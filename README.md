@@ -1,27 +1,19 @@
 # Welcome to Ubuntu Insights
 
-[actions-image]: https://github.com/canonical/Ubuntu Insights/actions/workflows/test.yaml/badge.svg?branch=main
-[actions-url]: https://github.com/canonical/Ubuntu Insights/actions?query=branch%3Amain+event%3Apush
+[actions-image]: https://github.com/ubuntu/ubuntu-insights/actions/workflows/test.yaml/badge.svg?branch=main
+[actions-url]: https://github.com/ubuntu/ubuntu-insights/actions?query=branch%3Amain+event%3Apush
 
 [license-image]: https://img.shields.io/badge/License-GPL3.0-blue.svg
 
-[codecov-image]: https://codecov.io/gh/canonical/Ubuntu Insights/branch/master/graph/badge.svg
-[codecov-url]: https://codecov.io/gh/canonical/Ubuntu Insights
+[codecov-image]: https://codecov.io/gh/ubuntu/ubuntu-insights/branch/master/graph/badge.svg
+[codecov-url]: https://codecov.io/gh/ubuntu/ubuntu-insights
 
-[user-documentation-image]: https://discouse.ubuntu.com/TODO
-[user-documentation-url]: https://discouse.ubuntu.com/TODO
-
-[reference-documentation-image]: https://discouse.ubuntu.com/TODO
-[reference-documentation-url]: https://discouse.ubuntu.com/TODO
-
-[goreport-image]: https://goreportcard.com/badge/github.com/canonical/Ubuntu Insights
-[goreport-url]: https://goreportcard.com/report/github.com/canonical/Ubuntu Insights
+[goreport-image]: https://goreportcard.com/badge/github.com/ubuntu/ubuntu-insights
+[goreport-url]: https://goreportcard.com/report/github.com/ubuntu/ubuntu-insights
 
 [![Code quality][actions-image]][actions-url]
 [![License][license-image]](LICENSE)
 [![Code coverage][codecov-image]][codecov-url]
-[![User Documentation][user-documentation-image]][user-documentation-url]
-[![Reference documentation][reference-documentation-image]][reference-documentation-url]
 [![Go Report Card][goreport-image]][goreport-url]
 
 This is the code repository for **Ubuntu Insights**, a user transparent, open, platform-agnostic and cross application solution for reporting hardware information and other collected metrics.
@@ -29,8 +21,6 @@ This is the code repository for **Ubuntu Insights**, a user transparent, open, p
 Ubuntu Insight is designed to show you exactly what is being sent, and allow you to acknowledge and control your own data. The code in this repository is designed to mainly be invoked by a controlling application, but a command line tool is also provided.
 
 This is designed to be a full replacement for Ubuntu Report. 
-
-For general details, including [installation](TODO link to installation instruction) and [Getting started](TODO link to getting started instructions) guides, head over to our [Ubuntu Insights documentation](link to project documentation).
 
 ## Troubleshooting
 
