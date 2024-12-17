@@ -9,11 +9,11 @@ body:
         :warning: **Please do not report security vulnerabilities here**
 
         Be careful with sensitive information and security vulnerabilities. In order to report bugs that could contain
-        sensitive information, use [Launchpad](https://bugs.launchpad.net/ubuntu/+source/PROJECT_TODO/+filebug) instead.
-        On Ubuntu machines, you can use `ubuntu-bug PROJECT_TODO` to collect relevant information.
+        sensitive information, use [Launchpad](https://bugs.launchpad.net/ubuntu/+source/ubuntu-insights/+filebug) instead.
+        On Ubuntu machines, you can use `ubuntu-bug ubuntu-insights` to collect relevant information.
 
 
-        Thanks for taking the time to report an issue and help improve PROJECT_TODO! Please fill out the form below as
+        Thanks for taking the time to report an issue and help improve Ubuntu Insights! Please fill out the form below as
         best as you can so that we can help you.
 
         Your additional work here is greatly appreciated and will help us respond as quickly as possible. For general
@@ -52,7 +52,7 @@ body:
     attributes:
       label: "Ubuntu users: System information and logs"
       description: >
-        Ubuntu users can run `ubuntu-bug PROJECT_TODO --save=/tmp/report.txt` and drag the file below.
+        Ubuntu users can run `ubuntu-bug ubuntu-insights --save=/tmp/report.txt` and drag the file below.
         It will contain any useful information.
   - type: textarea
     attributes:
@@ -61,7 +61,7 @@ body:
         For users of other distributions than ubuntu, provide details about the environment you experienced the issue in:
       value: |
         ### Environment
-        * PROJECT_TODO version: please run TODO
+        * Ubuntu Insights version: please run TODO
         * Distribution: (**NAME** in `/etc/os-release`)
         * Distribution version: (**VERSION_ID** on `/etc/os-release`):
 
@@ -83,8 +83,8 @@ body:
       label: Relevant information
       description: >
         Please look at our
-        [PROJECT_TODO Troubleshooting guide](../#troubleshooting)
-        and provide the debug logs for PROJECT_TODO.
+        [Ubuntu Insights Troubleshooting guide](../#troubleshooting)
+        and provide the debug logs for Ubuntu Insights.
 
       placeholder: Remember to redact any sensitive information from them.
   - type: checkboxes
