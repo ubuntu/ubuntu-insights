@@ -1,0 +1,67 @@
+name: Validate pull request title
+description: Ensures the title of the pull request complies with naming policy
+
+runs:
+  using: composite
+  steps:
+    - name: Parse PR title
+      id: parse
+      shell: bash
+      env:
+        # These variables are defined here so that they can be used verbatim,
+        # without this bash attempting to perform substitutions or character
+        # escapes. The last thing a regex needs is more escaped characters.
+        pattern: >-
+          ^([^() ]+)(\([^() ]+\))?: ([^ ].*)$
+        #   ~~~~~~~  ~~~~~~~~~~~    ~~~~~~~~
+        #   │        │              └─Title: free text after a colon and a single space.
+        #   │        └─Component: inside parentheses, optional.
+        #   └─Tag: limited to those pre-approved (see steps.validate.env.valid_tags).
+        pr_title: ${{ github.event.pull_request.title }}
+      run: |
+        # Parse ${{ github.event.pull_request.title }}
+        set -eu
+
+        echo "${pr_title}" | grep -P "${pattern}" > /dev/null || {
+            echo "::error::Pull request title does not match regex ${pattern}"
+
+            # Printing as a summary because multiline error messages are not supported
+            echo "Pull request title does not match regex \`${pattern}\`"                 >> $GITHUB_STEP_SUMMARY
+            echo "Example titles:"                                                        >> $GITHUB_STEP_SUMMARY
+            echo " - deps(turboencabulator): updated logarithmic casing"                  >> $GITHUB_STEP_SUMMARY
+            echo " - feat(guidance): enable location tracking via knowing where it isn't" >> $GITHUB_STEP_SUMMARY
+            echo " - docs: clarified behaviour of liblaurem in ipsum-compatible machines" >> $GITHUB_STEP_SUMMARY
+            echo " - maint: fix typo in example title"                                    >> $GITHUB_STEP_SUMMARY
+            exit 1
+        }
+
+        output=$'\\1'
+        tag=$(perl -pe "s#${pattern}#${output}#" <<< "${pr_title}")
+        echo "tag=${tag}" >> $GITHUB_OUTPUT
+    - name: Validate tag
+      shell: bash
+      id: validate
+      env:
+        tag: ${{ steps.parse.outputs.tag }}
+        valid_tags: build deps ci docs feat fix maint perf refactor tests
+      run: |
+        # Validate ${{ env.tag }}
+        set -eu
+
+        # Convert to list so that we can check each word separatelly
+        valid_tags=( ${{ env.valid_tags }} )
+
+        # Grep ^tag$ against every valid tag
+        if printf '%s\n' "${valid_tags[@]}" | grep "^${tag}\$" > /dev/null ; then
+          exit 0
+        fi
+
+        # Failure: print results and help
+        echo "::error::'${{ env.tag }}' is not in the list of admissible tags"
+
+        # Printing as a summary because multiline error messages are not supported
+        echo "'${{ env.tag }}' is not in the list of admissible tags" >> $GITHUB_STEP_SUMMARY
+        echo "Valid tags are:"                                        >> $GITHUB_STEP_SUMMARY
+        printf ' - %s\n' "${valid_tags[@]}"                           >> $GITHUB_STEP_SUMMARY
+
+        exit 1

@@ -1,0 +1,37 @@
+name: Install gotestfmt and our wrapper script
+description: Install gotestfmt and our wrapper script which improves the output and copies it to log files
+
+inputs:
+  tools-directory:
+    description: Directory pointing to go.mod file for checking tool versioning. If none is provided, the latest version will be downloaded.
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install gotestfmt
+      working-directory: ${{ inputs.tools-directory }}
+      run: |
+        # Install gotestfmt
+        set -eu
+        TOOL=github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt
+        VERSION=$(go mod edit --json | jq -r ".Require[] | select(.Path==\"${TOOL}\") | .Version" || true)
+
+        if [ -z "${VERSION}" ]; then
+          VERSION="latest"
+        fi
+
+        go install "${TOOL}@${VERSION}"
+      shell: bash
+
+    - name: Install gotestfmt wrapper script
+      run: |
+        # Install gotestfmt wrapper script
+        set -eu
+        # We install the wrapper to a different directory to avoid conflicts
+        # with the gotestfmt binary. We also add the directory to the PATH.
+        # The wrapper script expects gotestfmt to be in $GOPATH/bin, where
+        # go install puts it.
+        DEST=${GITHUB_ACTION_PATH}/bin
+        install -D --mode=755 -t "${DEST}" "${GITHUB_ACTION_PATH}/gotestfmt"
+        echo "${DEST}" >> "${GITHUB_PATH}"
+      shell: bash
