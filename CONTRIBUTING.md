@@ -27,7 +27,7 @@ Contributions are made to this project via Issues and Pull Requests (PRs). A few
 - To report security vulnerabilities, please use the advisories page of the repository and not a public bug report. Please use [launchpad private bugs](https://bugs.launchpad.net/ubuntu/+source/Ubuntu-Insights/+filebug) which is monitored by our security team. On an ubuntu machine, it’s best to use `ubuntu-bug Ubuntu Insights` to collect relevant information. FIXME: snap?
 - Search for existing Issues and PRs on this repository before creating your own.
 - We work hard to makes sure issues are handled in a timely manner but, depending on the impact, it could take a while to investigate the root cause. A friendly ping in the comment thread to the submitter or a contributor can help draw attention if your issue is blocking.
-- If you've never contributed before, see [this Ubuntu discourse post](https://discourse.ubuntu.com/t/contribute/26) for resources and tips on how to get started.
+- If you've never contributed before, see [this Ubuntu resource post](https://ubuntu.com/community/contribute) for resources and tips on how to get started.
 
 ### Issues
 
