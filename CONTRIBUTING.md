@@ -84,7 +84,6 @@ The test suite must pass before merging the PR to our main branch. Any new featu
 This project follow the TODO code-style. For more informative information about the code style in use, please check:
 
 - For go: <https://google.github.io/styleguide/go/>
-- For Flutter: <https://github.com/flutter/flutter/wiki/Style-guide-for-Flutter-repo>
 
 ## Contributor License Agreement
 
