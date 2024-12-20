@@ -3,13 +3,23 @@ package commands
 import (
 	"os"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
+// Root command flags
 var consentDir string
 var verbose bool
+
+// Shared flags but different configurations
+var source string
+
+// Command flags shared between collect and upload
+var force bool
+var dryRun bool
+var dir string
 
 var rootCmd = &cobra.Command{
 	Use:   "ubuntu-insights",
@@ -18,7 +28,6 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-
 	userConfigDir, err := os.UserConfigDir()
 	defaultConsentDir := ""
 	if err != nil {
@@ -45,5 +54,13 @@ func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal().Err(err).Msg("An error occurred while executing Ubuntu Insights.")
 		os.Exit(1)
+	}
+}
+
+func setVerbosity() {
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	if verbose {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		log.Debug().Msg("Verbose logging enabled")
 	}
 }
