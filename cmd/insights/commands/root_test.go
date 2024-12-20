@@ -6,8 +6,9 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
+
+	testHelpers "github.com/ubuntu/ubuntu-insights/internal/test-helpers"
 )
 
 func TestSetVerbosity(t *testing.T) {
@@ -57,39 +58,24 @@ func TestSetVerbosity(t *testing.T) {
 }
 
 func TestRootFlags(t *testing.T) {
-	testCases := []struct {
-		name     string
-		short    string
-		required bool
-		dirname  bool
-	}{
+	testCases := []testHelpers.CmdTestCase{
 		{
-			name:     "verbose",
-			short:    "v",
+			Name:           "verbose",
+			Short:          "v",
+			PersistentFlag: true,
+			BaseCmd:        rootCmd,
 		},
 		{
-			name:    "consent-dir",
-			dirname: true,
+			Name:           "consent-dir",
+			Dirname:        true,
+			PersistentFlag: true,
+			BaseCmd:        rootCmd,
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			flag := rootCmd.PersistentFlags().Lookup(tc.name)
-			assert.NotNil(t, flag)
-			assert.Equal(t, tc.short, flag.Shorthand)
-
-			if tc.required {
-				assert.Equal(t, "true", flag.Annotations[cobra.BashCompOneRequiredFlag][0])
-			} else {
-				assert.Nil(t, flag.Annotations[cobra.BashCompOneRequiredFlag])
-			}
-
-			if tc.dirname {
-				assert.Equal(t, []string{}, flag.Annotations[cobra.BashCompSubdirsInDir])
-			} else {
-				assert.Nil(t, flag.Annotations[cobra.BashCompSubdirsInDir])
-			}
+		t.Run(tc.Name, func(t *testing.T) {
+			testHelpers.FlagTestHelper(t, tc)
 		})
 	}
 }
