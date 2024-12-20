@@ -8,7 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
-	testHelpers "github.com/ubuntu/ubuntu-insights/internal/test-helpers"
+	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
 func TestSetVerbosity(t *testing.T) {
@@ -58,7 +58,7 @@ func TestSetVerbosity(t *testing.T) {
 }
 
 func TestRootFlags(t *testing.T) {
-	testCases := []testHelpers.CmdTestCase{
+	testCases := []testutils.CmdTestCase{
 		{
 			Name:           "verbose",
 			Short:          "v",
@@ -75,7 +75,7 @@ func TestRootFlags(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
-			testHelpers.FlagTestHelper(t, tc)
+			testutils.FlagTestHelper(t, tc)
 		})
 	}
 }

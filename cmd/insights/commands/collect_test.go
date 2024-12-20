@@ -3,11 +3,11 @@ package commands
 import (
 	"testing"
 
-	testHelpers "github.com/ubuntu/ubuntu-insights/internal/test-helpers"
+	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
 func TestCollectFlags(t *testing.T) {
-	testCases := []testHelpers.CmdTestCase{
+	testCases := []testutils.CmdTestCase{
 		{
 			Name:     "source",
 			Short:    "s",
@@ -38,7 +38,7 @@ func TestCollectFlags(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
-			testHelpers.FlagTestHelper(t, tc)
+			testutils.FlagTestHelper(t, tc)
 		})
 	}
 }
