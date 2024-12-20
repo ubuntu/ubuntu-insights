@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFlagsExist(t *testing.T) {
+func TestCollectFlags(t *testing.T) {
 	testCases := []struct {
 		name     string
 		short    string

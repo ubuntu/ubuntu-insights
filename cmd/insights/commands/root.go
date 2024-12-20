@@ -40,9 +40,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&consentDir, "consent-dir", defaultConsentDir, "directory to look for and to store user consent")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "enable verbose logging")
 
-	if err != nil {
-		err = rootCmd.MarkPersistentFlagRequired("consent-dir")
-	}
+	err = rootCmd.MarkPersistentFlagDirname("consent-dir")
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("An error occurred while initializing Ubuntu Insights.")
