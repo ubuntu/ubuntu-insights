@@ -1,9 +1,9 @@
 package constants
 
 import (
-	"os"
-
 	"log/slog"
+	"os"
+	"path/filepath"
 )
 
 const (
@@ -14,24 +14,35 @@ const (
 	DefaultLogLevel = slog.LevelInfo
 )
 
-var (
-	// DefaultConfigPath is the default path to the configuration file
-	DefaultConfigPath = userConfigDir(os.UserCacheDir) + string(os.PathSeparator) + DefaultAppFolder
-
-	// DefaultCachePath is the default path to the cache directory
-	DefaultCachePath = userCacheDir(os.UserConfigDir) + string(os.PathSeparator) + DefaultAppFolder
-)
-
-func userConfigDir(osUserConfigDir func() (string, error)) string {
-	dir, err := osUserConfigDir()
-	if err != nil {
-		return ""
-	}
-	return dir
+type options struct {
+	baseDir func() (string, error)
 }
 
-func userCacheDir(osUserCacheDir func() (string, error)) string {
-	dir, err := osUserCacheDir()
+type option func(*options)
+
+// GetDefaultConfigPath is the default path to the configuration file
+func GetDefaultConfigPath(opts ...option) string {
+	o := options{baseDir: os.UserConfigDir}
+	for _, opt := range opts {
+		opt(&o)
+	}
+
+	return filepath.Join(getBaseDir(o.baseDir), DefaultAppFolder)
+}
+
+// GetDefaultCachePath is the default path to the cache directory
+func GetDefaultCachePath(opts ...option) string {
+	o := options{baseDir: os.UserCacheDir}
+	for _, opt := range opts {
+		opt(&o)
+	}
+
+	return filepath.Join(getBaseDir(o.baseDir), DefaultAppFolder)
+}
+
+// getBaseDir is a helper function to handle the case where the baseDir function returns an error, and instead return an empty string
+func getBaseDir(baseDirFunc func() (string, error)) string {
+	dir, err := baseDirFunc()
 	if err != nil {
 		return ""
 	}
