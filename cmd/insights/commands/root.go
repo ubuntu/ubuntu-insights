@@ -2,7 +2,6 @@ package commands
 
 import (
 	"log/slog"
-	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
@@ -79,13 +78,12 @@ func installRootCmd(app *App) error {
 
 // setVerbosity sets the global logging level based on the verbose flag. If verbose is true, it sets the logging level to debug, otherwise it sets it to info.
 func setVerbosity(verbose bool) {
-	opts := &slog.HandlerOptions{Level: constants.DefaultLogLevel}
 	if verbose {
-		opts.Level = slog.LevelDebug
+		slog.SetLogLoggerLevel(slog.LevelDebug)
 		slog.Debug("Verbose logging enabled")
+	} else {
+		slog.SetLogLoggerLevel(constants.DefaultLogLevel)
 	}
-	logger := slog.New(slog.NewTextHandler(os.Stdout, opts))
-	slog.SetDefault(logger)
 }
 
 // Run executes the command and associated process, returning an error if any.

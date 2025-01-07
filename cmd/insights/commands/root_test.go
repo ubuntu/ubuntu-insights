@@ -47,3 +47,16 @@ func TestSetVerbosity(t *testing.T) {
 		})
 	}
 }
+
+func TestUsageError(t *testing.T) {
+	app, err := New()
+	assert.NoError(t, err)
+
+	// Test when SilenceUsage is true
+	app.rootCmd.SilenceUsage = true
+	assert.False(t, app.UsageError())
+
+	// Test when SilenceUsage is false
+	app.rootCmd.SilenceUsage = false
+	assert.True(t, app.UsageError())
+}

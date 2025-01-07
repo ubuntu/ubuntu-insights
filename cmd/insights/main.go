@@ -10,12 +10,7 @@ import (
 )
 
 func main() {
-	opts := &slog.HandlerOptions{
-		Level: constants.DefaultLogLevel,
-	}
-
-	logger := slog.New(slog.NewTextHandler(os.Stdout, opts))
-	slog.SetDefault(logger)
+	slog.SetLogLoggerLevel(constants.DefaultLogLevel)
 
 	a, err := commands.New()
 	if err != nil {
