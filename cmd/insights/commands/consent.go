@@ -7,24 +7,42 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var consentState string
-
-var consentCmd = &cobra.Command{
-	Use:   "consent",
-	Short: "Manage or get user consent state",
-	Long:  "Manage or get user consent state for data collection and upload",
-	Run: func(cmd *cobra.Command, args []string) {
-		setVerbosity()
-
-		consentState = strings.ToLower(consentState)
-
-		log.Info().Msg("Running consent command")
-	},
+type consentConfig struct {
+	sources      []string
+	consentState string
 }
 
-func init() {
-	consentCmd.Flags().StringVarP(&source, "source", "s", "", "the name of the source application or event where metrics are to be collected from. If not set, inferred to be global")
-	consentCmd.Flags().StringVarP(&consentState, "consent-state", "c", "", "set the user consent state (true or false)")
+var defaultConsentConfig = consentConfig{
+	sources:      []string{""},
+	consentState: "",
+}
 
-	rootCmd.AddCommand(consentCmd)
+func installConsentCmd(app *App) {
+	app.consentConfig = defaultConsentConfig
+
+	consentCmd := &cobra.Command{
+		Use:   "consent [SOURCES](optional arguments)",
+		Short: "Manage or get user consent state",
+		Long:  "Manage or get user consent state for data collection and upload",
+		Args:  cobra.ArbitraryArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Set Sources to Args
+			app.consentConfig.sources = args
+
+			// Ensure consent state is case insensitive
+			app.consentConfig.consentState = strings.ToLower(app.consentConfig.consentState)
+
+			// If insights-dir is set, warn the user that it is not used
+			if app.rootConfig.InsightsDir != defaultRootConfig.InsightsDir {
+				log.Warn().Msg("The insights-dir flag was provided but it is not used in the consent command")
+			}
+
+			log.Info().Msg("Running consent command")
+			return nil
+		},
+	}
+
+	consentCmd.Flags().StringVarP(&app.consentConfig.consentState, "consent-state", "c", "", "The consent state to set (true or false). If not set, the current consent state is displayed.")
+
+	app.rootCmd.AddCommand(consentCmd)
 }

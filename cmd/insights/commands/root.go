@@ -1,64 +1,101 @@
 package commands
 
 import (
-	"os"
-
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
-// Root command flags
-var consentDir string
-var verbose bool
+const cmdName = "ubuntu-insights"
 
-// Shared flags but different configurations
-var source string
+type App struct {
+	rootCmd *cobra.Command
 
-// Command flags shared between collect and upload
-var force bool
-var dryRun bool
-var dir string
-
-var rootCmd = &cobra.Command{
-	Use:   "ubuntu-insights",
-	Short: "",
-	Long:  "",
+	rootConfig    rootConfig
+	collectConfig collectConfig
+	uploadConfig  uploadConfig
+	consentConfig consentConfig
 }
 
-func init() {
-	userConfigDir, err := os.UserConfigDir()
-	defaultConsentDir := ""
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get user config directory, expecting consent-dir flag to be set")
+type rootConfig struct {
+	Verbose     bool
+	ConsentDir  string
+	InsightsDir string
+}
 
-	} else {
-		defaultConsentDir = userConfigDir + string(os.PathSeparator) + constants.DefaultAppDirName
+var defaultRootConfig = rootConfig{
+	Verbose:     false,
+	ConsentDir:  constants.DefaultConfigPath,
+	InsightsDir: constants.DefaultCachePath,
+}
+
+// Registers commands and returns a new app
+func New() (*App, error) {
+	a := App{}
+	a.rootCmd = &cobra.Command{
+		Use:   "ubuntu-insights [COMMAND]",
+		Short: "",
+		Long:  "",
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			// Command parsing has been successful. Returns to not print usage anymore.
+			a.rootCmd.SilenceUsage = true
+
+			setVerbosity(a.rootConfig.Verbose)
+			return nil
+		},
 	}
 
-	rootCmd.PersistentFlags().StringVar(&consentDir, "consent-dir", defaultConsentDir, "directory to look for and to store user consent")
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "enable verbose logging")
+	err := installRootCmd(&a)
+	err = installCollectCmd(&a)
+	installUploadCmd(&a)
+	installConsentCmd(&a)
 
-	err = rootCmd.MarkPersistentFlagDirname("consent-dir")
+	return &a, err
+}
 
-	if err != nil {
+func installRootCmd(app *App) error {
+	cmd := app.rootCmd
+
+	app.rootConfig = defaultRootConfig
+
+	cmd.PersistentFlags().BoolVarP(&app.rootConfig.Verbose, "verbose", "v", app.rootConfig.Verbose, "enable verbose logging")
+	cmd.PersistentFlags().StringVar(&app.rootConfig.ConsentDir, "consent-dir", app.rootConfig.ConsentDir, "the base directory to look for consent state files in")
+	cmd.PersistentFlags().StringVar(&app.rootConfig.InsightsDir, "insights-dir", app.rootConfig.InsightsDir, "the base directory of the insights report cache")
+
+	if err := cmd.MarkPersistentFlagDirname("consent-dir"); err != nil {
 		log.Fatal().Err(err).Msg("An error occurred while initializing Ubuntu Insights.")
-		os.Exit(1)
+		return err
 	}
+
+	if err := cmd.MarkPersistentFlagDirname("insights-dir"); err != nil {
+		log.Fatal().Err(err).Msg("An error occurred while initializing Ubuntu Insights.")
+		return err
+	}
+
+	return nil
 }
 
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		log.Fatal().Err(err).Msg("An error occurred while executing Ubuntu Insights.")
-		os.Exit(1)
-	}
-}
-
-func setVerbosity() {
+// setVerbosity sets the global logging level based on the verbose flag. If verbose is true, it sets the logging level to debug, otherwise it sets it to info.
+func setVerbosity(verbose bool) {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	if verbose {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		log.Debug().Msg("Verbose logging enabled")
 	}
+}
+
+// Run executes the command and associated process, returning an error if any.
+func (a *App) Run() error {
+	return a.rootCmd.Execute()
+}
+
+// UsageError returns if the error is a command parsing or runtime one.
+func (a App) UsageError() bool {
+	return !a.rootCmd.SilenceUsage
+}
+
+// Quit gracefully exits the application.
+func (a App) Quit() {
+	// Not implemented
 }

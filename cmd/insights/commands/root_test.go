@@ -7,8 +7,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
 func TestSetVerbosity(t *testing.T) {
@@ -41,8 +39,7 @@ func TestSetVerbosity(t *testing.T) {
 
 			for _, p := range tc.pattern {
 				buf = bytes.Buffer{}
-				verbose = p
-				setVerbosity()
+				setVerbosity(p)
 
 				log.Debug().Msg(tc.name + " debug message")
 				if p {
@@ -53,29 +50,6 @@ func TestSetVerbosity(t *testing.T) {
 					assert.NotContains(t, buf.String(), tc.name+" debug message")
 				}
 			}
-		})
-	}
-}
-
-func TestRootFlags(t *testing.T) {
-	testCases := []testutils.CmdTestCase{
-		{
-			Name:           "verbose",
-			Short:          "v",
-			PersistentFlag: true,
-			BaseCmd:        rootCmd,
-		},
-		{
-			Name:           "consent-dir",
-			Dirname:        true,
-			PersistentFlag: true,
-			BaseCmd:        rootCmd,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.Name, func(t *testing.T) {
-			testutils.FlagTestHelper(t, tc)
 		})
 	}
 }

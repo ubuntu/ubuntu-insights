@@ -5,34 +5,44 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var sources []string
-var server string
-var minAge uint
-
-var uploadCmd = &cobra.Command{
-	Use:   "upload",
-	Short: "Upload metrics to the Ubuntu Insights server",
-	Long:  "Upload metrics to the Ubuntu Insights server",
-	Run: func(cmd *cobra.Command, args []string) {
-		setVerbosity()
-		log.Info().Msg("Running upload command")
-	},
+type uploadConfig struct {
+	sources []string
+	server  string
+	minAge  uint
+	force   bool
+	dryRun  bool
 }
 
-func init() {
-	uploadCmd.Flags().StringArrayVarP(&sources, "source", "s", []string{""}, "the name of the source application(s) or event(s)")
-	uploadCmd.Flags().StringVar(&server, "server", "https://metrics.ubuntu.com", "the base URL of the server to upload the metrics to")
-	uploadCmd.Flags().UintVar(&minAge, "min-age", 604800, "the minimum age of the metrics to upload in seconds")
+var defaultUploadConfig = uploadConfig{
+	sources: []string{""},
+	server:  "https://metrics.ubuntu.com",
+	minAge:  604800,
+	force:   false,
+	dryRun:  false,
+}
 
-	uploadCmd.Flags().BoolVarP(&force, "force", "f", false, "force upload even if the period has not elapsed, overriding any conflicts")
-	uploadCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "perform a dry run of the upload without sending the data to the server")
-	uploadCmd.Flags().StringVar(&dir, "dir", "", "the directory in which to look for the collected/uploaded folders or valid source folders")
+func installUploadCmd(app *App) {
+	app.uploadConfig = defaultUploadConfig
 
-	err := uploadCmd.MarkFlagDirname("dir")
+	uploadCmd := &cobra.Command{
+		Use:   "upload upload [sources](optional arguments)",
+		Short: "Upload metrics to the Ubuntu Insights server",
+		Long:  "Upload metrics to the Ubuntu Insights server",
+		Args:  cobra.ArbitraryArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Set Sources to Args
+			app.uploadConfig.sources = args
 
-	if err != nil {
-		log.Fatal().Err(err).Msg("An error occurred while initializing the upload command.")
+			log.Info().Msg("Running upload command")
+
+			return nil
+		},
 	}
 
-	rootCmd.AddCommand(uploadCmd)
+	uploadCmd.Flags().StringVar(&app.uploadConfig.server, "server", app.uploadConfig.server, "the base URL of the server to upload the metrics to")
+	uploadCmd.Flags().UintVar(&app.uploadConfig.minAge, "min-age", app.uploadConfig.minAge, "the minimum age of the metrics to upload in seconds")
+	uploadCmd.Flags().BoolVarP(&app.uploadConfig.force, "force", "f", app.uploadConfig.force, "force upload even if the period has not elapsed, overriding any conflicts")
+	uploadCmd.Flags().BoolVarP(&app.uploadConfig.dryRun, "dry-run", "d", app.uploadConfig.dryRun, "perform a dry run of the upload without sending the data to the server")
+
+	app.rootCmd.AddCommand(uploadCmd)
 }
