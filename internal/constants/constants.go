@@ -16,22 +16,22 @@ const (
 
 var (
 	// DefaultConfigPath is the default path to the configuration file
-	DefaultConfigPath = userConfigDir() + string(os.PathSeparator) + DefaultAppFolder
+	DefaultConfigPath = userConfigDir(os.UserCacheDir) + string(os.PathSeparator) + DefaultAppFolder
 
 	// DefaultCachePath is the default path to the cache directory
-	DefaultCachePath = userCacheDir() + string(os.PathSeparator) + DefaultAppFolder
+	DefaultCachePath = userCacheDir(os.UserConfigDir) + string(os.PathSeparator) + DefaultAppFolder
 )
 
-func userConfigDir() string {
-	dir, err := os.UserConfigDir()
+func userConfigDir(osUserConfigDir func() (string, error)) string {
+	dir, err := osUserConfigDir()
 	if err != nil {
 		return ""
 	}
 	return dir
 }
 
-func userCacheDir() string {
-	dir, err := os.UserCacheDir()
+func userCacheDir(osUserCacheDir func() (string, error)) string {
+	dir, err := osUserCacheDir()
 	if err != nil {
 		return ""
 	}
