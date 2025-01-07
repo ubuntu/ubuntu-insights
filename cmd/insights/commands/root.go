@@ -1,8 +1,9 @@
 package commands
 
 import (
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	"log/slog"
+	"os"
+
 	"github.com/spf13/cobra"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
@@ -64,12 +65,12 @@ func installRootCmd(app *App) error {
 	cmd.PersistentFlags().StringVar(&app.rootConfig.InsightsDir, "insights-dir", app.rootConfig.InsightsDir, "the base directory of the insights report cache")
 
 	if err := cmd.MarkPersistentFlagDirname("consent-dir"); err != nil {
-		log.Fatal().Err(err).Msg("An error occurred while initializing Ubuntu Insights.")
+		slog.Error("An error occurred while initializing Ubuntu Insights", "error", err.Error())
 		return err
 	}
 
 	if err := cmd.MarkPersistentFlagDirname("insights-dir"); err != nil {
-		log.Fatal().Err(err).Msg("An error occurred while initializing Ubuntu Insights.")
+		slog.Error("An error occurred while initializing Ubuntu Insights.", "error", err.Error())
 		return err
 	}
 
@@ -78,11 +79,13 @@ func installRootCmd(app *App) error {
 
 // setVerbosity sets the global logging level based on the verbose flag. If verbose is true, it sets the logging level to debug, otherwise it sets it to info.
 func setVerbosity(verbose bool) {
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	opts := &slog.HandlerOptions{Level: constants.DefaultLogLevel}
 	if verbose {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		log.Debug().Msg("Verbose logging enabled")
+		opts.Level = slog.LevelDebug
+		slog.Debug("Verbose logging enabled")
 	}
+	logger := slog.New(slog.NewTextHandler(os.Stdout, opts))
+	slog.SetDefault(logger)
 }
 
 // Run executes the command and associated process, returning an error if any.

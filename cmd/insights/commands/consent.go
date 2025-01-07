@@ -1,9 +1,9 @@
 package commands
 
 import (
+	"log/slog"
 	"strings"
 
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -34,10 +34,10 @@ func installConsentCmd(app *App) {
 
 			// If insights-dir is set, warn the user that it is not used
 			if app.rootConfig.InsightsDir != defaultRootConfig.InsightsDir {
-				log.Warn().Msg("The insights-dir flag was provided but it is not used in the consent command")
+				slog.Warn("The insights-dir flag was provided but it is not used in the consent command")
 			}
 
-			log.Info().Msg("Running consent command")
+			slog.Info("Running consent command")
 			return nil
 		},
 	}

@@ -3,13 +3,20 @@ package main
 import (
 	"os"
 
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	"log/slog"
+
 	"github.com/ubuntu/ubuntu-insights/cmd/insights/commands"
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
 func main() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	opts := &slog.HandlerOptions{
+		Level: constants.DefaultLogLevel,
+	}
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, opts))
+	slog.SetDefault(logger)
+
 	a, err := commands.New()
 	if err != nil {
 		os.Exit(1)
@@ -26,7 +33,7 @@ type app interface {
 
 func run(a app) int {
 	if er := a.Run(); er != nil {
-		log.Error().Msg(er.Error())
+		slog.Error(er.Error())
 
 		if a.UsageError() {
 			return 2

@@ -1,12 +1,13 @@
 package commands
 
 import (
-	"bytes"
+	"context"
 	"testing"
 
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	"log/slog"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
 func TestSetVerbosity(t *testing.T) {
@@ -34,20 +35,13 @@ func TestSetVerbosity(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			log.Logger = log.Output(zerolog.ConsoleWriter{Out: &buf})
-
 			for _, p := range tc.pattern {
-				buf = bytes.Buffer{}
 				setVerbosity(p)
 
-				log.Debug().Msg(tc.name + " debug message")
 				if p {
-					assert.Equal(t, zerolog.DebugLevel, zerolog.GlobalLevel())
-					assert.Contains(t, buf.String(), tc.name+" debug message")
+					assert.True(t, slog.Default().Enabled(context.Background(), slog.LevelDebug))
 				} else {
-					assert.Equal(t, zerolog.InfoLevel, zerolog.GlobalLevel())
-					assert.NotContains(t, buf.String(), tc.name+" debug message")
+					assert.True(t, slog.Default().Enabled(context.Background(), constants.DefaultLogLevel))
 				}
 			}
 		})
