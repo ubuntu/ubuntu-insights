@@ -3,7 +3,7 @@ package constants
 import (
 	"os"
 
-	"github.com/rs/zerolog"
+	"log/slog"
 )
 
 const (
@@ -11,7 +11,7 @@ const (
 	DefaultAppFolder = "ubuntu-insights"
 
 	// DefaultLogLevel is the default log level selected without any verbosity flags
-	DefaultLogLevel = zerolog.InfoLevel
+	DefaultLogLevel = slog.LevelInfo
 )
 
 var (

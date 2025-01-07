@@ -1,7 +1,8 @@
 package commands
 
 import (
-	"github.com/rs/zerolog/log"
+	"log/slog"
+
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +34,7 @@ func installCollectCmd(app *App) error {
 			// Set Sources to Args
 			app.collectConfig.source = args[0]
 
-			log.Info().Msg("Running collect command")
+			slog.Info("Running collect command")
 
 			return nil
 		},
@@ -45,7 +46,7 @@ func installCollectCmd(app *App) error {
 	collectCmd.Flags().StringVarP(&app.collectConfig.extraMetrics, "extra-metrics", "e", "", "Path to JSON file to append extra metrics from")
 
 	if err := collectCmd.MarkFlagFilename("extra-metrics", "json"); err != nil {
-		log.Fatal().Msg("An error occurred while initializing the collect command.")
+		slog.Error("An error occurred while initializing the collect command.", "error", err.Error())
 		return err
 	}
 

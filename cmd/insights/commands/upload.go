@@ -1,7 +1,8 @@
 package commands
 
 import (
-	"github.com/rs/zerolog/log"
+	"log/slog"
+
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +34,7 @@ func installUploadCmd(app *App) {
 			// Set Sources to Args
 			app.uploadConfig.sources = args
 
-			log.Info().Msg("Running upload command")
+			slog.Info("Running upload command")
 
 			return nil
 		},
