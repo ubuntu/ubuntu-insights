@@ -1,82 +1,82 @@
-package constants
+package constants_test
 
 import (
 	"fmt"
+	"os"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
-func Test_userConfigDir(t *testing.T) {
+func Test_GetUserConfigDir(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		name string
+
+	tests := map[string]struct {
 		want string
 		mock func() (string, error)
 	}{
-		{
-			name: "os.UserConfigDir success",
-			want: "abc/def",
+		"os.UserConfigDir success": {
+			want: "abc/def" + string(os.PathSeparator) + constants.DefaultAppFolder,
 			mock: func() (string, error) {
 				return "abc/def", nil
 			},
 		},
-		{
-			name: "os.UserConfigDir error",
-			want: "",
+		"os.UserConfigDir error": {
+			want: string(os.PathSeparator) + constants.DefaultAppFolder,
 			mock: func() (string, error) {
 				return "", fmt.Errorf("error")
 			},
 		},
-		{
-			name: "os.UserConfigDir error 2",
-			want: "",
+		"os.UserConfigDir error 2": {
+			want: string(os.PathSeparator) + constants.DefaultAppFolder,
 			mock: func() (string, error) {
 				return "abc", fmt.Errorf("error")
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := userConfigDir(tt.mock); got != tt.want {
-				t.Errorf("userConfigDir() = %v, want %v", got, tt.want)
-			}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			opts := []constants.Option{constants.WithBaseDir(tt.mock)}
+			require.Equal(t, tt.want, constants.GetDefaultConfigPath(opts...))
 		})
 	}
 }
 
 func Test_userCacheDir(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		name string
+
+	tests := map[string]struct {
 		want string
 		mock func() (string, error)
 	}{
-		{
-			name: "os.UserCacheDir success",
-			want: "def/abc",
+		"os.UserCacheDir success": {
+			want: "def/abc" + string(os.PathSeparator) + constants.DefaultAppFolder,
 			mock: func() (string, error) {
 				return "def/abc", nil
 			},
 		},
-		{
-			name: "os.UserCacheDir error",
-			want: "",
+		"os.UserCacheDir error": {
+			want: string(os.PathSeparator) + constants.DefaultAppFolder,
 			mock: func() (string, error) {
 				return "", fmt.Errorf("error")
 			},
 		},
-		{
-			name: "os.UserCacheDir error 2",
-			want: "",
+		"os.UserCacheDir error 2": {
+			want: string(os.PathSeparator) + constants.DefaultAppFolder,
 			mock: func() (string, error) {
 				return "abc", fmt.Errorf("error")
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := userCacheDir(tt.mock); got != tt.want {
-				t.Errorf("userCacheDir() = %v, want %v", got, tt.want)
-			}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			opts := []constants.Option{constants.WithBaseDir(tt.mock)}
+			require.Equal(t, tt.want, constants.GetDefaultCachePath(opts...))
 		})
 	}
 }

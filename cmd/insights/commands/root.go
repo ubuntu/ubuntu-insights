@@ -26,8 +26,8 @@ type rootConfig struct {
 
 var defaultRootConfig = rootConfig{
 	Verbose:     false,
-	ConsentDir:  constants.DefaultConfigPath,
-	InsightsDir: constants.DefaultCachePath,
+	ConsentDir:  constants.GetDefaultConfigPath(),
+	InsightsDir: constants.GetDefaultCachePath(),
 }
 
 // Registers commands and returns a new app
