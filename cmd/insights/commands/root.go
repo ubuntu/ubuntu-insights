@@ -34,9 +34,10 @@ var defaultRootConfig = rootConfig{
 func New() (*App, error) {
 	a := App{}
 	a.rootCmd = &cobra.Command{
-		Use:   "ubuntu-insights [COMMAND]",
-		Short: "",
-		Long:  "",
+		Use:           "ubuntu-insights [COMMAND]",
+		Short:         "",
+		Long:          "",
+		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// Command parsing has been successful. Returns to not print usage anymore.
 			a.rootCmd.SilenceUsage = true
@@ -60,7 +61,7 @@ func installRootCmd(app *App) error {
 	app.rootConfig = defaultRootConfig
 
 	cmd.PersistentFlags().BoolVarP(&app.rootConfig.Verbose, "verbose", "v", app.rootConfig.Verbose, "enable verbose logging")
-	cmd.PersistentFlags().StringVar(&app.rootConfig.ConsentDir, "consent-dir", app.rootConfig.ConsentDir, "the base directory to look for consent state files in")
+	cmd.PersistentFlags().StringVar(&app.rootConfig.ConsentDir, "consent-dir", app.rootConfig.ConsentDir, "the base directory of the consent state files")
 	cmd.PersistentFlags().StringVar(&app.rootConfig.InsightsDir, "insights-dir", app.rootConfig.InsightsDir, "the base directory of the insights report cache")
 
 	if err := cmd.MarkPersistentFlagDirname("consent-dir"); err != nil {
