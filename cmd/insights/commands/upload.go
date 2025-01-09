@@ -41,9 +41,9 @@ func installUploadCmd(app *App) {
 	}
 
 	uploadCmd.Flags().StringVar(&app.uploadConfig.server, "server", app.uploadConfig.server, "the base URL of the server to upload the metrics to")
-	uploadCmd.Flags().UintVar(&app.uploadConfig.minAge, "min-age", app.uploadConfig.minAge, "the minimum age of the metrics to upload in seconds")
-	uploadCmd.Flags().BoolVarP(&app.uploadConfig.force, "force", "f", app.uploadConfig.force, "force upload even if the period has not elapsed, overriding any conflicts")
-	uploadCmd.Flags().BoolVarP(&app.uploadConfig.dryRun, "dry-run", "d", app.uploadConfig.dryRun, "perform a dry run of the upload without sending the data to the server")
+	uploadCmd.Flags().UintVar(&app.uploadConfig.minAge, "min-age", app.uploadConfig.minAge, "the minimum age (in seconds) of a report before the uploader will attempt to upload it")
+	uploadCmd.Flags().BoolVarP(&app.uploadConfig.force, "force", "f", app.uploadConfig.force, "force an upload, ignoring min age and clashes between the collected file and a file in the uploaded folder, replacing the clashing uploaded report if it exists")
+	uploadCmd.Flags().BoolVarP(&app.uploadConfig.dryRun, "dry-run", "d", app.uploadConfig.dryRun, "go through the motions of doing an upload, but do not communicate with the server or send the payload")
 
 	app.rootCmd.AddCommand(uploadCmd)
 }
