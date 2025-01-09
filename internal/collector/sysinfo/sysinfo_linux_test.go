@@ -37,7 +37,7 @@ func TestCollect(t *testing.T) {
 	}{
 		"Regular hardware information": {root: "regular"},
 
-		"Error on missing vendor information": {root: "withoutvendor", wantErr: true},
+		"Missing hardware information is empty": {root: "withoutinfo"},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {

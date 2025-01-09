@@ -1,5 +1,7 @@
 hardware:
     product:
+        Family: Framework DIY
+        Name: DIY Framework Laptop 16
         Vendor: |
             Framework
 software: {}
