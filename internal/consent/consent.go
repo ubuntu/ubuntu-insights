@@ -1,3 +1,5 @@
+// Package consent is the implementation of the consent manager component.
+// The consent manager is responsible for managing consent files, which are used to store the consent state for a source or the global consent state.
 package consent
 
 import (
@@ -12,13 +14,13 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
-// ConsentManager is a struct that manages consent files
-type ConsentManager struct {
+// Manager is a struct that manages consent files.
+type Manager struct {
 	folderPath string
 }
 
-// ConsentStates is a struct that represents the consent states for a list of sources and the global consent state
-type ConsentStates struct {
+// States is a struct that represents the consent states for a list of sources and the global consent state.
+type States struct {
 	SourceStates map[string]consentStateResult
 	GlobalState  consentStateResult
 }
@@ -29,21 +31,21 @@ type consentStateResult struct {
 	ReadErr bool   // true if there was an error reading the consent file
 }
 
-// consentFile is a struct that represents a consent file
+// consentFile is a struct that represents a consent file.
 type consentFile struct {
 	ConsentState bool `toml:"consent_state"`
 }
 
-// New returns a new ConsentManager
-func New(folderPath string) *ConsentManager {
-	return &ConsentManager{folderPath: folderPath}
+// New returns a new ConsentManager.
+func New(folderPath string) *Manager {
+	return &Manager{folderPath: folderPath}
 }
 
-// GetConsentStates, gets the consent state for the given sources and the global consent state
+// GetConsentStates gets the consent state for the given sources and the global consent state.
 // If any of the sources do not have a consent file, it will be considered as a false state.
-// If a specified source does not have a consent file, it will not be included in the returned ConsentStates struct
-func (cm *ConsentManager) GetConsentStates(sources []string) (*ConsentStates, error) {
-	consentStates := ConsentStates{SourceStates: make(map[string]consentStateResult)}
+// If a specified source does not have a consent file, it will not be included in the returned ConsentStates struct.
+func (cm *Manager) GetConsentStates(sources []string) (*States, error) {
+	consentStates := States{SourceStates: make(map[string]consentStateResult)}
 
 	sourceFiles, globalFile, err := getMatchingConsentFiles(sources, cm.folderPath)
 	if err != nil {
@@ -72,7 +74,7 @@ func (cm *ConsentManager) GetConsentStates(sources []string) (*ConsentStates, er
 		consentStates.GlobalState = <-globalResult
 	}
 
-	// Goroutine to read the consent files for each source, exlcuding the global consent file
+	// Goroutine to read the consent files for each source, excluding the global consent file.
 	for source, filePath := range sourceFiles {
 		go func(source, filePath string) {
 			consent, err := readConsentFile(filePath)
@@ -93,10 +95,25 @@ func (cm *ConsentManager) GetConsentStates(sources []string) (*ConsentStates, er
 	return &consentStates, nil
 }
 
+// SetConsentState sets the consent state for the given source.
+// If the source is an empty string, then the global consent state will be set.
+// If the target consent file does not exist, it will be created.
+func (cm *Manager) SetConsentState(source string, state bool) error {
+	var filePath string
+	if source == "" {
+		filePath = filepath.Join(cm.folderPath, constants.BaseConsentFileName)
+	} else {
+		filePath = filepath.Join(cm.folderPath, source+constants.ConsentSourceBaseSeparator+constants.BaseConsentFileName)
+	}
+
+	consent := consentFile{ConsentState: state}
+	return writeConsentFile(filePath, &consent)
+}
+
 // getMatchingConsentFiles returns a map of all paths to consent files matching the given sources and a path to the global consent file.
 // If sources is empty, all consent files in the folder will be returned.
 // If a source does not have a consent file, it will be represented as an empty string
-// Does not traverse subdirectories
+// Does not traverse subdirectories.
 func getMatchingConsentFiles(sources []string, folderPath string) (sourceFiles map[string]string, globalFile string, err error) {
 	sourceFiles = make(map[string]string)
 
@@ -145,12 +162,12 @@ func readConsentFile(filePath string) (*consentFile, error) {
 	}
 
 	lock := flock.New(filePath + ".lock")
-	lockAquired, err := lock.TryRLock()
+	lockAcquired, err := lock.TryRLock()
 	if err != nil {
 		return &consent, err
 	}
-	if !lockAquired {
-		return &consent, fmt.Errorf("could not aquire lock on %s", filePath)
+	if !lockAcquired {
+		return &consent, fmt.Errorf("could not acquire lock on %s", filePath)
 	}
 	defer lock.Unlock()
 
@@ -159,19 +176,19 @@ func readConsentFile(filePath string) (*consentFile, error) {
 	return &consent, err
 }
 
-// writeConsentFile writes the given consent file to the given path, replacing it if it already exists
+// writeConsentFile writes the given consent file to the given path, replacing it if it already exists.
 func writeConsentFile(filePath string, consent *consentFile) error {
 	lock := flock.New(filePath + ".lock")
-	lockAquired, err := lock.TryLock()
+	lockAcquired, err := lock.TryLock()
 	if err != nil {
 		return err
 	}
-	if !lockAquired {
-		return fmt.Errorf("could not aquire lock on %s", filePath)
+	if !lockAcquired {
+		return fmt.Errorf("could not acquire lock on %s", filePath)
 	}
 	defer lock.Unlock()
 
-	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}

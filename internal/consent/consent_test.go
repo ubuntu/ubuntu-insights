@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gofrs/flock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/internal/consent"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
@@ -22,7 +23,7 @@ const (
 )
 
 // consentDir is a struct that holds a test's temporary directory and its locks.
-// It should be cleaned up after the test is done
+// It should be cleaned up after the test is done.
 type consentDir struct {
 	dir         string
 	sourceLocks map[string]*flock.Flock
@@ -67,16 +68,16 @@ func TestGetConsentStates(t *testing.T) {
 		"Valid True Global File, No Locks, 3 Multiple Sources (VTrue, VFalse, NAF), No Locks": {globalFile: "valid_true-consent.toml", sources: []string{"valid_true", "valid_false", "not_a_file"}},
 	}
 
-	for name, tt := range tests {
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			cdir, err := setupTmpConsentFiles(t, tt.lockSources, tt.globalFile, tt.lockGlobal)
+			cdir, err := setupTmpConsentFiles(t, tc.lockSources, tc.globalFile, tc.lockGlobal)
 			require.NoError(t, err, "failed to setup temporary consent files")
-			defer cdir.cleanup()
+			defer cdir.cleanup(t)
 			cm := consent.New(cdir.dir)
 
-			got, err := cm.GetConsentStates(tt.sources)
-			if tt.wantErr {
+			got, err := cm.GetConsentStates(tc.sources)
+			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return
 			}
@@ -88,26 +89,88 @@ func TestGetConsentStates(t *testing.T) {
 	}
 }
 
-// cleanup unlocks all the locks and removes the temporary directory including its contents
-func (cdir consentDir) cleanup() error {
-	var err error
+func TestSetConsentStates(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		sources       []string
+		consentStates map[string]bool
+		lockSources   map[string]lockType
+		globalFile    string
+		lockGlobal    lockType
+
+		writeSource string
+		writeState  bool
+
+		wantErr bool
+	}{
+		// New File Tests No Locks
+		"New File, No Locks, Write Global False": {},
+		"New File, No Locks, Write Global True":  {writeState: true},
+		"New File, No Locks, Write Source True":  {writeSource: "new_true", writeState: true},
+		"New File, No Locks, Write Source False": {writeSource: "new_false"},
+
+		// Overwrite File, No Locks, Different State
+		"Overwrite File, No Locks, Write Diff Global False": {globalFile: "valid_true-consent.toml", writeState: false},
+		"Overwrite File, No Locks, Write Diff Global True":  {globalFile: "valid_false-consent.toml", writeState: true},
+		"Overwrite File, No Locks, Write Diff Source True":  {globalFile: "valid_true-consent.toml", writeSource: "valid_false", writeState: true},
+		"Overwrite File, No Locks, Write Diff Source False": {globalFile: "valid_true-consent.toml", writeSource: "valid_true", writeState: false},
+
+		// Overwrite File, No Locks, Same State
+		"Overwrite File, No Locks, Write Global True":  {globalFile: "valid_true-consent.toml", writeState: true},
+		"Overwrite File, No Locks, Write Global False": {globalFile: "valid_false-consent.toml", writeState: false},
+		"Overwrite File, No Locks, Write Source True":  {globalFile: "valid_true-consent.toml", writeSource: "valid_true", writeState: true},
+		"Overwrite File, No Locks, Write Source False": {globalFile: "valid_false-consent.toml", writeSource: "valid_false"},
+
+		// Overwrite File, Read Locks, Different State
+		"Overwrite File, Source Read Lock, Write Global False": {globalFile: "valid_true-consent.toml", lockGlobal: readLock, writeState: false, wantErr: true},
+		"Overwrite File, Source Read Lock, Write Global True":  {globalFile: "valid_false-consent.toml", lockGlobal: readLock, writeState: true, wantErr: true},
+		"Overwrite File, Source Read Lock, Write Source True":  {globalFile: "valid_true-consent.toml", lockSources: map[string]lockType{"valid_false": readLock}, writeSource: "valid_false", writeState: true, wantErr: true},
+		"Overwrite File, Source Read Lock, Write Source False": {globalFile: "valid_false-consent.toml", lockSources: map[string]lockType{"valid_true": readLock}, writeSource: "valid_true", writeState: false, wantErr: true},
+
+		// Overwrite File, Write Locks, Different State
+		"Overwrite File, Source Write Lock, Write Global False": {globalFile: "valid_true-consent.toml", lockGlobal: writeLock, writeState: false, wantErr: true},
+		"Overwrite File, Source Write Lock, Write Global True":  {globalFile: "valid_false-consent.toml", lockGlobal: writeLock, writeState: true, wantErr: true},
+		"Overwrite File, Source Write Lock, Write Source True":  {globalFile: "valid_true-consent.toml", lockSources: map[string]lockType{"valid_false": writeLock}, writeSource: "valid_false", writeState: true, wantErr: true},
+		"Overwrite File, Source Write Lock, Write Source False": {globalFile: "valid_false-consent.toml", lockSources: map[string]lockType{"valid_true": writeLock}, writeSource: "valid_true", writeState: false, wantErr: true},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			cdir, err := setupTmpConsentFiles(t, tc.lockSources, tc.globalFile, tc.lockGlobal)
+			require.NoError(t, err, "failed to setup temporary consent files")
+			defer cdir.cleanup(t)
+			cm := consent.New(cdir.dir)
+
+			err = cm.SetConsentState(tc.writeSource, tc.writeState)
+			if tc.wantErr {
+				require.Error(t, err, "expected an error but got none")
+				return
+			}
+			require.NoError(t, err, "got an unexpected error")
+
+			got, err := cm.GetConsentStates(tc.sources)
+			require.NoError(t, err, "got an unexpected error while getting consent states")
+
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			require.Equal(t, want, got, "GetConsentStates should return expected consent states")
+		})
+	}
+}
+
+// cleanup unlocks all the locks and removes the temporary directory including its contents.
+func (cdir consentDir) cleanup(t *testing.T) {
+	t.Helper()
 	for i := range cdir.sourceLocks {
-		if e := cdir.sourceLocks[i].Unlock(); e != nil {
-			err = fmt.Errorf("%v, %v", err, e)
-		}
+		assert.NoError(t, cdir.sourceLocks[i].Unlock(), "failed to unlock source lock")
 	}
 
 	if cdir.globalLock != nil {
-		if e := cdir.globalLock.Unlock(); e != nil {
-			err = fmt.Errorf("%v, %v", err, e)
-		}
+		assert.NoError(t, cdir.globalLock.Unlock(), "failed to unlock global lock")
 	}
 
-	if e := os.RemoveAll(cdir.dir); e != nil {
-		err = fmt.Errorf("%v, %v", err, e)
-	}
-
-	return err
+	assert.NoError(t, os.RemoveAll(cdir.dir), "failed to remove temporary directory")
 }
 
 func copyFile(src, dst string) error {
