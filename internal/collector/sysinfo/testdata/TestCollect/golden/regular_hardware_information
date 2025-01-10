@@ -1,0 +1,5 @@
+hardware:
+    product:
+        Vendor: |
+            Framework
+software: {}

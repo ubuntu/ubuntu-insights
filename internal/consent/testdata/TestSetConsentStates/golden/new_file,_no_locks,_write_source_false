@@ -1,0 +1,33 @@
+sourcestates:
+    empty:
+        source: empty
+        state: false
+        readerr: false
+    extra_key:
+        source: extra_key
+        state: false
+        readerr: false
+    invalid_file:
+        source: invalid_file
+        state: false
+        readerr: true
+    invalid_value:
+        source: invalid_value
+        state: false
+        readerr: true
+    new_false:
+        source: new_false
+        state: false
+        readerr: false
+    valid_false:
+        source: valid_false
+        state: false
+        readerr: false
+    valid_true:
+        source: valid_true
+        state: true
+        readerr: false
+globalstate:
+    source: ""
+    state: false
+    readerr: false

@@ -1,0 +1,5 @@
+sourcestates: {}
+globalstate:
+    source: global
+    state: true
+    readerr: false
