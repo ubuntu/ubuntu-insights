@@ -40,7 +40,7 @@ func installCollectCmd(app *App) error {
 
 			if len(args) != 0 {
 				if err := cobra.MatchAll(cobra.OnlyValidArgs, cobra.ExactArgs(2))(cmd, args); err != nil {
-					return fmt.Errorf("accepts no args, or exactly 2 args, recieved 1")
+					return fmt.Errorf("accepts no args, or exactly 2 args, received 1")
 				}
 
 				fileInfo, err := os.Stat(args[1])
