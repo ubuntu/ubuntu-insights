@@ -10,7 +10,7 @@ import (
 func (s Manager) readFile(file string) string {
 	d, err := os.ReadFile(file)
 	if err != nil {
-		// @TODO log error
+		s.log.Warn(err.Error())
 		return ""
 	}
 
@@ -45,7 +45,7 @@ func (s Manager) collectGPU(card string) (info GpuInfo, err error) {
 	if err == nil {
 		info.Gpu["Driver"] = filepath.Base(driverLink)
 	} else {
-		// @TODO log error
+		s.log.Warn(err.Error())
 	}
 
 	return info, nil
@@ -58,7 +58,7 @@ func (s Manager) collectGPUs() []GpuInfo {
 
 	ds, err := os.ReadDir(filepath.Join(s.root, "sys/class/drm"))
 	if err != nil {
-		// @TODO log error
+		s.log.Warn(err.Error())
 		return gpus
 	}
 
@@ -71,7 +71,7 @@ func (s Manager) collectGPUs() []GpuInfo {
 
 		gpu, err := s.collectGPU(n)
 		if err != nil {
-			// @TODO log error
+			s.log.Warn(err.Error())
 			continue
 		}
 
