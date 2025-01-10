@@ -1,0 +1,9 @@
+sourcestates:
+    valid_true:
+        source: valid_true
+        state: true
+        readerr: false
+globalstate:
+    source: global
+    state: true
+    readerr: false

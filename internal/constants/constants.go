@@ -12,6 +12,12 @@ const (
 
 	// DefaultLogLevel is the default log level selected without any verbosity flags
 	DefaultLogLevel = slog.LevelInfo
+
+	// DefaultConfigFileName is the default base name of the consent state files
+	BaseConsentFileName = "consent.toml"
+
+	// ConsentSourceBaseSeparator is the default separator between the source and the base name of the consent state files
+	ConsentSourceBaseSeparator = "-"
 )
 
 type options struct {
