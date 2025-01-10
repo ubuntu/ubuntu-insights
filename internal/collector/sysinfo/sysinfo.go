@@ -22,6 +22,13 @@ type SysInfo struct {
 // HwInfo is the hardware specific part.
 type HwInfo struct {
 	Product map[string]string
+
+	Gpus []GpuInfo
+}
+
+// GpuInfo contains GPU information of a specific GPU
+type GpuInfo struct {
+	Gpu map[string]string
 }
 
 // SwInfo is the software specific part.
