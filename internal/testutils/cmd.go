@@ -1,3 +1,4 @@
+// Package testutils provides helper functions for testing
 package testutils
 
 import (
@@ -8,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// CmdTestCase is a test case for testing cobra CMD flags.
 type CmdTestCase struct {
 	Name           string
 	Short          string
@@ -17,7 +19,9 @@ type CmdTestCase struct {
 	BaseCmd        *cobra.Command
 }
 
+// FlagTestHelper is a helper function to test cobra CMD flags.
 func FlagTestHelper(t *testing.T, testCase CmdTestCase) {
+	t.Helper()
 	var flag *pflag.Flag
 
 	if testCase.PersistentFlag {

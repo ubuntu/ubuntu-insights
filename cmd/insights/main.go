@@ -1,9 +1,9 @@
+// Main package for the insights command line tool.
 package main
 
 import (
-	"os"
-
 	"log/slog"
+	"os"
 
 	"github.com/ubuntu/ubuntu-insights/cmd/insights/commands"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
