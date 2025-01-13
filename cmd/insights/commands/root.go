@@ -1,3 +1,4 @@
+// Package commands contains the commands for the Ubuntu Insights CLI.
 package commands
 
 import (
@@ -7,8 +8,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
-const cmdName = "ubuntu-insights"
-
+// App represents the application.
 type App struct {
 	rootCmd *cobra.Command
 
@@ -30,11 +30,11 @@ var defaultRootConfig = rootConfig{
 	InsightsDir: constants.GetDefaultCachePath(),
 }
 
-// Registers commands and returns a new app
+// New registers commands and returns a new App.
 func New() (*App, error) {
 	a := App{}
 	a.rootCmd = &cobra.Command{
-		Use:           "ubuntu-insights [COMMAND]",
+		Use:           constants.CmdName + " [COMMAND]",
 		Short:         "",
 		Long:          "",
 		SilenceErrors: true,
@@ -48,7 +48,7 @@ func New() (*App, error) {
 	}
 
 	err := installRootCmd(&a)
-	err = installCollectCmd(&a)
+	installCollectCmd(&a)
 	installUploadCmd(&a)
 	installConsentCmd(&a)
 

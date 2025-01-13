@@ -2,9 +2,8 @@ package commands
 
 import (
 	"context"
-	"testing"
-
 	"log/slog"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
