@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/gofrs/flock"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
@@ -160,42 +159,34 @@ func readConsentFile(filePath string) (*consentFile, error) {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return &consent, nil
 	}
-
-	lock := flock.New(filePath + ".lock")
-	lockAcquired, err := lock.TryRLock()
-	if err != nil {
-		return &consent, err
-	}
-	if !lockAcquired {
-		return &consent, fmt.Errorf("could not acquire lock on %s", filePath)
-	}
-	defer lock.Unlock()
-
-	_, err = toml.DecodeFile(filePath, &consent)
+	_, err := toml.DecodeFile(filePath, &consent)
 
 	return &consent, err
 }
 
-// writeConsentFile writes the given consent file to the given path, replacing it if it already exists.
-func writeConsentFile(filePath string, consent *consentFile) error {
-	lock := flock.New(filePath + ".lock")
-	lockAcquired, err := lock.TryLock()
+// writeConsentFile writes the given consent file to the given path atomically, replacing it if it already exists.
+// Not atomic in Windows.
+func writeConsentFile(filePath string, consent *consentFile) (err error) {
+	dir := filepath.Dir(filePath)
+	tempFile, err := os.CreateTemp(dir, "consent-*.tmp")
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create temporary file: %w", err)
 	}
-	if !lockAcquired {
-		return fmt.Errorf("could not acquire lock on %s", filePath)
-	}
-	defer lock.Unlock()
+	defer func() {
+		tempFile.Close()
+		os.Remove(tempFile.Name())
+	}()
 
-	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return err
+	if err := toml.NewEncoder(tempFile).Encode(consent); err != nil {
+		return fmt.Errorf("could not encode consent file: %w", err)
 	}
-	defer file.Close()
 
-	if err := toml.NewEncoder(file).Encode(consent); err != nil {
-		return err
+	if err := tempFile.Close(); err != nil {
+		return fmt.Errorf("could not close temporary file: %w", err)
+	}
+
+	if err := os.Rename(tempFile.Name(), filePath); err != nil {
+		return fmt.Errorf("could not rename temporary file: %w", err)
 	}
 
 	return nil
