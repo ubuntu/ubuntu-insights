@@ -24,7 +24,7 @@ var defaultCollectConfig = collectConfig{
 	extraMetrics: "",
 }
 
-func installCollectCmd(app *App) error {
+func installCollectCmd(app *App) {
 	app.collectConfig = defaultCollectConfig
 
 	collectCmd := &cobra.Command{
@@ -45,11 +45,11 @@ func installCollectCmd(app *App) error {
 
 				fileInfo, err := os.Stat(args[1])
 				if err != nil {
-					return fmt.Errorf("the second argument, SOURCE-METRICS-PATH, should be a valid JSON file. Error: %s", err.Error())
+					return fmt.Errorf("the second argument, source-metrics-path, should be a valid JSON file. Error: %s", err.Error())
 				}
 
 				if fileInfo.IsDir() {
-					return fmt.Errorf("the second argument, SOURCE-METRICS-PATH, should be a valid JSON file, not a directory.")
+					return fmt.Errorf("the second argument, source-metrics-path, should be a valid JSON file, not a directory")
 				}
 			}
 
@@ -73,5 +73,4 @@ func installCollectCmd(app *App) error {
 	collectCmd.Flags().BoolVarP(&app.collectConfig.dryRun, "dry-run", "d", false, "perform a dry-run where a report is collected, but not written to disk")
 
 	app.rootCmd.AddCommand(collectCmd)
-	return nil
 }

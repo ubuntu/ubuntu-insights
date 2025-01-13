@@ -9,7 +9,8 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
-func Test_GetUserConfigDir(t *testing.T) {
+//nolint:dupl //Tests for GetDefaultConfigPath is very similar to GetDefaultCachePath.
+func Test_GetDefaultConfigPath(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -25,13 +26,13 @@ func Test_GetUserConfigDir(t *testing.T) {
 		"os.UserConfigDir error": {
 			want: string(os.PathSeparator) + constants.DefaultAppFolder,
 			mock: func() (string, error) {
-				return "", fmt.Errorf("error")
+				return "", fmt.Errorf("os.UserCacheDir error")
 			},
 		},
 		"os.UserConfigDir error 2": {
 			want: string(os.PathSeparator) + constants.DefaultAppFolder,
 			mock: func() (string, error) {
-				return "abc", fmt.Errorf("error")
+				return "abc", fmt.Errorf("os.UserCacheDir error")
 			},
 		},
 	}
@@ -45,7 +46,8 @@ func Test_GetUserConfigDir(t *testing.T) {
 	}
 }
 
-func Test_userCacheDir(t *testing.T) {
+//nolint:dupl //Tests for GetDefaultConfigPath is very similar to GetDefaultCachePath.
+func Test_GetDefaultCachePath(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -61,13 +63,13 @@ func Test_userCacheDir(t *testing.T) {
 		"os.UserCacheDir error": {
 			want: string(os.PathSeparator) + constants.DefaultAppFolder,
 			mock: func() (string, error) {
-				return "", fmt.Errorf("error")
+				return "", fmt.Errorf("os.UserCacheDir error")
 			},
 		},
-		"os.UserCacheDir error 2": {
+		"os.UserCacheDir error with return": {
 			want: string(os.PathSeparator) + constants.DefaultAppFolder,
 			mock: func() (string, error) {
-				return "abc", fmt.Errorf("error")
+				return "return", fmt.Errorf("os.UserCacheDir error")
 			},
 		},
 	}
