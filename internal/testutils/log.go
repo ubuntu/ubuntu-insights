@@ -14,12 +14,14 @@ type ExpectedRecord struct {
 }
 
 func (want ExpectedRecord) Compare(t *testing.T, have slog.Record) {
+	t.Helper()
+
 	assert.Equal(t, want.Level, have.Level, "Expected Level did not match real Level")
 
 	if want.Message == "" {
 		return
 	}
-	assert.Contains(t, have.Message, want.Message, "R eal Message does not contain Expected")
+	assert.Contains(t, have.Message, want.Message, "Real Message does not contain Expected")
 }
 
 type MockHandler struct {

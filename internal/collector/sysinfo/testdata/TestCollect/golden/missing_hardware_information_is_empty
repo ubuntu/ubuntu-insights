@@ -3,5 +3,7 @@ hardware:
         Family: ""
         Name: ""
         Vendor: ""
+    cpus:
+        cpu: {}
     gpus: []
 software: {}

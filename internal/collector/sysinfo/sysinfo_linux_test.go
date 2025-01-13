@@ -33,17 +33,30 @@ func TestCollect(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		root string
+		root    string
+		cpuInfo string
 
 		logs    []testutils.ExpectedRecord
 		wantErr bool
 	}{
-		"Regular hardware information": {root: "regular"},
+		"Regular hardware information": {
+			root: "regular",
+			// temporary raw literal until it is replaced with proper subprocess mocking
+			cpuInfo: `{
+	"lscpu": [
+		{
+			"field": "Architecture:",
+        	"data": "x86_64"
+		}
+	]
+}`,
+		},
 
 		"Missing hardware information is empty": {
-			root: "withoutinfo",
+			root:    "withoutinfo",
+			cpuInfo: "",
 			logs: []testutils.ExpectedRecord{
-				{Level: slog.LevelWarn}, {Level: slog.LevelWarn}, {Level: slog.LevelWarn}, {Level: slog.LevelWarn},
+				{Level: slog.LevelWarn}, {Level: slog.LevelWarn}, {Level: slog.LevelWarn}, {Level: slog.LevelWarn}, {Level: slog.LevelWarn},
 			},
 		},
 	}
@@ -55,6 +68,7 @@ func TestCollect(t *testing.T) {
 			s := sysinfo.New(
 				sysinfo.WithRoot(filepath.Join("testdata", "linuxfs", tc.root)),
 				sysinfo.WithLogger(&l),
+				sysinfo.WithCpuInfo(tc.cpuInfo),
 			)
 
 			got, err := s.Collect()

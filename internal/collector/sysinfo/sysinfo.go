@@ -1,20 +1,12 @@
 // package sysinfo allows collecting "common" system information for all insight reports.
 package sysinfo
 
-import "log/slog"
-
-type options struct {
-	root string
-	log  *slog.Logger
-}
-
 // Options is the variadic options available to the manager.
 type Options func(*options)
 
 // Manager allows collecting Software and Hardware information of the system.
 type Manager struct {
-	root string
-	log  *slog.Logger
+	opts options
 }
 
 // SysInfo contains Software and Hardware information of the system.
@@ -27,7 +19,13 @@ type SysInfo struct {
 type HwInfo struct {
 	Product map[string]string
 
+	Cpus CpuInfo
 	Gpus []GpuInfo
+}
+
+// CpuInfo contains CPU information of a specific CPU core
+type CpuInfo struct {
+	Cpu map[string]string
 }
 
 // GpuInfo contains GPU information of a specific GPU
@@ -42,18 +40,13 @@ type SwInfo struct {
 // New returns a new SysInfo.
 func New(args ...Options) Manager {
 	// options defaults
-	opts := &options{
-		root: "/",
-		log:  slog.Default(),
-	}
-
+	opts := newOptions()
 	for _, opt := range args {
 		opt(opts)
 	}
 
 	return Manager{
-		root: opts.root,
-		log:  opts.log,
+		opts: *opts,
 	}
 }
 

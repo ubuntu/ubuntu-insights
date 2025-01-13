@@ -4,6 +4,9 @@ hardware:
         Name: DIY Framework Laptop 16
         Vendor: |
             Framework
+    cpus:
+        cpu:
+            'Architecture:': x86_64
     gpus:
         - gpu:
             Driver: i915
