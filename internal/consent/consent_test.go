@@ -49,10 +49,10 @@ func TestGetConsentStates(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			cdir, err := setupTmpConsentFiles(t, tc.globalFile)
+			cDir, err := setupTmpConsentFiles(t, tc.globalFile)
 			require.NoError(t, err, "failed to setup temporary consent files")
-			defer cdir.cleanup(t)
-			cm := consent.New(cdir.dir)
+			defer cDir.cleanup(t)
+			cm := consent.New(cDir.dir)
 
 			got, err := cm.GetConsentStates(tc.sources)
 			if tc.wantErr {
@@ -96,7 +96,7 @@ func TestSetConsentStates(t *testing.T) {
 		"Overwrite File, Write Global True":  {globalFile: "valid_true-consent.toml", writeState: true},
 		"Overwrite File, Write Global False": {globalFile: "valid_false-consent.toml", writeState: false},
 		"Overwrite File, Write Source True":  {globalFile: "valid_true-consent.toml", writeSource: "valid_true", writeState: true},
-		"Overwrite File, Write Source False": {globalFile: "valid_false-consent.toml", writeSource: "valid_false"},
+		"Overwrite File, Write Source False": {globalFile: "valid_false-consent.toml", writeSource: "valid_false", writeState: false},
 	}
 
 	type goldenFile struct {
@@ -107,10 +107,10 @@ func TestSetConsentStates(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			cdir, err := setupTmpConsentFiles(t, tc.globalFile)
+			cDir, err := setupTmpConsentFiles(t, tc.globalFile)
 			require.NoError(t, err, "failed to setup temporary consent files")
-			defer cdir.cleanup(t)
-			cm := consent.New(cdir.dir)
+			defer cDir.cleanup(t)
+			cm := consent.New(cDir.dir)
 
 			err = cm.SetConsentState(tc.writeSource, tc.writeState)
 			if tc.wantErr {
@@ -122,7 +122,7 @@ func TestSetConsentStates(t *testing.T) {
 			states, err := cm.GetConsentStates(tc.sources)
 			require.NoError(t, err, "got an unexpected error while getting consent states")
 
-			d, err := os.ReadDir(cdir.dir)
+			d, err := os.ReadDir(cDir.dir)
 			require.NoError(t, err, "failed to read temporary directory")
 			got := goldenFile{States: states, FileCount: uint(len(d))}
 
@@ -133,9 +133,9 @@ func TestSetConsentStates(t *testing.T) {
 }
 
 // cleanup unlocks all the locks and removes the temporary directory including its contents.
-func (cdir consentDir) cleanup(t *testing.T) {
+func (cDir consentDir) cleanup(t *testing.T) {
 	t.Helper()
-	assert.NoError(t, os.RemoveAll(cdir.dir), "failed to remove temporary directory")
+	assert.NoError(t, os.RemoveAll(cDir.dir), "failed to remove temporary directory")
 }
 
 func copyFile(src, dst string) error {
@@ -174,25 +174,25 @@ func copyDir(srcDir, dstDir string) error {
 
 func setupTmpConsentFiles(t *testing.T, globalFile string) (*consentDir, error) {
 	t.Helper()
-	cdir := consentDir{}
+	cDir := consentDir{}
 
 	// Setup temporary directory
 	var err error
-	cdir.dir, err = os.MkdirTemp("", "consent-files")
+	cDir.dir, err = os.MkdirTemp("", "consent-files")
 	if err != nil {
-		return &cdir, fmt.Errorf("failed to create temporary directory: %v", err)
+		return &cDir, fmt.Errorf("failed to create temporary directory: %v", err)
 	}
 
-	if err = copyDir(filepath.Join("testdata", "consent_files"), cdir.dir); err != nil {
-		return &cdir, fmt.Errorf("failed to copy testdata directory to temporary directory: %v", err)
+	if err = copyDir(filepath.Join("testdata", "consent_files"), cDir.dir); err != nil {
+		return &cDir, fmt.Errorf("failed to copy testdata directory to temporary directory: %v", err)
 	}
 
-	// Setup globalfile if provided
+	// Setup globalFile if provided
 	if globalFile != "" {
-		if err = copyFile(filepath.Join(cdir.dir, globalFile), filepath.Join(cdir.dir, "consent.toml")); err != nil {
-			return &cdir, fmt.Errorf("failed to copy requested global consent file: %v", err)
+		if err = copyFile(filepath.Join(cDir.dir, globalFile), filepath.Join(cDir.dir, "consent.toml")); err != nil {
+			return &cDir, fmt.Errorf("failed to copy requested global consent file: %v", err)
 		}
 	}
 
-	return &cdir, nil
+	return &cDir, nil
 }
