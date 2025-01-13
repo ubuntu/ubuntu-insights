@@ -5,6 +5,7 @@ package constants
 import (
 	"log/slog"
 	"os"
+	"path/filepath"
 )
 
 const (
@@ -32,22 +33,22 @@ type option func(*options)
 
 // GetDefaultConfigPath is the default path to the configuration file.
 func GetDefaultConfigPath(opts ...option) string {
-	o := options{baseDir: os.UserCacheDir}
-	for _, opt := range opts {
-		opt(&o)
-	}
-
-	return getBaseDir(o.baseDir) + string(os.PathSeparator) + DefaultAppFolder
-}
-
-// GetDefaultCachePath is the default path to the cache directory.
-func GetDefaultCachePath(opts ...option) string {
 	o := options{baseDir: os.UserConfigDir}
 	for _, opt := range opts {
 		opt(&o)
 	}
 
-	return getBaseDir(o.baseDir) + string(os.PathSeparator) + DefaultAppFolder
+	return filepath.Join(getBaseDir(o.baseDir), DefaultAppFolder)
+}
+
+// GetDefaultCachePath is the default path to the cache directory.
+func GetDefaultCachePath(opts ...option) string {
+	o := options{baseDir: os.UserCacheDir}
+	for _, opt := range opts {
+		opt(&o)
+	}
+
+	return filepath.Join(getBaseDir(o.baseDir), DefaultAppFolder)
 }
 
 // getBaseDir is a helper function to handle the case where the baseDir function returns an error, and instead return an empty string.

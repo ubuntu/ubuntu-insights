@@ -24,13 +24,13 @@ func Test_GetDefaultConfigPath(t *testing.T) {
 			},
 		},
 		"os.UserConfigDir error": {
-			want: string(os.PathSeparator) + constants.DefaultAppFolder,
+			want: constants.DefaultAppFolder,
 			mock: func() (string, error) {
 				return "", fmt.Errorf("os.UserCacheDir error")
 			},
 		},
 		"os.UserConfigDir error 2": {
-			want: string(os.PathSeparator) + constants.DefaultAppFolder,
+			want: constants.DefaultAppFolder,
 			mock: func() (string, error) {
 				return "abc", fmt.Errorf("os.UserCacheDir error")
 			},
@@ -61,13 +61,13 @@ func Test_GetDefaultCachePath(t *testing.T) {
 			},
 		},
 		"os.UserCacheDir error": {
-			want: string(os.PathSeparator) + constants.DefaultAppFolder,
+			want: constants.DefaultAppFolder,
 			mock: func() (string, error) {
 				return "", fmt.Errorf("os.UserCacheDir error")
 			},
 		},
 		"os.UserCacheDir error with return": {
-			want: string(os.PathSeparator) + constants.DefaultAppFolder,
+			want: constants.DefaultAppFolder,
 			mock: func() (string, error) {
 				return "return", fmt.Errorf("os.UserCacheDir error")
 			},
