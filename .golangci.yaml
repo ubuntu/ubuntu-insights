@@ -6,23 +6,29 @@ linters:
   enable:
     - copyloopvar
     - dupl
+    - dupword
     - durationcheck
     - errname
     - errorlint
     - forbidigo
     - forcetypeassert
     - gci
+    - gocheckcompilerdirectives
     - godot
     - gofmt
     - gosec
+    - intrange
     - misspell
     - nakedret
     - nolintlint
     - revive
+    - sloglint
+    - testifylint
     - thelper
     - tparallel
     - unconvert
     - unparam
+    - usestdlibvars
     - whitespace
 
 run:
@@ -47,6 +53,9 @@ issues:
     - unused-parameter
     # Sometimes it is more readable it do a `if err:=a(); err != nil` tha simpy `return a()`
     - if-return
+    # Outdated warining, it only applies to Go < 1.22
+    # G601: Implicit memory aliasing in for loop.
+    - G601
 
 nolintlint:
   require-explanation: true
