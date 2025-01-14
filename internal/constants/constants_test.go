@@ -9,7 +9,6 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
-//nolint:dupl //Tests for GetDefaultConfigPath is very similar to GetDefaultCachePath.
 func Test_GetDefaultConfigPath(t *testing.T) {
 	t.Parallel()
 
@@ -46,7 +45,6 @@ func Test_GetDefaultConfigPath(t *testing.T) {
 	}
 }
 
-//nolint:dupl //Tests for GetDefaultConfigPath is very similar to GetDefaultCachePath.
 func Test_GetDefaultCachePath(t *testing.T) {
 	t.Parallel()
 
