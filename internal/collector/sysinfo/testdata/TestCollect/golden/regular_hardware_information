@@ -4,7 +4,7 @@ hardware:
         Name: DIY Framework Laptop 16
         Vendor: |
             Framework
-    cpus:
+    cpu:
         cpu:
             'Architecture:': x86_64
     gpus:
@@ -16,4 +16,7 @@ hardware:
             Driver: nvidia
             Name: NVIDIA GeForce GTX 1050 Ti
             Vendor: "0x10de"
+    mem:
+        mem:
+            MemTotal: 33493504000
 software: {}

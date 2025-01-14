@@ -56,7 +56,7 @@ func TestCollect(t *testing.T) {
 			root:    "withoutinfo",
 			cpuInfo: "",
 			logs: []testutils.ExpectedRecord{
-				{Level: slog.LevelWarn}, {Level: slog.LevelWarn}, {Level: slog.LevelWarn}, {Level: slog.LevelWarn}, {Level: slog.LevelWarn},
+				{Level: slog.LevelWarn}, {Level: slog.LevelWarn}, {Level: slog.LevelWarn}, {Level: slog.LevelWarn}, {Level: slog.LevelWarn}, {Level: slog.LevelWarn},
 			},
 		},
 	}

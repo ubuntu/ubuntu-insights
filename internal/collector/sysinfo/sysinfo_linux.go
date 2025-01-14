@@ -1,11 +1,14 @@
 package sysinfo
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
+	"strings"
 )
 
 type options struct {
@@ -76,7 +79,7 @@ func (s Manager) populateCpuInfo(entries []LscpuEntry, c *CpuInfo) CpuInfo {
 	return *c
 }
 
-func (s Manager) collectCPUs() CpuInfo {
+func (s Manager) collectCPU() CpuInfo {
 	o := CpuInfo{Cpu: map[string]string{}}
 
 	r := runCmd(s.opts.cpuInfoCmd)
@@ -151,11 +154,85 @@ func (s Manager) collectGPUs() []GpuInfo {
 	return gpus
 }
 
+// convertUnitToBytes takes a string bytes unit and converts value to bytes
+func (s Manager) convertUnitToBytes(unit string, value int) int {
+	switch strings.ToLower(unit) {
+	case "":
+		fallthrough
+	case "b":
+		return value
+	case "kb":
+		fallthrough
+	case "kib":
+		return value * 1024
+	case "mb":
+		fallthrough
+	case "mib":
+		return value * 1024 * 1024
+	case "gb":
+		fallthrough
+	case "gib":
+		return value * 1024 * 1024 * 1024
+	case "tb":
+		fallthrough
+	case "tib":
+		return value * 1024 * 1024 * 1024 * 1024
+	default:
+		s.opts.log.Warn(fmt.Sprintf("Unrecognized bytes unit: %s", unit))
+		return value
+	}
+}
+
+var usedMemFields = map[string]bool{
+	"MemTotal": true,
+}
+
+// lines are in the form `key`:   `bytes` (`unit`)
+var meminfoRegex *regexp.Regexp = regexp.MustCompile(`^([^\s:]+):\s*([0-9]+)(?:\s+([^\s]+))?\s*$`)
+
+func (s Manager) collectMemory() MemInfo {
+	o := MemInfo{Mem: map[string]int{}}
+
+	f, err := os.ReadFile(filepath.Join(s.opts.root, "proc/meminfo"))
+	if err != nil {
+		s.opts.log.Warn(err.Error())
+		return o
+	}
+
+	ls := strings.Split(string(f), "\n")
+	for _, l := range ls {
+		if l == "" {
+			continue
+		}
+
+		m := meminfoRegex.FindStringSubmatch(l)
+		if m == nil {
+			s.opts.log.Warn(fmt.Sprintf("meminfo contains invalid line: %s", l))
+			continue
+		}
+
+		if !usedMemFields[m[1]] {
+			continue
+		}
+
+		b, err := strconv.Atoi(m[2])
+		if err != nil {
+			s.opts.log.Warn(err.Error())
+			continue
+		}
+
+		o.Mem[m[1]] = s.convertUnitToBytes(m[3], b)
+	}
+
+	return o
+}
+
 func (s Manager) collectHardware() (hwInfo HwInfo, err error) {
 
 	hwInfo.Product = s.collectProduct()
-	hwInfo.Cpus = s.collectCPUs()
+	hwInfo.Cpu = s.collectCPU()
 	hwInfo.Gpus = s.collectGPUs()
+	hwInfo.Mem = s.collectMemory()
 
 	return hwInfo, nil
 }
