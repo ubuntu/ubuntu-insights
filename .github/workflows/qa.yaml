@@ -1,0 +1,94 @@
+name: QA & sanity checks
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "*"
+  pull_request:
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+  GO_TESTS_TIMEOUT: 20m
+
+jobs:
+  go-sanity:
+    name: "Go: Code sanity"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-13, macos-14] # Run on Ubuntu, Windows, Mac Intel, Mac ARM
+    steps:
+      - name: Install dependencies on Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt update
+          sudo apt install -y ${{ env.apt_deps }}
+      - uses: actions/checkout@v4
+      - name: Go code sanity check
+        uses: hk21702/desktop-engineering/gh-actions/go/code-sanity@UDENG-5777-add-macos-compatibility-for-desktop-github-actions # TODO: Replace when merged
+        with:
+          golangci-lint-configfile: ".golangci.yaml"
+          tools-directory: "tools"
+  go-tests:
+    name: "Go: Tests"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ["coverage", "race"]
+        os: [ubuntu-24.04, windows-2022, macos-13, macos-14] # Run on Ubuntu, Windows, Mac Intel, Mac ARM
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install gotestfmt and our wrapper script
+        uses: hk21702/desktop-engineering/gh-actions/go/gotestfmt@UDENG-5777-add-macos-compatibility-for-desktop-github-actions # TODO: Replace when merged
+
+      - name: Prepare tests artifacts path
+        run: |
+          set -eu
+
+          artifacts_dir=$(mktemp -d -t insights-test-artifacts-XXXXXX)
+          echo INSIGHTS_TEST_ARTIFACTS_PATH="${artifacts_dir}" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Run tests (with coverage collection)
+        if: matrix.test == 'coverage'
+        env:
+          G_DEBUG: "fatal-criticals"
+        run: |
+          set -eu
+
+          cov_dir=$(pwd)/coverage
+          mkdir -p ${cov_dir}/codecov ${cov_dir}/raw
+          go test -shuffle=on -coverpkg=./... -coverprofile=${cov_dir}/raw/coverage.out -covermode=count ./... -tags=gowslmock
+          grep -hv -e "testutils" -e "pb.go:" ${cov_dir}/raw/coverage.out > ${cov_dir}/codecov/coverage.out.codecov
+        shell: bash
+
+      - name: Run tests (with race detector)
+        if: matrix.test == 'race'
+        env:
+          GO_TESTS_TIMEOUT: 35m
+        run: |
+          go test -json -timeout ${GO_TESTS_TIMEOUT} -race ./... | \
+            gotestfmt --logfile "${INSIGHTS_TEST_ARTIFACTS_PATH}/gotestfmt.race.log"
+        shell: bash
+
+      - name: Upload coverage to Codecov
+        if: matrix.test == 'coverage'
+        uses: codecov/codecov-action@v5
+        with:
+          directory: ./coverage/codecov
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: insights-${{ github.job }}-${{ matrix.test }}-${{ matrix.os }}-artifacts-${{ github.run_attempt }}
+          path: ${{ env.INSIGHTS_TEST_ARTIFACTS_PATH }}
+          
