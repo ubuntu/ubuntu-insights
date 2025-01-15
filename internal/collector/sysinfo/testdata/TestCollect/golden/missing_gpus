@@ -13,15 +13,7 @@ hardware:
             'Socket(s):': "1"
             'Thread(s) per core:': "2"
             'Vendor ID:': GenuineIntel
-    gpus:
-        - gpu:
-            Driver: i915
-            Name: Onboard - Video
-            Vendor: "0x8086"
-        - gpu:
-            Driver: nvidia
-            Name: NVIDIA GeForce GTX 1050 Ti
-            Vendor: "0x10de"
+    gpus: []
     mem:
         mem:
             MemTotal: 33493504000

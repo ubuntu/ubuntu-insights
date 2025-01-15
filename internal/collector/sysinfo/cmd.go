@@ -2,25 +2,16 @@
 package sysinfo
 
 import (
-	"errors"
-	"fmt"
-	"io"
+	"bytes"
+	"context"
 	"os/exec"
 )
 
-func runCmd(cmd *exec.Cmd) io.Reader {
-	pr, pw := io.Pipe()
-	cmd.Stdout = pw
+func runCmd(ctx context.Context, cmd string, args ...string) (stdout bytes.Buffer, stderr bytes.Buffer, err error) {
+	c := exec.CommandContext(ctx, cmd, args...)
+	c.Stdout = &stdout
+	c.Stderr = &stderr
+	err = c.Run()
 
-	go func() {
-		err := cmd.Run()
-		if err != nil {
-			s := fmt.Sprintf("'%v' returned an error: %s", cmd.Args, err)
-			pw.CloseWithError(errors.New(s))
-			return
-		}
-		pw.Close()
-	}()
-
-	return pr
+	return stdout, stderr, err
 }

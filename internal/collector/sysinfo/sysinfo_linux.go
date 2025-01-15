@@ -1,12 +1,10 @@
 package sysinfo
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -84,13 +82,13 @@ func (s Manager) populateCpuInfo(entries []LscpuEntry, c *CpuInfo) CpuInfo {
 func (s Manager) collectCPU() CpuInfo {
 	o := CpuInfo{Cpu: map[string]string{}}
 
-	cmd := exec.CommandContext(context.Background(), s.opts.cpuInfoCmd[0], s.opts.cpuInfoCmd[1:]...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
+	stdout, stderr, err := runCmd(context.Background(), s.opts.cpuInfoCmd[0], s.opts.cpuInfoCmd[1:]...)
 	if err != nil {
+		s.opts.log.Warn(err.Error())
 		return o
+	}
+	if stderr.Len() > 0 {
+		s.opts.log.Warn(stderr.String())
 	}
 
 	result, err := parseJSON(&stdout, &Lscpu{})
@@ -159,6 +157,10 @@ func (s Manager) collectGPUs() []GpuInfo {
 		}
 
 		gpus = append(gpus, gpu)
+	}
+
+	if len(gpus) == 0 {
+		s.opts.log.Warn("No GPU information found")
 	}
 
 	return gpus

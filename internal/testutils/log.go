@@ -8,22 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type ExpectedRecord struct {
-	Level   slog.Level
-	Message string
-}
-
-func (want ExpectedRecord) Compare(t *testing.T, have slog.Record) {
-	t.Helper()
-
-	assert.Equal(t, want.Level, have.Level, "Expected Level did not match real Level")
-
-	if want.Message == "" {
-		return
-	}
-	assert.Contains(t, have.Message, want.Message, "Real Message does not contain Expected")
-}
-
 type MockHandler struct {
 	EnabledCalls   []slog.Level
 	HandleCalls    []slog.Record
@@ -39,6 +23,23 @@ func NewMockHandler() MockHandler {
 		WithAttrsCalls: make([][]slog.Attr, 0),
 		WithGroupCalls: make([]string, 0),
 	}
+}
+
+// AssertLevels asserts that the logging levels observed match the expected amount
+func (h MockHandler) AssertLevels(t *testing.T, levels map[slog.Level]uint) {
+	t.Helper()
+
+	if levels == nil {
+		assert.Empty(t, h.HandleCalls)
+		return
+	}
+
+	have := make(map[slog.Level]uint)
+	for _, r := range h.HandleCalls {
+		have[r.Level] += 1
+	}
+
+	assert.Equal(t, levels, have)
 }
 
 // Enabled implements Handler.Enabled.

@@ -1,7 +1,6 @@
 package testutils
 
 import (
-	"os/exec"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -40,8 +39,4 @@ func FlagTestHelper(t *testing.T, testCase CmdTestCase) {
 	} else {
 		assert.Nil(t, flag.Annotations[cobra.BashCompSubdirsInDir])
 	}
-}
-
-func MakeTestCmd(want string) *exec.Cmd {
-	return exec.Command("echo", "-n", "-e", want)
 }

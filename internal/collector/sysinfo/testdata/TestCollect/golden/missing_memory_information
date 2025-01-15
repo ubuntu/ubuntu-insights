@@ -23,6 +23,5 @@ hardware:
             Name: NVIDIA GeForce GTX 1050 Ti
             Vendor: "0x10de"
     mem:
-        mem:
-            MemTotal: 33493504000
+        mem: {}
 software: {}
