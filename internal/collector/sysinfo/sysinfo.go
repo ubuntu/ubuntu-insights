@@ -46,7 +46,7 @@ type SwInfo struct {
 // New returns a new SysInfo.
 func New(args ...Options) Manager {
 	// options defaults
-	opts := newOptions()
+	opts := defaultOptions()
 	for _, opt := range args {
 		opt(opts)
 	}

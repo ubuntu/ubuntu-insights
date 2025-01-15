@@ -17,7 +17,7 @@ type options struct {
 	log        *slog.Logger
 }
 
-func newOptions() *options {
+func defaultOptions() *options {
 	return &options{
 		root:       "/",
 		cpuInfoCmd: exec.Command("lscpu", "-J"),

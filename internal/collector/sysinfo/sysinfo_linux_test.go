@@ -65,11 +65,17 @@ func TestCollect(t *testing.T) {
 			t.Parallel()
 
 			l := testutils.NewMockHandler()
-			s := sysinfo.New(
+
+			options := []sysinfo.Options{
 				sysinfo.WithRoot(filepath.Join("testdata", "linuxfs", tc.root)),
 				sysinfo.WithLogger(&l),
-				sysinfo.WithCpuInfo(tc.cpuInfo),
-			)
+			}
+
+			if tc.cpuInfo != "-" {
+				options = append(options, sysinfo.WithCpuInfo(tc.cpuInfo))
+			}
+
+			s := sysinfo.New(options...)
 
 			got, err := s.Collect()
 			if tc.wantErr {

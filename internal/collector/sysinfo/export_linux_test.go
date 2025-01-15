@@ -12,8 +12,6 @@ func WithRoot(root string) Options {
 // WithCpuInfo overrides default cpu info to return <info>
 func WithCpuInfo(info string) Options {
 	return func(o *options) {
-		if info != "-" {
-			o.cpuInfoCmd = testutils.MakeTestCmd(info)
-		}
+		o.cpuInfoCmd = testutils.MakeTestCmd(info)
 	}
 }
