@@ -1,7 +1,9 @@
 package sysinfo_test
 
 import (
+	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -42,14 +44,7 @@ func TestCollect(t *testing.T) {
 		"Regular hardware information": {
 			root: "regular",
 			// temporary raw literal until it is replaced with proper subprocess mocking
-			cpuInfo: `{
-	"lscpu": [
-		{
-			"field": "Architecture:",
-        	"data": "x86_64"
-		}
-	]
-}`,
+			cpuInfo: "regular",
 		},
 
 		"Missing hardware information is empty": {
@@ -72,7 +67,9 @@ func TestCollect(t *testing.T) {
 			}
 
 			if tc.cpuInfo != "-" {
-				options = append(options, sysinfo.WithCpuInfo(tc.cpuInfo))
+				cmdArgs := []string{"env", "GO_WANT_HELPER_PROCESS=1", os.Args[0], "-test.run=TestMockCPUList", "--"}
+				cmdArgs = append(cmdArgs, tc.cpuInfo)
+				options = append(options, sysinfo.WithCpuInfo(cmdArgs))
 			}
 
 			s := sysinfo.New(options...)
@@ -92,5 +89,38 @@ func TestCollect(t *testing.T) {
 				expect.Compare(t, l.HandleCalls[i])
 			}
 		})
+	}
+}
+
+func TestMockCPUList(_ *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+	defer os.Exit(0)
+
+	args := os.Args
+	for len(args) > 0 {
+		if args[0] != "--" {
+			args = args[1:]
+			continue
+		}
+		args = args[1:]
+		break
+	}
+
+	switch args[0] {
+	case "exit 1":
+		fmt.Fprint(os.Stderr, "Error requested in Mock cpulist")
+		os.Exit(1)
+	case "regular":
+		fmt.Println(`{
+	"lscpu": [
+		{
+			"field": "Architecture:",
+			"data": "x86_64"
+		}
+	]
+}`)
+
 	}
 }

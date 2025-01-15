@@ -1,6 +1,8 @@
 package sysinfo
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -13,14 +15,14 @@ import (
 
 type options struct {
 	root       string
-	cpuInfoCmd *exec.Cmd
+	cpuInfoCmd []string
 	log        *slog.Logger
 }
 
 func defaultOptions() *options {
 	return &options{
 		root:       "/",
-		cpuInfoCmd: exec.Command("lscpu", "-J"),
+		cpuInfoCmd: []string{"lscpu", "-J"},
 		log:        slog.Default(),
 	}
 }
@@ -82,8 +84,16 @@ func (s Manager) populateCpuInfo(entries []LscpuEntry, c *CpuInfo) CpuInfo {
 func (s Manager) collectCPU() CpuInfo {
 	o := CpuInfo{Cpu: map[string]string{}}
 
-	r := runCmd(s.opts.cpuInfoCmd)
-	result, err := parseJSON(r, &Lscpu{})
+	cmd := exec.CommandContext(context.Background(), s.opts.cpuInfoCmd[0], s.opts.cpuInfoCmd[1:]...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		return o
+	}
+
+	result, err := parseJSON(&stdout, &Lscpu{})
 	if err != nil {
 		s.opts.log.Warn(err.Error())
 		return o

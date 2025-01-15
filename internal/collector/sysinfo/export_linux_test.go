@@ -1,7 +1,5 @@
 package sysinfo
 
-import "github.com/ubuntu/ubuntu-insights/internal/testutils"
-
 // WithRoot overrides default root directory of the system.
 func WithRoot(root string) Options {
 	return func(o *options) {
@@ -10,8 +8,8 @@ func WithRoot(root string) Options {
 }
 
 // WithCpuInfo overrides default cpu info to return <info>
-func WithCpuInfo(info string) Options {
+func WithCpuInfo(cmd []string) Options {
 	return func(o *options) {
-		o.cpuInfoCmd = testutils.MakeTestCmd(info)
+		o.cpuInfoCmd = cmd
 	}
 }
