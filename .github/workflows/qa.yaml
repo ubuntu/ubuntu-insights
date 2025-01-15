@@ -50,7 +50,7 @@ jobs:
 
       - name: Prepare tests artifacts path
         run: |
-          set -eu
+          set -euo pipefail
 
           artifacts_dir=$(mktemp -d -t insights-test-artifacts-XXXXXX)
           echo INSIGHTS_TEST_ARTIFACTS_PATH="${artifacts_dir}" >> $GITHUB_ENV
@@ -61,7 +61,7 @@ jobs:
         env:
           G_DEBUG: "fatal-criticals"
         run: |
-          set -eu
+          set -euo pipefail
 
           cov_dir=$(pwd)/coverage
           mkdir -p ${cov_dir}/codecov ${cov_dir}/raw
@@ -74,6 +74,7 @@ jobs:
         env:
           GO_TESTS_TIMEOUT: 35m
         run: |
+          set -euo pipefail
           go test -json -timeout ${GO_TESTS_TIMEOUT} -race ./... | \
             gotestfmt --logfile "${INSIGHTS_TEST_ARTIFACTS_PATH}/gotestfmt.race.log"
         shell: bash
@@ -91,4 +92,3 @@ jobs:
         with:
           name: insights-${{ github.job }}-${{ matrix.test }}-${{ matrix.os }}-artifacts-${{ github.run_attempt }}
           path: ${{ env.INSIGHTS_TEST_ARTIFACTS_PATH }}
-          
