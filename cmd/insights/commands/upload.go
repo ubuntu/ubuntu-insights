@@ -26,7 +26,7 @@ func installUploadCmd(app *App) {
 	app.uploadConfig = defaultUploadConfig
 
 	uploadCmd := &cobra.Command{
-		Use:   "upload upload [sources](optional arguments)",
+		Use:   "upload [sources](optional arguments)",
 		Short: "Upload metrics to the Ubuntu Insights server",
 		Long:  "Upload metrics to the Ubuntu Insights server",
 		Args:  cobra.ArbitraryArgs,
