@@ -14,6 +14,7 @@ import (
 type options struct {
 	root       string
 	cpuInfoCmd []string
+	lsblkCmd   []string
 	log        *slog.Logger
 }
 
@@ -21,6 +22,7 @@ func defaultOptions() *options {
 	return &options{
 		root:       "/",
 		cpuInfoCmd: []string{"lscpu", "-J"},
+		lsblkCmd:   []string{"lsblk", "-o", "NAME,SIZE,TYPE", "--tree", "-J"},
 		log:        slog.Default(),
 	}
 }
@@ -33,6 +35,17 @@ type LscpuEntry struct {
 
 type Lscpu struct {
 	Lscpu []LscpuEntry `json:"lscpu"`
+}
+
+type LsblkEntry struct {
+	Name     string       `json:"name"`
+	Size     string       `json:"size"`
+	Type     string       `json:"type"`
+	Children []LsblkEntry `json:"children,omitempty"`
+}
+
+type Lsblk struct {
+	Lsblk []LsblkEntry `json:"blockdevices"`
 }
 
 // readFile returns the data in <file>, or "" on error.
@@ -173,18 +186,26 @@ func (s Manager) convertUnitToBytes(unit string, value int) int {
 		fallthrough
 	case "b":
 		return value
+	case "k":
+		fallthrough
 	case "kb":
 		fallthrough
 	case "kib":
 		return value * 1024
+	case "m":
+		fallthrough
 	case "mb":
 		fallthrough
 	case "mib":
 		return value * 1024 * 1024
+	case "g":
+		fallthrough
 	case "gb":
 		fallthrough
 	case "gib":
 		return value * 1024 * 1024 * 1024
+	case "t":
+		fallthrough
 	case "tb":
 		fallthrough
 	case "tib":
@@ -239,12 +260,69 @@ func (s Manager) collectMemory() MemInfo {
 	return o
 }
 
+func (s Manager) populateBlkInfo(entries []LsblkEntry) []DiskInfo {
+	o := make([]DiskInfo, 0, 2)
+
+	for _, entry := range entries {
+		switch strings.ToLower(entry.Type) {
+		case "disk":
+			o = append(o, DiskInfo{
+				Name:       entry.Name,
+				Size:       entry.Size,
+				Partitions: s.populateBlkInfo(entry.Children),
+			})
+		case "part":
+			o = append(o, DiskInfo{
+				Name:       entry.Name,
+				Size:       entry.Size,
+				Partitions: []DiskInfo{},
+			})
+		default:
+			continue
+		}
+	}
+
+	return o
+}
+
+func (s Manager) collectBlocks() []DiskInfo {
+
+	stdout, stderr, err := runCmd(context.Background(), s.opts.lsblkCmd[0], s.opts.lsblkCmd[1:]...)
+	if err != nil {
+		s.opts.log.Warn(err.Error())
+		return []DiskInfo{}
+	}
+	if stderr.Len() > 0 {
+		s.opts.log.Warn(stderr.String())
+	}
+
+	result, err := parseJSON(&stdout, &Lsblk{})
+	if err != nil {
+		s.opts.log.Warn(err.Error())
+		return []DiskInfo{}
+	}
+
+	lsblk, ok := result.(*Lsblk)
+	if !ok {
+		s.opts.log.Warn("couldn't get block info, could not convert to a valid Lsblk struct: %v", result)
+		return []DiskInfo{}
+	}
+
+	blks := s.populateBlkInfo(lsblk.Lsblk)
+	if len(blks) == 0 {
+		s.opts.log.Warn("No Block information found")
+	}
+
+	return blks
+}
+
 func (s Manager) collectHardware() (hwInfo HwInfo, err error) {
 
 	hwInfo.Product = s.collectProduct()
 	hwInfo.Cpu = s.collectCPU()
 	hwInfo.Gpus = s.collectGPUs()
 	hwInfo.Mem = s.collectMemory()
+	hwInfo.Blks = s.collectBlocks()
 
 	return hwInfo, nil
 }

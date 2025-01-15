@@ -8,4 +8,5 @@ hardware:
     gpus: []
     mem:
         mem: {}
+    blks: []
 software: {}

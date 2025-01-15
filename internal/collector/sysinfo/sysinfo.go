@@ -22,6 +22,7 @@ type HwInfo struct {
 	Cpu  CpuInfo
 	Gpus []GpuInfo
 	Mem  MemInfo
+	Blks []DiskInfo
 }
 
 // CpuInfo contains CPU information of a machine.
@@ -37,6 +38,13 @@ type GpuInfo struct {
 // MemInfo contains Memory information of a machine.
 type MemInfo struct {
 	Mem map[string]int
+}
+
+type DiskInfo struct {
+	Name string
+	Size string
+
+	Partitions []DiskInfo
 }
 
 // SwInfo is the software specific part.

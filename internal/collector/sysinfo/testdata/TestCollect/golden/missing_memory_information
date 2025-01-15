@@ -24,4 +24,17 @@ hardware:
             Vendor: "0x10de"
     mem:
         mem: {}
+    blks:
+        - name: sda
+          size: 931.5G
+          partitions:
+            - name: sda1
+              size: 1G
+              partitions: []
+            - name: sda2
+              size: 2G
+              partitions: []
+            - name: sda3
+              size: 928.5G
+              partitions: []
 software: {}

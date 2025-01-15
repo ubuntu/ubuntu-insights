@@ -7,9 +7,16 @@ func WithRoot(root string) Options {
 	}
 }
 
-// WithCpuInfo overrides default cpu info to return <info>
+// WithCpuInfo overrides default cpu info.
 func WithCpuInfo(cmd []string) Options {
 	return func(o *options) {
 		o.cpuInfoCmd = cmd
+	}
+}
+
+// WithCpuInfo overrides default blk info.
+func WithBlkInfo(cmd []string) Options {
+	return func(o *options) {
+		o.lsblkCmd = cmd
 	}
 }

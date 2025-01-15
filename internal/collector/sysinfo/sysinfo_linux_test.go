@@ -37,6 +37,7 @@ func TestCollect(t *testing.T) {
 	tests := map[string]struct {
 		root         string
 		cpuInfo      string
+		blkInfo      string
 		missingFiles []string
 
 		logs    map[slog.Level]uint
@@ -45,11 +46,13 @@ func TestCollect(t *testing.T) {
 		"Regular hardware information": {
 			root:    "regular",
 			cpuInfo: "regular",
+			blkInfo: "regular",
 		},
 
 		"Missing Product information": {
 			root:    "regular",
 			cpuInfo: "regular",
+			blkInfo: "regular",
 			missingFiles: []string{
 				"sys/class/dmi/id/product_family",
 				"sys/class/dmi/id/product_name",
@@ -64,6 +67,7 @@ func TestCollect(t *testing.T) {
 		"Missing CPU information": {
 			root:    "regular",
 			cpuInfo: "missing",
+			blkInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -73,6 +77,7 @@ func TestCollect(t *testing.T) {
 		"Missing GPUs": {
 			root:    "regular",
 			cpuInfo: "regular",
+			blkInfo: "regular",
 			missingFiles: []string{
 				"sys/class/drm/card0",
 				"sys/class/drm/card1",
@@ -86,6 +91,7 @@ func TestCollect(t *testing.T) {
 		"Missing GPU information": {
 			root:    "regular",
 			cpuInfo: "regular",
+			blkInfo: "regular",
 			missingFiles: []string{
 				"sys/class/drm/c0/d0/driver",
 				"sys/class/drm/c0/d0/label",
@@ -100,7 +106,18 @@ func TestCollect(t *testing.T) {
 		"Missing Memory information": {
 			root:         "regular",
 			cpuInfo:      "regular",
+			blkInfo:      "regular",
 			missingFiles: []string{"proc/meminfo"},
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Missing Block information": {
+			root:    "regular",
+			cpuInfo: "regular",
+			blkInfo: "missing",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -110,8 +127,9 @@ func TestCollect(t *testing.T) {
 		"Missing hardware information is empty": {
 			root:    "withoutinfo",
 			cpuInfo: "",
+			blkInfo: "",
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 6,
+				slog.LevelWarn: 7,
 			},
 		},
 	}
@@ -146,6 +164,12 @@ func TestCollect(t *testing.T) {
 				cmdArgs := []string{"env", "GO_WANT_HELPER_PROCESS=1", os.Args[0], "-test.run=TestMockCPUList", "--"}
 				cmdArgs = append(cmdArgs, tc.cpuInfo)
 				options = append(options, sysinfo.WithCpuInfo(cmdArgs))
+			}
+
+			if tc.blkInfo != "-" {
+				cmdArgs := []string{"env", "GO_WANT_HELPER_PROCESS=1", os.Args[0], "-test.run=TestMockBlkList", "--"}
+				cmdArgs = append(cmdArgs, tc.blkInfo)
+				options = append(options, sysinfo.WithBlkInfo(cmdArgs))
 			}
 
 			s := sysinfo.New(options...)
@@ -281,5 +305,77 @@ func TestMockCPUList(_ *testing.T) {
 	case "missing":
 		os.Exit(0)
 
+	}
+}
+
+func TestMockBlkList(_ *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+	defer os.Exit(0)
+
+	args := os.Args
+	for len(args) > 0 {
+		if args[0] != "--" {
+			args = args[1:]
+			continue
+		}
+		args = args[1:]
+		break
+	}
+
+	switch args[0] {
+	case "exit 1":
+		fmt.Fprint(os.Stderr, "Error requested in Mock lsblk")
+		os.Exit(1)
+	case "regular":
+		fmt.Println(`{
+   "blockdevices": [
+      {
+         "name": "loop0",
+         "size": "4K",
+         "type": "loop"
+      },{
+         "name": "loop1",
+         "size": "9.5M",
+         "type": "loop"
+      },{
+         "name": "sda",
+         "size": "931.5G",
+         "type": "disk",
+         "children": [
+            {
+               "name": "sda1",
+               "size": "1G",
+               "type": "part"
+            },{
+               "name": "sda2",
+               "size": "2G",
+               "type": "part"
+            },{
+               "name": "sda3",
+               "size": "928.5G",
+               "type": "part",
+               "children": [
+                  {
+                     "name": "dm_crypt-0",
+                     "size": "928.4G",
+                     "type": "crypt",
+                     "children": [
+                        {
+                           "name": "ubuntu--vg-ubuntu--lv",
+                           "size": "928.4G",
+                           "type": "lvm"
+                        }
+                     ]
+                  }
+               ]
+            }
+         ]
+      }
+   ]
+}`)
+	case "missing":
+		os.Exit(0)
 	}
 }
