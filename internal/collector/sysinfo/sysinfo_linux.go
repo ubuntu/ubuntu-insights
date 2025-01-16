@@ -374,6 +374,5 @@ func (s Manager) collectHardware() (hwInfo HwInfo, err error) {
 }
 
 func (s Manager) collectSoftware() (swInfo SwInfo, err error) {
-
 	return swInfo, nil
 }

@@ -1,4 +1,4 @@
-// package sysinfo allows collecting "common" system information for all insight reports.
+// Package sysinfo allows collecting "common" system information for all insight reports.
 package sysinfo
 
 // Options is the variadic options available to the manager.
