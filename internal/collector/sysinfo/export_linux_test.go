@@ -8,7 +8,7 @@ func WithRoot(root string) Options {
 }
 
 // WithCpuInfo overrides default cpu info.
-func WithCpuInfo(cmd []string) Options {
+func WithCPUInfo(cmd []string) Options {
 	return func(o *options) {
 		o.cpuInfoCmd = cmd
 	}

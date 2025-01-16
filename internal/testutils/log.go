@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// MockHandler tracks calls to logging functions and implements slog.Handler.
 type MockHandler struct {
 	EnabledCalls   []slog.Level
 	HandleCalls    []slog.Record
@@ -25,7 +26,7 @@ func NewMockHandler() MockHandler {
 	}
 }
 
-// AssertLevels asserts that the logging levels observed match the expected amount
+// AssertLevels asserts that the logging levels observed match the expected amount.
 func (h MockHandler) AssertLevels(t *testing.T, levels map[slog.Level]uint) {
 	t.Helper()
 
@@ -36,7 +37,7 @@ func (h MockHandler) AssertLevels(t *testing.T, levels map[slog.Level]uint) {
 
 	have := make(map[slog.Level]uint)
 	for _, r := range h.HandleCalls {
-		have[r.Level] += 1
+		have[r.Level]++
 	}
 
 	assert.Equal(t, levels, have)
@@ -60,7 +61,7 @@ func (h *MockHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return h
 }
 
-// WithAttrs implements Handler.WithGroup.
+// WithGroup implements Handler.WithGroup.
 func (h *MockHandler) WithGroup(name string) slog.Handler {
 	h.WithGroupCalls = append(h.WithGroupCalls, name)
 	return h

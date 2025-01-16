@@ -29,36 +29,36 @@ func defaultOptions() *options {
 	}
 }
 
-type LscpuEntry struct {
+type lscpuEntry struct {
 	Field    string       `json:"field"`
 	Data     string       `json:"data"`
-	Children []LscpuEntry `json:"children,omitempty"`
+	Children []lscpuEntry `json:"children,omitempty"`
 }
 
-type Lscpu struct {
-	Lscpu []LscpuEntry `json:"lscpu"`
+type lscpu struct {
+	Lscpu []lscpuEntry `json:"lscpu"`
 }
 
-type LsblkEntry struct {
+type lsblkEntry struct {
 	Name     string       `json:"name"`
 	Size     string       `json:"size"`
 	Type     string       `json:"type"`
-	Children []LsblkEntry `json:"children,omitempty"`
+	Children []lsblkEntry `json:"children,omitempty"`
 }
 
-type Lsblk struct {
-	Lsblk []LsblkEntry `json:"blockdevices"`
+type lsblk struct {
+	Lsblk []lsblkEntry `json:"blockdevices"`
 }
 
 // readFile returns the data in <file>, or "" on error.
 func (s Manager) readFile(file string) string {
-	d, err := os.ReadFile(file)
+	f, err := os.ReadFile(file)
 	if err != nil {
-		s.opts.log.Warn(err.Error())
+		s.opts.log.Warn(fmt.Sprintf("failed to read file %s: %v", file, err))
 		return ""
 	}
 
-	return string(d)
+	return string(f)
 }
 
 func (s Manager) collectProduct() map[string]string {
@@ -69,7 +69,7 @@ func (s Manager) collectProduct() map[string]string {
 	}
 }
 
-var usedCpuFields = map[string]bool{
+var usedCPUFields = map[string]bool{
 	"CPU(s):":             true,
 	"Socket(s):":          true,
 	"Core(s) per socket:": true,
@@ -79,82 +79,81 @@ var usedCpuFields = map[string]bool{
 	"Model name:":         true,
 }
 
-func (s Manager) populateCpuInfo(entries []LscpuEntry, c *CpuInfo) CpuInfo {
+func (s Manager) populateCPUInfo(entries []lscpuEntry, info *cpuInfo) cpuInfo {
 	for _, entry := range entries {
-
-		if usedCpuFields[entry.Field] {
-			c.Cpu[entry.Field] = entry.Data
+		if usedCPUFields[entry.Field] {
+			info.CPU[entry.Field] = entry.Data
 		}
 
 		if len(entry.Children) > 0 {
-			s.populateCpuInfo(entry.Children, c)
+			s.populateCPUInfo(entry.Children, info)
 		}
 	}
 
-	return *c
+	return *info
 }
 
-func (s Manager) collectCPU() CpuInfo {
-	o := CpuInfo{Cpu: map[string]string{}}
+func (s Manager) collectCPU() cpuInfo {
+	info := cpuInfo{CPU: map[string]string{}}
 
 	stdout, stderr, err := runCmd(context.Background(), s.opts.cpuInfoCmd[0], s.opts.cpuInfoCmd[1:]...)
 	if err != nil {
-		s.opts.log.Warn(err.Error())
-		return o
+		s.opts.log.Warn(fmt.Sprintf("failed to run lscpu: %v", err))
+		return info
 	}
 	if stderr.Len() > 0 {
-		s.opts.log.Warn(stderr.String())
+		s.opts.log.Warn(fmt.Sprintf("lscpu output to stderr: %v", stderr))
 	}
 
-	result, err := parseJSON(&stdout, &Lscpu{})
+	result, err := parseJSON(&stdout, &lscpu{})
 	if err != nil {
-		s.opts.log.Warn(err.Error())
-		return o
+		s.opts.log.Warn(fmt.Sprintf("failed to parse CPU json: %v", err))
+		return info
 	}
 
-	lscpu, ok := result.(*Lscpu)
+	lscpu, ok := result.(*lscpu)
 	if !ok {
-		s.opts.log.Warn("couldn't get CPU info, could not convert to a valid Lscpu struct: %v", result)
-		return o
+		s.opts.log.Warn(fmt.Sprintf("failed to convert json to a valid lscpu struct: %v", result))
+		return info
 	}
 
-	return s.populateCpuInfo(lscpu.Lscpu, &o)
+	return s.populateCPUInfo(lscpu.Lscpu, &info)
 }
 
-func (s Manager) collectGPU(card string) (info GpuInfo, err error) {
+func (s Manager) collectGPU(card string) (info gpuInfo, err error) {
 	cardDir, err := filepath.EvalSymlinks(filepath.Join(s.opts.root, "sys/class/drm", card))
 	if err != nil {
-		return GpuInfo{}, err
+		return gpuInfo{}, err
 	}
 
 	devDir, err := filepath.EvalSymlinks(filepath.Join(cardDir, "device"))
 	if err != nil {
-		return GpuInfo{}, err
+		return gpuInfo{}, err
 	}
 
-	info.Gpu = make(map[string]string)
+	info.GPU = make(map[string]string)
 
-	info.Gpu["Vendor"] = s.readFile(filepath.Join(devDir, "vendor"))
-	info.Gpu["Name"] = s.readFile(filepath.Join(devDir, "label"))
+	info.GPU["Vendor"] = s.readFile(filepath.Join(devDir, "vendor"))
+	info.GPU["Name"] = s.readFile(filepath.Join(devDir, "label"))
 
 	driverLink, err := os.Readlink(filepath.Join(devDir, "driver"))
-	if err == nil {
-		info.Gpu["Driver"] = filepath.Base(driverLink)
-	} else {
-		s.opts.log.Warn(err.Error())
+	if err != nil {
+		s.opts.log.Warn(fmt.Sprintf("failed to get driver for %s: %v", card, err))
+		return info, nil
 	}
+	info.GPU["Driver"] = filepath.Base(driverLink)
 
 	return info, nil
 }
 
-var gpuSymlinkRegex *regexp.Regexp = regexp.MustCompile("^card[0-9]+$")
+var gpuSymlinkRegex = regexp.MustCompile("^card[0-9]+$")
 
-func (s Manager) collectGPUs() []GpuInfo {
-	gpus := make([]GpuInfo, 0, 2)
+func (s Manager) collectGPUs() []gpuInfo {
+	gpus := make([]gpuInfo, 0, 2)
 
 	ds, err := os.ReadDir(filepath.Join(s.opts.root, "sys/class/drm"))
 	if err != nil {
-		s.opts.log.Warn(err.Error())
+		s.opts.log.Warn(fmt.Sprintf("failed to read GPU directory in sysfs: %v", err))
 		return gpus
 	}
 
@@ -167,7 +166,7 @@ func (s Manager) collectGPUs() []GpuInfo {
 
 		gpu, err := s.collectGPU(n)
 		if err != nil {
-			s.opts.log.Warn(err.Error())
+			s.opts.log.Warn(fmt.Sprintf("failed to get GPU info for %s: %v", n, err))
 			continue
 		}
 
@@ -175,13 +174,13 @@ func (s Manager) collectGPUs() []GpuInfo {
 	}
 
 	if len(gpus) == 0 {
-		s.opts.log.Warn("No GPU information found")
+		s.opts.log.Warn("no GPU information found")
 	}
 
 	return gpus
 }
 
-// convertUnitToBytes takes a string bytes unit and converts value to bytes
+// convertUnitToBytes takes a string bytes unit and converts value to bytes.
 func (s Manager) convertUnitToBytes(unit string, value int) int {
 	switch strings.ToLower(unit) {
 	case "":
@@ -213,7 +212,7 @@ func (s Manager) convertUnitToBytes(unit string, value int) int {
 	case "tib":
 		return value * 1024 * 1024 * 1024 * 1024
 	default:
-		s.opts.log.Warn(fmt.Sprintf("Unrecognized bytes unit: %s", unit))
+		s.opts.log.Warn(fmt.Sprintf("unrecognized bytes unit: %s", unit))
 		return value
 	}
 }
@@ -222,27 +221,27 @@ var usedMemFields = map[string]bool{
 	"MemTotal": true,
 }
 
-// lines are in the form `key`:   `bytes` (`unit`)
-var meminfoRegex *regexp.Regexp = regexp.MustCompile(`^([^\s:]+):\s*([0-9]+)(?:\s+([^\s]+))?\s*$`)
+// lines are in the form `key`:   `bytes` (`unit`).
+var meminfoRegex = regexp.MustCompile(`^([^\s:]+):\s*([0-9]+)(?:\s+([^\s]+))?\s*$`)
 
-func (s Manager) collectMemory() MemInfo {
-	o := MemInfo{Mem: map[string]int{}}
+func (s Manager) collectMemory() memInfo {
+	info := memInfo{Mem: map[string]int{}}
 
 	f, err := os.ReadFile(filepath.Join(s.opts.root, "proc/meminfo"))
 	if err != nil {
-		s.opts.log.Warn(err.Error())
-		return o
+		s.opts.log.Warn(fmt.Sprintf("failed to read meminfo: %v", err))
+		return info
 	}
 
-	ls := strings.Split(string(f), "\n")
-	for _, l := range ls {
-		if l == "" {
+	lines := strings.Split(string(f), "\n")
+	for _, line := range lines {
+		if line == "" {
 			continue
 		}
 
-		m := meminfoRegex.FindStringSubmatch(l)
+		m := meminfoRegex.FindStringSubmatch(line)
 		if m == nil {
-			s.opts.log.Warn(fmt.Sprintf("meminfo contains invalid line: %s", l))
+			s.opts.log.Warn(fmt.Sprintf("meminfo contains invalid line: %s", line))
 			continue
 		}
 
@@ -250,105 +249,104 @@ func (s Manager) collectMemory() MemInfo {
 			continue
 		}
 
-		b, err := strconv.Atoi(m[2])
+		val, err := strconv.Atoi(m[2])
 		if err != nil {
-			s.opts.log.Warn(err.Error())
+			s.opts.log.Warn(fmt.Sprintf("meminfo value was not an integer: %v", err))
 			continue
 		}
 
-		o.Mem[m[1]] = s.convertUnitToBytes(m[3], b)
+		info.Mem[m[1]] = s.convertUnitToBytes(m[3], val)
 	}
 
-	return o
+	return info
 }
 
-func (s Manager) populateBlkInfo(entries []LsblkEntry) []DiskInfo {
-	o := make([]DiskInfo, 0, 2)
+func (s Manager) populateBlkInfo(entries []lsblkEntry) []diskInfo {
+	info := make([]diskInfo, 0, 2)
 
 	for _, entry := range entries {
 		switch strings.ToLower(entry.Type) {
 		case "disk":
-			o = append(o, DiskInfo{
+			info = append(info, diskInfo{
 				Name:       entry.Name,
 				Size:       entry.Size,
 				Partitions: s.populateBlkInfo(entry.Children),
 			})
 		case "part":
-			o = append(o, DiskInfo{
+			info = append(info, diskInfo{
 				Name:       entry.Name,
 				Size:       entry.Size,
-				Partitions: []DiskInfo{},
+				Partitions: []diskInfo{},
 			})
 		default:
 			continue
 		}
 	}
 
-	return o
+	return info
 }
 
-func (s Manager) collectBlocks() []DiskInfo {
-
+func (s Manager) collectBlocks() []diskInfo {
 	stdout, stderr, err := runCmd(context.Background(), s.opts.lsblkCmd[0], s.opts.lsblkCmd[1:]...)
 	if err != nil {
-		s.opts.log.Warn(err.Error())
-		return []DiskInfo{}
+		s.opts.log.Warn(fmt.Sprintf("failed to run lsblk: %v", err))
+		return []diskInfo{}
 	}
 	if stderr.Len() > 0 {
-		s.opts.log.Warn(stderr.String())
+		s.opts.log.Warn(fmt.Sprintf("lsblk output to stderr: %v", stderr))
 	}
 
-	result, err := parseJSON(&stdout, &Lsblk{})
+	result, err := parseJSON(&stdout, &lsblk{})
 	if err != nil {
-		s.opts.log.Warn(err.Error())
-		return []DiskInfo{}
+		s.opts.log.Warn(fmt.Sprintf("failed to convert json to a valid lsblk struct: %v", err))
+		return []diskInfo{}
 	}
 
-	lsblk, ok := result.(*Lsblk)
+	lsblk, ok := result.(*lsblk)
 	if !ok {
-		s.opts.log.Warn("couldn't get block info, could not convert to a valid Lsblk struct: %v", result)
-		return []DiskInfo{}
+		s.opts.log.Warn("could not convert json to a valid lsblk struct: %v", result)
+		return []diskInfo{}
 	}
 
 	blks := s.populateBlkInfo(lsblk.Lsblk)
 	if len(blks) == 0 {
-		s.opts.log.Warn("No Block information found")
+		s.opts.log.Warn("no Block information found")
 	}
 
 	return blks
 }
 
 // This regex matches the name, primary status, real resolution, and physical size from xrandr.
-var screenHeaderRegex *regexp.Regexp = regexp.MustCompile(`(?m)^(\S+)\s+connected\s+(?:(primary)\s+)?([0-9]+x[0-9]+).*?([0-9]+mm\s+x\s+[0-9]+mm).*$`)
+var screenHeaderRegex = regexp.MustCompile(`(?m)^(\S+)\s+connected\s+(?:(primary)\s+)?([0-9]+x[0-9]+).*?([0-9]+mm\s+x\s+[0-9]+mm).*$`)
 
 // This regex matches the resolution and current refresh rate from xrandr.
-var screenConfigRegex *regexp.Regexp = regexp.MustCompile(`(?m)^\s*([0-9]+x[0-9]+)\s.*?([0-9]+\.[0-9]+)\+?\*\+?.*$`)
+var screenConfigRegex = regexp.MustCompile(`(?m)^\s*([0-9]+x[0-9]+)\s.*?([0-9]+\.[0-9]+)\+?\*\+?.*$`)
 
-func (s Manager) collectScreens() []ScreenInfo {
+func (s Manager) collectScreens() []screenInfo {
 	stdout, stderr, err := runCmd(context.Background(), s.opts.screenCmd[0], s.opts.screenCmd[1:]...)
 	if err != nil {
-		s.opts.log.Warn(err.Error())
-		return []ScreenInfo{}
+		s.opts.log.Warn(fmt.Sprintf("failed to run xrandr: %v", err))
+		return []screenInfo{}
 	}
 	if stderr.Len() > 0 {
-		s.opts.log.Warn(stderr.String())
+		s.opts.log.Warn(fmt.Sprintf("xrandr output to stderr: %v", stderr))
 	}
 
-	d := stdout.String()
-	screens := screenHeaderRegex.Split(d, -1)
-	headers := screenHeaderRegex.FindAllStringSubmatch(d, -1)
+	data := stdout.String()
+	screens := screenHeaderRegex.Split(data, -1)
+	headers := screenHeaderRegex.FindAllStringSubmatch(data, -1)
 
 	if len(headers) == 0 {
-		s.opts.log.Warn("No Screen information found")
-		return []ScreenInfo{}
+		s.opts.log.Warn("no Screen information found")
+		return []screenInfo{}
 	}
 
-	o := make([]ScreenInfo, 0, len(headers))
+	info := make([]screenInfo, 0, len(headers))
 
 	for i, header := range headers {
 		v := screenConfigRegex.FindStringSubmatch(screens[i+1])
 
-		o = append(o, ScreenInfo{
+		info = append(info, screenInfo{
 			Name:               header[1],
 			PhysicalResolution: header[3],
 			Size:               header[4],
@@ -358,14 +356,13 @@ func (s Manager) collectScreens() []ScreenInfo {
 		})
 	}
 
-	return o
+	return info
 }
 
-func (s Manager) collectHardware() (hwInfo HwInfo, err error) {
-
+func (s Manager) collectHardware() (hwInfo hwInfo, err error) {
 	hwInfo.Product = s.collectProduct()
-	hwInfo.Cpu = s.collectCPU()
-	hwInfo.Gpus = s.collectGPUs()
+	hwInfo.CPU = s.collectCPU()
+	hwInfo.GPUs = s.collectGPUs()
 	hwInfo.Mem = s.collectMemory()
 	hwInfo.Blks = s.collectBlocks()
 	hwInfo.Screens = s.collectScreens()
@@ -373,6 +370,6 @@ func (s Manager) collectHardware() (hwInfo HwInfo, err error) {
 	return hwInfo, nil
 }
 
-func (s Manager) collectSoftware() (swInfo SwInfo, err error) {
+func (s Manager) collectSoftware() (swInfo swInfo, err error) {
 	return swInfo, nil
 }

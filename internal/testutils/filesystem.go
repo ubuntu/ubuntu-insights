@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-// CopyDir copies the directory src to dest, symlinks are copied but not followed
+// CopyDir copies the directory src to dest, symlinks are copied but not followed.
 func CopyDir(src string, dest string) error {
 	dir, err := os.ReadDir(src)
 	if err != nil {
@@ -14,7 +14,7 @@ func CopyDir(src string, dest string) error {
 	}
 	dest = filepath.Join(dest, filepath.Base(src))
 
-	err = os.MkdirAll(dest, os.ModePerm)
+	err = os.MkdirAll(dest, 0750)
 	if err != nil {
 		return err
 	}
@@ -49,12 +49,11 @@ func CopyDir(src string, dest string) error {
 				return err
 			}
 
-			err = os.WriteFile(d, i, os.ModePerm)
+			err = os.WriteFile(d, i, 0600)
 			if err != nil {
 				return err
 			}
 		}
-
 	}
 
 	return nil

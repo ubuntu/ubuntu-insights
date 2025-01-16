@@ -183,7 +183,7 @@ func TestCollect(t *testing.T) {
 			if tc.cpuInfo != "-" {
 				cmdArgs := []string{"env", "GO_WANT_HELPER_PROCESS=1", os.Args[0], "-test.run=TestMockCPUList", "--"}
 				cmdArgs = append(cmdArgs, tc.cpuInfo)
-				options = append(options, sysinfo.WithCpuInfo(cmdArgs))
+				options = append(options, sysinfo.WithCPUInfo(cmdArgs))
 			}
 
 			if tc.blkInfo != "-" {
@@ -332,7 +332,6 @@ func TestMockCPUList(_ *testing.T) {
 		fallthrough
 	case "missing":
 		os.Exit(0)
-
 	}
 }
 
