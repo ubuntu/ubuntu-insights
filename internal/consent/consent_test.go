@@ -100,7 +100,7 @@ func TestSetConsentStates(t *testing.T) {
 	}
 
 	type goldenFile struct {
-		States    *consent.States
+		States    consent.States
 		FileCount uint
 	}
 
