@@ -1,31 +1,6 @@
 states:
-    sourcestates:
-        empty:
-            source: empty
-            state: false
-            readerr: false
-        extra_key:
-            source: extra_key
-            state: false
-            readerr: false
-        invalid_file:
-            source: invalid_file
-            state: false
-            readerr: true
-        invalid_value:
-            source: invalid_value
-            state: false
-            readerr: true
-        valid_false:
-            source: valid_false
-            state: true
-            readerr: false
-        valid_true:
-            source: valid_true
-            state: true
-            readerr: false
-    globalstate:
-        source: global
-        state: true
-        readerr: false
+    empty: false
+    extra_key: false
+    valid_false: true
+    valid_true: true
 filecount: 9

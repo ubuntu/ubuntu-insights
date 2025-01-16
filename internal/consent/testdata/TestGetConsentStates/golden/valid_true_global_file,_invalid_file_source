@@ -1,9 +1,0 @@
-sourcestates:
-    invalid_file:
-        source: invalid_file
-        state: false
-        readerr: true
-globalstate:
-    source: global
-    state: true
-    readerr: false
