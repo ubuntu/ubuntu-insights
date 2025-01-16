@@ -20,3 +20,9 @@ func WithBlkInfo(cmd []string) Options {
 		o.lsblkCmd = cmd
 	}
 }
+
+func WithScreenInfo(cmd []string) Options {
+	return func(o *options) {
+		o.screenCmd = cmd
+	}
+}

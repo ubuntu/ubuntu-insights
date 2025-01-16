@@ -19,10 +19,11 @@ type SysInfo struct {
 type HwInfo struct {
 	Product map[string]string
 
-	Cpu  CpuInfo
-	Gpus []GpuInfo
-	Mem  MemInfo
-	Blks []DiskInfo
+	Cpu     CpuInfo
+	Gpus    []GpuInfo
+	Mem     MemInfo
+	Blks    []DiskInfo
+	Screens []ScreenInfo
 }
 
 // CpuInfo contains CPU information of a machine.
@@ -45,6 +46,14 @@ type DiskInfo struct {
 	Size string
 
 	Partitions []DiskInfo
+}
+
+type ScreenInfo struct {
+	Name               string
+	PhysicalResolution string
+	Size               string
+	Resolution         string
+	RefreshRate        string
 }
 
 // SwInfo is the software specific part.

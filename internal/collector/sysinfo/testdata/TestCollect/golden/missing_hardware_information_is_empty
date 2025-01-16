@@ -9,4 +9,5 @@ hardware:
     mem:
         mem: {}
     blks: []
+    screens: []
 software: {}

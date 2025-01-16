@@ -26,4 +26,15 @@ hardware:
         mem:
             MemTotal: 33493504000
     blks: []
+    screens:
+        - name: HDMI-0
+          physicalresolution: 3840x2160
+          size: 598mm x 336mm
+          resolution: 1920x1080
+          refreshrate: "60.00"
+        - name: eDP-1-1
+          physicalresolution: 3072x1728
+          size: 344mm x 193mm
+          resolution: 1920x1080
+          refreshrate: "60.03"
 software: {}

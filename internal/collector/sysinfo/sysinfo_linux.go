@@ -15,6 +15,7 @@ type options struct {
 	root       string
 	cpuInfoCmd []string
 	lsblkCmd   []string
+	screenCmd  []string
 	log        *slog.Logger
 }
 
@@ -23,6 +24,7 @@ func defaultOptions() *options {
 		root:       "/",
 		cpuInfoCmd: []string{"lscpu", "-J"},
 		lsblkCmd:   []string{"lsblk", "-o", "NAME,SIZE,TYPE", "--tree", "-J"},
+		screenCmd:  []string{"xrandr"},
 		log:        slog.Default(),
 	}
 }
@@ -316,6 +318,49 @@ func (s Manager) collectBlocks() []DiskInfo {
 	return blks
 }
 
+// This regex matches the name, primary status, real resolution, and physical size from xrandr.
+var screenHeaderRegex *regexp.Regexp = regexp.MustCompile(`(?m)^(\S+)\s+connected\s+(?:(primary)\s+)?([0-9]+x[0-9]+).*?([0-9]+mm\s+x\s+[0-9]+mm).*$`)
+
+// This regex matches the resolution and current refresh rate from xrandr.
+var screenConfigRegex *regexp.Regexp = regexp.MustCompile(`(?m)^\s*([0-9]+x[0-9]+)\s.*?([0-9]+\.[0-9]+)\+?\*\+?.*$`)
+
+func (s Manager) collectScreens() []ScreenInfo {
+	stdout, stderr, err := runCmd(context.Background(), s.opts.screenCmd[0], s.opts.screenCmd[1:]...)
+	if err != nil {
+		s.opts.log.Warn(err.Error())
+		return []ScreenInfo{}
+	}
+	if stderr.Len() > 0 {
+		s.opts.log.Warn(stderr.String())
+	}
+
+	d := stdout.String()
+	screens := screenHeaderRegex.Split(d, -1)
+	headers := screenHeaderRegex.FindAllStringSubmatch(d, -1)
+
+	if len(headers) == 0 {
+		s.opts.log.Warn("No Screen information found")
+		return []ScreenInfo{}
+	}
+
+	o := make([]ScreenInfo, 0, len(headers))
+
+	for i, header := range headers {
+		v := screenConfigRegex.FindStringSubmatch(screens[i+1])
+
+		o = append(o, ScreenInfo{
+			Name:               header[1],
+			PhysicalResolution: header[3],
+			Size:               header[4],
+
+			Resolution:  v[1],
+			RefreshRate: v[2],
+		})
+	}
+
+	return o
+}
+
 func (s Manager) collectHardware() (hwInfo HwInfo, err error) {
 
 	hwInfo.Product = s.collectProduct()
@@ -323,6 +368,7 @@ func (s Manager) collectHardware() (hwInfo HwInfo, err error) {
 	hwInfo.Gpus = s.collectGPUs()
 	hwInfo.Mem = s.collectMemory()
 	hwInfo.Blks = s.collectBlocks()
+	hwInfo.Screens = s.collectScreens()
 
 	return hwInfo, nil
 }

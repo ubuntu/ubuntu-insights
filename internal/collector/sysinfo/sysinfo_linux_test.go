@@ -38,21 +38,24 @@ func TestCollect(t *testing.T) {
 		root         string
 		cpuInfo      string
 		blkInfo      string
+		screenInfo   string
 		missingFiles []string
 
 		logs    map[slog.Level]uint
 		wantErr bool
 	}{
 		"Regular hardware information": {
-			root:    "regular",
-			cpuInfo: "regular",
-			blkInfo: "regular",
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "regular",
 		},
 
 		"Missing Product information": {
-			root:    "regular",
-			cpuInfo: "regular",
-			blkInfo: "regular",
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "regular",
 			missingFiles: []string{
 				"sys/class/dmi/id/product_family",
 				"sys/class/dmi/id/product_name",
@@ -65,9 +68,10 @@ func TestCollect(t *testing.T) {
 		},
 
 		"Missing CPU information": {
-			root:    "regular",
-			cpuInfo: "missing",
-			blkInfo: "regular",
+			root:       "regular",
+			cpuInfo:    "missing",
+			blkInfo:    "regular",
+			screenInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -75,9 +79,10 @@ func TestCollect(t *testing.T) {
 		},
 
 		"Missing GPUs": {
-			root:    "regular",
-			cpuInfo: "regular",
-			blkInfo: "regular",
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "regular",
 			missingFiles: []string{
 				"sys/class/drm/card0",
 				"sys/class/drm/card1",
@@ -89,9 +94,10 @@ func TestCollect(t *testing.T) {
 		},
 
 		"Missing GPU information": {
-			root:    "regular",
-			cpuInfo: "regular",
-			blkInfo: "regular",
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "regular",
 			missingFiles: []string{
 				"sys/class/drm/c0/d0/driver",
 				"sys/class/drm/c0/d0/label",
@@ -107,6 +113,7 @@ func TestCollect(t *testing.T) {
 			root:         "regular",
 			cpuInfo:      "regular",
 			blkInfo:      "regular",
+			screenInfo:   "regular",
 			missingFiles: []string{"proc/meminfo"},
 
 			logs: map[slog.Level]uint{
@@ -115,9 +122,21 @@ func TestCollect(t *testing.T) {
 		},
 
 		"Missing Block information": {
-			root:    "regular",
-			cpuInfo: "regular",
-			blkInfo: "missing",
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "missing",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Missing Screen information": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -125,11 +144,12 @@ func TestCollect(t *testing.T) {
 		},
 
 		"Missing hardware information is empty": {
-			root:    "withoutinfo",
-			cpuInfo: "",
-			blkInfo: "",
+			root:       "withoutinfo",
+			cpuInfo:    "",
+			blkInfo:    "",
+			screenInfo: "",
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 7,
+				slog.LevelWarn: 8,
 			},
 		},
 	}
@@ -170,6 +190,12 @@ func TestCollect(t *testing.T) {
 				cmdArgs := []string{"env", "GO_WANT_HELPER_PROCESS=1", os.Args[0], "-test.run=TestMockBlkList", "--"}
 				cmdArgs = append(cmdArgs, tc.blkInfo)
 				options = append(options, sysinfo.WithBlkInfo(cmdArgs))
+			}
+
+			if tc.blkInfo != "-" {
+				cmdArgs := []string{"env", "GO_WANT_HELPER_PROCESS=1", os.Args[0], "-test.run=TestMockScreenList", "--"}
+				cmdArgs = append(cmdArgs, tc.screenInfo)
+				options = append(options, sysinfo.WithScreenInfo(cmdArgs))
 			}
 
 			s := sysinfo.New(options...)
@@ -302,6 +328,8 @@ func TestMockCPUList(_ *testing.T) {
       }
    ]
 }`)
+	case "":
+		fallthrough
 	case "missing":
 		os.Exit(0)
 
@@ -375,6 +403,93 @@ func TestMockBlkList(_ *testing.T) {
       }
    ]
 }`)
+	case "":
+		fallthrough
+	case "missing":
+		os.Exit(0)
+	}
+}
+
+func TestMockScreenList(_ *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+	defer os.Exit(0)
+
+	args := os.Args
+	for len(args) > 0 {
+		if args[0] != "--" {
+			args = args[1:]
+			continue
+		}
+		args = args[1:]
+		break
+	}
+
+	switch args[0] {
+	case "exit 1":
+		fmt.Fprint(os.Stderr, "Error requested in Mock lsblk")
+		os.Exit(1)
+	case "regular":
+		fmt.Println(`Screen 0: minimum 8 x 8, current 6912 x 2160, maximum 32767 x 32767
+HDMI-0 connected primary 3840x2160+3072+0 (normal left inverted right x axis y axis) 598mm x 336mm
+   1920x1080     60.00*+ 100.00    84.90    74.97    59.94    50.00  
+   1680x1050     59.95  
+   1440x900      59.89  
+   1280x1024     75.02    60.02  
+   1280x960      60.00  
+   1280x800      59.81  
+   1280x720      60.00    59.94    50.00  
+   1152x864      75.00  
+   1024x768      75.03    70.07    60.00  
+   800x600       75.00    72.19    60.32    56.25  
+   720x576       50.00  
+   720x480       59.94  
+   640x480       75.00    72.81    59.94    59.93  
+DP-0 disconnected (normal left inverted right x axis y axis)
+DP-1 disconnected (normal left inverted right x axis y axis)
+eDP-1-1 connected 3072x1728+0+432 (normal left inverted right x axis y axis) 344mm x 193mm
+   1920x1080     60.03*+  60.03    40.02  
+   1680x1050     60.03  
+   1400x1050     60.03  
+   1600x900      60.03  
+   1280x1024     60.03  
+   1400x900      60.03  
+   1280x960      60.03  
+   1440x810      60.03  
+   1368x768      60.03  
+   1280x800      60.03  
+   1280x720      60.03  
+   1024x768      60.03  
+   960x720       60.03  
+   928x696       60.03  
+   896x672       60.03  
+   1024x576      60.03  
+   960x600       60.03  
+   960x540       60.03  
+   800x600       60.03  
+   840x525       60.03  
+   864x486       60.03  
+   700x525       60.03  
+   800x450       60.03  
+   640x512       60.03  
+   700x450       60.03  
+   640x480       60.03  
+   720x405       60.03  
+   684x384       60.03  
+   640x360       60.03  
+   512x384       60.03  
+   512x288       60.03  
+   480x270       60.03  
+   400x300       60.03  
+   432x243       60.03  
+   320x240       60.03  
+   360x202       60.03  
+   320x180       60.03  
+DP-1-1 disconnected (normal left inverted right x axis y axis)
+HDMI-1-1 disconnected (normal left inverted right x axis y axis)`)
+	case "":
+		fallthrough
 	case "missing":
 		os.Exit(0)
 	}
