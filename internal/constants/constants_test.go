@@ -2,14 +2,14 @@ package constants_test
 
 import (
 	"fmt"
-	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
-func Test_GetUserConfigDir(t *testing.T) {
+func Test_GetDefaultConfigPath(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -17,21 +17,21 @@ func Test_GetUserConfigDir(t *testing.T) {
 		mock func() (string, error)
 	}{
 		"os.UserConfigDir success": {
-			want: "abc/def" + string(os.PathSeparator) + constants.DefaultAppFolder,
+			want: filepath.Join("abc", "def", constants.DefaultAppFolder),
 			mock: func() (string, error) {
 				return "abc/def", nil
 			},
 		},
 		"os.UserConfigDir error": {
-			want: string(os.PathSeparator) + constants.DefaultAppFolder,
+			want: constants.DefaultAppFolder,
 			mock: func() (string, error) {
-				return "", fmt.Errorf("error")
+				return "", fmt.Errorf("os.UserCacheDir error")
 			},
 		},
 		"os.UserConfigDir error 2": {
-			want: string(os.PathSeparator) + constants.DefaultAppFolder,
+			want: constants.DefaultAppFolder,
 			mock: func() (string, error) {
-				return "abc", fmt.Errorf("error")
+				return filepath.Join("abc", "def"), fmt.Errorf("os.UserCacheDir error")
 			},
 		},
 	}
@@ -45,7 +45,7 @@ func Test_GetUserConfigDir(t *testing.T) {
 	}
 }
 
-func Test_userCacheDir(t *testing.T) {
+func Test_GetDefaultCachePath(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -53,21 +53,21 @@ func Test_userCacheDir(t *testing.T) {
 		mock func() (string, error)
 	}{
 		"os.UserCacheDir success": {
-			want: "def/abc" + string(os.PathSeparator) + constants.DefaultAppFolder,
+			want: filepath.Join("abc", "def", constants.DefaultAppFolder),
 			mock: func() (string, error) {
-				return "def/abc", nil
+				return filepath.Join("abc", "def"), nil
 			},
 		},
 		"os.UserCacheDir error": {
-			want: string(os.PathSeparator) + constants.DefaultAppFolder,
+			want: constants.DefaultAppFolder,
 			mock: func() (string, error) {
-				return "", fmt.Errorf("error")
+				return "", fmt.Errorf("os.UserCacheDir error")
 			},
 		},
-		"os.UserCacheDir error 2": {
-			want: string(os.PathSeparator) + constants.DefaultAppFolder,
+		"os.UserCacheDir error with return": {
+			want: constants.DefaultAppFolder,
 			mock: func() (string, error) {
-				return "abc", fmt.Errorf("error")
+				return "return", fmt.Errorf("os.UserCacheDir error")
 			},
 		},
 	}

@@ -2,11 +2,11 @@ package commands
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 
-	"log/slog"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
@@ -50,7 +50,7 @@ func TestSetVerbosity(t *testing.T) {
 
 func TestUsageError(t *testing.T) {
 	app, err := New()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Test when SilenceUsage is true
 	app.rootCmd.SilenceUsage = true

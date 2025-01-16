@@ -1,7 +1,9 @@
 package commands
 
 import (
+	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -25,6 +27,17 @@ func installConsentCmd(app *App) {
 		Short: "Manage or get user consent state",
 		Long:  "Manage or get user consent state for data collection and upload",
 		Args:  cobra.ArbitraryArgs,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			app.rootCmd.SilenceUsage = false
+
+			validConsentStates := []string{"true", "false", ""}
+			if !slices.Contains(validConsentStates, strings.ToLower(app.consentConfig.consentState)) {
+				return fmt.Errorf("consent-state must be either true, false, or not set")
+			}
+
+			app.rootCmd.SilenceUsage = true
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set Sources to Args
 			app.consentConfig.sources = args
