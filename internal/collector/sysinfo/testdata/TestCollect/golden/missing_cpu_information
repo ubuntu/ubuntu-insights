@@ -5,14 +5,7 @@ hardware:
         Vendor: |
             Framework
     cpu:
-        cpu:
-            'Architecture:': x86_64
-            'CPU(s):': "12"
-            'Core(s) per socket:': "6"
-            'Model name:': Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz
-            'Socket(s):': "1"
-            'Thread(s) per core:': "2"
-            'Vendor ID:': GenuineIntel
+        cpu: {}
     gpus:
         - gpu:
             Driver: i915

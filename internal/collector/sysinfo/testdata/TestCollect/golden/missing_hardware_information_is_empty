@@ -1,0 +1,13 @@
+hardware:
+    product:
+        Family: ""
+        Name: ""
+        Vendor: ""
+    cpu:
+        cpu: {}
+    gpus: []
+    mem:
+        mem: {}
+    blks: []
+    screens: []
+software: {}

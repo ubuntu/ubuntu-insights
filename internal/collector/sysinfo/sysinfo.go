@@ -1,46 +1,77 @@
 // Package sysinfo allows collecting "common" system information for all insight reports.
 package sysinfo
 
-type options struct {
-	root string
-}
-
 // Options is the variadic options available to the manager.
 type Options func(*options)
 
 // Manager allows collecting Software and Hardware information of the system.
 type Manager struct {
-	root string
+	opts options
 }
 
 // SysInfo contains Software and Hardware information of the system.
 type SysInfo struct {
-	Hardware HwInfo
-	Software SwInfo
+	Hardware hwInfo
+	Software swInfo
 }
 
 // HwInfo is the hardware specific part.
-type HwInfo struct {
+type hwInfo struct {
 	Product map[string]string
+
+	CPU     cpuInfo
+	GPUs    []gpuInfo
+	Mem     memInfo
+	Blks    []diskInfo
+	Screens []screenInfo
+}
+
+// CpuInfo contains CPU information of a machine.
+type cpuInfo struct {
+	CPU map[string]string
+}
+
+// GpuInfo contains GPU information of a specific GPU.
+type gpuInfo struct {
+	GPU map[string]string
+}
+
+// MemInfo contains Memory information of a machine.
+type memInfo struct {
+	Mem map[string]int
+}
+
+// DiskInfo contains Disk information of a disk or partition.
+type diskInfo struct {
+	Name string
+	Size string
+
+	Partitions []diskInfo
+}
+
+// ScreenInfo contains Screen information for a screen.
+type screenInfo struct {
+	Name               string
+	PhysicalResolution string
+	Size               string
+	Resolution         string
+	RefreshRate        string
 }
 
 // SwInfo is the software specific part.
-type SwInfo struct {
+type swInfo struct {
 }
 
 // New returns a new SysInfo.
 func New(args ...Options) Manager {
 	// options defaults
-	opts := &options{
-		root: "/",
-	}
-
+	opts := defaultOptions()
 	for _, opt := range args {
 		opt(opts)
 	}
 
 	return Manager{
-		root: opts.root,
+		opts: *opts,
 	}
 }
 

@@ -1,9 +1,19 @@
 package sysinfo
 
-func (s Manager) collectHardware() (HwInfo, error) {
-	return HwInfo{}, nil
+import "log/slog"
+
+type options struct {
+	log *slog.Logger
 }
 
-func (s Manager) collectSoftware() (SwInfo, error) {
-	return SwInfo{}, nil
+func defaultOptions() *options {
+	return &options{}
+}
+
+func (s Manager) collectHardware() (hwInfo, error) {
+	return hwInfo{}, nil
+}
+
+func (s Manager) collectSoftware() (swInfo, error) {
+	return swInfo{}, nil
 }

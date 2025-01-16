@@ -1,8 +1,12 @@
 package sysinfo
 
-// WithRoot overrides default root directory of the system.
-func WithRoot(root string) Options {
+import (
+	"log/slog"
+)
+
+// WithLogger overrides the default logger.
+func WithLogger(logger slog.Handler) Options {
 	return func(o *options) {
-		o.root = root
+		o.log = slog.New(logger)
 	}
 }
