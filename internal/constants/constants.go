@@ -23,6 +23,9 @@ const (
 
 	// ConsentSourceBaseSeparator is the default separator between the source and the base name of the consent state files.
 	ConsentSourceBaseSeparator = "-"
+
+	// ReportExtension is the default extension for the report files.
+	ReportExtension = ".json"
 )
 
 type options struct {
