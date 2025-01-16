@@ -1,9 +1,0 @@
-sourcestates:
-    invalid_value:
-        source: invalid_value
-        state: false
-        readerr: true
-globalstate:
-    source: global
-    state: true
-    readerr: false
