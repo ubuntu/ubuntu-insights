@@ -16,7 +16,7 @@ func TestNew(t *testing.T) {
 	}{
 		"Instantiate a sys info manager": {},
 	}
-	for name, _ := range tests {
+	for name := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -56,5 +56,4 @@ func TestCollect(t *testing.T) {
 			require.Equal(t, want, got, "Collect should return expected sys information")
 		})
 	}
-
 }
