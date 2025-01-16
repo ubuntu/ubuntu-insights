@@ -126,27 +126,28 @@ func getMatchingConsentFiles(sources []string, folderPath string) (sourceFiles m
 			continue
 		}
 
+		// Global file
+		if entry.Name() == constants.BaseConsentFileName {
+			globalFile = filepath.Join(folderPath, entry.Name())
+			slog.Debug("Found global consent file", "file", globalFile)
+			continue
+		}
+
 		if len(sources) == 0 {
-			// Global file
-			if entry.Name() == constants.BaseConsentFileName {
-				globalFile = filepath.Join(folderPath, entry.Name())
-				continue
-			}
 			// Source file
 			if !strings.HasSuffix(entry.Name(), constants.ConsentSourceBaseSeparator+constants.BaseConsentFileName) {
 				continue
 			}
 			source := strings.TrimSuffix(entry.Name(), constants.ConsentSourceBaseSeparator+constants.BaseConsentFileName)
 			sourceFiles[source] = filepath.Join(folderPath, entry.Name())
+			slog.Debug("Found source consent file", "file", sourceFiles[source])
 			continue
 		}
 
 		for _, source := range sources {
 			if entry.Name() == source+constants.ConsentSourceBaseSeparator+constants.BaseConsentFileName {
 				sourceFiles[source] = filepath.Join(folderPath, entry.Name())
-				break
-			} else if entry.Name() == constants.BaseConsentFileName {
-				globalFile = filepath.Join(folderPath, entry.Name())
+				slog.Debug("Found matching source consent file", "file", sourceFiles[source])
 				break
 			}
 		}
@@ -160,6 +161,7 @@ func readConsentFile(filePath string) (*consentFile, error) {
 		return &consent, nil
 	}
 	_, err := toml.DecodeFile(filePath, &consent)
+	slog.Debug("Read consent file", "file", filePath, "consent", consent.ConsentState)
 
 	return &consent, err
 }
@@ -188,6 +190,7 @@ func writeConsentFile(filePath string, consent *consentFile) (err error) {
 	if err := os.Rename(tempFile.Name(), filePath); err != nil {
 		return fmt.Errorf("could not rename temporary file: %w", err)
 	}
+	slog.Debug("Wrote consent file", "file", filePath, "consent", consent.ConsentState)
 
 	return nil
 }

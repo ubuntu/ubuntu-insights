@@ -50,7 +50,7 @@ func TestGetConsentStates(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			cDir, err := setupTmpConsentFiles(t, tc.globalFile)
-			require.NoError(t, err, "failed to setup temporary consent files")
+			require.NoError(t, err, "Setup: failed to setup temporary consent files")
 			defer cDir.cleanup(t)
 			cm := consent.New(cDir.dir)
 
@@ -108,7 +108,7 @@ func TestSetConsentStates(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			cDir, err := setupTmpConsentFiles(t, tc.globalFile)
-			require.NoError(t, err, "failed to setup temporary consent files")
+			require.NoError(t, err, "Setup: failed to setup temporary consent files")
 			defer cDir.cleanup(t)
 			cm := consent.New(cDir.dir)
 
@@ -135,7 +135,7 @@ func TestSetConsentStates(t *testing.T) {
 // cleanup unlocks all the locks and removes the temporary directory including its contents.
 func (cDir consentDir) cleanup(t *testing.T) {
 	t.Helper()
-	assert.NoError(t, os.RemoveAll(cDir.dir), "failed to remove temporary directory")
+	assert.NoError(t, os.RemoveAll(cDir.dir), "Cleanup: failed to remove temporary directory")
 }
 
 func copyFile(src, dst string) error {
