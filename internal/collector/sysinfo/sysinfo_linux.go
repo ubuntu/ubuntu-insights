@@ -6,7 +6,6 @@ import (
 )
 
 func (s Manager) collectHardware() (hwInfo HwInfo, err error) {
-
 	// System vendor
 	d, err := os.ReadFile(filepath.Join(s.root, "sys/class/dmi/id/sys_vendor"))
 	if err != nil {
@@ -20,6 +19,5 @@ func (s Manager) collectHardware() (hwInfo HwInfo, err error) {
 }
 
 func (s Manager) collectSoftware() (swInfo SwInfo, err error) {
-
 	return swInfo, nil
 }

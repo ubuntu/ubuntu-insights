@@ -13,37 +13,35 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
-// consentDir is a struct that holds a test's temporary directory and its locks.
+// consentDir is a struct that holds a test's temporary directory.
 // It should be cleaned up after the test is done.
 type consentDir struct {
 	dir string
 }
 
-func TestGetConsentStates(t *testing.T) {
+func TestGetConsentState(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		sources    []string
+		source     string
 		globalFile string
 
 		wantErr bool
 	}{
-		"No Global File": {},
+		"No Global File": {wantErr: true},
 
 		// Global File Tests
 		"Valid True Global File":    {globalFile: "valid_true-consent.toml"},
 		"Valid False Global File":   {globalFile: "valid_false-consent.toml"},
-		"Invalid Value Global File": {globalFile: "invalid_value-consent.toml"},
-		"Invalid File Global File":  {globalFile: "invalid_file-consent.toml"},
+		"Invalid Value Global File": {globalFile: "invalid_value-consent.toml", wantErr: true},
+		"Invalid File Global File":  {globalFile: "invalid_file-consent.toml", wantErr: true},
 
 		// Source Specific Tests
-		"Valid True Global File, Valid True Source":                       {globalFile: "valid_true-consent.toml", sources: []string{"valid_true"}},
-		"Valid True Global File, Valid False Source":                      {globalFile: "valid_true-consent.toml", sources: []string{"valid_false"}},
-		"Valid True Global File, Invalid Value Source":                    {globalFile: "valid_true-consent.toml", sources: []string{"invalid_value"}},
-		"Valid True Global File, Invalid File Source":                     {globalFile: "valid_true-consent.toml", sources: []string{"invalid_file"}},
-		"Valid True Global File, No File Source":                          {globalFile: "valid_true-consent.toml", sources: []string{"not_a_file"}},
-		"Valid True Global File, 2 Multiple Sources (VTrue, VFalse)":      {globalFile: "valid_true-consent.toml", sources: []string{"valid_true", "valid_false"}},
-		"Valid True Global File, 3 Multiple Sources (VTrue, VFalse, NAF)": {globalFile: "valid_true-consent.toml", sources: []string{"valid_true", "valid_false", "not_a_file"}},
+		"Valid True Global File, Valid True Source":    {globalFile: "valid_true-consent.toml", source: "valid_true"},
+		"Valid True Global File, Valid False Source":   {globalFile: "valid_true-consent.toml", source: "valid_false"},
+		"Valid True Global File, Invalid Value Source": {globalFile: "valid_true-consent.toml", source: "invalid_value", wantErr: true},
+		"Valid True Global File, Invalid File Source":  {globalFile: "valid_true-consent.toml", source: "invalid_file", wantErr: true},
+		"Valid True Global File, No File Source":       {globalFile: "valid_true-consent.toml", source: "not_a_file", wantErr: true},
 	}
 
 	for name, tc := range tests {
@@ -54,7 +52,7 @@ func TestGetConsentStates(t *testing.T) {
 			defer cDir.cleanup(t)
 			cm := consent.New(cDir.dir)
 
-			got, err := cm.GetConsentStates(tc.sources)
+			got, err := cm.GetConsentState(tc.source)
 			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return
@@ -62,7 +60,7 @@ func TestGetConsentStates(t *testing.T) {
 			require.NoError(t, err, "got an unexpected error")
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-			require.Equal(t, want, got, "GetConsentStates should return expected consent states")
+			require.Equal(t, want, got, "GetConsentState should return expected consent state")
 		})
 	}
 }
@@ -71,7 +69,6 @@ func TestSetConsentStates(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		sources       []string
 		consentStates map[string]bool
 		globalFile    string
 
@@ -100,8 +97,8 @@ func TestSetConsentStates(t *testing.T) {
 	}
 
 	type goldenFile struct {
-		States    *consent.States
-		FileCount uint
+		States    map[string]bool
+		FileCount int
 	}
 
 	for name, tc := range tests {
@@ -119,12 +116,12 @@ func TestSetConsentStates(t *testing.T) {
 			}
 			require.NoError(t, err, "got an unexpected error")
 
-			states, err := cm.GetConsentStates(tc.sources)
+			states, err := cm.GetAllSourceConsentStates(true)
 			require.NoError(t, err, "got an unexpected error while getting consent states")
 
 			d, err := os.ReadDir(cDir.dir)
 			require.NoError(t, err, "failed to read temporary directory")
-			got := goldenFile{States: states, FileCount: uint(len(d))}
+			got := goldenFile{States: states, FileCount: len(d)}
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			require.Equal(t, want, got, "GetConsentStates should return expected consent states")

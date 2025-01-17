@@ -18,8 +18,8 @@ const (
 	// DefaultLogLevel is the default log level selected without any verbosity flags.
 	DefaultLogLevel = slog.LevelInfo
 
-	// BaseConsentFileName is the default base name of the consent state files.
-	BaseConsentFileName = "consent.toml"
+	// GlobalFileName is the default base name of the consent state files.
+	GlobalFileName = "consent.toml"
 
 	// ConsentSourceBaseSeparator is the default separator between the source and the base name of the consent state files.
 	ConsentSourceBaseSeparator = "-"
