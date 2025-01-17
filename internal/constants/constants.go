@@ -21,7 +21,7 @@ const (
 	// GlobalFileName is the default base name of the consent state files.
 	GlobalFileName = "consent.toml"
 
-	// ConsentSourceBaseSeparator is the default separator between the source and the base name of the consent state files
+	// ConsentSourceBaseSeparator is the default separator between the source and the base name of the consent state files.
 	ConsentSourceBaseSeparator = "-"
 
 	// ReportExtension is the default extension for the report files.
