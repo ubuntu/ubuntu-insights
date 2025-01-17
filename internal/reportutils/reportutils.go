@@ -2,6 +2,7 @@
 package reportutils
 
 import (
+	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -12,41 +13,53 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
+// ErrInvalidPeriod is returned when a function requiring a period, received an invalid, period that isn't a non-negative integer.
+var ErrInvalidPeriod = errors.New("invalid period, period should be a positive integer")
+
 // GetPeriodStart returns the start of the period window for a given period in seconds.
-func GetPeriodStart(period uint) uint64 {
-	utcTime := uint64(time.Now().UTC().Unix())
-	return utcTime - (utcTime % uint64(period))
+func GetPeriodStart(period int) (int64, error) {
+	if period <= 0 {
+		return 0, ErrInvalidPeriod
+	}
+	utcTime := time.Now().UTC().Unix()
+	return utcTime - (utcTime % int64(period)), nil
 }
 
-// GetReportTime returns a unint64 representation of the report time from the report path.
-func GetReportTime(reportPath string) (uint64, error) {
-	fileName := filepath.Base(reportPath)
-	return strconv.ParseUint(strings.TrimSuffix(fileName, filepath.Ext(fileName)), 10, 64)
+// GetReportTime returns a int64 representation of the report time from the report path.
+func GetReportTime(path string) (int64, error) {
+	fileName := filepath.Base(path)
+	return strconv.ParseInt(strings.TrimSuffix(fileName, filepath.Ext(fileName)), 10, 64)
 }
 
 // GetReportPath returns the path for the most recent report within a period window, returning an empty string if no report is found.
 // Not inclusive of the period end (periodStart + period).
-func GetReportPath(reportsDir string, time uint64, period uint) (string, error) {
-	periodStart := time - (time % uint64(period))
-	periodEnd := periodStart + uint64(period)
+//
+// For example, given reports 1 and 7, with time 2 and period 7, the function will return the path for report 1.
+func GetReportPath(dir string, time int64, period int) (string, error) {
+	if period <= 0 {
+		return "", ErrInvalidPeriod
+	}
+
+	periodStart := time - (time % int64(period))
+	periodEnd := periodStart + int64(period)
 
 	// Reports names are utc timestamps. Get the most recent report within the period window.
 	var mostRecentReportPath string
-	files, err := os.ReadDir(reportsDir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
-		slog.Error("Failed to read directory", "directory", reportsDir, "error", err)
+		slog.Error("Failed to read directory", "directory", dir, "error", err)
 		return "", err
 	}
 
-	for _, reportPath := range files {
-		if filepath.Ext(reportPath.Name()) != constants.ReportExtension {
-			slog.Info("Skipping non-report file, invalid extension", "file", reportPath.Name())
+	for _, file := range files {
+		if filepath.Ext(file.Name()) != constants.ReportExt {
+			slog.Info("Skipping non-report file, invalid extension", "file", file.Name())
 			continue
 		}
 
-		reportTime, err := GetReportTime(reportPath.Name())
+		reportTime, err := GetReportTime(file.Name())
 		if err != nil {
-			slog.Info("Skipping non-report file, invalid file name", "file", reportPath.Name())
+			slog.Info("Skipping non-report file, invalid file name", "file", file.Name())
 			continue
 		}
 
@@ -57,7 +70,7 @@ func GetReportPath(reportsDir string, time uint64, period uint) (string, error) 
 			break
 		}
 
-		mostRecentReportPath = filepath.Join(reportsDir, reportPath.Name())
+		mostRecentReportPath = filepath.Join(dir, file.Name())
 	}
 
 	return mostRecentReportPath, nil
