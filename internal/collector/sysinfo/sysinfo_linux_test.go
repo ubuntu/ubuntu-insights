@@ -164,7 +164,7 @@ func TestCollect(t *testing.T) {
 				t.FailNow()
 			}
 
-			root := filepath.Join(tmp, "linuxfs", tc.root)
+			root := filepath.Join(tmp, tc.root)
 			for _, f := range tc.missingFiles {
 				err := os.Remove(filepath.Join(root, f))
 				if err != nil {

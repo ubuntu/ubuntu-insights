@@ -2,8 +2,7 @@ hardware:
     product:
         Family: Framework DIY
         Name: DIY Framework Laptop 16
-        Vendor: |
-            Framework
+        Vendor: Framework
     cpu:
         cpu:
             'Architecture:': x86_64

@@ -58,7 +58,7 @@ func (s Manager) readFile(file string) string {
 		return ""
 	}
 
-	return string(f)
+	return strings.TrimSpace(string(f))
 }
 
 func (s Manager) collectProduct() map[string]string {
