@@ -25,7 +25,7 @@ type consentFile struct {
 }
 
 // New returns a new ConsentManager.
-// path is the folder the consents are store into.
+// path is the folder the consents are stored into.
 func New(path string) *Manager {
 	return &Manager{path: path}
 }
@@ -50,7 +50,7 @@ var consentSourceFilePattern = `%s` + constants.ConsentSourceBaseSeparator + con
 // If the source is an empty string, then the global consent state will be set.
 // If the target consent file does not exist, it will be created.
 func (cm Manager) SetConsentState(source string, state bool) (err error) {
-	defer decorate.OnError(&err, "could not set consent state:")
+	defer decorate.OnError(&err, "could not set consent state")
 
 	consent := consentFile{ConsentState: state}
 	return consent.write(cm.getConsentFile(source))
@@ -94,12 +94,12 @@ func (cm Manager) getConsentFiles() (map[string]string, error) {
 	return sourceFiles, nil
 }
 
-func readConsentFile(path string) (*consentFile, error) {
+func readConsentFile(path string) (consentFile, error) {
 	var consent consentFile
 	_, err := toml.DecodeFile(path, &consent)
 	slog.Debug("Read consent file", "file", path, "consent", consent.ConsentState)
 
-	return &consent, err
+	return consent, err
 }
 
 // writeConsentFile writes the given consent file to the given path atomically, replacing it if it already exists.
