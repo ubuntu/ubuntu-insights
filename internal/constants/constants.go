@@ -26,6 +26,9 @@ const (
 
 	// ReportExt is the default extension for the report files.
 	ReportExt = ".json"
+
+	// OptOutJSON is the data sent in case of Opt-Out choice.
+	OptOutJSON = `{"OptOut": true}`
 )
 
 type options struct {

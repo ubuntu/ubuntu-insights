@@ -154,3 +154,47 @@ func setupTmpDir(t *testing.T, files []string, subDir string, subDirFiles []stri
 
 	return dir, nil
 }
+
+func TestGetReports(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		files       []string
+		subDir      string
+		subDirFiles []string
+		period      int
+
+		wantErr error
+	}{
+		"Empty Directory": {period: 500},
+		"Files in subDir": {subDir: "subdir", subDirFiles: []string{"1.json", "2.json"}, period: 500},
+
+		"Invalid File Extension":   {files: []string{"1.txt", "2.txt"}, period: 500},
+		"Invalid File Names":       {files: []string{"i-1.json", "i-2.json", "i-3.json", "test.json", "one.json"}, period: 500},
+		"Mix of Valid and Invalid": {files: []string{"1.json", "2.json", "i-1.json", "i-2.json", "i-3.json", "test.json", "five.json"}, period: 500},
+
+		"Get Newest of Period":             {files: []string{"1.json", "7.json"}, period: 100},
+		"Multiple Consecutive Windows":     {files: []string{"1.json", "7.json", "101.json", "107.json", "201.json", "207.json"}, period: 100},
+		"Multiple Non-Consecutive Windows": {files: []string{"1.json", "7.json", "101.json", "107.json", "251.json", "257.json"}, period: 50},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			dir, err := setupTmpDir(t, tc.files, tc.subDir, tc.subDirFiles)
+			require.NoError(t, err, "Setup: failed to setup temporary directory")
+			defer os.RemoveAll(dir)
+
+			got, err := reportutils.GetReports(dir, tc.period)
+			if tc.wantErr != nil {
+				require.ErrorIs(t, err, tc.wantErr)
+				return
+			}
+			require.NoError(t, err, "got an unexpected error")
+
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			require.Equal(t, want, got, "GetReports should return the most recent report within each period window")
+		})
+	}
+}
