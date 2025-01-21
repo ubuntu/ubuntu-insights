@@ -18,6 +18,15 @@ const (
 	// DefaultLogLevel is the default log level selected without any verbosity flags.
 	DefaultLogLevel = slog.LevelInfo
 
+	// DefaultServerURL is the default base URL for the server that reports are uploaded to.
+	DefaultServerURL = "https://metrics.ubuntu.com"
+
+	// LocalFolder is the default name of the local collected reports folder.
+	LocalFolder = "local"
+
+	// UploadedFolder is the default name of the uploaded reports folder.
+	UploadedFolder = "uploaded"
+
 	// GlobalFileName is the default base name of the consent state files.
 	GlobalFileName = "consent.toml"
 
@@ -26,10 +35,10 @@ const (
 
 	// ReportExt is the default extension for the report files.
 	ReportExt = ".json"
-
-	// OptOutJSON is the data sent in case of Opt-Out choice.
-	OptOutJSON = `{"OptOut": true}`
 )
+
+// OptOutJSON is the data sent in case of Opt-Out choice.
+var OptOutJSON = struct{ OptOut bool }{OptOut: true}
 
 type options struct {
 	baseDir func() (string, error)

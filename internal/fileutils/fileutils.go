@@ -2,7 +2,6 @@
 package fileutils
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -13,7 +12,7 @@ import (
 // If the file already exists, then it will be overwritten.
 // Not atomic on Windows.
 func AtomicWrite(path string, data []byte) error {
-	tmp, err := os.CreateTemp(filepath.Dir(path), "consent-*.tmp")
+	tmp, err := os.CreateTemp(filepath.Dir(path), "tmp-*.tmp")
 	if err != nil {
 		return fmt.Errorf("could not create temporary file: %v", err)
 	}
@@ -36,13 +35,4 @@ func AtomicWrite(path string, data []byte) error {
 		return fmt.Errorf("could not rename temporary file: %v", err)
 	}
 	return nil
-}
-
-// FileExists checks if a file exists at the given path.
-func FileExists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return false, err
-	}
-	return !errors.Is(err, os.ErrNotExist), nil
 }

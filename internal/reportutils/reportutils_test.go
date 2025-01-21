@@ -176,6 +176,7 @@ func TestGetReports(t *testing.T) {
 		"Get Newest of Period":             {files: []string{"1.json", "7.json"}, period: 100},
 		"Multiple Consecutive Windows":     {files: []string{"1.json", "7.json", "101.json", "107.json", "201.json", "207.json"}, period: 100},
 		"Multiple Non-Consecutive Windows": {files: []string{"1.json", "7.json", "101.json", "107.json", "251.json", "257.json"}, period: 50},
+		"Get All Reports":                  {files: []string{"1.json", "2.json", "3.json", "101.json", "107.json", "251.json", "257.json"}, period: 1},
 	}
 
 	for name, tc := range tests {
@@ -195,6 +196,43 @@ func TestGetReports(t *testing.T) {
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			require.Equal(t, want, got, "GetReports should return the most recent report within each period window")
+		})
+	}
+}
+
+func TestGetAllReports(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		files       []string
+		subDir      string
+		subDirFiles []string
+
+		wantErr error
+	}{
+		"Empty Directory":          {},
+		"Files in subDir":          {files: []string{"1.json", "2.json"}, subDir: "subdir", subDirFiles: []string{"1.json", "2.json"}},
+		"Invalid File Extension":   {files: []string{"1.txt", "2.txt"}},
+		"Invalid File Names":       {files: []string{"i-1.json", "i-2.json", "i-3.json", "test.json", "one.json"}},
+		"Mix of Valid and Invalid": {files: []string{"1.json", "2.json", "500.json", "i-1.json", "i-2.json", "i-3.json", "test.json", "five.json"}},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			dir, err := setupTmpDir(t, tc.files, tc.subDir, tc.subDirFiles)
+			require.NoError(t, err, "Setup: failed to setup temporary directory")
+			defer os.RemoveAll(dir)
+
+			got, err := reportutils.GetAllReports(dir)
+			if tc.wantErr != nil {
+				require.ErrorIs(t, err, tc.wantErr)
+				return
+			}
+			require.NoError(t, err, "got an unexpected error")
+
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			require.Equal(t, want, got, "GetAllReports should return all reports in the directory")
 		})
 	}
 }

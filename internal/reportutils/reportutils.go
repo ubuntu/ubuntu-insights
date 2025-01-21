@@ -45,32 +45,41 @@ func GetReportPath(dir string, time int64, period int) (string, error) {
 
 	// Reports names are utc timestamps. Get the most recent report within the period window.
 	var mostRecentReportPath string
-	files, err := os.ReadDir(dir)
-	if err != nil {
-		slog.Error("Failed to read directory", "directory", dir, "error", err)
-		return "", err
-	}
-
-	for _, file := range files {
-		if filepath.Ext(file.Name()) != constants.ReportExt {
-			slog.Info("Skipping non-report file, invalid extension", "file", file.Name())
-			continue
+	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			slog.Error("Failed to access path", "path", path, "error", err)
+			return err
 		}
 
-		reportTime, err := GetReportTime(file.Name())
+		// Skip subdirectories.
+		if d.IsDir() && path != dir {
+			return filepath.SkipDir
+		}
+
+		if filepath.Ext(d.Name()) != constants.ReportExt {
+			slog.Info("Skipping non-report file, invalid extension", "file", d.Name())
+			return nil
+		}
+
+		reportTime, err := GetReportTime(d.Name())
 		if err != nil {
-			slog.Info("Skipping non-report file, invalid file name", "file", file.Name())
-			continue
+			slog.Info("Skipping non-report file, invalid file name", "file", d.Name())
+			return nil
 		}
 
 		if reportTime < periodStart {
-			continue
+			return nil
 		}
 		if reportTime >= periodEnd {
-			break
+			return filepath.SkipDir
 		}
 
-		mostRecentReportPath = filepath.Join(dir, file.Name())
+		mostRecentReportPath = path
+		return nil
+	})
+
+	if err != nil {
+		return "", err
 	}
 
 	return mostRecentReportPath, nil
@@ -78,36 +87,80 @@ func GetReportPath(dir string, time int64, period int) (string, error) {
 
 // GetReports returns the paths for the latest report within each period window for a given directory.
 // The key of the map is the start of the period window, and the report timestamp.
+//
+// If period is 1, then all reports in the dir are returned.
 func GetReports(dir string, period int) (map[int64]int64, error) {
 	if period <= 0 {
 		return nil, ErrInvalidPeriod
 	}
 
-	// Get the most recent report within each period window.
-	files, err := os.ReadDir(dir)
-	if err != nil {
-		slog.Error("Failed to read directory", "directory", dir, "error", err)
-		return nil, err
-	}
-
-	// Map to store the most recent report within each period window.
 	reports := make(map[int64]int64)
-	for _, file := range files {
-		if filepath.Ext(file.Name()) != constants.ReportExt {
-			slog.Info("Skipping non-report file, invalid extension", "file", file.Name())
-			continue
+	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			slog.Error("Failed to access path", "path", path, "error", err)
+			return err
 		}
 
-		reportTime, err := GetReportTime(file.Name())
+		if d.IsDir() && path != dir {
+			return filepath.SkipDir
+		}
+
+		if filepath.Ext(d.Name()) != constants.ReportExt {
+			slog.Info("Skipping non-report file, invalid extension", "file", d.Name())
+			return nil
+		}
+
+		reportTime, err := GetReportTime(d.Name())
 		if err != nil {
-			slog.Info("Skipping non-report file, invalid file name", "file", file.Name())
-			continue
+			slog.Info("Skipping non-report file, invalid file name", "file", d.Name())
+			return nil
 		}
 
 		periodStart := reportTime - (reportTime % int64(period))
 		if existingReport, ok := reports[periodStart]; !ok || existingReport < reportTime {
 			reports[periodStart] = reportTime
 		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return reports, nil
+}
+
+// GetAllReports returns the filename for all reports within a given directory, which match the expected pattern.
+// Does not traverse subdirectories.
+func GetAllReports(dir string) ([]string, error) {
+	reports := make([]string, 0)
+	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			slog.Error("Failed to access path", "path", path, "error", err)
+			return err
+		}
+
+		if d.IsDir() && path != dir {
+			return filepath.SkipDir
+		}
+
+		if filepath.Ext(d.Name()) != constants.ReportExt {
+			slog.Info("Skipping non-report file, invalid extension", "file", d.Name())
+			return nil
+		}
+
+		if _, err := GetReportTime(d.Name()); err != nil {
+			slog.Info("Skipping non-report file, invalid file name", "file", d.Name())
+			return nil
+		}
+
+		reports = append(reports, d.Name())
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
 	return reports, nil
