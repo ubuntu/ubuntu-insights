@@ -426,6 +426,7 @@ func TestMockScreenList(_ *testing.T) {
 	}
 
 	switch args[0] {
+	// TODO: case with non matching regexp
 	case "exit 1":
 		fmt.Fprint(os.Stderr, "Error requested in Mock lsblk")
 		os.Exit(1)

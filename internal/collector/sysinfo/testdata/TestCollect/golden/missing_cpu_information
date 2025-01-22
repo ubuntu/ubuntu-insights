@@ -3,20 +3,16 @@ hardware:
         Family: Framework DIY
         Name: DIY Framework Laptop 16
         Vendor: Framework
-    cpu:
-        cpu: {}
+    cpu: {}
     gpus:
-        - gpu:
-            Driver: i915
-            Name: Onboard - Video
-            Vendor: "0x8086"
-        - gpu:
-            Driver: nvidia
-            Name: NVIDIA GeForce GTX 1050 Ti
-            Vendor: "0x10de"
+        - Driver: i915
+          Name: Onboard - Video
+          Vendor: "0x8086"
+        - Driver: nvidia
+          Name: NVIDIA GeForce GTX 1050 Ti
+          Vendor: "0x10de"
     mem:
-        mem:
-            MemTotal: 33493504000
+        MemTotal: 33493504000
     blks:
         - name: sda
           size: 931.5G

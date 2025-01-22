@@ -19,26 +19,11 @@ type SysInfo struct {
 type hwInfo struct {
 	Product map[string]string
 
-	CPU     cpuInfo
-	GPUs    []gpuInfo
-	Mem     memInfo
+	CPU     map[string]string
+	GPUs    []map[string]string
+	Mem     map[string]int
 	Blks    []diskInfo
 	Screens []screenInfo
-}
-
-// CpuInfo contains CPU information of a machine.
-type cpuInfo struct {
-	CPU map[string]string
-}
-
-// GpuInfo contains GPU information of a specific GPU.
-type gpuInfo struct {
-	GPU map[string]string
-}
-
-// MemInfo contains Memory information of a machine.
-type memInfo struct {
-	Mem map[string]int
 }
 
 // DiskInfo contains Disk information of a disk or partition.
