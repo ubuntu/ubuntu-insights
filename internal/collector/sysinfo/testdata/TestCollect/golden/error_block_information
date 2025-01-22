@@ -1,0 +1,35 @@
+hardware:
+    product:
+        Family: Framework DIY
+        Name: DIY Framework Laptop 16
+        Vendor: Framework
+    cpu:
+        'Architecture:': x86_64
+        'CPU(s):': "12"
+        'Core(s) per socket:': "6"
+        'Model name:': Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz
+        'Socket(s):': "1"
+        'Thread(s) per core:': "2"
+        'Vendor ID:': GenuineIntel
+    gpus:
+        - Driver: i915
+          Name: Onboard - Video
+          Vendor: "0x8086"
+        - Driver: nvidia
+          Name: NVIDIA GeForce GTX 1050 Ti
+          Vendor: "0x10de"
+    mem:
+        MemTotal: 33493504000
+    blks: []
+    screens:
+        - name: HDMI-0
+          physicalresolution: 3840x2160
+          size: 598mm x 336mm
+          resolution: 1920x1080
+          refreshrate: "60.00"
+        - name: eDP-1-1
+          physicalresolution: 3072x1728
+          size: 344mm x 193mm
+          resolution: 1920x1080
+          refreshrate: "60.03"
+software: {}

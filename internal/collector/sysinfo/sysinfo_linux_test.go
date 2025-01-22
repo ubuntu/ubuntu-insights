@@ -78,6 +78,17 @@ func TestCollect(t *testing.T) {
 			},
 		},
 
+		"Error CPU information": {
+			root:       "regular",
+			cpuInfo:    "error",
+			blkInfo:    "regular",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
 		"Garbage CPU information is empty": {
 			root:       "regular",
 			cpuInfo:    "garbage",
@@ -135,7 +146,18 @@ func TestCollect(t *testing.T) {
 		"Missing Block information": {
 			root:       "regular",
 			cpuInfo:    "regular",
-			blkInfo:    "missing",
+			blkInfo:    "",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Error Block information": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "error",
 			screenInfo: "regular",
 
 			logs: map[slog.Level]uint{
@@ -159,6 +181,17 @@ func TestCollect(t *testing.T) {
 			cpuInfo:    "regular",
 			blkInfo:    "regular",
 			screenInfo: "",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Error Screen information": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "error",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -213,7 +246,7 @@ func TestCollect(t *testing.T) {
 			blkInfo:    "garbage",
 			screenInfo: "garbage",
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 18,
+				slog.LevelWarn: 19,
 			},
 		},
 	}
@@ -301,7 +334,7 @@ func TestMockCPUList(_ *testing.T) {
 	}
 
 	switch args[0] {
-	case "exit 1":
+	case "error":
 		fmt.Fprint(os.Stderr, "Error requested in Mock cpulist")
 		os.Exit(1)
 	case "regular":
@@ -423,7 +456,7 @@ func TestMockBlkList(_ *testing.T) {
 	}
 
 	switch args[0] {
-	case "exit 1":
+	case "error":
 		fmt.Fprint(os.Stderr, "Error requested in Mock lsblk")
 		os.Exit(1)
 	case "regular":
@@ -500,8 +533,7 @@ func TestMockScreenList(_ *testing.T) {
 	}
 
 	switch args[0] {
-	// TODO: case with non matching regexp
-	case "exit 1":
+	case "error":
 		fmt.Fprint(os.Stderr, "Error requested in Mock lsblk")
 		os.Exit(1)
 	case "regular":

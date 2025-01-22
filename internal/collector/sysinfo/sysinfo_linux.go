@@ -32,11 +32,7 @@ func defaultOptions() *options {
 
 // collectHardware aggregates the data from all the other hardware collect functions.
 func (s Manager) collectHardware() (hwInfo hwInfo, err error) {
-	hwInfo.Product, err = s.collectProduct()
-	if err != nil {
-		s.opts.log.Warn(fmt.Sprintf("%v", err))
-		hwInfo.Product = map[string]string{}
-	}
+	hwInfo.Product = s.collectProduct()
 
 	hwInfo.CPU, err = s.collectCPU()
 	if err != nil {
@@ -77,14 +73,8 @@ func (s Manager) collectSoftware() (swInfo swInfo, err error) {
 }
 
 // collectProduct reads sysfs to find information about the system.
-func (s Manager) collectProduct() (info map[string]string, err error) {
-	defer func() {
-		if err == nil && len(info) == 0 {
-			err = fmt.Errorf("no Product information found")
-		}
-	}()
-
-	info = map[string]string{
+func (s Manager) collectProduct() map[string]string {
+	info := map[string]string{
 		"Vendor": s.readFileDiscardError(filepath.Join(s.opts.root, "sys/class/dmi/id/sys_vendor")),
 		"Name":   s.readFileDiscardError(filepath.Join(s.opts.root, "sys/class/dmi/id/product_name")),
 		"Family": s.readFileDiscardError(filepath.Join(s.opts.root, "sys/class/dmi/id/product_family")),
@@ -97,7 +87,7 @@ func (s Manager) collectProduct() (info map[string]string, err error) {
 		}
 	}
 
-	return info, nil
+	return info
 }
 
 // collectCPU uses lscpu to collect information about the CPUs.
