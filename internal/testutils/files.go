@@ -36,6 +36,7 @@ func CopyFile(src, dst string) error {
 	return err
 }
 
+// CopySymlink copies a symlink from source to destination.
 func CopySymlink(src, dst string) error {
 	lnk, err := os.Readlink(src)
 	if err != nil {
