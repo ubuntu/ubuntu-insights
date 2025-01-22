@@ -84,11 +84,20 @@ func (s Manager) collectProduct() (info map[string]string, err error) {
 		}
 	}()
 
-	return map[string]string{
+	info = map[string]string{
 		"Vendor": s.readFileDiscardError(filepath.Join(s.opts.root, "sys/class/dmi/id/sys_vendor")),
 		"Name":   s.readFileDiscardError(filepath.Join(s.opts.root, "sys/class/dmi/id/product_name")),
 		"Family": s.readFileDiscardError(filepath.Join(s.opts.root, "sys/class/dmi/id/product_family")),
-	}, nil
+	}
+
+	for k, v := range info {
+		if strings.ContainsRune(v, '\n') {
+			s.opts.log.Warn(fmt.Sprintf("product %s contains invalid value", k))
+			info[k] = ""
+		}
+	}
+
+	return info, nil
 }
 
 // collectCPU uses lscpu to collect information about the CPUs.
@@ -209,6 +218,13 @@ func (s Manager) collectGPU(card string) (info map[string]string, err error) {
 		return info, nil
 	}
 	info["Driver"] = filepath.Base(driverLink)
+
+	for k, v := range info {
+		if strings.ContainsRune(v, '\n') {
+			s.opts.log.Warn(fmt.Sprintf("gpu %s's %s contains invalid value", card, k))
+			info[k] = ""
+		}
+	}
 
 	return info, nil
 }
@@ -363,6 +379,11 @@ func (s Manager) collectScreens() (info []screenInfo, err error) {
 
 	for i, header := range headers {
 		v := screenConfigRegex.FindStringSubmatch(screens[i+1])
+
+		if len(v) < 3 {
+			s.opts.log.Warn(fmt.Sprintf("xrandr screen info for %s malformed", header[1]))
+			continue
+		}
 
 		info = append(info, screenInfo{
 			Name:               header[1],

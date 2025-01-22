@@ -27,12 +27,11 @@ func NewMockHandler() MockHandler {
 }
 
 // AssertLevels asserts that the logging levels observed match the expected amount.
-func (h MockHandler) AssertLevels(t *testing.T, levels map[slog.Level]uint) {
+func (h MockHandler) AssertLevels(t *testing.T, levels map[slog.Level]uint) bool {
 	t.Helper()
 
 	if levels == nil {
-		assert.Empty(t, h.HandleCalls)
-		return
+		return assert.Empty(t, h.HandleCalls)
 	}
 
 	have := make(map[slog.Level]uint)
@@ -40,7 +39,7 @@ func (h MockHandler) AssertLevels(t *testing.T, levels map[slog.Level]uint) {
 		have[r.Level]++
 	}
 
-	assert.Equal(t, levels, have)
+	return assert.Equal(t, levels, have)
 }
 
 // Enabled implements Handler.Enabled.

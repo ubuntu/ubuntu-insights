@@ -78,6 +78,17 @@ func TestCollect(t *testing.T) {
 			},
 		},
 
+		"Garbage CPU information is empty": {
+			root:       "regular",
+			cpuInfo:    "garbage",
+			blkInfo:    "regular",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
 		"Missing GPUs": {
 			root:       "regular",
 			cpuInfo:    "regular",
@@ -132,6 +143,17 @@ func TestCollect(t *testing.T) {
 			},
 		},
 
+		"Garbage Block information is empty": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "garbage",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
 		"Missing Screen information": {
 			root:       "regular",
 			cpuInfo:    "regular",
@@ -143,6 +165,28 @@ func TestCollect(t *testing.T) {
 			},
 		},
 
+		"Garbage Screen information is empty": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "garbage",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Missing Screen refresh information is empty": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "missing refresh",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 2,
+			},
+		},
+
 		"Missing hardware information is empty": {
 			root:       "withoutinfo",
 			cpuInfo:    "",
@@ -150,6 +194,26 @@ func TestCollect(t *testing.T) {
 			screenInfo: "",
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 8,
+			},
+		},
+
+		"Empty hardware information is empty": {
+			root:       "empty",
+			cpuInfo:    "",
+			blkInfo:    "",
+			screenInfo: "",
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 4,
+			},
+		},
+
+		"Garbage hardware information is sane": {
+			root:       "garbage",
+			cpuInfo:    "garbage",
+			blkInfo:    "garbage",
+			screenInfo: "garbage",
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 18,
 			},
 		},
 	}
@@ -210,7 +274,11 @@ func TestCollect(t *testing.T) {
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			assert.Equal(t, want, got, "Collect should return expected sys information")
 
-			l.AssertLevels(t, tc.logs)
+			if !l.AssertLevels(t, tc.logs) {
+				for _, call := range l.HandleCalls {
+					fmt.Printf("Logged %v: %s\n", call.Level, call.Message)
+				}
+			}
 		})
 	}
 }
@@ -328,6 +396,8 @@ func TestMockCPUList(_ *testing.T) {
       }
    ]
 }`)
+	case "garbage":
+		fmt.Println("-100cpus, 10 sockets, 20 cores per socket, 400 threads per core, nebula computing enabled.")
 	case "":
 		fallthrough
 	case "missing":
@@ -402,6 +472,9 @@ func TestMockBlkList(_ *testing.T) {
       }
    ]
 }`)
+	case "garbage":
+		fmt.Println(`my ssd is broken :(
+I should get a new one.`)
 	case "":
 		fallthrough
 	case "missing":
@@ -488,6 +561,13 @@ eDP-1-1 connected 3072x1728+0+432 (normal left inverted right x axis y axis) 344
    320x180       60.03  
 DP-1-1 disconnected (normal left inverted right x axis y axis)
 HDMI-1-1 disconnected (normal left inverted right x axis y axis)`)
+	case "garbage":
+		fmt.Println(`HDMI connected! (inverted Down down Up up right left right left a b) primary
+If only there were an arcade somewhere...`)
+	case "missing refresh":
+		fmt.Println(`Screen 0: minimum 8 x 8, current 6912 x 2160, maximum 32767 x 32767
+HDMI-0 connected primary 3840x2160+3072+0 (normal left inverted right x axis y axis) 598mm x 336mm
+   1920x1080     60.00+ 100.00    84.90`)
 	case "":
 		fallthrough
 	case "missing":
