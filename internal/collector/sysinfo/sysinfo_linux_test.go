@@ -244,20 +244,21 @@ func TestCollect(t *testing.T) {
 				sysinfo.WithLogger(&l),
 			}
 
+			cover := fmt.Sprintf("GOCOVERDIR=%s", os.Getenv("GOCOVERDIR"))
 			if tc.cpuInfo != "-" {
-				cmdArgs := []string{"env", "GO_WANT_HELPER_PROCESS=1", os.Args[0], "-test.run=TestMockCPUList", "--"}
+				cmdArgs := []string{"env", "GO_WANT_HELPER_PROCESS=1", cover, os.Args[0], "-test.run=TestMockCPUList", "--"}
 				cmdArgs = append(cmdArgs, tc.cpuInfo)
 				options = append(options, sysinfo.WithCPUInfo(cmdArgs))
 			}
 
 			if tc.blkInfo != "-" {
-				cmdArgs := []string{"env", "GO_WANT_HELPER_PROCESS=1", os.Args[0], "-test.run=TestMockBlkList", "--"}
+				cmdArgs := []string{"env", "GO_WANT_HELPER_PROCESS=1", cover, os.Args[0], "-test.run=TestMockBlkList", "--"}
 				cmdArgs = append(cmdArgs, tc.blkInfo)
 				options = append(options, sysinfo.WithBlkInfo(cmdArgs))
 			}
 
 			if tc.blkInfo != "-" {
-				cmdArgs := []string{"env", "GO_WANT_HELPER_PROCESS=1", os.Args[0], "-test.run=TestMockScreenList", "--"}
+				cmdArgs := []string{"env", "GO_WANT_HELPER_PROCESS=1", cover, os.Args[0], "-test.run=TestMockScreenList", "--"}
 				cmdArgs = append(cmdArgs, tc.screenInfo)
 				options = append(options, sysinfo.WithScreenInfo(cmdArgs))
 			}
