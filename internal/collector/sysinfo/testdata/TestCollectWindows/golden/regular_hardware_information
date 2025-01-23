@@ -1,0 +1,8 @@
+hardware:
+    product: {}
+    cpu: {}
+    gpus: []
+    mem: {}
+    blks: []
+    screens: []
+software: {}
