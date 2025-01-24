@@ -2,6 +2,7 @@
 package fileutils
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -35,4 +36,13 @@ func AtomicWrite(path string, data []byte) error {
 		return fmt.Errorf("could not rename temporary file: %v", err)
 	}
 	return nil
+}
+
+// FileExists checks if a file exists.
+func FileExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return false, err
+	}
+	return !errors.Is(err, os.ErrNotExist), nil
 }

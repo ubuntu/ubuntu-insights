@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"math"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -20,15 +20,15 @@ import (
 
 // Upload uploads the reports corresponding to the source to the configured server.
 // Does not do duplicate checks.
-func (um Manager) Upload() error {
+func (um Manager) Upload(force bool) error {
 	slog.Debug("Uploading reports")
 
-	gConsent, err := um.consentManager.GetConsentState("")
+	gConsent, err := um.consentM.GetConsentState("")
 	if err != nil {
 		return fmt.Errorf("upload failed to get global consent state: %v", err)
 	}
 
-	sConsent, err := um.consentManager.GetConsentState(um.source)
+	sConsent, err := um.consentM.GetConsentState(um.source)
 	if err != nil {
 		return fmt.Errorf("upload failed to get source consent state: %v", err)
 	}
@@ -48,7 +48,7 @@ func (um Manager) Upload() error {
 		wg.Add(1)
 		go func(file string) {
 			defer wg.Done()
-			if err := um.upload(file, url, gConsent && sConsent); err != nil {
+			if err := um.upload(file, url, gConsent && sConsent, force); err != nil {
 				slog.Warn("Failed to upload report", "file", file, "source", um.source, "error", err)
 			}
 		}(file)
@@ -58,37 +58,56 @@ func (um Manager) Upload() error {
 	return nil
 }
 
-func (um Manager) upload(file, url string, consent bool) error {
-	slog.Debug("Uploading report", "file", file, "consent", consent)
+// upload uploads an individual report to the server. It returns an error if the report is not mature enough to be uploaded, or if the upload fails.
+// It also moves the report to the uploaded directory after a successful upload.
+func (um Manager) upload(fName, url string, consent, force bool) error {
+	slog.Debug("Uploading report", "file", fName, "consent", consent, "force", force)
 
-	ts, err := reportutils.GetReportTime(file)
+	ts, err := reportutils.GetReportTime(fName)
 	if err != nil {
 		return fmt.Errorf("failed to parse report time from filename: %v", err)
 	}
 
-	// Report maturity check
-	if um.minAge > math.MaxInt64 {
-		return fmt.Errorf("min age is too large: %d", um.minAge)
-	}
-	if ts+int64(um.minAge) > um.timeProvider.NowUnix() {
-		slog.Debug("Skipping report due to min age", "timestamp", file, "minAge", um.minAge)
-		return ErrReportNotMature
+	if ts > um.timeProvider.NowUnix()-um.minAge && !force {
+		return fmt.Errorf("report is not mature enough to be uploaded")
 	}
 
-	payload, err := um.getPayload(file, consent)
+	// Check for duplicate reports.
+	fileExists, err := fileutils.FileExists(filepath.Join(um.uploadedDir, fName))
+	if err != nil {
+		return fmt.Errorf("failed to check if report has already been uploaded: %v", err)
+	}
+	if fileExists && !force {
+		return fmt.Errorf("report has already been uploaded")
+	}
+
+	origData, err := um.readPayload(fName)
 	if err != nil {
 		return fmt.Errorf("failed to get payload: %v", err)
 	}
-	slog.Debug("Uploading", "payload", payload)
-
-	if !um.dryRun {
-		if err := send(url, payload); err != nil {
-			return fmt.Errorf("failed to send data: %v", err)
+	data := origData
+	if !consent {
+		data, err = json.Marshal(constants.OptOutJSON)
+		if err != nil {
+			return fmt.Errorf("failed to marshal opt-out JSON data: %v", err)
 		}
+	}
+	slog.Debug("Uploading", "payload", data)
 
-		if err := um.moveReport(file, payload); err != nil {
-			return fmt.Errorf("failed to move report after uploading: %v", err)
+	if um.dryRun {
+		slog.Debug("Dry run, skipping upload")
+		return nil
+	}
+
+	// Move report first to avoid the situation where the report is sent, but not marked as sent.
+	if err := um.moveReport(filepath.Join(um.uploadedDir, fName), filepath.Join(um.collectedDir, fName), data); err != nil {
+		return fmt.Errorf("failed to move report after uploading: %v", err)
+	}
+	if err := send(url, data); err != nil {
+		if moveErr := um.moveReport(filepath.Join(um.collectedDir, fName), filepath.Join(um.uploadedDir, fName), origData); moveErr != nil {
+			return fmt.Errorf("failed to send data: %v, and failed to restore the original report: %v", err, moveErr)
 		}
+		return fmt.Errorf("failed to send data: %v", err)
 	}
 
 	return nil
@@ -103,48 +122,38 @@ func (um Manager) getURL() (string, error) {
 	return u.String(), nil
 }
 
-func (um Manager) getPayload(file string, consent bool) ([]byte, error) {
-	path := path.Join(um.collectedDir, file)
+func (um Manager) readPayload(file string) ([]byte, error) {
 	var jsonData map[string]interface{}
 
-	data, err := json.Marshal(constants.OptOutJSON)
+	// Read the report file
+	data, err := os.ReadFile(path.Join(um.collectedDir, file))
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal JSON data")
+		return nil, fmt.Errorf("failed to read report file: %v", err)
 	}
-	if consent {
-		// Read the report file
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read report file: %v", err)
-		}
 
-		// Remashal the JSON data to ensure it is valid
-		if err := json.Unmarshal(data, &jsonData); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal JSON data: %v", err)
-		}
+	// Remarshal the JSON data to ensure it is valid
+	if err := json.Unmarshal(data, &jsonData); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON data: %v", err)
+	}
 
-		// Marshal the JSON data back to bytes
-		data, err = json.Marshal(jsonData)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal JSON data: %v", err)
-		}
-
-		return data, nil
+	data, err = json.Marshal(jsonData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JSON data: %v", err)
 	}
 
 	return data, nil
 }
 
-// moveReport writes the uploaded report to the uploaded directory, and removes it from the collected directory.
-func (um Manager) moveReport(file string, data []byte) error {
-	err := fileutils.AtomicWrite(path.Join(um.uploadedDir, file), data)
+// moveReport writes the data to the writePath, and removes the matching file from the removePath.
+func (um Manager) moveReport(writePath, removePath string, data []byte) error {
+	err := fileutils.AtomicWrite(writePath, data)
 	if err != nil {
-		return fmt.Errorf("failed to write report to uploaded directory: %v", err)
+		return fmt.Errorf("failed to write report: %v", err)
 	}
 
-	err = os.Remove(path.Join(um.collectedDir, file))
+	err = os.Remove(removePath)
 	if err != nil {
-		return fmt.Errorf("failed to remove report from collected directory: %v", err)
+		return fmt.Errorf("failed to remove report: %v", err)
 	}
 
 	return nil
@@ -156,14 +165,12 @@ func send(url string, data []byte) error {
 	if err != nil {
 		return fmt.Errorf("failed to create request: %v", err)
 	}
-
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{Timeout: time.Second * 10}
-
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to send data: %v", err)
+		return fmt.Errorf("failed to send HTTP request: %v", err)
 	}
 	defer resp.Body.Close()
 

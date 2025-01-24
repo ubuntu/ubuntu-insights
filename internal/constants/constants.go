@@ -38,7 +38,7 @@ const (
 )
 
 // OptOutJSON is the data sent in case of Opt-Out choice.
-var OptOutJSON = struct{ OptOut bool }{OptOut: true}
+var OptOutJSON = struct{ OptOut bool }{true}
 
 type options struct {
 	baseDir func() (string, error)
