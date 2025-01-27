@@ -189,9 +189,9 @@ func setupTmpDir(t *testing.T, localFiles, uploadedFiles map[string]reportType, 
 
 func copyDummyData(t *testing.T, sourceDir, dir, localDir, uploadedDir string) {
 	t.Helper()
-	require.NoError(t, testutils.CopyDir(sourceDir, dir), "Setup: failed to copy dummy data to temporary directory")
-	require.NoError(t, testutils.CopyDir(sourceDir, localDir), "Setup: failed to copy dummy data to local")
-	require.NoError(t, testutils.CopyDir(sourceDir, uploadedDir), "Setup: failed to copy dummy data to uploaded")
+	require.NoError(t, testutils.CopyDir(t, sourceDir, dir), "Setup: failed to copy dummy data to temporary directory")
+	require.NoError(t, testutils.CopyDir(t, sourceDir, localDir), "Setup: failed to copy dummy data to local")
+	require.NoError(t, testutils.CopyDir(t, sourceDir, uploadedDir), "Setup: failed to copy dummy data to uploaded")
 }
 
 func writeFiles(t *testing.T, targetDir string, files map[string]reportType) {

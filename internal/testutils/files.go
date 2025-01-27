@@ -10,18 +10,12 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
-// CleanupDir removes the temporary directory including its contents.
-func CleanupDir(t *testing.T, dir string) {
-	t.Helper()
-	assert.NoError(t, os.RemoveAll(dir), "Cleanup: failed to remove temporary directory")
-}
-
 // CopyFile copies a file from source to destination.
-func CopyFile(src, dst string) error {
+func CopyFile(t *testing.T, src, dst string) error {
+	t.Helper()
+
 	sourceFile, err := os.Open(src)
 	if err != nil {
 		return err
@@ -39,8 +33,9 @@ func CopyFile(src, dst string) error {
 }
 
 // CopyDir copies the contents of a directory to another directory.
-func CopyDir(srcDir, dstDir string) error {
-	return filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
+func CopyDir(t *testing.T, srcDir, dstDir string) error {
+	t.Helper()
+	return filepath.WalkDir(srcDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -49,10 +44,10 @@ func CopyDir(srcDir, dstDir string) error {
 			return err
 		}
 		dstPath := filepath.Join(dstDir, relPath)
-		if info.IsDir() {
-			return os.MkdirAll(dstPath, info.Mode())
+		if d.IsDir() {
+			return os.MkdirAll(dstPath, 0700)
 		}
-		return CopyFile(path, dstPath)
+		return CopyFile(t, path, dstPath)
 	})
 }
 

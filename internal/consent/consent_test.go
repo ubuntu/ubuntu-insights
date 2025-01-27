@@ -55,7 +55,6 @@ func TestGetConsentState(t *testing.T) {
 			t.Parallel()
 			dir, err := setupTmpConsentFiles(t, tc.globalFile)
 			require.NoError(t, err, "Setup: failed to setup temporary consent files")
-			defer testutils.CleanupDir(t, dir)
 			cm := consent.New(dir)
 
 			got, err := cm.GetConsentState(tc.source)
@@ -112,7 +111,6 @@ func TestSetConsentStates(t *testing.T) {
 			t.Parallel()
 			dir, err := setupTmpConsentFiles(t, tc.globalFile)
 			require.NoError(t, err, "Setup: failed to setup temporary consent files")
-			defer testutils.CleanupDir(t, dir)
 			cm := consent.New(dir)
 
 			err = cm.SetConsentState(tc.writeSource, tc.writeState)
@@ -140,18 +138,15 @@ func setupTmpConsentFiles(t *testing.T, globalFile string) (string, error) {
 
 	// Setup temporary directory
 	var err error
-	dir, err := os.MkdirTemp("", "consent-files")
-	if err != nil {
-		return dir, fmt.Errorf("failed to create temporary directory: %v", err)
-	}
+	dir := t.TempDir()
 
-	if err = testutils.CopyDir(filepath.Join("testdata", "consent_files"), dir); err != nil {
+	if err = testutils.CopyDir(t, filepath.Join("testdata", "consent_files"), dir); err != nil {
 		return dir, fmt.Errorf("failed to copy testdata directory to temporary directory: %v", err)
 	}
 
 	// Setup globalFile if provided
 	if globalFile != "" {
-		if err = testutils.CopyFile(filepath.Join(dir, globalFile), filepath.Join(dir, "consent.toml")); err != nil {
+		if err = testutils.CopyFile(t, filepath.Join(dir, globalFile), filepath.Join(dir, "consent.toml")); err != nil {
 			return dir, fmt.Errorf("failed to copy requested global consent file: %v", err)
 		}
 	}
