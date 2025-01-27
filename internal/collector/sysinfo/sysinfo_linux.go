@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type options struct {
@@ -36,31 +37,31 @@ func (s Manager) collectHardware() (hwInfo hwInfo, err error) {
 
 	hwInfo.CPU, err = s.collectCPU()
 	if err != nil {
-		s.opts.log.Warn(fmt.Sprintf("%v", err))
+		s.opts.log.Warn("failed to collect CPU info", "error", err)
 		hwInfo.CPU = map[string]string{}
 	}
 
 	hwInfo.GPUs, err = s.collectGPUs()
 	if err != nil {
-		s.opts.log.Warn(fmt.Sprintf("%v", err))
+		s.opts.log.Warn("failed to collect GPU info", "error", err)
 		hwInfo.GPUs = []map[string]string{}
 	}
 
 	hwInfo.Mem, err = s.collectMemory()
 	if err != nil {
-		s.opts.log.Warn(fmt.Sprintf("%v", err))
+		s.opts.log.Warn("failed to collect memory info", "error", err)
 		hwInfo.Mem = map[string]int{}
 	}
 
 	hwInfo.Blks, err = s.collectBlocks()
 	if err != nil {
-		s.opts.log.Warn(fmt.Sprintf("%v", err))
+		s.opts.log.Warn("failed to collect block info", "error", err)
 		hwInfo.Blks = []diskInfo{}
 	}
 
 	hwInfo.Screens, err = s.collectScreens()
 	if err != nil {
-		s.opts.log.Warn(fmt.Sprintf("%v", err))
+		s.opts.log.Warn("failed to collect screen info", "error", err)
 		hwInfo.Screens = []screenInfo{}
 	}
 
@@ -98,12 +99,12 @@ func (s Manager) collectCPU() (info map[string]string, err error) {
 		}
 	}()
 
-	stdout, stderr, err := runCmd(context.Background(), s.opts.cpuInfoCmd[0], s.opts.cpuInfoCmd[1:]...)
+	stdout, stderr, err := runCmdWithTimeout(context.Background(), 1*time.Second, s.opts.cpuInfoCmd[0], s.opts.cpuInfoCmd[1:]...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run lscpu: %v", err)
 	}
 	if stderr.Len() > 0 {
-		s.opts.log.Info(fmt.Sprintf("lscpu output to stderr: %v", stderr))
+		s.opts.log.Info("lscpu output to stderr", "stderr", stderr)
 	}
 
 	type lscpu struct {
@@ -176,7 +177,7 @@ func (s Manager) collectGPUs() (gpus []map[string]string, err error) {
 
 		gpu, err := s.collectGPU(n)
 		if err != nil {
-			s.opts.log.Warn(fmt.Sprintf("failed to get GPU info for %s: %v", n, err))
+			s.opts.log.Warn("failed to get GPU info", "GPU", n, "error", err)
 			continue
 		}
 
@@ -204,14 +205,14 @@ func (s Manager) collectGPU(card string) (info map[string]string, err error) {
 
 	driverLink, err := os.Readlink(filepath.Join(devDir, "driver"))
 	if err != nil {
-		s.opts.log.Warn(fmt.Sprintf("failed to get driver for %s: %v", card, err))
+		s.opts.log.Warn("failed to get GPU driver", "GPU", card, "error", err)
 		return info, nil
 	}
 	info["Driver"] = filepath.Base(driverLink)
 
 	for k, v := range info {
 		if strings.ContainsRune(v, '\n') {
-			s.opts.log.Warn(fmt.Sprintf("gpu %s's %s contains invalid value", card, k))
+			s.opts.log.Warn(fmt.Sprintf("GPU info contains invalid value for %s", k), "GPU", card)
 			info[k] = ""
 		}
 	}
@@ -243,14 +244,14 @@ func (s Manager) collectMemory() (info map[string]int, err error) {
 
 	info = map[string]int{}
 	lines := strings.Split(string(f), "\n")
-	for _, l := range lines {
+	for i, l := range lines {
 		if l == "" {
 			continue
 		}
 
 		m := meminfoRegex.FindStringSubmatch(l)
 		if m == nil {
-			s.opts.log.Warn(fmt.Sprintf("meminfo contains invalid line: %s", l))
+			s.opts.log.Warn("meminfo contains invalid line", "line", l, "linenum", i)
 			continue
 		}
 
@@ -260,7 +261,7 @@ func (s Manager) collectMemory() (info map[string]int, err error) {
 
 		v, err := strconv.Atoi(m[2])
 		if err != nil {
-			s.opts.log.Warn(fmt.Sprintf("meminfo value was not an integer: %v", err))
+			s.opts.log.Warn("meminfo value was not an integer", "value", v, "error", err, "linenum", i)
 			continue
 		}
 
@@ -309,12 +310,12 @@ func (s Manager) collectBlocks() (info []diskInfo, err error) {
 		}
 	}()
 
-	stdout, stderr, err := runCmd(context.Background(), s.opts.lsblkCmd[0], s.opts.lsblkCmd[1:]...)
+	stdout, stderr, err := runCmdWithTimeout(context.Background(), 1*time.Second, s.opts.lsblkCmd[0], s.opts.lsblkCmd[1:]...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run lsblk: %v", err)
 	}
 	if stderr.Len() > 0 {
-		s.opts.log.Info(fmt.Sprintf("lsblk output to stderr: %v", stderr))
+		s.opts.log.Info("lsblk output to stderr", "stderr", stderr)
 	}
 
 	type lsblk struct {
@@ -349,12 +350,12 @@ func (s Manager) collectScreens() (info []screenInfo, err error) {
 		}
 	}()
 
-	stdout, stderr, err := runCmd(context.Background(), s.opts.screenCmd[0], s.opts.screenCmd[1:]...)
+	stdout, stderr, err := runCmdWithTimeout(context.Background(), 1*time.Second, s.opts.screenCmd[0], s.opts.screenCmd[1:]...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run xrandr: %v", err)
 	}
 	if stderr.Len() > 0 {
-		s.opts.log.Info(fmt.Sprintf("xrandr output to stderr: %v", stderr))
+		s.opts.log.Info("xrandr output to stderr", "stderr", stderr)
 	}
 
 	data := stdout.String()
@@ -371,7 +372,7 @@ func (s Manager) collectScreens() (info []screenInfo, err error) {
 		v := screenConfigRegex.FindStringSubmatch(screens[i+1])
 
 		if len(v) < 3 {
-			s.opts.log.Warn(fmt.Sprintf("xrandr screen info for %s malformed", header[1]))
+			s.opts.log.Warn("xrandr screen info malformed", "screen", header[1])
 			continue
 		}
 
@@ -386,52 +387,4 @@ func (s Manager) collectScreens() (info []screenInfo, err error) {
 	}
 
 	return info, nil
-}
-
-// readFile returns the data in the file path, trimming whitespace, or "" on error.
-func (s Manager) readFileDiscardError(path string) string {
-	f, err := os.ReadFile(path)
-	if err != nil {
-		s.opts.log.Warn(fmt.Sprintf("failed to read file %s: %v", path, err))
-		return ""
-	}
-
-	return strings.TrimSpace(string(f))
-}
-
-// convertUnitToBytes takes a string bytes unit and converts value to bytes.
-func (s Manager) convertUnitToBytes(unit string, value int) int {
-	switch strings.ToLower(unit) {
-	case "":
-		fallthrough
-	case "b":
-		return value
-	case "k":
-		fallthrough
-	case "kb":
-		fallthrough
-	case "kib":
-		return value * 1024
-	case "m":
-		fallthrough
-	case "mb":
-		fallthrough
-	case "mib":
-		return value * 1024 * 1024
-	case "g":
-		fallthrough
-	case "gb":
-		fallthrough
-	case "gib":
-		return value * 1024 * 1024 * 1024
-	case "t":
-		fallthrough
-	case "tb":
-		fallthrough
-	case "tib":
-		return value * 1024 * 1024 * 1024 * 1024
-	default:
-		s.opts.log.Warn(fmt.Sprintf("unrecognized bytes unit: %s", unit))
-		return value
-	}
 }

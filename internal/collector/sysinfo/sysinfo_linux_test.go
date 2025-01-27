@@ -256,18 +256,12 @@ func TestCollect(t *testing.T) {
 
 			tmp := t.TempDir()
 			err := testutils.CopyDir("testdata/linuxfs", tmp)
-			if err != nil {
-				fmt.Printf("Setup: failed to copy testdata directory: %v\n", err)
-				t.FailNow()
-			}
+			require.NoError(t, err, "setup: failed to copy test data directory: ")
 
 			root := filepath.Join(tmp, tc.root)
 			for _, f := range tc.missingFiles {
 				err := os.Remove(filepath.Join(root, f))
-				if err != nil {
-					fmt.Printf("Setup: failed to remove file %s: %v\n", f, err)
-					t.FailNow()
-				}
+				require.NoError(t, err, "setup: failed to remove file %s: ", f)
 			}
 
 			l := testutils.NewMockHandler()
