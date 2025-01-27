@@ -6,21 +6,29 @@ import (
 	"log/slog"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type options struct {
-	gpuCmd []string
-	log    *slog.Logger
+	productCmd []string
+	gpuCmd     []string
+	log        *slog.Logger
 }
 
 func defaultOptions() *options {
 	return &options{
-		gpuCmd: []string{"Get-WmiObject", "Win32_VideoController"},
-		log:    slog.Default(),
+		productCmd: []string{"powershell.exe", "-Command", "Get-WmiObject", "Win32_BaseBoard"},
+		gpuCmd:     []string{"powershell.exe", "-Command", "Get-WmiObject", "Win32_VideoController"},
+		log:        slog.Default(),
 	}
 }
 
 func (s Manager) collectHardware() (hwInfo hwInfo, err error) {
+	hwInfo.Product, err = s.collectProduct()
+	if err != nil {
+		s.opts.log.Warn(fmt.Sprintf("%v", err))
+		hwInfo.Product = map[string]string{}
+	}
 
 	hwInfo.GPUs, err = s.collectGPUs()
 	if err != nil {
@@ -33,6 +41,35 @@ func (s Manager) collectHardware() (hwInfo hwInfo, err error) {
 
 func (s Manager) collectSoftware() (swInfo, error) {
 	return swInfo{}, nil
+}
+
+var usedProductFields = map[string]struct{}{
+	"Product":      {},
+	"Name":         {},
+	"Manufacturer": {},
+}
+
+func (s Manager) collectProduct() (product map[string]string, err error) {
+	products, err := s.runWMI(s.opts.productCmd, usedProductFields)
+	if err != nil {
+		return nil, err
+	}
+	if len(products) == 0 {
+		return nil, fmt.Errorf("product information missing")
+	}
+	if len(products) > 1 {
+		s.opts.log.Info(fmt.Sprintf("product information more than 1 (%v) products", len(products)))
+	}
+
+	product = products[0]
+
+	product["Family"] = product["Product"]
+	delete(product, "Product")
+
+	product["Vendor"] = product["Manufacturer"]
+	delete(product, "Manufacturer")
+
+	return product, nil
 }
 
 var usedGPUFields = map[string]struct{}{
@@ -81,7 +118,7 @@ func (s Manager) runWMI(args []string, filter map[string]struct{}) ([]map[string
 		return nil, fmt.Errorf("empty filter will always produce nothing for cmdlet Get-WmiObject %v", args)
 	}
 
-	stdout, stderr, err := runCmd(context.Background(), args[0], args[1:]...)
+	stdout, stderr, err := runCmdWithTimeout(context.Background(), 1*time.Second, args[0], args[1:]...)
 	if err != nil {
 		return nil, err
 	}

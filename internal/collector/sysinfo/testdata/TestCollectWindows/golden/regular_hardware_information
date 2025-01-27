@@ -1,7 +1,16 @@
 hardware:
-    product: {}
+    product:
+        Family: MS-1582
+        Name: Base Board
+        Vendor: Micro-Star International Co., Ltd.
     cpu: {}
-    gpus: []
+    gpus:
+        - Driver: nvldumdx.dll
+          Name: NVIDIA GeForce RTX 3050 Ti Laptop GPU
+          Vendor: NVIDIA
+        - Driver: igdumdim0.dll
+          Name: Intel(R) UHD Graphics
+          Vendor: Intel Corporation
     mem: {}
     blks: []
     screens: []

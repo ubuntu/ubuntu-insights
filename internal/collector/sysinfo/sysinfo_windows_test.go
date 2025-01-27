@@ -17,12 +17,14 @@ func TestCollectWindows(t *testing.T) {
 
 	tests := map[string]struct {
 		gpuInfo string
+		productInfo string
 
 		logs    map[slog.Level]uint
 		wantErr bool
 	}{
 		"Regular hardware information": {
 			gpuInfo: "regular",
+			productInfo: "regular",
 		},
 	}
 
@@ -32,10 +34,7 @@ func TestCollectWindows(t *testing.T) {
 
 			tmp := t.TempDir()
 			err := testutils.CopyDir("testdata/windowsfs", tmp)
-			if err != nil {
-				fmt.Printf("Setup: failed to copy testdata directory: %v\n", err)
-				t.FailNow()
-			}
+			require.NoError(t, err, "setup: failed to copy testdata directory")
 
 			l := testutils.NewMockHandler()
 
@@ -48,6 +47,12 @@ func TestCollectWindows(t *testing.T) {
 				cmdArgs := []string{os.Args[0], "-test.run=TestMockGPUInfo", "--"}
 				cmdArgs = append(cmdArgs, tc.gpuInfo)
 				options = append(options, sysinfo.WithGPUInfo(cmdArgs))
+			}
+
+			if tc.productInfo != "-" {
+				cmdArgs := []string{os.Args[0], "-test.run=TestMockProductInfo", "--"}
+				cmdArgs = append(cmdArgs, tc.productInfo)
+				options = append(options, sysinfo.WithProductInfo(cmdArgs))
 			}
 
 			s := sysinfo.New(options...)
@@ -234,6 +239,42 @@ VideoMemoryType              : 2
 VideoMode                    :
 VideoModeDescription         : 1920 x 1080 x 4294967296 colors
 VideoProcessor               : Intel(R) UHD Graphics Family`)
+	case "":
+		fallthrough
+	case "missing":
+		os.Exit(0)
+	}
+}
+
+func TestMockProductInfo(_ *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+	defer os.Exit(0)
+
+	args := os.Args
+	for len(args) > 0 {
+		if args[0] != "--" {
+			args = args[1:]
+			continue
+		}
+		args = args[1:]
+		break
+	}
+
+	switch args[0] {
+	case "error":
+		fmt.Fprint(os.Stderr, "Error requested in Mock product info")
+		os.Exit(1)
+	case "regular":
+		fmt.Println(`
+
+Manufacturer : Micro-Star International Co., Ltd.
+Model        :
+Name         : Base Board
+SerialNumber : BSS-0123456789
+SKU          :
+Product      : MS-1582`)
 	case "":
 		fallthrough
 	case "missing":
