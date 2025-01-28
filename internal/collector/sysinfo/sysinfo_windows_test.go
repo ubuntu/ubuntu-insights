@@ -16,15 +16,18 @@ func TestCollectWindows(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		gpuInfo string
 		productInfo string
+		cpuInfo string
+		gpuInfo string
+		
 
 		logs    map[slog.Level]uint
 		wantErr bool
 	}{
 		"Regular hardware information": {
-			gpuInfo: "regular",
 			productInfo: "regular",
+			cpuInfo: "regular",
+			gpuInfo: "regular",
 		},
 	}
 
@@ -43,16 +46,22 @@ func TestCollectWindows(t *testing.T) {
 			}
 
 			os.Setenv("GO_WANT_HELPER_PROCESS", "1")
-			if tc.gpuInfo != "-" {
-				cmdArgs := []string{os.Args[0], "-test.run=TestMockGPUInfo", "--"}
-				cmdArgs = append(cmdArgs, tc.gpuInfo)
-				options = append(options, sysinfo.WithGPUInfo(cmdArgs))
-			}
-
 			if tc.productInfo != "-" {
 				cmdArgs := []string{os.Args[0], "-test.run=TestMockProductInfo", "--"}
 				cmdArgs = append(cmdArgs, tc.productInfo)
 				options = append(options, sysinfo.WithProductInfo(cmdArgs))
+			}
+
+			if tc.cpuInfo != "-" {
+				cmdArgs := []string{os.Args[0], "-test.run=TestMockCPUInfo", "--"}
+				cmdArgs = append(cmdArgs, tc.cpuInfo)
+				options = append(options, sysinfo.WithCPUInfo(cmdArgs))
+			}
+
+			if tc.gpuInfo != "-" {
+				cmdArgs := []string{os.Args[0], "-test.run=TestMockGPUInfo", "--"}
+				cmdArgs = append(cmdArgs, tc.gpuInfo)
+				options = append(options, sysinfo.WithGPUInfo(cmdArgs))
 			}
 
 			s := sysinfo.New(options...)
@@ -69,10 +78,192 @@ func TestCollectWindows(t *testing.T) {
 
 			if !l.AssertLevels(t, tc.logs) {
 				for _, call := range l.HandleCalls {
-					fmt.Printf("Logged %v: %s\n", call.Level, call.Message)
+					t.Logf("Logged %v: %s\n", call.Level, call.Message)
 				}
 			}
 		})
+	}
+}
+
+
+func TestMockProductInfo(_ *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+	defer os.Exit(0)
+
+	args := os.Args
+	for len(args) > 0 {
+		if args[0] != "--" {
+			args = args[1:]
+			continue
+		}
+		args = args[1:]
+		break
+	}
+
+	switch args[0] {
+	case "error":
+		fmt.Fprint(os.Stderr, "Error requested in Mock product info")
+		os.Exit(1)
+	case "regular":
+		fmt.Println(`
+
+AdminPasswordStatus         : 3
+BootupState                 : Normal boot
+ChassisBootupState          : 3
+KeyboardPasswordStatus      : 3
+PowerOnPasswordStatus       : 3
+PowerSupplyState            : 3
+PowerState                  : 0
+FrontPanelResetStatus       : 3
+ThermalState                : 3
+Status                      : OK
+Name                        : MSI
+PowerManagementCapabilities :
+PowerManagementSupported    :
+Caption                     : MSI
+Description                 : AT/AT COMPATIBLE
+InstallDate                 :
+CreationClassName           : Win32_ComputerSystem
+NameFormat                  :
+PrimaryOwnerContact         :
+PrimaryOwnerName            : johndoe@internet.org
+Roles                       : {LM_Workstation, LM_Server, NT}
+InitialLoadInfo             :
+LastLoadInfo                :
+ResetCapability             : 1
+AutomaticManagedPagefile    : True
+AutomaticResetBootOption    : True
+AutomaticResetCapability    : True
+BootOptionOnLimit           :
+BootOptionOnWatchDog        :
+BootROMSupported            : True
+BootStatus                  : {0, 0, 0, 0...}
+ChassisSKUNumber            : Default string
+CurrentTimeZone             : -300
+DaylightInEffect            : False
+DNSHostName                 : MSI
+Domain                      : WORKGROUP
+DomainRole                  : 0
+EnableDaylightSavingsTime   : True
+HypervisorPresent           : True
+InfraredSupported           : False
+Manufacturer                : Micro-Star International Co., Ltd.
+Model                       : Star 11 CPP
+NetworkServerModeEnabled    : True
+NumberOfLogicalProcessors   : 16
+NumberOfProcessors          : 1
+OEMLogoBitmap               :
+OEMStringArray              : { , $BIOSE1110000100000000200,  ,  ...}
+PartOfDomain                : False
+PauseAfterReset             : -1
+PCSystemType                : 2
+PCSystemTypeEx              : 2
+ResetCount                  : -1
+ResetLimit                  : -1
+SupportContactDescription   :
+SystemFamily                : GF
+SystemSKUNumber             : 1582.3
+SystemStartupDelay          :
+SystemStartupOptions        :
+SystemStartupSetting        :
+SystemType                  : x64-based PC
+TotalPhysicalMemory         : 68406489088
+UserName                    : MSI\johndo
+WakeUpType                  : 6
+Workgroup                   : WORKGROUP`)
+	case "":
+		fallthrough
+	case "missing":
+		os.Exit(0)
+	}
+}
+
+func TestMockCPUInfo(_ *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+	defer os.Exit(0)
+
+	args := os.Args
+	for len(args) > 0 {
+		if args[0] != "--" {
+			args = args[1:]
+			continue
+		}
+		args = args[1:]
+		break
+	}
+
+	switch args[0] {
+	case "error":
+		fmt.Fprint(os.Stderr, "Error requested in Mock cpu info")
+		os.Exit(1)
+	case "regular":
+		fmt.Println(`
+
+Availability                            : 3
+CpuStatus                               : 1
+CurrentVoltage                          : 8
+DeviceID                                : CPU0
+ErrorCleared                            :
+ErrorDescription                        :
+LastErrorCode                           :
+LoadPercentage                          : 4
+Status                                  : OK
+StatusInfo                              : 3
+AddressWidth                            : 64
+DataWidth                               : 64
+ExtClock                                : 100
+L2CacheSize                             : 10240
+L2CacheSpeed                            :
+MaxClockSpeed                           : 2304
+PowerManagementSupported                : False
+ProcessorType                           : 3
+Revision                                :
+SocketDesignation                       : U3E1
+Version                                 :
+VoltageCaps                             :
+Caption                                 : Intel64 Family 6 Model 141 Stepping 1
+Description                             : Intel64 Family 6 Model 141 Stepping 1
+InstallDate                             :
+Name                                    : 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz
+ConfigManagerErrorCode                  :
+ConfigManagerUserConfig                 :
+CreationClassName                       : Win32_Processor
+PNPDeviceID                             :
+PowerManagementCapabilities             :
+SystemCreationClassName                 : Win32_ComputerSystem
+SystemName                              : MSI
+CurrentClockSpeed                       : 2304
+Family                                  : 198
+OtherFamilyDescription                  :
+Role                                    : CPU
+Stepping                                :
+UniqueId                                :
+UpgradeMethod                           : 1
+Architecture                            : 9
+AssetTag                                : To Be Filled By O.E.M.
+Characteristics                         : 252
+L3CacheSize                             : 24576
+L3CacheSpeed                            : 0
+Level                                   : 6
+Manufacturer                            : GenuineIntel
+NumberOfCores                           : 8
+NumberOfEnabledCore                     : 8
+NumberOfLogicalProcessors               : 16
+PartNumber                              : To Be Filled By O.E.M.
+ProcessorId                             : BFEBFBFF000806D1
+SecondLevelAddressTranslationExtensions : False
+SerialNumber                            : To Be Filled By O.E.M.
+ThreadCount                             : 16
+VirtualizationFirmwareEnabled           : False
+VMMonitorModeExtensions                 : False`)
+	case "":
+		fallthrough
+	case "missing":
+		os.Exit(0)
 	}
 }
 
@@ -99,15 +290,6 @@ func TestMockGPUInfo(_ *testing.T) {
 	case "regular":
 		fmt.Println(`
 
-__GENUS                      : 2
-__CLASS                      : Win32_VideoController
-__SUPERCLASS                 : CIM_PCVideoController
-__DYNASTY                    : CIM_ManagedSystemElement
-__RELPATH                    : Win32_VideoController.DeviceID="VideoController1"
-__PROPERTY_COUNT             : 59
-__DERIVATION                 : {CIM_PCVideoController, CIM_VideoController, CIM_Controller, CIM_LogicalDevice...}
-__NAMESPACE                  : root\cimv2
-__PATH                       : root\cimv2:Win32_VideoController.DeviceID="VideoController1"
 AcceleratorCapabilities      :
 AdapterCompatibility         : NVIDIA
 AdapterDACType               : Integrated RAMDAC
@@ -169,15 +351,6 @@ VideoMode                    :
 VideoModeDescription         :
 VideoProcessor               : NVIDIA GeForce RTX 3050 Ti Laptop GPU
 
-__GENUS                      : 2
-__CLASS                      : Win32_VideoController
-__SUPERCLASS                 : CIM_PCVideoController
-__DYNASTY                    : CIM_ManagedSystemElement
-__RELPATH                    : Win32_VideoController.DeviceID="VideoController2"
-__PROPERTY_COUNT             : 59
-__DERIVATION                 : {CIM_PCVideoController, CIM_VideoController, CIM_Controller, CIM_LogicalDevice...}
-__NAMESPACE                  : root\cimv2
-__PATH                       : root\cimv2:Win32_VideoController.DeviceID="VideoController2"
 AcceleratorCapabilities      :
 AdapterCompatibility         : Intel Corporation
 AdapterDACType               : Internal
@@ -239,42 +412,6 @@ VideoMemoryType              : 2
 VideoMode                    :
 VideoModeDescription         : 1920 x 1080 x 4294967296 colors
 VideoProcessor               : Intel(R) UHD Graphics Family`)
-	case "":
-		fallthrough
-	case "missing":
-		os.Exit(0)
-	}
-}
-
-func TestMockProductInfo(_ *testing.T) {
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
-		return
-	}
-	defer os.Exit(0)
-
-	args := os.Args
-	for len(args) > 0 {
-		if args[0] != "--" {
-			args = args[1:]
-			continue
-		}
-		args = args[1:]
-		break
-	}
-
-	switch args[0] {
-	case "error":
-		fmt.Fprint(os.Stderr, "Error requested in Mock product info")
-		os.Exit(1)
-	case "regular":
-		fmt.Println(`
-
-Manufacturer : Micro-Star International Co., Ltd.
-Model        :
-Name         : Base Board
-SerialNumber : BSS-0123456789
-SKU          :
-Product      : MS-1582`)
 	case "":
 		fallthrough
 	case "missing":

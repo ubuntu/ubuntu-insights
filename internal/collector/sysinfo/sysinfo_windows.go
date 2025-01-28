@@ -5,20 +5,23 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
 
 type options struct {
 	productCmd []string
+	cpuCmd     []string
 	gpuCmd     []string
 	log        *slog.Logger
 }
 
 func defaultOptions() *options {
 	return &options{
-		productCmd: []string{"powershell.exe", "-Command", "Get-WmiObject", "Win32_BaseBoard"},
-		gpuCmd:     []string{"powershell.exe", "-Command", "Get-WmiObject", "Win32_VideoController"},
+		productCmd: []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_ComputerSystem", "|", "Format-List", "-Property", "*"},
+		cpuCmd:     []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_Processor", "|", "Format-List", "-Property", "*"},
+		gpuCmd:     []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_VideoController", "|", "Format-List", "-Property", "*"},
 		log:        slog.Default(),
 	}
 }
@@ -26,13 +29,19 @@ func defaultOptions() *options {
 func (s Manager) collectHardware() (hwInfo hwInfo, err error) {
 	hwInfo.Product, err = s.collectProduct()
 	if err != nil {
-		s.opts.log.Warn(fmt.Sprintf("%v", err))
+		s.opts.log.Warn("failed to collect product info", "error", err)
 		hwInfo.Product = map[string]string{}
+	}
+
+	hwInfo.CPU, err = s.collectCPU()
+	if err != nil {
+		s.opts.log.Warn("failed to collect cpu info", "error", err)
+		hwInfo.CPU = map[string]string{}
 	}
 
 	hwInfo.GPUs, err = s.collectGPUs()
 	if err != nil {
-		s.opts.log.Warn(fmt.Sprintf("%v", err))
+		s.opts.log.Warn("failed to collect GPU info", "error", err)
 		hwInfo.GPUs = []map[string]string{}
 	}
 
@@ -44,9 +53,9 @@ func (s Manager) collectSoftware() (swInfo, error) {
 }
 
 var usedProductFields = map[string]struct{}{
-	"Product":      {},
-	"Name":         {},
-	"Manufacturer": {},
+	"Model":           {},
+	"Manufacturer":    {},
+	"SystemSKUNumber": {},
 }
 
 func (s Manager) collectProduct() (product map[string]string, err error) {
@@ -58,18 +67,40 @@ func (s Manager) collectProduct() (product map[string]string, err error) {
 		return nil, fmt.Errorf("product information missing")
 	}
 	if len(products) > 1 {
-		s.opts.log.Info(fmt.Sprintf("product information more than 1 (%v) products", len(products)))
+		s.opts.log.Info("product information more than 1 products", "count", len(products))
 	}
 
 	product = products[0]
 
-	product["Family"] = product["Product"]
-	delete(product, "Product")
+	product["Family"] = product["SystemSKUNumber"]
+	delete(product, "SystemSKUNumber")
 
 	product["Vendor"] = product["Manufacturer"]
 	delete(product, "Manufacturer")
 
 	return product, nil
+}
+
+var usedCPUFields = map[string]struct{}{
+	"NumberOfLogicalProcessors": {},
+	"NumberOfCores":             {},
+	"Manufacturer":              {},
+	"Name":                      {},
+}
+
+func (s Manager) collectCPU() (cpu map[string]string, err error) {
+	cpus, err := s.runWMI(s.opts.cpuCmd, usedCPUFields)
+	if err != nil {
+		return nil, err
+	}
+	if len(cpus) == 0 {
+		return nil, fmt.Errorf("cpu info has no cpus")
+	}
+
+	// we are assuming all CPUs are the same
+	cpus[0]["Sockets"] = strconv.Itoa(len(cpus))
+
+	return cpus[0], nil
 }
 
 var usedGPUFields = map[string]struct{}{
@@ -118,12 +149,12 @@ func (s Manager) runWMI(args []string, filter map[string]struct{}) ([]map[string
 		return nil, fmt.Errorf("empty filter will always produce nothing for cmdlet Get-WmiObject %v", args)
 	}
 
-	stdout, stderr, err := runCmdWithTimeout(context.Background(), 1*time.Second, args[0], args[1:]...)
+	stdout, stderr, err := runCmdWithTimeout(context.Background(), 5*time.Second, args[0], args[1:]...)
 	if err != nil {
 		return nil, err
 	}
 	if stderr.Len() > 0 {
-		s.opts.log.Info(fmt.Sprintf("Get-WmiObject %v output to stderr: %v", args, stderr))
+		s.opts.log.Info(fmt.Sprintf("Get-WmiObject %v output to stderr", args[1:]), "stderr", stderr)
 	}
 
 	sections := strings.Split(stdout.String(), "\n\n")
@@ -136,7 +167,7 @@ func (s Manager) runWMI(args []string, filter map[string]struct{}) ([]map[string
 
 		entries := wmiEntryRegex.FindAllStringSubmatch(section, -1)
 		if len(entries) == 0 {
-			s.opts.log.Info(fmt.Sprintf("Get-WmiObject %v output has malformed section: %s", args, section))
+			s.opts.log.Info(fmt.Sprintf("Get-WmiObject %v output has malformed section", args[1:]), "section", section)
 			continue
 		}
 

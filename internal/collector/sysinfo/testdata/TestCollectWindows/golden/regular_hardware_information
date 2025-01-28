@@ -1,9 +1,14 @@
 hardware:
     product:
-        Family: MS-1582
-        Name: Base Board
+        Family: "1582.3"
+        Model: Star 11 CPP
         Vendor: Micro-Star International Co., Ltd.
-    cpu: {}
+    cpu:
+        Manufacturer: GenuineIntel
+        Name: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz
+        NumberOfCores: "8"
+        NumberOfLogicalProcessors: "16"
+        Sockets: "1"
     gpus:
         - Driver: nvldumdx.dll
           Name: NVIDIA GeForce RTX 3050 Ti Laptop GPU
