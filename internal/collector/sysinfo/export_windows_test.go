@@ -23,3 +23,15 @@ func WithMemoryInfo(cmd []string) Options {
 		o.memoryCmd = cmd
 	}
 }
+
+func WithDiskInfo(cmd []string) Options {
+	return func(o *options) {
+		o.diskCmd = cmd
+	}
+}
+
+func WithPartitionInfo(cmd []string) Options {
+	return func(o *options) {
+		o.partitionCmd = cmd
+	}
+}

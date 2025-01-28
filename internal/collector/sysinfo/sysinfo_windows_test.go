@@ -20,6 +20,8 @@ func TestCollectWindows(t *testing.T) {
 		cpuInfo string
 		gpuInfo string
 		memoryInfo string
+		diskInfo string
+		partitionInfo string
 
 		logs    map[slog.Level]uint
 		wantErr bool
@@ -29,6 +31,8 @@ func TestCollectWindows(t *testing.T) {
 			cpuInfo: "regular",
 			gpuInfo: "regular",
 			memoryInfo: "regular",
+			diskInfo: "regular",
+			partitionInfo: "regular",
 		},
 	}
 
@@ -69,6 +73,18 @@ func TestCollectWindows(t *testing.T) {
 				cmdArgs := []string{os.Args[0], "-test.run=TestMockMemoryInfo", "--"}
 				cmdArgs = append(cmdArgs, tc.memoryInfo)
 				options = append(options, sysinfo.WithMemoryInfo(cmdArgs))
+			}
+
+			if tc.diskInfo != "-" {
+				cmdArgs := []string{os.Args[0], "-test.run=TestMockDiskInfo", "--"}
+				cmdArgs = append(cmdArgs, tc.diskInfo)
+				options = append(options, sysinfo.WithDiskInfo(cmdArgs))
+			}
+
+			if tc.partitionInfo != "-" {
+				cmdArgs := []string{os.Args[0], "-test.run=TestMockPartitionInfo", "--"}
+				cmdArgs = append(cmdArgs, tc.partitionInfo)
+				options = append(options, sysinfo.WithPartitionInfo(cmdArgs))
 			}
 
 
@@ -451,6 +467,256 @@ func TestMockMemoryInfo(_ *testing.T) {
 		fmt.Println(`
 
 TotalPhysicalMemory : 68406489088`)
+	case "":
+		fallthrough
+	case "missing":
+		os.Exit(0)
+	}
+}
+
+func TestMockDiskInfo(_ *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+	defer os.Exit(0)
+
+	args := os.Args
+	for len(args) > 0 {
+		if args[0] != "--" {
+			args = args[1:]
+			continue
+		}
+		args = args[1:]
+		break
+	}
+
+	switch args[0] {
+	case "error":
+		fmt.Fprint(os.Stderr, "Error requested in Mock disk info")
+		os.Exit(1)
+	case "regular":
+		fmt.Println(`
+
+ConfigManagerErrorCode      : 0
+LastErrorCode               :
+NeedsCleaning               :
+Status                      : OK
+DeviceID                    : \\.\PHYSICALDRIVE0
+StatusInfo                  :
+Partitions                  : 4
+BytesPerSector              : 512
+ConfigManagerUserConfig     : False
+DefaultBlockSize            :
+Index                       : 0
+InstallDate                 :
+InterfaceType               : SCSI
+MaxBlockSize                :
+MaxMediaSize                :
+MinBlockSize                :
+NumberOfMediaSupported      :
+SectorsPerTrack             : 63
+Size                        : 2000396321280
+TotalCylinders              : 243201
+TotalHeads                  : 255
+TotalSectors                : 3907024065
+TotalTracks                 : 62016255
+TracksPerCylinder           : 255
+Caption                     : WD Green SN350 2TB
+Description                 : Disk drive
+Name                        : \\.\PHYSICALDRIVE0
+Availability                :
+CreationClassName           : Win32_DiskDrive
+ErrorCleared                :
+ErrorDescription            :
+PNPDeviceID                 : SCSI\DISK&VEN_NVME&PROD_WD_GREEN_SN350_2\5&CD81A53&0&000000
+PowerManagementCapabilities :
+PowerManagementSupported    :
+SystemCreationClassName     : Win32_ComputerSystem
+SystemName                  : MSI
+Capabilities                : {3, 4}
+CapabilityDescriptions      : {Random Access, Supports Writing}
+CompressionMethod           :
+ErrorMethodology            :
+FirmwareRevision            : 33006000
+Manufacturer                : (Standard disk drives)
+MediaLoaded                 : True
+MediaType                   : Fixed hard disk media
+Model                       : WD Green SN350 2TB
+SCSIBus                     : 0
+SCSILogicalUnit             : 0
+SCSIPort                    : 1
+SCSITargetId                : 0
+SerialNumber                : DEAD_BEEF_D34D_B33F_DEAD_B33F_D34D_BEEF.
+Signature                   :`)
+	case "":
+		fallthrough
+	case "missing":
+		os.Exit(0)
+	}
+}
+
+func TestMockPartitionInfo(_ *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+	defer os.Exit(0)
+
+	args := os.Args
+	for len(args) > 0 {
+		if args[0] != "--" {
+			args = args[1:]
+			continue
+		}
+		args = args[1:]
+		break
+	}
+
+	switch args[0] {
+	case "error":
+		fmt.Fprint(os.Stderr, "Error requested in Mock partition info")
+		os.Exit(1)
+	case "regular":
+		fmt.Println(`
+
+Index                       : 0
+Status                      :
+StatusInfo                  :
+Name                        : Disk #0, Partition #0
+Caption                     : Disk #0, Partition #0
+Description                 : GPT: System
+InstallDate                 :
+Availability                :
+ConfigManagerErrorCode      :
+ConfigManagerUserConfig     :
+CreationClassName           : Win32_DiskPartition
+DeviceID                    : Disk #0, Partition #0
+ErrorCleared                :
+ErrorDescription            :
+LastErrorCode               :
+PNPDeviceID                 :
+PowerManagementCapabilities :
+PowerManagementSupported    :
+SystemCreationClassName     : Win32_ComputerSystem
+SystemName                  : MSI
+Access                      :
+BlockSize                   : 512
+ErrorMethodology            :
+NumberOfBlocks              : 614400
+Purpose                     :
+Bootable                    : True
+PrimaryPartition            : True
+BootPartition               : True
+DiskIndex                   : 0
+HiddenSectors               :
+RewritePartition            :
+Size                        : 314572800
+StartingOffset              : 1048576
+Type                        : GPT: System
+
+Index                       : 1
+Status                      :
+StatusInfo                  :
+Name                        : Disk #0, Partition #1
+Caption                     : Disk #0, Partition #1
+Description                 : GPT: Unknown
+InstallDate                 :
+Availability                :
+ConfigManagerErrorCode      :
+ConfigManagerUserConfig     :
+CreationClassName           : Win32_DiskPartition
+DeviceID                    : Disk #0, Partition #1
+ErrorCleared                :
+ErrorDescription            :
+LastErrorCode               :
+PNPDeviceID                 :
+PowerManagementCapabilities :
+PowerManagementSupported    :
+SystemCreationClassName     : Win32_ComputerSystem
+SystemName                  : MSI
+Access                      :
+BlockSize                   : 512
+ErrorMethodology            :
+NumberOfBlocks              : 1843200
+Purpose                     :
+Bootable                    : False
+PrimaryPartition            : False
+BootPartition               : False
+DiskIndex                   : 0
+HiddenSectors               :
+RewritePartition            :
+Size                        : 943718400
+StartingOffset              : 449839104
+Type                        : GPT: Unknown
+
+Index                       : 2
+Status                      :
+StatusInfo                  :
+Name                        : Disk #0, Partition #2
+Caption                     : Disk #0, Partition #2
+Description                 : GPT: Unknown
+InstallDate                 :
+Availability                :
+ConfigManagerErrorCode      :
+ConfigManagerUserConfig     :
+CreationClassName           : Win32_DiskPartition
+DeviceID                    : Disk #0, Partition #2
+ErrorCleared                :
+ErrorDescription            :
+LastErrorCode               :
+PNPDeviceID                 :
+PowerManagementCapabilities :
+PowerManagementSupported    :
+SystemCreationClassName     : Win32_ComputerSystem
+SystemName                  : MSI
+Access                      :
+BlockSize                   : 512
+ErrorMethodology            :
+NumberOfBlocks              : 43268096
+Purpose                     :
+Bootable                    : False
+PrimaryPartition            : False
+BootPartition               : False
+DiskIndex                   : 0
+HiddenSectors               :
+RewritePartition            :
+Size                        : 22153265152
+StartingOffset              : 1393557504
+Type                        : GPT: Unknown
+
+Index                       : 3
+Status                      :
+StatusInfo                  :
+Name                        : Disk #0, Partition #3
+Caption                     : Disk #0, Partition #3
+Description                 : GPT: Basic Data
+InstallDate                 :
+Availability                :
+ConfigManagerErrorCode      :
+ConfigManagerUserConfig     :
+CreationClassName           : Win32_DiskPartition
+DeviceID                    : Disk #0, Partition #3
+ErrorCleared                :
+ErrorDescription            :
+LastErrorCode               :
+PNPDeviceID                 :
+PowerManagementCapabilities :
+PowerManagementSupported    :
+SystemCreationClassName     : Win32_ComputerSystem
+SystemName                  : MSI
+Access                      :
+BlockSize                   : 512
+ErrorMethodology            :
+NumberOfBlocks              : 3861037056
+Purpose                     :
+Bootable                    : False
+PrimaryPartition            : True
+BootPartition               : False
+DiskIndex                   : 0
+HiddenSectors               :
+RewritePartition            :
+Size                        : 1976850972672
+StartingOffset              : 23546822656
+Type                        : GPT: Basic Data`)
 	case "":
 		fallthrough
 	case "missing":

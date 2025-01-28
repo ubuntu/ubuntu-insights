@@ -15,7 +15,13 @@ type options struct {
 	cpuCmd     []string
 	gpuCmd     []string
 	memoryCmd  []string
-	log        *slog.Logger
+
+	diskCmd      []string
+	partitionCmd []string
+
+	screenCmd []string
+
+	log *slog.Logger
 }
 
 func defaultOptions() *options {
@@ -24,7 +30,13 @@ func defaultOptions() *options {
 		cpuCmd:     []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_Processor", "|", "Format-List", "-Property", "*"},
 		gpuCmd:     []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_VideoController", "|", "Format-List", "-Property", "*"},
 		memoryCmd:  []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_ComputerSystem", "|", "Format-List", "-Property", "TotalPhysicalMemory"},
-		log:        slog.Default(),
+
+		diskCmd:      []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_DiskDrive", "|", "Format-List", "-Property", "*"},
+		partitionCmd: []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_DiskPartition", "|", "Format-List", "-Property", "*"},
+
+		screenCmd: []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_DesktopMonitor", "|", "Format-List", "-Property", "*"},
+
+		log: slog.Default(),
 	}
 }
 
@@ -51,6 +63,12 @@ func (s Manager) collectHardware() (hwInfo hwInfo, err error) {
 	if err != nil {
 		s.opts.log.Warn("failed to collect Memory info", "error", err)
 		hwInfo.Mem = map[string]int{}
+	}
+
+	hwInfo.Blks, err = s.collectBlocks()
+	if err != nil {
+		s.opts.log.Warn("failed to collect Block info", "error", err)
+		hwInfo.Blks = []diskInfo{}
 	}
 
 	return hwInfo, nil
@@ -162,7 +180,7 @@ func (s Manager) collectMemory() (mem map[string]int, err error) {
 		return nil, fmt.Errorf("memory info has no info")
 	}
 
-	var size int = 0
+	var size = 0
 	for _, os := range oses {
 		sm := os["TotalPhysicalMemory"]
 		v, err := strconv.Atoi(sm)
@@ -178,13 +196,102 @@ func (s Manager) collectMemory() (mem map[string]int, err error) {
 	}, nil
 }
 
+var usedDiskFields = map[string]struct{}{
+	"Name":       {},
+	"Size":       {},
+	"Partitions": {},
+}
+
+var usedPartitionFields = map[string]struct{}{
+	"DiskIndex": {},
+	"Index":     {},
+	"Name":      {},
+	"Size":      {},
+}
+
+func (s Manager) collectBlocks() (blks []diskInfo, err error) {
+	disks, err := s.runWMI(s.opts.diskCmd, usedDiskFields)
+	if err != nil {
+		return nil, err
+	}
+	if len(disks) == 0 {
+		return nil, fmt.Errorf("block info has no disks")
+	}
+
+	blks = make([]diskInfo, 0, len(disks))
+	for _, d := range disks {
+		parts, err := strconv.Atoi(d["Partitions"])
+		if err != nil {
+			s.opts.log.Warn("disk partitions was not an integer", "error", err)
+			parts = 0
+		}
+		if parts < 0 {
+			s.opts.log.Warn("disk partitions was negative", "value", parts)
+			parts = 0
+		}
+
+		blks = append(blks, diskInfo{
+			Name:       d["Name"],
+			Size:       d["Size"],
+			Partitions: make([]diskInfo, parts),
+		})
+	}
+
+	parts, err := s.runWMI(s.opts.partitionCmd, usedPartitionFields)
+	if err != nil {
+		s.opts.log.Warn("can't get partitions", "error", err)
+		return blks, nil
+	}
+
+	for _, p := range parts {
+		disk, err := strconv.Atoi(p["DiskIndex"])
+		if err != nil {
+			s.opts.log.Warn("partition disk index was not an integer", "error", err)
+			continue
+		}
+		if disk < 0 {
+			s.opts.log.Warn("partition disk index was negative", "value", disk)
+			continue
+		}
+		if disk >= len(blks) {
+			s.opts.log.Warn("partition disk index was larger than disks", "value", disk)
+			continue
+		}
+
+		idx, err := strconv.Atoi(p["Index"])
+		if err != nil {
+			s.opts.log.Warn("partition index was not an integer", "error", err, "disk", disk)
+			continue
+		}
+		if idx < 0 {
+			s.opts.log.Warn("partition index was negative", "value", idx, "disk", disk)
+			continue
+		}
+		if idx >= len(blks[disk].Partitions) {
+			s.opts.log.Warn("partition index was larger than partitions", "value", idx, "disk", disk)
+			continue
+		}
+
+		blks[disk].Partitions[idx] = diskInfo{
+			Name:       p["Name"],
+			Size:       p["Size"],
+			Partitions: []diskInfo{},
+		}
+	}
+
+	return blks, nil
+}
+
 // wmiEntryRegex matches the key and value (if any) from gwmi output.
 // For example: "Status   : OK " matches and has "Status", "OK".
 // Or: "DitherType:" matches and has "DitherType", "".
 // However: "   : OK" does not match.
 var wmiEntryRegex = regexp.MustCompile(`(?m)^\s*(\S+)\s*:[^\S\n]*(.*?)\s*$`)
 
-var wmiReplaceRegex = regexp.MustCompile(`\n\s*`)
+var wmiReplaceRegex = regexp.MustCompile(`\r?\n\s*`)
+
+// wmiSplitRegex splits on two consecutive newlines, but \r needs special handling
+var wmiSplitRegex = regexp.MustCompile(`\r?\n\r?\n`)
 
 // runWMI runs the cmdlet "Get-WmiObject args..." and only includes fields in the filter.
 func (s Manager) runWMI(args []string, filter map[string]struct{}) ([]map[string]string, error) {
@@ -200,7 +307,7 @@ func (s Manager) runWMI(args []string, filter map[string]struct{}) ([]map[string
 		s.opts.log.Info(fmt.Sprintf("Get-WmiObject %v output to stderr", args[1:]), "stderr", stderr)
 	}
 
-	sections := strings.Split(stdout.String(), "\n\n")
+	sections := wmiSplitRegex.Split(stdout.String(), -1)
 	out := make([]map[string]string, 0, len(sections))
 
 	for _, section := range sections {
