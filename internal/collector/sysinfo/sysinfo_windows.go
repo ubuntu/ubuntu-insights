@@ -14,6 +14,7 @@ type options struct {
 	productCmd []string
 	cpuCmd     []string
 	gpuCmd     []string
+	memoryCmd  []string
 	log        *slog.Logger
 }
 
@@ -22,6 +23,7 @@ func defaultOptions() *options {
 		productCmd: []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_ComputerSystem", "|", "Format-List", "-Property", "*"},
 		cpuCmd:     []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_Processor", "|", "Format-List", "-Property", "*"},
 		gpuCmd:     []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_VideoController", "|", "Format-List", "-Property", "*"},
+		memoryCmd:  []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_ComputerSystem", "|", "Format-List", "-Property", "TotalPhysicalMemory"},
 		log:        slog.Default(),
 	}
 }
@@ -43,6 +45,12 @@ func (s Manager) collectHardware() (hwInfo hwInfo, err error) {
 	if err != nil {
 		s.opts.log.Warn("failed to collect GPU info", "error", err)
 		hwInfo.GPUs = []map[string]string{}
+	}
+
+	hwInfo.Mem, err = s.collectMemory()
+	if err != nil {
+		s.opts.log.Warn("failed to collect Memory info", "error", err)
+		hwInfo.Mem = map[string]int{}
 	}
 
 	return hwInfo, nil
@@ -133,6 +141,41 @@ func (s Manager) collectGPUs() (gpus []map[string]string, err error) {
 	}
 
 	return gpus, nil
+}
+
+var usedMemoryFields = map[string]struct{}{
+	"TotalPhysicalMemory": {},
+}
+
+func (s Manager) collectMemory() (mem map[string]int, err error) {
+	defer func() {
+		if err == nil && len(mem) == 0 {
+			err = fmt.Errorf("no memory information found")
+		}
+	}()
+
+	oses, err := s.runWMI(s.opts.memoryCmd, usedMemoryFields)
+	if err != nil {
+		return nil, err
+	}
+	if len(oses) == 0 {
+		return nil, fmt.Errorf("memory info has no info")
+	}
+
+	var size int = 0
+	for _, os := range oses {
+		sm := os["TotalPhysicalMemory"]
+		v, err := strconv.Atoi(sm)
+		if err != nil {
+			s.opts.log.Warn("memory info contained non-integer memory", "value", sm)
+			continue
+		}
+		size += v
+	}
+
+	return map[string]int{
+		"MemTotal": size,
+	}, nil
 }
 
 // wmiEntryRegex matches the key and value (if any) from gwmi output.

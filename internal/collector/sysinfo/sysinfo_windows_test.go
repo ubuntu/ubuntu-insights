@@ -19,7 +19,7 @@ func TestCollectWindows(t *testing.T) {
 		productInfo string
 		cpuInfo string
 		gpuInfo string
-		
+		memoryInfo string
 
 		logs    map[slog.Level]uint
 		wantErr bool
@@ -28,6 +28,7 @@ func TestCollectWindows(t *testing.T) {
 			productInfo: "regular",
 			cpuInfo: "regular",
 			gpuInfo: "regular",
+			memoryInfo: "regular",
 		},
 	}
 
@@ -63,6 +64,13 @@ func TestCollectWindows(t *testing.T) {
 				cmdArgs = append(cmdArgs, tc.gpuInfo)
 				options = append(options, sysinfo.WithGPUInfo(cmdArgs))
 			}
+
+			if tc.memoryInfo != "-" {
+				cmdArgs := []string{os.Args[0], "-test.run=TestMockMemoryInfo", "--"}
+				cmdArgs = append(cmdArgs, tc.memoryInfo)
+				options = append(options, sysinfo.WithMemoryInfo(cmdArgs))
+			}
+
 
 			s := sysinfo.New(options...)
 
@@ -412,6 +420,37 @@ VideoMemoryType              : 2
 VideoMode                    :
 VideoModeDescription         : 1920 x 1080 x 4294967296 colors
 VideoProcessor               : Intel(R) UHD Graphics Family`)
+	case "":
+		fallthrough
+	case "missing":
+		os.Exit(0)
+	}
+}
+
+func TestMockMemoryInfo(_ *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+	defer os.Exit(0)
+
+	args := os.Args
+	for len(args) > 0 {
+		if args[0] != "--" {
+			args = args[1:]
+			continue
+		}
+		args = args[1:]
+		break
+	}
+
+	switch args[0] {
+	case "error":
+		fmt.Fprint(os.Stderr, "Error requested in Mock memory info")
+		os.Exit(1)
+	case "regular":
+		fmt.Println(`
+
+TotalPhysicalMemory : 68406489088`)
 	case "":
 		fallthrough
 	case "missing":

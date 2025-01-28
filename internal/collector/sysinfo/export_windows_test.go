@@ -17,3 +17,9 @@ func WithGPUInfo(cmd []string) Options {
 		o.gpuCmd = cmd
 	}
 }
+
+func WithMemoryInfo(cmd []string) Options {
+	return func(o *options) {
+		o.memoryCmd = cmd
+	}
+}
