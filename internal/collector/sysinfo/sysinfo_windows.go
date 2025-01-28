@@ -95,9 +95,6 @@ func (s Manager) collectProduct() (product map[string]string, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(products) == 0 {
-		return nil, fmt.Errorf("product information missing")
-	}
 	if len(products) > 1 {
 		s.opts.log.Info("product information more than 1 products", "count", len(products))
 	}
@@ -125,9 +122,6 @@ func (s Manager) collectCPU() (cpu map[string]string, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(cpus) == 0 {
-		return nil, fmt.Errorf("cpu info has no cpus")
-	}
 
 	// we are assuming all CPUs are the same
 	cpus[0]["Sockets"] = strconv.Itoa(len(cpus))
@@ -142,12 +136,6 @@ var usedGPUFields = map[string]struct{}{
 }
 
 func (s Manager) collectGPUs() (gpus []map[string]string, err error) {
-	defer func() {
-		if err == nil && len(gpus) == 0 {
-			err = fmt.Errorf("no GPU information found")
-		}
-	}()
-
 	gpus, err = s.runWMI(s.opts.gpuCmd, usedGPUFields)
 	if err != nil {
 		return gpus, err
@@ -172,18 +160,9 @@ var usedMemoryFields = map[string]struct{}{
 }
 
 func (s Manager) collectMemory() (mem map[string]int, err error) {
-	defer func() {
-		if err == nil && len(mem) == 0 {
-			err = fmt.Errorf("no memory information found")
-		}
-	}()
-
 	oses, err := s.runWMI(s.opts.memoryCmd, usedMemoryFields)
 	if err != nil {
 		return nil, err
-	}
-	if len(oses) == 0 {
-		return nil, fmt.Errorf("memory info has no info")
 	}
 
 	var size = 0
@@ -220,9 +199,6 @@ func (s Manager) collectBlocks() (blks []diskInfo, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(disks) == 0 {
-		return nil, fmt.Errorf("block info has no disks")
-	}
 
 	blks = make([]diskInfo, 0, len(disks))
 	for _, d := range disks {
@@ -250,10 +226,6 @@ func (s Manager) collectBlocks() (blks []diskInfo, err error) {
 	parts, err := s.runWMI(s.opts.partitionCmd, usedPartitionFields)
 	if err != nil {
 		s.opts.log.Warn("can't get partitions", "error", err)
-		return blks, nil
-	}
-	if len(parts) == 0 {
-		s.opts.log.Warn("block info has no partitions")
 		return blks, nil
 	}
 
@@ -307,9 +279,6 @@ func (s Manager) collectScreens() (screens []screenInfo, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(monitors) == 0 {
-		return nil, fmt.Errorf("screen info has no screens")
-	}
 
 	screens = make([]screenInfo, 0, len(monitors))
 
@@ -335,7 +304,13 @@ var wmiReplaceRegex = regexp.MustCompile(`\r?\n\s*`)
 var wmiSplitRegex = regexp.MustCompile(`\r?\n\r?\n`)
 
 // runWMI runs the cmdlet "Get-WmiObject args..." and only includes fields in the filter.
-func (s Manager) runWMI(args []string, filter map[string]struct{}) ([]map[string]string, error) {
+func (s Manager) runWMI(args []string, filter map[string]struct{}) (out []map[string]string, err error) {
+	defer func() {
+		if err == nil && len(out) == 0 {
+			err = fmt.Errorf("%v output contained no sections", args)
+		}
+	}()
+
 	if len(filter) == 0 {
 		return nil, fmt.Errorf("empty filter will always produce nothing for cmdlet Get-WmiObject %v", args)
 	}
@@ -349,7 +324,7 @@ func (s Manager) runWMI(args []string, filter map[string]struct{}) ([]map[string
 	}
 
 	sections := wmiSplitRegex.Split(stdout.String(), -1)
-	out := make([]map[string]string, 0, len(sections))
+	out = make([]map[string]string, 0, len(sections))
 
 	for _, section := range sections {
 		if section == "" {
@@ -363,7 +338,6 @@ func (s Manager) runWMI(args []string, filter map[string]struct{}) ([]map[string
 		}
 
 		v := make(map[string]string, len(filter))
-
 		for _, e := range entries {
 			if _, ok := filter[e[1]]; !ok {
 				continue
