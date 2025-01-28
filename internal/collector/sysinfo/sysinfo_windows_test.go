@@ -22,6 +22,7 @@ func TestCollectWindows(t *testing.T) {
 		memoryInfo string
 		diskInfo string
 		partitionInfo string
+		screenInfo string
 
 		logs    map[slog.Level]uint
 		wantErr bool
@@ -33,6 +34,7 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo: "regular",
 			diskInfo: "regular",
 			partitionInfo: "regular",
+			screenInfo: "regular",
 		},
 	}
 
@@ -85,6 +87,12 @@ func TestCollectWindows(t *testing.T) {
 				cmdArgs := []string{os.Args[0], "-test.run=TestMockPartitionInfo", "--"}
 				cmdArgs = append(cmdArgs, tc.partitionInfo)
 				options = append(options, sysinfo.WithPartitionInfo(cmdArgs))
+			}
+
+			if tc.screenInfo != "-" {
+				cmdArgs := []string{os.Args[0], "-test.run=TestMockScreenInfo", "--"}
+				cmdArgs = append(cmdArgs, tc.screenInfo)
+				options = append(options, sysinfo.WithScreenInfo(cmdArgs))
 			}
 
 
@@ -717,6 +725,93 @@ RewritePartition            :
 Size                        : 1976850972672
 StartingOffset              : 23546822656
 Type                        : GPT: Basic Data`)
+	case "":
+		fallthrough
+	case "missing":
+		os.Exit(0)
+	}
+}
+
+func TestMockScreenInfo(_ *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+	defer os.Exit(0)
+
+	args := os.Args
+	for len(args) > 0 {
+		if args[0] != "--" {
+			args = args[1:]
+			continue
+		}
+		args = args[1:]
+		break
+	}
+
+	switch args[0] {
+	case "error":
+		fmt.Fprint(os.Stderr, "Error requested in Mock screen info")
+		os.Exit(1)
+	case "regular":
+		fmt.Println(`
+
+DeviceID                    : DesktopMonitor1
+Name                        : Default Monitor
+PixelsPerXLogicalInch       : 120
+PixelsPerYLogicalInch       : 120
+ScreenHeight                : 1080
+ScreenWidth                 : 1920
+IsLocked                    :
+LastErrorCode               :
+Status                      : OK
+StatusInfo                  :
+Caption                     : Default Monitor
+Description                 : Default Monitor
+InstallDate                 :
+Availability                : 3
+ConfigManagerErrorCode      :
+ConfigManagerUserConfig     :
+CreationClassName           : Win32_DesktopMonitor
+ErrorCleared                :
+ErrorDescription            :
+PNPDeviceID                 :
+PowerManagementCapabilities :
+PowerManagementSupported    :
+SystemCreationClassName     : Win32_ComputerSystem
+SystemName                  : MSI
+Bandwidth                   :
+DisplayType                 :
+MonitorManufacturer         :
+MonitorType                 : Default Monitor
+
+DeviceID                    : DesktopMonitor2
+Name                        : Generic PnP Monitor
+PixelsPerXLogicalInch       : 120
+PixelsPerYLogicalInch       : 120
+ScreenHeight                : 1080
+ScreenWidth                 : 1920
+IsLocked                    :
+LastErrorCode               :
+Status                      : OK
+StatusInfo                  :
+Caption                     : Generic PnP Monitor
+Description                 : Generic PnP Monitor
+InstallDate                 :
+Availability                : 3
+ConfigManagerErrorCode      : 0
+ConfigManagerUserConfig     : False
+CreationClassName           : Win32_DesktopMonitor
+ErrorCleared                :
+ErrorDescription            :
+PNPDeviceID                 : DISPLAY\AUOAF90\4&28FE40F5&0&UID8388688
+PowerManagementCapabilities :
+PowerManagementSupported    :
+SystemCreationClassName     : Win32_ComputerSystem
+SystemName                  : MSI
+Bandwidth                   :
+DisplayType                 :
+MonitorManufacturer         : (Standard monitor types)
+MonitorType                 : Generic PnP Monitor`)
 	case "":
 		fallthrough
 	case "missing":

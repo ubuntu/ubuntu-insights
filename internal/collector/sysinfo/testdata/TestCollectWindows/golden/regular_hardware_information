@@ -34,5 +34,15 @@ hardware:
             - name: 'Disk #0, Partition #3'
               size: "1976850972672"
               partitions: []
-    screens: []
+    screens:
+        - name: Default Monitor
+          physicalresolution: ""
+          size: ""
+          resolution: 1920x1080
+          refreshrate: ""
+        - name: Generic PnP Monitor
+          physicalresolution: ""
+          size: ""
+          resolution: 1920x1080
+          refreshrate: ""
 software: {}

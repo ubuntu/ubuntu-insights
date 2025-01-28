@@ -35,3 +35,9 @@ func WithPartitionInfo(cmd []string) Options {
 		o.partitionCmd = cmd
 	}
 }
+
+func WithScreenInfo(cmd []string) Options {
+	return func(o *options) {
+		o.screenCmd = cmd
+	}
+}

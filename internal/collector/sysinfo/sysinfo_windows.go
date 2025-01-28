@@ -71,6 +71,12 @@ func (s Manager) collectHardware() (hwInfo hwInfo, err error) {
 		hwInfo.Blks = []diskInfo{}
 	}
 
+	hwInfo.Screens, err = s.collectScreens()
+	if err != nil {
+		s.opts.log.Warn("failed to collect Screen info", "error", err)
+		hwInfo.Screens = []screenInfo{}
+	}
+
 	return hwInfo, nil
 }
 
@@ -280,6 +286,33 @@ func (s Manager) collectBlocks() (blks []diskInfo, err error) {
 	}
 
 	return blks, nil
+}
+
+var usedScreenFields = map[string]struct{}{
+	"Name":         {},
+	"ScreenWidth":  {},
+	"ScreenHeight": {},
+}
+
+func (s Manager) collectScreens() (screens []screenInfo, err error) {
+	monitors, err := s.runWMI(s.opts.screenCmd, usedScreenFields)
+	if err != nil {
+		return nil, err
+	}
+	if len(monitors) == 0 {
+		return nil, fmt.Errorf("screen info has no screens")
+	}
+
+	screens = make([]screenInfo, 0, len(monitors))
+
+	for _, screen := range monitors {
+		screens = append(screens, screenInfo{
+			Name:       screen["Name"],
+			Resolution: fmt.Sprintf("%sx%s", screen["ScreenWidth"], screen["ScreenHeight"]),
+		})
+	}
+
+	return screens, nil
 }
 
 // wmiEntryRegex matches the key and value (if any) from gwmi output.
