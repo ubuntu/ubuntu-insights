@@ -36,6 +36,202 @@ func TestCollectWindows(t *testing.T) {
 			partitionInfo: "regular",
 			screenInfo: "regular",
 		},
+
+		"Missing product information": {
+			productInfo: "missing",
+			cpuInfo: "regular",
+			gpuInfo: "regular",
+			memoryInfo: "regular",
+			diskInfo: "regular",
+			partitionInfo: "regular",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Error product information": {
+			productInfo: "error",
+			cpuInfo: "regular",
+			gpuInfo: "regular",
+			memoryInfo: "regular",
+			diskInfo: "regular",
+			partitionInfo: "regular",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Missing CPU information": {
+			productInfo: "regular",
+			cpuInfo: "missing",
+			gpuInfo: "regular",
+			memoryInfo: "regular",
+			diskInfo: "regular",
+			partitionInfo: "regular",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Error CPU information": {
+			productInfo: "regular",
+			cpuInfo: "error",
+			gpuInfo: "regular",
+			memoryInfo: "regular",
+			diskInfo: "regular",
+			partitionInfo: "regular",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Missing GPU information": {
+			productInfo: "regular",
+			cpuInfo: "regular",
+			gpuInfo: "missing",
+			memoryInfo: "regular",
+			diskInfo: "regular",
+			partitionInfo: "regular",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Error GPU information": {
+			productInfo: "regular",
+			cpuInfo: "regular",
+			gpuInfo: "error",
+			memoryInfo: "regular",
+			diskInfo: "regular",
+			partitionInfo: "regular",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Missing memory information": {
+			productInfo: "regular",
+			cpuInfo: "regular",
+			gpuInfo: "regular",
+			memoryInfo: "missing",
+			diskInfo: "regular",
+			partitionInfo: "regular",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Error memory information": {
+			productInfo: "regular",
+			cpuInfo: "regular",
+			gpuInfo: "regular",
+			memoryInfo: "error",
+			diskInfo: "regular",
+			partitionInfo: "regular",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Missing disk information": {
+			productInfo: "regular",
+			cpuInfo: "regular",
+			gpuInfo: "regular",
+			memoryInfo: "regular",
+			diskInfo: "missing",
+			partitionInfo: "regular",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Error disk information": {
+			productInfo: "regular",
+			cpuInfo: "regular",
+			gpuInfo: "regular",
+			memoryInfo: "regular",
+			diskInfo: "error",
+			partitionInfo: "regular",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Missing partition information": {
+			productInfo: "regular",
+			cpuInfo: "regular",
+			gpuInfo: "regular",
+			memoryInfo: "regular",
+			diskInfo: "regular",
+			partitionInfo: "missing",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Error partition information": {
+			productInfo: "regular",
+			cpuInfo: "regular",
+			gpuInfo: "regular",
+			memoryInfo: "regular",
+			diskInfo: "regular",
+			partitionInfo: "error",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Missing screen information": {
+			productInfo: "regular",
+			cpuInfo: "regular",
+			gpuInfo: "regular",
+			memoryInfo: "regular",
+			diskInfo: "regular",
+			partitionInfo: "regular",
+			screenInfo: "missing",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Error screen information": {
+			productInfo: "regular",
+			cpuInfo: "regular",
+			gpuInfo: "regular",
+			memoryInfo: "regular",
+			diskInfo: "regular",
+			partitionInfo: "regular",
+			screenInfo: "error",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
 	}
 
 	for name, tc := range tests {

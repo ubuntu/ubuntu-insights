@@ -236,16 +236,24 @@ func (s Manager) collectBlocks() (blks []diskInfo, err error) {
 			parts = 0
 		}
 
-		blks = append(blks, diskInfo{
+		c := diskInfo{
 			Name:       d["Name"],
 			Size:       d["Size"],
 			Partitions: make([]diskInfo, parts),
-		})
+		}
+		for i := range c.Partitions {
+			c.Partitions[i].Partitions = []diskInfo{}
+		}
+		blks = append(blks, c)
 	}
 
 	parts, err := s.runWMI(s.opts.partitionCmd, usedPartitionFields)
 	if err != nil {
 		s.opts.log.Warn("can't get partitions", "error", err)
+		return blks, nil
+	}
+	if len(parts) == 0 {
+		s.opts.log.Warn("block info has no partitions")
 		return blks, nil
 	}
 
