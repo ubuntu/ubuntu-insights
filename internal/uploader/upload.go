@@ -16,7 +16,7 @@ import (
 
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
-	"github.com/ubuntu/ubuntu-insights/internal/reportutils"
+	"github.com/ubuntu/ubuntu-insights/internal/report"
 )
 
 var (
@@ -34,7 +34,7 @@ func (um Uploader) Upload(force bool) error {
 		return fmt.Errorf("upload failed to get consent state: %v", err)
 	}
 
-	reports, err := reportutils.GetAllReports(um.collectedDir)
+	reports, err := report.GetAll(um.collectedDir)
 	if err != nil {
 		return fmt.Errorf("failed to get reports: %v", err)
 	}
@@ -45,17 +45,17 @@ func (um Uploader) Upload(force bool) error {
 	}
 
 	var wg sync.WaitGroup
-	for _, name := range reports {
+	for _, r := range reports {
 		wg.Add(1)
-		go func(name string) {
+		go func(r report.Report) {
 			defer wg.Done()
-			err := um.upload(name, url, consent, force)
+			err := um.upload(r, url, consent, force)
 			if errors.Is(err, ErrReportNotMature) {
-				slog.Debug("Skipped report upload, not mature enough", "file", name, "source", um.source)
+				slog.Debug("Skipped report upload, not mature enough", "file", r.Name, "source", um.source)
 			} else if err != nil {
-				slog.Warn("Failed to upload report", "file", name, "source", um.source, "error", err)
+				slog.Warn("Failed to upload report", "file", r.Name, "source", um.source, "error", err)
 			}
-		}(name)
+		}(r)
 	}
 	wg.Wait()
 
@@ -64,21 +64,15 @@ func (um Uploader) Upload(force bool) error {
 
 // upload uploads an individual report to the server. It returns an error if the report is not mature enough to be uploaded, or if the upload fails.
 // It also moves the report to the uploaded directory after a successful upload.
-func (um Uploader) upload(name, url string, consent, force bool) error {
-	slog.Debug("Uploading report", "file", name, "consent", consent, "force", force)
+func (um Uploader) upload(r report.Report, url string, consent, force bool) error {
+	slog.Debug("Uploading report", "file", r.Name, "consent", consent, "force", force)
 
-	// TODO… pass the Report object directly.
-	ts, err := reportutils.GetReportTime(name)
-	if err != nil {
-		return fmt.Errorf("failed to parse report time from filename: %v", err)
-	}
-
-	if um.timeProvider.Now().Add(time.Duration(-um.minAge)*time.Second).Before(time.Unix(ts, 0)) && !force {
+	if um.timeProvider.Now().Add(time.Duration(-um.minAge)*time.Second).Before(time.Unix(r.TimeStamp, 0)) && !force {
 		return ErrReportNotMature
 	}
 
 	// Check for duplicate reports.
-	_, err = os.Stat(filepath.Join(um.uploadedDir, name))
+	_, err := os.Stat(filepath.Join(um.uploadedDir, r.Name))
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to check if report has already been uploaded: %v", err)
 	}
@@ -88,9 +82,9 @@ func (um Uploader) upload(name, url string, consent, force bool) error {
 		return fmt.Errorf("report has already been uploaded")
 	}
 
-	origData, err := um.readJSON(name)
+	origData, err := r.ReadJSON()
 	if err != nil {
-		return fmt.Errorf("failed to get payload: %v", err)
+		return fmt.Errorf("failed to read report: %v", err)
 	}
 	data := origData
 	if !consent {
@@ -108,11 +102,11 @@ func (um Uploader) upload(name, url string, consent, force bool) error {
 
 	// Move report first to avoid the situation where the report is sent, but not marked as sent.
 	// TODO: maybe a method on Reports ?
-	if err := um.moveReport(filepath.Join(um.uploadedDir, name), filepath.Join(um.collectedDir, name), data); err != nil {
+	if err := um.moveReport(filepath.Join(um.uploadedDir, r.Name), filepath.Join(um.collectedDir, r.Name), data); err != nil {
 		return fmt.Errorf("failed to move report after uploading: %v", err)
 	}
 	if err := send(url, data); err != nil {
-		if moveErr := um.moveReport(filepath.Join(um.collectedDir, name), filepath.Join(um.uploadedDir, name), origData); moveErr != nil {
+		if moveErr := um.moveReport(filepath.Join(um.collectedDir, r.Name), filepath.Join(um.uploadedDir, r.Name), origData); moveErr != nil {
 			return fmt.Errorf("failed to send data: %v, and failed to restore the original report: %v", err, moveErr)
 		}
 		return fmt.Errorf("failed to send data: %v", err)
@@ -128,21 +122,6 @@ func (um Uploader) getURL() (string, error) {
 	}
 	u.Path = path.Join(u.Path, um.source)
 	return u.String(), nil
-}
-
-// readJSON reads the JSON data from the report file.
-func (um Uploader) readJSON(file string) ([]byte, error) {
-	// Read the report file
-	data, err := os.ReadFile(path.Join(um.collectedDir, file))
-	if err != nil {
-		return nil, fmt.Errorf("failed to read report file: %v", err)
-	}
-
-	if !json.Valid(data) {
-		return nil, fmt.Errorf("invalid JSON data in report file")
-	}
-
-	return data, nil
 }
 
 func (um Uploader) moveReport(writePath, removePath string, data []byte) error {
