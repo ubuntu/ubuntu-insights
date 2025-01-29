@@ -299,9 +299,7 @@ func TestCollect(t *testing.T) {
 			assert.Equal(t, want, got, "Collect should return expected sys information")
 
 			if !l.AssertLevels(t, tc.logs) {
-				for _, call := range l.HandleCalls {
-					t.Logf("Logged %v: %s\n", call.Level, call.Message)
-				}
+				l.OutputLogs(t)
 			}
 		})
 	}

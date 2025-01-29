@@ -42,6 +42,19 @@ func (h MockHandler) AssertLevels(t *testing.T, levels map[slog.Level]uint) bool
 	return assert.Equal(t, levels, have)
 }
 
+// OutputLogs outputs the logs collected by the handler in a readable format.
+func (h MockHandler) OutputLogs(t *testing.T) {
+	t.Helper()
+
+	for _, call := range h.HandleCalls {
+		t.Logf("Logged %v %s:", call.Level, call.Message)
+		call.Attrs(func(attr slog.Attr) bool {
+			t.Log(attr.String())
+			return true
+		})
+	}
+}
+
 // Enabled implements Handler.Enabled.
 func (h *MockHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	h.EnabledCalls = append(h.EnabledCalls, level)
