@@ -3,6 +3,7 @@ package uploader
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -18,19 +19,19 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/reportutils"
 )
 
+var (
+	// ErrReportNotMature is returned when a report is not mature enough to be uploaded.
+	ErrReportNotMature = errors.New("report is not mature enough to be uploaded")
+)
+
 // Upload uploads the reports corresponding to the source to the configured server.
 // Does not do duplicate checks.
-func (um Manager) Upload(force bool) error {
+func (um Uploader) Upload(force bool) error {
 	slog.Debug("Uploading reports")
 
-	gConsent, err := um.consentM.GetConsentState("")
+	consent, err := um.consentM.HasConsent(um.source)
 	if err != nil {
-		return fmt.Errorf("upload failed to get global consent state: %v", err)
-	}
-
-	sConsent, err := um.consentM.GetConsentState(um.source)
-	if err != nil {
-		return fmt.Errorf("upload failed to get source consent state: %v", err)
+		return fmt.Errorf("upload failed to get consent state: %v", err)
 	}
 
 	reports, err := reportutils.GetAllReports(um.collectedDir)
@@ -44,14 +45,17 @@ func (um Manager) Upload(force bool) error {
 	}
 
 	var wg sync.WaitGroup
-	for _, file := range reports {
+	for _, name := range reports {
 		wg.Add(1)
-		go func(file string) {
+		go func(name string) {
 			defer wg.Done()
-			if err := um.upload(file, url, gConsent && sConsent, force); err != nil {
-				slog.Warn("Failed to upload report", "file", file, "source", um.source, "error", err)
+			err := um.upload(name, url, consent, force)
+			if errors.Is(err, ErrReportNotMature) {
+				slog.Debug("Skipped report upload, not mature enough", "file", name, "source", um.source)
+			} else if err != nil {
+				slog.Warn("Failed to upload report", "file", name, "source", um.source, "error", err)
 			}
-		}(file)
+		}(name)
 	}
 	wg.Wait()
 
@@ -60,28 +64,31 @@ func (um Manager) Upload(force bool) error {
 
 // upload uploads an individual report to the server. It returns an error if the report is not mature enough to be uploaded, or if the upload fails.
 // It also moves the report to the uploaded directory after a successful upload.
-func (um Manager) upload(fName, url string, consent, force bool) error {
-	slog.Debug("Uploading report", "file", fName, "consent", consent, "force", force)
+func (um Uploader) upload(name, url string, consent, force bool) error {
+	slog.Debug("Uploading report", "file", name, "consent", consent, "force", force)
 
-	ts, err := reportutils.GetReportTime(fName)
+	// TODO… pass the Report object directly.
+	ts, err := reportutils.GetReportTime(name)
 	if err != nil {
 		return fmt.Errorf("failed to parse report time from filename: %v", err)
 	}
 
-	if ts > um.timeProvider.NowUnix()-um.minAge && !force {
-		return fmt.Errorf("report is not mature enough to be uploaded")
+	if um.timeProvider.Now().Add(time.Duration(-um.minAge)*time.Second).Before(time.Unix(ts, 0)) && !force {
+		return ErrReportNotMature
 	}
 
 	// Check for duplicate reports.
-	fileExists, err := fileutils.FileExists(filepath.Join(um.uploadedDir, fName))
-	if err != nil {
+	_, err = os.Stat(filepath.Join(um.uploadedDir, name))
+	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to check if report has already been uploaded: %v", err)
 	}
-	if fileExists && !force {
+	if err == nil && !force {
+		// TODO: What to do with the original file? Should we clean it up?
+		// Should we move it elsewhere for investigation in a "tmp" and clean it afterwards?
 		return fmt.Errorf("report has already been uploaded")
 	}
 
-	origData, err := um.readPayload(fName)
+	origData, err := um.readJSON(name)
 	if err != nil {
 		return fmt.Errorf("failed to get payload: %v", err)
 	}
@@ -100,11 +107,12 @@ func (um Manager) upload(fName, url string, consent, force bool) error {
 	}
 
 	// Move report first to avoid the situation where the report is sent, but not marked as sent.
-	if err := um.moveReport(filepath.Join(um.uploadedDir, fName), filepath.Join(um.collectedDir, fName), data); err != nil {
+	// TODO: maybe a method on Reports ?
+	if err := um.moveReport(filepath.Join(um.uploadedDir, name), filepath.Join(um.collectedDir, name), data); err != nil {
 		return fmt.Errorf("failed to move report after uploading: %v", err)
 	}
 	if err := send(url, data); err != nil {
-		if moveErr := um.moveReport(filepath.Join(um.collectedDir, fName), filepath.Join(um.uploadedDir, fName), origData); moveErr != nil {
+		if moveErr := um.moveReport(filepath.Join(um.collectedDir, name), filepath.Join(um.uploadedDir, name), origData); moveErr != nil {
 			return fmt.Errorf("failed to send data: %v, and failed to restore the original report: %v", err, moveErr)
 		}
 		return fmt.Errorf("failed to send data: %v", err)
@@ -113,7 +121,7 @@ func (um Manager) upload(fName, url string, consent, force bool) error {
 	return nil
 }
 
-func (um Manager) getURL() (string, error) {
+func (um Uploader) getURL() (string, error) {
 	u, err := url.Parse(um.baseServerURL)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse base server URL %s: %v", um.baseServerURL, err)
@@ -122,37 +130,32 @@ func (um Manager) getURL() (string, error) {
 	return u.String(), nil
 }
 
-func (um Manager) readPayload(file string) ([]byte, error) {
-	var jsonData map[string]interface{}
-
+// readJSON reads the JSON data from the report file.
+func (um Uploader) readJSON(file string) ([]byte, error) {
 	// Read the report file
 	data, err := os.ReadFile(path.Join(um.collectedDir, file))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read report file: %v", err)
 	}
 
-	// Remarshal the JSON data to ensure it is valid
-	if err := json.Unmarshal(data, &jsonData); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON data: %v", err)
-	}
-
-	data, err = json.Marshal(jsonData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal JSON data: %v", err)
+	if !json.Valid(data) {
+		return nil, fmt.Errorf("invalid JSON data in report file")
 	}
 
 	return data, nil
 }
 
-// moveReport writes the data to the writePath, and removes the matching file from the removePath.
-func (um Manager) moveReport(writePath, removePath string, data []byte) error {
-	err := fileutils.AtomicWrite(writePath, data)
-	if err != nil {
+func (um Uploader) moveReport(writePath, removePath string, data []byte) error {
+	// (Report).MarkAsProcessed(data)
+	// (Report).UndoProcessed
+	// moveReport writes the data to the writePath, and removes the matching file from the removePath.
+	// dest, src, data
+
+	if err := fileutils.AtomicWrite(writePath, data); err != nil {
 		return fmt.Errorf("failed to write report: %v", err)
 	}
 
-	err = os.Remove(removePath)
-	if err != nil {
+	if err := os.Remove(removePath); err != nil {
 		return fmt.Errorf("failed to remove report: %v", err)
 	}
 

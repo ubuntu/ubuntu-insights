@@ -25,48 +25,36 @@ var (
 	badContent            = `bad content`
 )
 
-type mockTimeProvider struct {
-	currentTime int64
-}
-
-func (m mockTimeProvider) NowUnix() int64 {
-	return m.currentTime
-}
-
 var (
-	cmSErr     = testConsentManager{sErr: fmt.Errorf("consent error")}
-	cmTrueSErr = testConsentManager{sState: true, gState: true, sErr: fmt.Errorf("consent error")}
-	cmGErr     = testConsentManager{gErr: fmt.Errorf("consent error")}
-	cmTrueGErr = testConsentManager{gState: true, gErr: fmt.Errorf("consent error")}
-	cmTrue     = testConsentManager{sState: true, gState: true}
-	cmFalse    = testConsentManager{sState: false, gState: false}
-	cmSTrue    = testConsentManager{sState: true, gState: false}
-	cmGTrue    = testConsentManager{sState: false, gState: true}
+	cTrue    = testConsentChecker{consent: true}
+	cFalse   = testConsentChecker{consent: false}
+	cErr     = testConsentChecker{err: fmt.Errorf("consent error")}
+	cErrTrue = testConsentChecker{consent: true, err: fmt.Errorf("consent error")}
 )
 
 func TestNew(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		cm     testConsentManager
-		source string
-		minAge uint
-		dryRun bool
+		consent testConsentChecker
+		source  string
+		minAge  uint
+		dryRun  bool
 
 		wantErr bool
 	}{
-		"Valid":        {cm: cmTrue, source: "source", minAge: 5, dryRun: true},
-		"Zero Min Age": {cm: cmTrue, source: "source", minAge: 0},
+		"Valid":        {consent: cTrue, source: "source", minAge: 5, dryRun: true},
+		"Zero Min Age": {consent: cTrue, source: "source", minAge: 0},
 
-		"Empty Source":    {cm: cmTrue, source: "", wantErr: true},
-		"Minage Overflow": {cm: cmTrue, source: "source", minAge: math.MaxUint64, wantErr: true},
+		"Empty Source":    {consent: cTrue, source: "", wantErr: true},
+		"Minage Overflow": {consent: cTrue, source: "source", minAge: math.MaxUint64, wantErr: true},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := uploader.New(tc.cm, tc.source, tc.minAge, tc.dryRun)
+			_, err := uploader.New(tc.consent, tc.source, tc.minAge, tc.dryRun)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
@@ -89,44 +77,40 @@ func TestUpload(t *testing.T) {
 		url                       string
 		invalidDir                bool
 
-		cm     testConsentManager
-		minAge uint
-		dryRun bool
-		force  bool
+		consent testConsentChecker
+		minAge  uint
+		dryRun  bool
+		force   bool
 
 		wantErr bool
 	}{
-		"No Reports":            {cm: cmTrue, serverResponse: http.StatusOK},
-		"No Reports with Dummy": {dummy: true, cm: cmTrue, serverResponse: http.StatusOK},
-		"Single Upload":         {localFiles: map[string]reportType{"1.json": normal}, cm: cmTrue, serverResponse: http.StatusOK},
-		"Multi Upload":          {localFiles: map[string]reportType{"1.json": normal, "5.json": normal}, cm: cmTrue, serverResponse: http.StatusOK},
-		"Min Age":               {localFiles: map[string]reportType{"1.json": normal, "9.json": normal}, cm: cmTrue, minAge: 5, serverResponse: http.StatusOK},
-		"Future Timestamp":      {localFiles: map[string]reportType{"1.json": normal, "11.json": normal}, cm: cmTrue, serverResponse: http.StatusOK},
-		"Duplicate Upload":      {localFiles: map[string]reportType{"1.json": normal}, uploadedFiles: map[string]reportType{"1.json": badContent}, cm: cmTrue, serverResponse: http.StatusAccepted},
-		"Bad Content":           {localFiles: map[string]reportType{"1.json": badContent}, cm: cmTrue, serverResponse: http.StatusOK},
+		"No Reports":            {consent: cTrue, serverResponse: http.StatusOK},
+		"No Reports with Dummy": {dummy: true, consent: cTrue, serverResponse: http.StatusOK},
+		"Single Upload":         {localFiles: map[string]reportType{"1.json": normal}, consent: cTrue, serverResponse: http.StatusOK},
+		"Multi Upload":          {localFiles: map[string]reportType{"1.json": normal, "5.json": normal}, consent: cTrue, serverResponse: http.StatusOK},
+		"Min Age":               {localFiles: map[string]reportType{"1.json": normal, "9.json": normal}, consent: cTrue, minAge: 5, serverResponse: http.StatusOK},
+		"Future Timestamp":      {localFiles: map[string]reportType{"1.json": normal, "11.json": normal}, consent: cTrue, serverResponse: http.StatusOK},
+		"Duplicate Upload":      {localFiles: map[string]reportType{"1.json": normal}, uploadedFiles: map[string]reportType{"1.json": badContent}, consent: cTrue, serverResponse: http.StatusAccepted},
+		"Bad Content":           {localFiles: map[string]reportType{"1.json": badContent}, consent: cTrue, serverResponse: http.StatusOK},
 
-		"Consent Manager Source Error":              {localFiles: map[string]reportType{"1.json": normal}, cm: cmSErr, serverResponse: http.StatusOK, wantErr: true},
-		"Consent Manager Source Error with True":    {localFiles: map[string]reportType{"1.json": normal}, cm: cmTrueSErr, serverResponse: http.StatusOK, wantErr: true},
-		"Consent Manager Global Error":              {localFiles: map[string]reportType{"1.json": normal}, cm: cmGErr, serverResponse: http.StatusOK, wantErr: true},
-		"Consent Manager Global Error with True":    {localFiles: map[string]reportType{"1.json": normal}, cm: cmTrueGErr, serverResponse: http.StatusOK, wantErr: true},
-		"Consent Manager False":                     {localFiles: map[string]reportType{"1.json": normal}, cm: cmFalse, serverResponse: http.StatusOK},
-		"Consent Manager Global True, Source False": {localFiles: map[string]reportType{"1.json": normal}, cm: cmGTrue, serverResponse: http.StatusOK},
-		"Consent Manager Global False, Source True": {localFiles: map[string]reportType{"1.json": normal}, cm: cmSTrue, serverResponse: http.StatusOK},
+		"Consent Manager Source Error":           {localFiles: map[string]reportType{"1.json": normal}, consent: cErr, serverResponse: http.StatusOK, wantErr: true},
+		"Consent Manager Source Error with True": {localFiles: map[string]reportType{"1.json": normal}, consent: cErrTrue, serverResponse: http.StatusOK, wantErr: true},
+		"Consent Manager False":                  {localFiles: map[string]reportType{"1.json": normal}, consent: cFalse, serverResponse: http.StatusOK},
 
-		"Force CM False":  {localFiles: map[string]reportType{"1.json": normal}, cm: cmFalse, force: true, serverResponse: http.StatusOK},
-		"Force Min Age":   {localFiles: map[string]reportType{"1.json": normal, "9.json": normal}, cm: cmTrue, minAge: 5, force: true, serverResponse: http.StatusOK},
-		"Force Duplicate": {localFiles: map[string]reportType{"1.json": normal}, uploadedFiles: map[string]reportType{"1.json": badContent}, cm: cmTrue, force: true, serverResponse: http.StatusOK},
+		"Force CM False":  {localFiles: map[string]reportType{"1.json": normal}, consent: cFalse, force: true, serverResponse: http.StatusOK},
+		"Force Min Age":   {localFiles: map[string]reportType{"1.json": normal, "9.json": normal}, consent: cTrue, minAge: 5, force: true, serverResponse: http.StatusOK},
+		"Force Duplicate": {localFiles: map[string]reportType{"1.json": normal}, uploadedFiles: map[string]reportType{"1.json": badContent}, consent: cTrue, force: true, serverResponse: http.StatusOK},
 
-		"OptOut Payload CM True":  {localFiles: map[string]reportType{"1.json": optOut}, cm: cmTrue, serverResponse: http.StatusOK},
-		"OptOut Payload CM False": {localFiles: map[string]reportType{"1.json": optOut}, cm: cmFalse, serverResponse: http.StatusOK},
+		"OptOut Payload CM True":  {localFiles: map[string]reportType{"1.json": optOut}, consent: cTrue, serverResponse: http.StatusOK},
+		"OptOut Payload CM False": {localFiles: map[string]reportType{"1.json": optOut}, consent: cFalse, serverResponse: http.StatusOK},
 
-		"Dry run": {localFiles: map[string]reportType{"1.json": normal}, cm: cmTrue, dryRun: true},
+		"Dry run": {localFiles: map[string]reportType{"1.json": normal}, consent: cTrue, dryRun: true},
 
-		"Bad URL":        {localFiles: map[string]reportType{"1.json": normal}, cm: cmTrue, url: "http://a b.com/", wantErr: true},
-		"Bad Response":   {localFiles: map[string]reportType{"1.json": normal}, cm: cmTrue, serverResponse: http.StatusForbidden},
-		"Offline Server": {localFiles: map[string]reportType{"1.json": normal}, cm: cmTrue, serverOffline: true},
+		"Bad URL":        {localFiles: map[string]reportType{"1.json": normal}, consent: cTrue, url: "http://a b.com/", wantErr: true},
+		"Bad Response":   {localFiles: map[string]reportType{"1.json": normal}, consent: cTrue, serverResponse: http.StatusForbidden},
+		"Offline Server": {localFiles: map[string]reportType{"1.json": normal}, consent: cTrue, serverOffline: true},
 
-		"Invalid Directory": {localFiles: map[string]reportType{"1.json": normal}, cm: cmTrue, invalidDir: true, wantErr: true},
+		"Invalid Directory": {localFiles: map[string]reportType{"1.json": normal}, consent: cTrue, invalidDir: true, wantErr: true},
 	}
 
 	for name, tc := range tests {
@@ -149,8 +133,8 @@ func TestUpload(t *testing.T) {
 				require.NoError(t, os.RemoveAll(filepath.Join(dir, "local")), "Setup: failed to remove local directory")
 			}
 
-			mgr, err := uploader.New(tc.cm, "source", tc.minAge, tc.dryRun,
-				uploader.WithBaseServerURL(tc.url), uploader.WithCachePath(dir), uploader.WithTimeProvider(mockTimeProvider{currentTime: mockTime}))
+			mgr, err := uploader.New(tc.consent, "source", tc.minAge, tc.dryRun,
+				uploader.WithBaseServerURL(tc.url), uploader.WithCachePath(dir), uploader.WithTimeProvider(uploader.MockTimeProvider{CurrentTime: mockTime}))
 			require.NoError(t, err, "Setup: failed to create new uploader manager")
 
 			err = mgr.Upload(tc.force)
@@ -211,16 +195,11 @@ func writeFiles(t *testing.T, targetDir string, files map[string]reportType) {
 	}
 }
 
-type testConsentManager struct {
-	sState bool
-	gState bool
-	sErr   error
-	gErr   error
+type testConsentChecker struct {
+	consent bool
+	err     error
 }
 
-func (m testConsentManager) GetConsentState(source string) (bool, error) {
-	if source != "" {
-		return m.sState, m.sErr
-	}
-	return m.gState, m.gErr
+func (m testConsentChecker) HasConsent(source string) (bool, error) {
+	return m.consent, m.err
 }

@@ -55,6 +55,19 @@ func (cm Manager) SetState(source string, state bool) (err error) {
 	return consent.write(cm.getFile(source))
 }
 
+// HasConsent returns true if there is consent for the given source, based on the hierarchy rules.
+// If the source has a consent file, its value is returned.
+// Otherwise, the global consent state is returned.
+func (cm Manager) HasConsent(source string) (bool, error) {
+	consent, err := cm.GetState(source)
+	if err != nil {
+		slog.Warn("Could not get source specific consent state, falling back to global consent state", "source", source, "error", err)
+		return cm.GetState("")
+	}
+
+	return consent, nil
+}
+
 // getFile returns the expected path to the consent file for the given source.
 // If source is blank, it returns the path to the global consent file.
 // It does not check if the file exists, or if it is valid.
