@@ -12,14 +12,6 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
-type mockTimeProvider struct {
-	currentTime int64
-}
-
-func (m mockTimeProvider) NowUnix() int64 {
-	return m.currentTime
-}
-
 func TestUploadBadFile(t *testing.T) {
 	t.Parallel()
 	basicContent := `{"Content":true, "string": "string"}`
@@ -59,11 +51,11 @@ func TestUploadBadFile(t *testing.T) {
 
 			dir := t.TempDir()
 
-			um := &Manager{
+			um := &Uploader{
 				collectedDir: filepath.Join(dir, constants.LocalFolder),
 				uploadedDir:  filepath.Join(dir, constants.UploadedFolder),
 				minAge:       0,
-				timeProvider: mockTimeProvider{currentTime: 0},
+				timeProvider: MockTimeProvider{CurrentTime: 0},
 			}
 
 			require.NoError(t, os.Mkdir(um.collectedDir, 0750), "Setup: failed to create uploaded folder")
@@ -114,7 +106,7 @@ func TestMoveReport(t *testing.T) {
 			t.Parallel()
 			dir := t.TempDir()
 
-			um := &Manager{
+			um := &Uploader{
 				collectedDir: filepath.Join(dir, constants.LocalFolder),
 				uploadedDir:  filepath.Join(dir, constants.UploadedFolder),
 			}

@@ -1,6 +1,8 @@
 // Package reportutils provides utility functions for handling reports.
 package reportutils
 
+// package report
+
 import (
 	"errors"
 	"log/slog"
@@ -16,6 +18,8 @@ import (
 // ErrInvalidPeriod is returned when a function requiring a period, received an invalid, period that isn't a non-negative integer.
 var ErrInvalidPeriod = errors.New("invalid period, period should be a positive integer")
 
+// type Report struct{}
+
 // GetPeriodStart returns the start of the period window for a given period in seconds.
 func GetPeriodStart(period int) (int64, error) {
 	if period <= 0 {
@@ -30,6 +34,8 @@ func GetReportTime(path string) (int64, error) {
 	fileName := filepath.Base(path)
 	return strconv.ParseInt(strings.TrimSuffix(fileName, filepath.Ext(fileName)), 10, 64)
 }
+
+// Path is a method on Report
 
 // GetReportPath returns the path for the most recent report within a period window, returning an empty string if no report is found.
 // Not inclusive of the period end (periodStart + period).
@@ -85,6 +91,8 @@ func GetReportPath(dir string, time int64, period int) (string, error) {
 	return mostRecentReportPath, nil
 }
 
+// -> map[int64]Report
+
 // GetReports returns the paths for the latest report within each period window for a given directory.
 // The key of the map is the start of the period window, and the report timestamp.
 //
@@ -130,6 +138,8 @@ func GetReports(dir string, period int) (map[int64]int64, error) {
 
 	return reports, nil
 }
+
+// reports.GetAll(dir string) ([]Report, error)
 
 // GetAllReports returns the filename for all reports within a given directory, which match the expected pattern.
 // Does not traverse subdirectories.

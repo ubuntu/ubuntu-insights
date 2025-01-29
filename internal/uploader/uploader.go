@@ -13,17 +13,17 @@ import (
 )
 
 type timeProvider interface {
-	NowUnix() int64
+	Now() time.Time
 }
 
 type realTimeProvider struct{}
 
-func (realTimeProvider) NowUnix() int64 {
-	return time.Now().Unix()
+func (realTimeProvider) Now() time.Time {
+	return time.Now()
 }
 
-// Manager is an abstraction of the uploader component.
-type Manager struct {
+// Uploader is an abstraction of the uploader component.
+type Uploader struct {
 	source   string
 	consentM consentManager
 	minAge   int64
@@ -46,19 +46,19 @@ type options struct {
 type Options func(*options)
 
 type consentManager interface {
-	GetConsentState(source string) (bool, error)
+	HasConsent(source string) (bool, error)
 }
 
 // New returns a new UploaderManager.
-func New(cm consentManager, source string, minAge uint, dryRun bool, args ...Options) (Manager, error) {
+func New(cm consentManager, source string, minAge uint, dryRun bool, args ...Options) (Uploader, error) {
 	slog.Debug("Creating new uploader manager", "source", source, "minAge", minAge, "dryRun", dryRun)
 
 	if source == "" {
-		return Manager{}, fmt.Errorf("source cannot be an empty string")
+		return Uploader{}, fmt.Errorf("source cannot be an empty string")
 	}
 
 	if minAge > math.MaxInt64 {
-		return Manager{}, fmt.Errorf("min age %d is too large, would overflow", minAge)
+		return Uploader{}, fmt.Errorf("min age %d is too large, would overflow", minAge)
 	}
 
 	opts := options{
@@ -70,7 +70,7 @@ func New(cm consentManager, source string, minAge uint, dryRun bool, args ...Opt
 		opt(&opts)
 	}
 
-	return Manager{
+	return Uploader{
 		source:       source,
 		consentM:     cm,
 		minAge:       int64(minAge),

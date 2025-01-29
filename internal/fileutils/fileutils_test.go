@@ -74,39 +74,3 @@ func TestAtomicWrite(t *testing.T) {
 		})
 	}
 }
-
-func TestFileExists(t *testing.T) {
-	t.Parallel()
-
-	tests := map[string]struct {
-		fileExists bool
-
-		wantExists bool
-		wantError  bool
-	}{
-		"Returns_true_when_file_exists":                      {fileExists: true, wantExists: true},
-		"Returns_false_when_file_does_not_exist":             {fileExists: false, wantExists: false},
-		"Returns_false_when_parent_directory_does_not_exist": {fileExists: false, wantExists: false},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			tempDir := t.TempDir()
-			path := filepath.Join(tempDir, "file")
-			if tc.fileExists {
-				err := fileutils.AtomicWrite(path, []byte(""))
-				require.NoError(t, err, "Setup: AtomicWrite should not return an error")
-			}
-
-			exists, err := fileutils.FileExists(path)
-			if tc.wantError {
-				require.Error(t, err, "FileExists should return an error")
-			} else {
-				require.NoError(t, err, "FileExists should not return an error")
-			}
-			require.Equal(t, tc.wantExists, exists, "FileExists should return the expected result")
-		})
-	}
-}
