@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
+	"github.com/ubuntu/ubuntu-insights/internal/report"
 )
 
 func TestUploadBadFile(t *testing.T) {
@@ -25,21 +26,22 @@ func TestUploadBadFile(t *testing.T) {
 		url          string
 		consent      bool
 
+		rNewErr bool
 		wantErr bool
 	}{
 		"Ok":           {fName: "0.json", fileContents: basicContent, wantErr: false},
 		"Missing File": {fName: "0.json", fileContents: basicContent, missingFile: true, wantErr: true},
 		"File Is Dir":  {fName: "0.json", fileIsDir: true, wantErr: true},
-		"Non-numeric":  {fName: "not-numeric.json", fileContents: basicContent, wantErr: true},
-		"Bad File Ext": {fName: "0.txt", fileContents: basicContent},
+		"Non-numeric":  {fName: "not-numeric.json", fileContents: basicContent, rNewErr: true},
+		"Bad File Ext": {fName: "0.txt", fileContents: basicContent, rNewErr: true},
 		"Bad Contents": {fName: "0.json", fileContents: badContent, wantErr: true},
 		"Bad URL":      {fName: "0.json", fileContents: basicContent, url: "http://bad host:1234", wantErr: true},
 
 		"Ok Consent":           {fName: "0.json", fileContents: basicContent, consent: true, wantErr: false},
 		"Missing File Consent": {fName: "0.json", fileContents: basicContent, missingFile: true, consent: true, wantErr: true},
 		"File Is Dir Consent":  {fName: "0.json", fileIsDir: true, consent: true, wantErr: true},
-		"Non-numeric Consent":  {fName: "not-numeric.json", fileContents: basicContent, consent: true, wantErr: true},
-		"Bad File Ext Consent": {fName: "0.txt", fileContents: basicContent, consent: true},
+		"Non-numeric Consent":  {fName: "not-numeric.json", fileContents: basicContent, consent: true, rNewErr: true},
+		"Bad File Ext Consent": {fName: "0.txt", fileContents: basicContent, consent: true, rNewErr: true},
 		"Bad Contents Consent": {fName: "0.json", fileContents: badContent, consent: true, wantErr: true},
 		"Bad URL Consent":      {fName: "0.json", fileContents: basicContent, url: "http://bad host:1234", consent: true, wantErr: true},
 	}
@@ -77,8 +79,13 @@ func TestUploadBadFile(t *testing.T) {
 			if tc.url == "" {
 				tc.url = ts.URL
 			}
-
-			err := um.upload(tc.fName, tc.url, tc.consent, false)
+			r, err := report.New(fPath)
+			if tc.rNewErr {
+				require.Error(t, err, "Setup: failed to create report object")
+				return
+			}
+			require.NoError(t, err, "Setup: failed to create report object")
+			err = um.upload(r, tc.url, tc.consent, false)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
