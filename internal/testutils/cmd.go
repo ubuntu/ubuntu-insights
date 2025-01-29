@@ -2,6 +2,8 @@
 package testutils
 
 import (
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -43,4 +45,34 @@ func FlagTestHelper(t *testing.T, testCase CmdTestCase) {
 	} else {
 		assert.Nil(t, flag.Annotations[cobra.BashCompSubdirsInDir])
 	}
+}
+
+// SetupFakeCmdArgs sets up arguments to run a fake testing command.
+func SetupFakeCmdArgs(fakeCmdFunc string, args ...string) []string {
+	cmdArgs := []string{os.Args[0], fmt.Sprintf("-test.run=%s", fakeCmdFunc), "--"}
+	return append(cmdArgs, args...)
+}
+
+// SetupFakeCmdEnv sets up environment variables for running fake testing commands.
+func SetupFakeCmdEnv() {
+	os.Setenv("GO_WANT_HELPER_PROCESS", "1")
+}
+
+// GetFakeCmdArgs gets the arguments passed into a fake testing command, or errors without the proper environment.
+func GetFakeCmdArgs() (args []string, err error) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return nil, fmt.Errorf("fake cmd called in non-testing environment")
+	}
+
+	args = os.Args
+	for len(args) > 0 {
+		if args[0] != "--" {
+			args = args[1:]
+			continue
+		}
+		args = args[1:]
+		break
+	}
+
+	return args, nil
 }

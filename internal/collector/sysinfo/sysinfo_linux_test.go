@@ -271,22 +271,19 @@ func TestCollect(t *testing.T) {
 				sysinfo.WithLogger(&l),
 			}
 
-			cover := fmt.Sprintf("GOCOVERDIR=%s", os.Getenv("GOCOVERDIR"))
+			testutils.SetupFakeCmdEnv()
 			if tc.cpuInfo != "-" {
-				cmdArgs := []string{"env", "GO_WANT_HELPER_PROCESS=1", cover, os.Args[0], "-test.run=TestMockCPUList", "--"}
-				cmdArgs = append(cmdArgs, tc.cpuInfo)
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeCPUList", tc.cpuInfo)
 				options = append(options, sysinfo.WithCPUInfo(cmdArgs))
 			}
 
 			if tc.blkInfo != "-" {
-				cmdArgs := []string{"env", "GO_WANT_HELPER_PROCESS=1", cover, os.Args[0], "-test.run=TestMockBlkList", "--"}
-				cmdArgs = append(cmdArgs, tc.blkInfo)
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeBlkList", tc.blkInfo)
 				options = append(options, sysinfo.WithBlkInfo(cmdArgs))
 			}
 
-			if tc.blkInfo != "-" {
-				cmdArgs := []string{"env", "GO_WANT_HELPER_PROCESS=1", cover, os.Args[0], "-test.run=TestMockScreenList", "--"}
-				cmdArgs = append(cmdArgs, tc.screenInfo)
+			if tc.screenInfo != "-" {
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeScreenList", tc.screenInfo)
 				options = append(options, sysinfo.WithScreenInfo(cmdArgs))
 			}
 
@@ -304,32 +301,23 @@ func TestCollect(t *testing.T) {
 
 			if !l.AssertLevels(t, tc.logs) {
 				for _, call := range l.HandleCalls {
-					fmt.Printf("Logged %v: %s\n", call.Level, call.Message)
+					t.Logf("Logged %v: %s\n", call.Level, call.Message)
 				}
 			}
 		})
 	}
 }
 
-func TestMockCPUList(_ *testing.T) {
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+func TestFakeCPUList(_ *testing.T) {
+	args, err := testutils.GetFakeCmdArgs()
+	if err != nil {
 		return
 	}
 	defer os.Exit(0)
 
-	args := os.Args
-	for len(args) > 0 {
-		if args[0] != "--" {
-			args = args[1:]
-			continue
-		}
-		args = args[1:]
-		break
-	}
-
 	switch args[0] {
 	case "error":
-		fmt.Fprint(os.Stderr, "Error requested in Mock cpulist")
+		fmt.Fprint(os.Stderr, "Error requested in fake cpulist")
 		os.Exit(1)
 	case "regular":
 		fmt.Println(`{
@@ -433,25 +421,16 @@ func TestMockCPUList(_ *testing.T) {
 	}
 }
 
-func TestMockBlkList(_ *testing.T) {
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+func TestFakeBlkList(_ *testing.T) {
+	args, err := testutils.GetFakeCmdArgs()
+	if err != nil {
 		return
 	}
 	defer os.Exit(0)
 
-	args := os.Args
-	for len(args) > 0 {
-		if args[0] != "--" {
-			args = args[1:]
-			continue
-		}
-		args = args[1:]
-		break
-	}
-
 	switch args[0] {
 	case "error":
-		fmt.Fprint(os.Stderr, "Error requested in Mock lsblk")
+		fmt.Fprint(os.Stderr, "Error requested in fake lsblk")
 		os.Exit(1)
 	case "regular":
 		fmt.Println(`{
@@ -510,25 +489,16 @@ I should get a new one.`)
 	}
 }
 
-func TestMockScreenList(_ *testing.T) {
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+func TestFakeScreenList(_ *testing.T) {
+	args, err := testutils.GetFakeCmdArgs()
+	if err != nil {
 		return
 	}
 	defer os.Exit(0)
 
-	args := os.Args
-	for len(args) > 0 {
-		if args[0] != "--" {
-			args = args[1:]
-			continue
-		}
-		args = args[1:]
-		break
-	}
-
 	switch args[0] {
 	case "error":
-		fmt.Fprint(os.Stderr, "Error requested in Mock lsblk")
+		fmt.Fprint(os.Stderr, "Error requested in fake xrandr")
 		os.Exit(1)
 	case "regular":
 		fmt.Println(`Screen 0: minimum 8 x 8, current 6912 x 2160, maximum 32767 x 32767
