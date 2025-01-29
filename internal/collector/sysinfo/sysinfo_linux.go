@@ -99,7 +99,7 @@ func (s Manager) collectCPU() (info map[string]string, err error) {
 		}
 	}()
 
-	stdout, stderr, err := runCmdWithTimeout(context.Background(), 1*time.Second, s.opts.cpuInfoCmd[0], s.opts.cpuInfoCmd[1:]...)
+	stdout, stderr, err := runCmdWithTimeout(context.Background(), 15*time.Second, s.opts.cpuInfoCmd[0], s.opts.cpuInfoCmd[1:]...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run lscpu: %v", err)
 	}
@@ -310,7 +310,7 @@ func (s Manager) collectBlocks() (info []diskInfo, err error) {
 		}
 	}()
 
-	stdout, stderr, err := runCmdWithTimeout(context.Background(), 1*time.Second, s.opts.lsblkCmd[0], s.opts.lsblkCmd[1:]...)
+	stdout, stderr, err := runCmdWithTimeout(context.Background(), 15*time.Second, s.opts.lsblkCmd[0], s.opts.lsblkCmd[1:]...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run lsblk: %v", err)
 	}
@@ -350,7 +350,7 @@ func (s Manager) collectScreens() (info []screenInfo, err error) {
 		}
 	}()
 
-	stdout, stderr, err := runCmdWithTimeout(context.Background(), 1*time.Second, s.opts.screenCmd[0], s.opts.screenCmd[1:]...)
+	stdout, stderr, err := runCmdWithTimeout(context.Background(), 15*time.Second, s.opts.screenCmd[0], s.opts.screenCmd[1:]...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run xrandr: %v", err)
 	}
