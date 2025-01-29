@@ -24,6 +24,7 @@ type options struct {
 	log *slog.Logger
 }
 
+// defaultOptions returns options for when running under a normal environment.
 func defaultOptions() *options {
 	return &options{
 		productCmd: []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_ComputerSystem", "|", "Format-List", "-Property", "*"},
@@ -40,6 +41,7 @@ func defaultOptions() *options {
 	}
 }
 
+// collectHardware aggregates the data from all the other hardware collect functions.
 func (s Manager) collectHardware() (hwInfo hwInfo, err error) {
 	hwInfo.Product, err = s.collectProduct()
 	if err != nil {
@@ -80,6 +82,7 @@ func (s Manager) collectHardware() (hwInfo hwInfo, err error) {
 	return hwInfo, nil
 }
 
+// collectSoftware aggregates the data from all the other software collect functions.
 func (s Manager) collectSoftware() (swInfo, error) {
 	return swInfo{}, nil
 }
@@ -90,6 +93,7 @@ var usedProductFields = map[string]struct{}{
 	"SystemSKUNumber": {},
 }
 
+// collectProduct uses Win32_ComputerSystem to find information about the system.
 func (s Manager) collectProduct() (product map[string]string, err error) {
 	products, err := s.runWMI(s.opts.productCmd, usedProductFields)
 	if err != nil {
@@ -117,6 +121,7 @@ var usedCPUFields = map[string]struct{}{
 	"Name":                      {},
 }
 
+// collectCPU uses Win32_Processor to collect information about the CPUs.
 func (s Manager) collectCPU() (cpu map[string]string, err error) {
 	cpus, err := s.runWMI(s.opts.cpuCmd, usedCPUFields)
 	if err != nil {
@@ -135,6 +140,7 @@ var usedGPUFields = map[string]struct{}{
 	"AdapterCompatibility":    {},
 }
 
+// collectGPUs uses Win32_VideoController to collect information about the GPUs.
 func (s Manager) collectGPUs() (gpus []map[string]string, err error) {
 	gpus, err = s.runWMI(s.opts.gpuCmd, usedGPUFields)
 	if err != nil {
@@ -142,9 +148,10 @@ func (s Manager) collectGPUs() (gpus []map[string]string, err error) {
 	}
 
 	for _, g := range gpus {
-		// InstalledDisplayDrivers is a comma seperated list of paths to drivers
+		// InstalledDisplayDrivers is a comma separated list of paths to drivers
 		v, _, _ := strings.Cut(g["InstalledDisplayDrivers"], ",")
 		vs := strings.Split(v, `\`)
+
 		g["Driver"] = vs[len(vs)-1]
 		delete(g, "InstalledDisplayDrivers")
 
@@ -159,6 +166,7 @@ var usedMemoryFields = map[string]struct{}{
 	"TotalPhysicalMemory": {},
 }
 
+// collectMemory uses Win32_ComputerSystem to collect information about RAM.
 func (s Manager) collectMemory() (mem map[string]int, err error) {
 	oses, err := s.runWMI(s.opts.memoryCmd, usedMemoryFields)
 	if err != nil {
@@ -194,6 +202,7 @@ var usedPartitionFields = map[string]struct{}{
 	"Size":      {},
 }
 
+// collectBlocks uses Win32_DiskDrive and Win32_DiskPartition to collect information about disks.
 func (s Manager) collectBlocks() (blks []diskInfo, err error) {
 	disks, err := s.runWMI(s.opts.diskCmd, usedDiskFields)
 	if err != nil {
@@ -274,6 +283,7 @@ var usedScreenFields = map[string]struct{}{
 	"ScreenHeight": {},
 }
 
+// collectScreens uses Win32_DesktopMonitor to collect information about screens.
 func (s Manager) collectScreens() (screens []screenInfo, err error) {
 	monitors, err := s.runWMI(s.opts.screenCmd, usedScreenFields)
 	if err != nil {
@@ -300,10 +310,10 @@ var wmiEntryRegex = regexp.MustCompile(`(?m)^\s*(\S+)\s*:[^\S\n]*(.*?)\s*$`)
 
 var wmiReplaceRegex = regexp.MustCompile(`\r?\n\s*`)
 
-// wmiSplitRegex splits on two consecutive newlines, but \r needs special handling
+// wmiSplitRegex splits on two consecutive newlines, but \r needs special handling.
 var wmiSplitRegex = regexp.MustCompile(`\r?\n\r?\n`)
 
-// runWMI runs the cmdlet "Get-WmiObject args..." and only includes fields in the filter.
+// runWMI runs the cmdlet specified by args and only includes fields in the filter.
 func (s Manager) runWMI(args []string, filter map[string]struct{}) (out []map[string]string, err error) {
 	defer func() {
 		if err == nil && len(out) == 0 {
@@ -312,15 +322,15 @@ func (s Manager) runWMI(args []string, filter map[string]struct{}) (out []map[st
 	}()
 
 	if len(filter) == 0 {
-		return nil, fmt.Errorf("empty filter will always produce nothing for cmdlet Get-WmiObject %v", args)
+		return nil, fmt.Errorf("empty filter will always produce nothing for cmdlet %v", args)
 	}
 
-	stdout, stderr, err := runCmdWithTimeout(context.Background(), 5*time.Second, args[0], args[1:]...)
+	stdout, stderr, err := runCmdWithTimeout(context.Background(), 15*time.Second, args[0], args[1:]...)
 	if err != nil {
 		return nil, err
 	}
 	if stderr.Len() > 0 {
-		s.opts.log.Info(fmt.Sprintf("Get-WmiObject %v output to stderr", args[1:]), "stderr", stderr)
+		s.opts.log.Info(fmt.Sprintf("%v output to stderr", args), "stderr", stderr)
 	}
 
 	sections := wmiSplitRegex.Split(stdout.String(), -1)
@@ -333,7 +343,7 @@ func (s Manager) runWMI(args []string, filter map[string]struct{}) (out []map[st
 
 		entries := wmiEntryRegex.FindAllStringSubmatch(section, -1)
 		if len(entries) == 0 {
-			s.opts.log.Info(fmt.Sprintf("Get-WmiObject %v output has malformed section", args[1:]), "section", section)
+			s.opts.log.Info(fmt.Sprintf("%v output has malformed section", args), "section", section)
 			continue
 		}
 

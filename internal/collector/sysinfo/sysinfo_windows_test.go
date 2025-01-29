@@ -16,35 +16,35 @@ func TestCollectWindows(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		productInfo string
-		cpuInfo string
-		gpuInfo string
-		memoryInfo string
-		diskInfo string
+		productInfo   string
+		cpuInfo       string
+		gpuInfo       string
+		memoryInfo    string
+		diskInfo      string
 		partitionInfo string
-		screenInfo string
+		screenInfo    string
 
 		logs    map[slog.Level]uint
 		wantErr bool
 	}{
 		"Regular hardware information": {
-			productInfo: "regular",
-			cpuInfo: "regular",
-			gpuInfo: "regular",
-			memoryInfo: "regular",
-			diskInfo: "regular",
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo: "regular",
+			screenInfo:    "regular",
 		},
 
 		"Missing product information": {
-			productInfo: "missing",
-			cpuInfo: "regular",
-			gpuInfo: "regular",
-			memoryInfo: "regular",
-			diskInfo: "regular",
+			productInfo:   "missing",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo: "regular",
+			screenInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -52,13 +52,13 @@ func TestCollectWindows(t *testing.T) {
 		},
 
 		"Error product information": {
-			productInfo: "error",
-			cpuInfo: "regular",
-			gpuInfo: "regular",
-			memoryInfo: "regular",
-			diskInfo: "regular",
+			productInfo:   "error",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo: "regular",
+			screenInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -66,13 +66,13 @@ func TestCollectWindows(t *testing.T) {
 		},
 
 		"Missing CPU information": {
-			productInfo: "regular",
-			cpuInfo: "missing",
-			gpuInfo: "regular",
-			memoryInfo: "regular",
-			diskInfo: "regular",
+			productInfo:   "regular",
+			cpuInfo:       "missing",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo: "regular",
+			screenInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -80,13 +80,13 @@ func TestCollectWindows(t *testing.T) {
 		},
 
 		"Error CPU information": {
-			productInfo: "regular",
-			cpuInfo: "error",
-			gpuInfo: "regular",
-			memoryInfo: "regular",
-			diskInfo: "regular",
+			productInfo:   "regular",
+			cpuInfo:       "error",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo: "regular",
+			screenInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -94,13 +94,13 @@ func TestCollectWindows(t *testing.T) {
 		},
 
 		"Missing GPU information": {
-			productInfo: "regular",
-			cpuInfo: "regular",
-			gpuInfo: "missing",
-			memoryInfo: "regular",
-			diskInfo: "regular",
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "missing",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo: "regular",
+			screenInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -108,13 +108,13 @@ func TestCollectWindows(t *testing.T) {
 		},
 
 		"Error GPU information": {
-			productInfo: "regular",
-			cpuInfo: "regular",
-			gpuInfo: "error",
-			memoryInfo: "regular",
-			diskInfo: "regular",
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "error",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo: "regular",
+			screenInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -122,13 +122,13 @@ func TestCollectWindows(t *testing.T) {
 		},
 
 		"Missing memory information": {
-			productInfo: "regular",
-			cpuInfo: "regular",
-			gpuInfo: "regular",
-			memoryInfo: "missing",
-			diskInfo: "regular",
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "missing",
+			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo: "regular",
+			screenInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -136,13 +136,13 @@ func TestCollectWindows(t *testing.T) {
 		},
 
 		"Error memory information": {
-			productInfo: "regular",
-			cpuInfo: "regular",
-			gpuInfo: "regular",
-			memoryInfo: "error",
-			diskInfo: "regular",
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "error",
+			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo: "regular",
+			screenInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -150,13 +150,13 @@ func TestCollectWindows(t *testing.T) {
 		},
 
 		"Missing disk information": {
-			productInfo: "regular",
-			cpuInfo: "regular",
-			gpuInfo: "regular",
-			memoryInfo: "regular",
-			diskInfo: "missing",
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "missing",
 			partitionInfo: "regular",
-			screenInfo: "regular",
+			screenInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -164,13 +164,13 @@ func TestCollectWindows(t *testing.T) {
 		},
 
 		"Error disk information": {
-			productInfo: "regular",
-			cpuInfo: "regular",
-			gpuInfo: "regular",
-			memoryInfo: "regular",
-			diskInfo: "error",
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "error",
 			partitionInfo: "regular",
-			screenInfo: "regular",
+			screenInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -178,13 +178,13 @@ func TestCollectWindows(t *testing.T) {
 		},
 
 		"Missing partition information": {
-			productInfo: "regular",
-			cpuInfo: "regular",
-			gpuInfo: "regular",
-			memoryInfo: "regular",
-			diskInfo: "regular",
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
 			partitionInfo: "missing",
-			screenInfo: "regular",
+			screenInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -192,13 +192,13 @@ func TestCollectWindows(t *testing.T) {
 		},
 
 		"Error partition information": {
-			productInfo: "regular",
-			cpuInfo: "regular",
-			gpuInfo: "regular",
-			memoryInfo: "regular",
-			diskInfo: "regular",
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
 			partitionInfo: "error",
-			screenInfo: "regular",
+			screenInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -206,13 +206,13 @@ func TestCollectWindows(t *testing.T) {
 		},
 
 		"Missing screen information": {
-			productInfo: "regular",
-			cpuInfo: "regular",
-			gpuInfo: "regular",
-			memoryInfo: "regular",
-			diskInfo: "regular",
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo: "missing",
+			screenInfo:    "missing",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -220,13 +220,13 @@ func TestCollectWindows(t *testing.T) {
 		},
 
 		"Error screen information": {
-			productInfo: "regular",
-			cpuInfo: "regular",
-			gpuInfo: "regular",
-			memoryInfo: "regular",
-			diskInfo: "regular",
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo: "error",
+			screenInfo:    "error",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -248,49 +248,40 @@ func TestCollectWindows(t *testing.T) {
 				sysinfo.WithLogger(&l),
 			}
 
-			os.Setenv("GO_WANT_HELPER_PROCESS", "1")
 			if tc.productInfo != "-" {
-				cmdArgs := []string{os.Args[0], "-test.run=TestMockProductInfo", "--"}
-				cmdArgs = append(cmdArgs, tc.productInfo)
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeProductInfo", tc.productInfo)
 				options = append(options, sysinfo.WithProductInfo(cmdArgs))
 			}
 
 			if tc.cpuInfo != "-" {
-				cmdArgs := []string{os.Args[0], "-test.run=TestMockCPUInfo", "--"}
-				cmdArgs = append(cmdArgs, tc.cpuInfo)
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeCPUInfo", tc.cpuInfo)
 				options = append(options, sysinfo.WithCPUInfo(cmdArgs))
 			}
 
 			if tc.gpuInfo != "-" {
-				cmdArgs := []string{os.Args[0], "-test.run=TestMockGPUInfo", "--"}
-				cmdArgs = append(cmdArgs, tc.gpuInfo)
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeGPUInfo", tc.gpuInfo)
 				options = append(options, sysinfo.WithGPUInfo(cmdArgs))
 			}
 
 			if tc.memoryInfo != "-" {
-				cmdArgs := []string{os.Args[0], "-test.run=TestMockMemoryInfo", "--"}
-				cmdArgs = append(cmdArgs, tc.memoryInfo)
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeMemoryInfo", tc.memoryInfo)
 				options = append(options, sysinfo.WithMemoryInfo(cmdArgs))
 			}
 
 			if tc.diskInfo != "-" {
-				cmdArgs := []string{os.Args[0], "-test.run=TestMockDiskInfo", "--"}
-				cmdArgs = append(cmdArgs, tc.diskInfo)
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeDiskInfo", tc.diskInfo)
 				options = append(options, sysinfo.WithDiskInfo(cmdArgs))
 			}
 
 			if tc.partitionInfo != "-" {
-				cmdArgs := []string{os.Args[0], "-test.run=TestMockPartitionInfo", "--"}
-				cmdArgs = append(cmdArgs, tc.partitionInfo)
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakePartitionInfo", tc.partitionInfo)
 				options = append(options, sysinfo.WithPartitionInfo(cmdArgs))
 			}
 
 			if tc.screenInfo != "-" {
-				cmdArgs := []string{os.Args[0], "-test.run=TestMockScreenInfo", "--"}
-				cmdArgs = append(cmdArgs, tc.screenInfo)
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeScreenInfo", tc.screenInfo)
 				options = append(options, sysinfo.WithScreenInfo(cmdArgs))
 			}
-
 
 			s := sysinfo.New(options...)
 
@@ -313,26 +304,16 @@ func TestCollectWindows(t *testing.T) {
 	}
 }
 
-
-func TestMockProductInfo(_ *testing.T) {
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+func TestFakeProductInfo(_ *testing.T) {
+	args, err := testutils.GetFakeCmdArgs()
+	if err != nil {
 		return
 	}
 	defer os.Exit(0)
 
-	args := os.Args
-	for len(args) > 0 {
-		if args[0] != "--" {
-			args = args[1:]
-			continue
-		}
-		args = args[1:]
-		break
-	}
-
 	switch args[0] {
 	case "error":
-		fmt.Fprint(os.Stderr, "Error requested in Mock product info")
+		fmt.Fprint(os.Stderr, "Error requested in fake product info")
 		os.Exit(1)
 	case "regular":
 		fmt.Println(`
@@ -408,25 +389,16 @@ Workgroup                   : WORKGROUP`)
 	}
 }
 
-func TestMockCPUInfo(_ *testing.T) {
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+func TestFakeCPUInfo(_ *testing.T) {
+	args, err := testutils.GetFakeCmdArgs()
+	if err != nil {
 		return
 	}
 	defer os.Exit(0)
 
-	args := os.Args
-	for len(args) > 0 {
-		if args[0] != "--" {
-			args = args[1:]
-			continue
-		}
-		args = args[1:]
-		break
-	}
-
 	switch args[0] {
 	case "error":
-		fmt.Fprint(os.Stderr, "Error requested in Mock cpu info")
+		fmt.Fprint(os.Stderr, "Error requested in fake cpu info")
 		os.Exit(1)
 	case "regular":
 		fmt.Println(`
@@ -495,25 +467,16 @@ VMMonitorModeExtensions                 : False`)
 	}
 }
 
-func TestMockGPUInfo(_ *testing.T) {
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+func TestFakeGPUInfo(_ *testing.T) {
+	args, err := testutils.GetFakeCmdArgs()
+	if err != nil {
 		return
 	}
 	defer os.Exit(0)
 
-	args := os.Args
-	for len(args) > 0 {
-		if args[0] != "--" {
-			args = args[1:]
-			continue
-		}
-		args = args[1:]
-		break
-	}
-
 	switch args[0] {
 	case "error":
-		fmt.Fprint(os.Stderr, "Error requested in Mock gpu info")
+		fmt.Fprint(os.Stderr, "Error requested in fake gpu info")
 		os.Exit(1)
 	case "regular":
 		fmt.Println(`
@@ -647,25 +610,16 @@ VideoProcessor               : Intel(R) UHD Graphics Family`)
 	}
 }
 
-func TestMockMemoryInfo(_ *testing.T) {
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+func TestFakeMemoryInfo(_ *testing.T) {
+	args, err := testutils.GetFakeCmdArgs()
+	if err != nil {
 		return
 	}
 	defer os.Exit(0)
 
-	args := os.Args
-	for len(args) > 0 {
-		if args[0] != "--" {
-			args = args[1:]
-			continue
-		}
-		args = args[1:]
-		break
-	}
-
 	switch args[0] {
 	case "error":
-		fmt.Fprint(os.Stderr, "Error requested in Mock memory info")
+		fmt.Fprint(os.Stderr, "Error requested in fake memory info")
 		os.Exit(1)
 	case "regular":
 		fmt.Println(`
@@ -678,25 +632,16 @@ TotalPhysicalMemory : 68406489088`)
 	}
 }
 
-func TestMockDiskInfo(_ *testing.T) {
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+func TestFakeDiskInfo(_ *testing.T) {
+	args, err := testutils.GetFakeCmdArgs()
+	if err != nil {
 		return
 	}
 	defer os.Exit(0)
 
-	args := os.Args
-	for len(args) > 0 {
-		if args[0] != "--" {
-			args = args[1:]
-			continue
-		}
-		args = args[1:]
-		break
-	}
-
 	switch args[0] {
 	case "error":
-		fmt.Fprint(os.Stderr, "Error requested in Mock disk info")
+		fmt.Fprint(os.Stderr, "Error requested in fake disk info")
 		os.Exit(1)
 	case "regular":
 		fmt.Println(`
@@ -759,25 +704,16 @@ Signature                   :`)
 	}
 }
 
-func TestMockPartitionInfo(_ *testing.T) {
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+func TestFakePartitionInfo(_ *testing.T) {
+	args, err := testutils.GetFakeCmdArgs()
+	if err != nil {
 		return
 	}
 	defer os.Exit(0)
 
-	args := os.Args
-	for len(args) > 0 {
-		if args[0] != "--" {
-			args = args[1:]
-			continue
-		}
-		args = args[1:]
-		break
-	}
-
 	switch args[0] {
 	case "error":
-		fmt.Fprint(os.Stderr, "Error requested in Mock partition info")
+		fmt.Fprint(os.Stderr, "Error requested in fake partition info")
 		os.Exit(1)
 	case "regular":
 		fmt.Println(`
@@ -928,25 +864,16 @@ Type                        : GPT: Basic Data`)
 	}
 }
 
-func TestMockScreenInfo(_ *testing.T) {
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+func TestFakeScreenInfo(_ *testing.T) {
+	args, err := testutils.GetFakeCmdArgs()
+	if err != nil {
 		return
 	}
 	defer os.Exit(0)
 
-	args := os.Args
-	for len(args) > 0 {
-		if args[0] != "--" {
-			args = args[1:]
-			continue
-		}
-		args = args[1:]
-		break
-	}
-
 	switch args[0] {
 	case "error":
-		fmt.Fprint(os.Stderr, "Error requested in Mock screen info")
+		fmt.Fprint(os.Stderr, "Error requested in fake screen info")
 		os.Exit(1)
 	case "regular":
 		fmt.Println(`
