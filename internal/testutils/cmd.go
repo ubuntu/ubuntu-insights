@@ -49,21 +49,12 @@ func FlagTestHelper(t *testing.T, testCase CmdTestCase) {
 
 // SetupFakeCmdArgs sets up arguments to run a fake testing command.
 func SetupFakeCmdArgs(fakeCmdFunc string, args ...string) []string {
-	cmdArgs := []string{os.Args[0], fmt.Sprintf("-test.run=%s", fakeCmdFunc), "--"}
+	cmdArgs := []string{os.Args[0], fmt.Sprintf("-test.run=%s", fakeCmdFunc), "--", "GO_HELPER_PROCESS"}
 	return append(cmdArgs, args...)
-}
-
-// SetupFakeCmdEnv sets up environment variables for running fake testing commands.
-func SetupFakeCmdEnv() {
-	os.Setenv("GO_WANT_HELPER_PROCESS", "1")
 }
 
 // GetFakeCmdArgs gets the arguments passed into a fake testing command, or errors without the proper environment.
 func GetFakeCmdArgs() (args []string, err error) {
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
-		return nil, fmt.Errorf("fake cmd called in non-testing environment")
-	}
-
 	args = os.Args
 	for len(args) > 0 {
 		if args[0] != "--" {
@@ -74,5 +65,9 @@ func GetFakeCmdArgs() (args []string, err error) {
 		break
 	}
 
-	return args, nil
+	if len(args) == 0 || args[0] != "GO_HELPER_PROCESS" {
+		return nil, fmt.Errorf("fake cmd called in non-testing environment")
+	}
+
+	return args[1:], nil
 }

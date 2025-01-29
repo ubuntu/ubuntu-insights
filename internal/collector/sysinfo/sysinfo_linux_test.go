@@ -271,7 +271,6 @@ func TestCollect(t *testing.T) {
 				sysinfo.WithLogger(&l),
 			}
 
-			testutils.SetupFakeCmdEnv()
 			if tc.cpuInfo != "-" {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeCPUList", tc.cpuInfo)
 				options = append(options, sysinfo.WithCPUInfo(cmdArgs))
