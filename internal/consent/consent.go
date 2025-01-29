@@ -19,8 +19,8 @@ type Manager struct {
 	path string
 }
 
-// consentFile is a struct that represents a consent file.
-type consentFile struct {
+// CFile is a struct that represents a consent file.
+type CFile struct {
 	ConsentState bool `toml:"consent_state"`
 }
 
@@ -30,14 +30,13 @@ func New(path string) *Manager {
 	return &Manager{path: path}
 }
 
-// GetConsentState gets the consent state for the given source.
+// GetState gets the consent state for the given source.
 // If the source do not have a consent file, it will be considered as a false state.
 // If the source is an empty string, then the global consent state will be returned.
 // If the target consent file does not exist, it will not be created.
-func (cm Manager) GetConsentState(source string) (bool, error) {
-	sourceConsent, err := readConsentFile(cm.getConsentFile(source))
+func (cm Manager) GetState(source string) (bool, error) {
+	sourceConsent, err := readFile(cm.getFile(source))
 	if err != nil {
-		slog.Error("Error reading source consent file", "source", source, "error", err)
 		return false, err
 	}
 
@@ -46,20 +45,20 @@ func (cm Manager) GetConsentState(source string) (bool, error) {
 
 var consentSourceFilePattern = `%s` + constants.ConsentSourceBaseSeparator + constants.GlobalFileName
 
-// SetConsentState updates the consent state for the given source.
+// SetState updates the consent state for the given source.
 // If the source is an empty string, then the global consent state will be set.
 // If the target consent file does not exist, it will be created.
-func (cm Manager) SetConsentState(source string, state bool) (err error) {
+func (cm Manager) SetState(source string, state bool) (err error) {
 	defer decorate.OnError(&err, "could not set consent state")
 
-	consent := consentFile{ConsentState: state}
-	return consent.write(cm.getConsentFile(source))
+	consent := CFile{ConsentState: state}
+	return consent.write(cm.getFile(source))
 }
 
-// getConsentFile returns the expected path to the consent file for the given source.
+// getFile returns the expected path to the consent file for the given source.
 // If source is blank, it returns the path to the global consent file.
 // It does not check if the file exists, or if it is valid.
-func (cm Manager) getConsentFile(source string) string {
+func (cm Manager) getFile(source string) string {
 	p := filepath.Join(cm.path, constants.GlobalFileName)
 	if source != "" {
 		p = filepath.Join(cm.path, fmt.Sprintf(consentSourceFilePattern, source))
@@ -69,7 +68,7 @@ func (cm Manager) getConsentFile(source string) string {
 }
 
 // getSourceConsentFiles returns a map of all paths to validly named consent files in the folder, other than the global file.
-func (cm Manager) getConsentFiles() (map[string]string, error) {
+func (cm Manager) getFiles() (map[string]string, error) {
 	sourceFiles := make(map[string]string)
 
 	entries, err := os.ReadDir(cm.path)
@@ -94,8 +93,8 @@ func (cm Manager) getConsentFiles() (map[string]string, error) {
 	return sourceFiles, nil
 }
 
-func readConsentFile(path string) (consentFile, error) {
-	var consent consentFile
+func readFile(path string) (CFile, error) {
+	var consent CFile
 	_, err := toml.DecodeFile(path, &consent)
 	slog.Debug("Read consent file", "file", path, "consent", consent.ConsentState)
 
@@ -104,7 +103,11 @@ func readConsentFile(path string) (consentFile, error) {
 
 // writeConsentFile writes the given consent file to the given path atomically, replacing it if it already exists.
 // Not atomic on Windows.
-func (cf consentFile) write(path string) (err error) {
+// Makes dir if it does not exist.
+func (cf CFile) write(path string) (err error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
+		return fmt.Errorf("could not create directory: %v", err)
+	}
 	tmp, err := os.CreateTemp(filepath.Dir(path), "consent-*.tmp")
 	if err != nil {
 		return fmt.Errorf("could not create temporary file: %v", err)

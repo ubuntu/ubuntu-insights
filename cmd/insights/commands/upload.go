@@ -46,5 +46,5 @@ func installUploadCmd(app *App) {
 	uploadCmd.Flags().BoolVarP(&app.uploadConfig.force, "force", "f", app.uploadConfig.force, "force an upload, ignoring min age and clashes between the collected file and a file in the uploaded folder, replacing the clashing uploaded report if it exists")
 	uploadCmd.Flags().BoolVarP(&app.uploadConfig.dryRun, "dry-run", "d", app.uploadConfig.dryRun, "go through the motions of doing an upload, but do not communicate with the server or send the payload")
 
-	app.rootCmd.AddCommand(uploadCmd)
+	app.cmd.AddCommand(uploadCmd)
 }

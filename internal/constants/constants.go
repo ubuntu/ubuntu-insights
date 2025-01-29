@@ -8,6 +8,11 @@ import (
 	"path/filepath"
 )
 
+var (
+	// Version is the version of the application.
+	Version = "Dev"
+)
+
 const (
 	// CmdName is the name of the command line tool.
 	CmdName = "ubuntu-insights"

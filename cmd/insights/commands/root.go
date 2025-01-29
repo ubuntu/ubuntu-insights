@@ -10,7 +10,7 @@ import (
 
 // App represents the application.
 type App struct {
-	rootCmd *cobra.Command
+	cmd *cobra.Command
 
 	rootConfig    rootConfig
 	collectConfig collectConfig
@@ -33,14 +33,16 @@ var defaultRootConfig = rootConfig{
 // New registers commands and returns a new App.
 func New() (*App, error) {
 	a := App{}
-	a.rootCmd = &cobra.Command{
+
+	a.cmd = &cobra.Command{
 		Use:           constants.CmdName + " [COMMAND]",
 		Short:         "",
 		Long:          "",
 		SilenceErrors: true,
+		Version:       constants.Version,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// Command parsing has been successful. Returns to not print usage anymore.
-			a.rootCmd.SilenceUsage = true
+			a.cmd.SilenceUsage = true
 
 			setVerbosity(a.rootConfig.Verbose)
 			return nil
@@ -56,7 +58,7 @@ func New() (*App, error) {
 }
 
 func installRootCmd(app *App) error {
-	cmd := app.rootCmd
+	cmd := app.cmd
 
 	app.rootConfig = defaultRootConfig
 
@@ -70,7 +72,7 @@ func installRootCmd(app *App) error {
 	}
 
 	if err := cmd.MarkPersistentFlagDirname("insights-dir"); err != nil {
-		slog.Error("An error occurred while initializing Ubuntu Insights.", "error", err.Error())
+		slog.Error("An error occurred while initializing Ubuntu Insights", "error", err.Error())
 		return err
 	}
 
@@ -89,12 +91,12 @@ func setVerbosity(verbose bool) {
 
 // Run executes the command and associated process, returning an error if any.
 func (a *App) Run() error {
-	return a.rootCmd.Execute()
+	return a.cmd.Execute()
 }
 
 // UsageError returns if the error is a command parsing or runtime one.
 func (a App) UsageError() bool {
-	return !a.rootCmd.SilenceUsage
+	return !a.cmd.SilenceUsage
 }
 
 // Quit gracefully exits the application.

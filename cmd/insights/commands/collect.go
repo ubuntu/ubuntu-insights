@@ -72,5 +72,5 @@ func installCollectCmd(app *App) {
 	collectCmd.Flags().BoolVarP(&app.collectConfig.force, "force", "f", false, "force a collection, override the report if there are any conflicts (doesn't ignore consent)")
 	collectCmd.Flags().BoolVarP(&app.collectConfig.dryRun, "dry-run", "d", false, "perform a dry-run where a report is collected, but not written to disk")
 
-	app.rootCmd.AddCommand(collectCmd)
+	app.cmd.AddCommand(collectCmd)
 }

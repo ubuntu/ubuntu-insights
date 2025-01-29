@@ -57,7 +57,7 @@ func TestGetConsentState(t *testing.T) {
 			require.NoError(t, err, "Setup: failed to setup temporary consent files")
 			cm := consent.New(dir)
 
-			got, err := cm.GetConsentState(tc.source)
+			got, err := cm.GetState(tc.source)
 			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return
@@ -113,7 +113,7 @@ func TestSetConsentStates(t *testing.T) {
 			require.NoError(t, err, "Setup: failed to setup temporary consent files")
 			cm := consent.New(dir)
 
-			err = cm.SetConsentState(tc.writeSource, tc.writeState)
+			err = cm.SetState(tc.writeSource, tc.writeState)
 			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return
