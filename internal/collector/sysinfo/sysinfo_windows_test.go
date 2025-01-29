@@ -238,10 +238,6 @@ func TestCollectWindows(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tmp := t.TempDir()
-			err := testutils.CopyDir("testdata/windowsfs", tmp)
-			require.NoError(t, err, "setup: failed to copy testdata directory")
-
 			l := testutils.NewMockHandler()
 
 			options := []sysinfo.Options{
