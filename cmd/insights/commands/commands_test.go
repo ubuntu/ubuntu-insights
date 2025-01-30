@@ -2,6 +2,7 @@ package commands_test
 
 import (
 	"os"
+	"runtime"
 	"testing"
 
 	"github.com/BurntSushi/toml"
@@ -52,7 +53,7 @@ func TestConsent(t *testing.T) {
 
 		"Bad Command":      {args: []string{"consent", "-unknown"}, wantUsageErr: true, wantErr: true},
 		"Bad State":        {args: []string{"consent", "-c=bad"}, wantUsageErr: true, wantErr: true},
-		"Set Dir No Perms": {args: []string{"consent", "-c=true"}, consentFiles: map[string]bool{"consent.toml": false, "abc-consent.toml": false}, dirNoPerms: true, wantGetDirErr: true, wantErr: true},
+		"Set Dir No Perms": {args: []string{"consent", "-c=true"}, consentFiles: map[string]bool{"consent.toml": false, "abc-consent.toml": false}, dirNoPerms: true, wantGetDirErr: runtime.GOOS != "windows", wantErr: runtime.GOOS != "windows"},
 	}
 
 	for name, tc := range tests {
