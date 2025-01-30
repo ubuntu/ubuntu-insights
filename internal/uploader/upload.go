@@ -24,7 +24,9 @@ var (
 )
 
 // Upload uploads the reports corresponding to the source to the configured server.
-// Does not do duplicate checks.
+//
+// It will only upload reports that are mature enough, and have not been uploaded before.
+// If force is true, maturity and duplicate check will be skipped.
 func (um Uploader) Upload(force bool) error {
 	slog.Debug("Uploading reports")
 
