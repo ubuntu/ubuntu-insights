@@ -1,6 +1,7 @@
 package sysinfo_test
 
 import (
+	"flag"
 	"fmt"
 	"log/slog"
 	"os"
@@ -12,6 +13,17 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	dir, ok := testutils.SetupHelperCoverdir()
+
+	r := m.Run()
+	if ok {
+		os.Remove(dir)
+	}
+	os.Exit(r)
+}
 
 func TestNew(t *testing.T) {
 	t.Parallel()
