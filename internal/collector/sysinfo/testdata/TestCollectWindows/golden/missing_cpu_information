@@ -3,7 +3,8 @@ hardware:
         Family: "1582.3"
         Model: Star 11 CPP
         Vendor: Micro-Star International Co., Ltd.
-    cpu: {}
+    cpu:
+        Architecture: amd64
     gpus:
         - Driver: nvldumdx.dll
           Name: NVIDIA GeForce RTX 3050 Ti Laptop GPU

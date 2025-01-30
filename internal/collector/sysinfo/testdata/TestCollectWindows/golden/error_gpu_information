@@ -4,6 +4,7 @@ hardware:
         Model: Star 11 CPP
         Vendor: Micro-Star International Co., Ltd.
     cpu:
+        Architecture: amd64
         Manufacturer: GenuineIntel
         Name: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz
         NumberOfCores: "8"

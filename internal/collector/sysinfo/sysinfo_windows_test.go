@@ -324,6 +324,7 @@ func TestCollectWindows(t *testing.T) {
 
 			options := []sysinfo.Options{
 				sysinfo.WithLogger(&l),
+				sysinfo.WithArch("amd64"),
 			}
 
 			if tc.productInfo != "-" {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -20,6 +21,8 @@ type options struct {
 	partitionCmd []string
 
 	screenCmd []string
+
+	arch string
 
 	log *slog.Logger
 }
@@ -37,6 +40,8 @@ func defaultOptions() *options {
 
 		screenCmd: []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_DesktopMonitor", "|", "Format-List", "-Property", "*"},
 
+		arch: runtime.GOARCH,
+
 		log: slog.Default(),
 	}
 }
@@ -52,7 +57,9 @@ func (s Manager) collectHardware() (hwInfo hwInfo, err error) {
 	hwInfo.CPU, err = s.collectCPU()
 	if err != nil {
 		s.opts.log.Warn("failed to collect cpu info", "error", err)
-		hwInfo.CPU = map[string]string{}
+		hwInfo.CPU = map[string]string{
+			"Architecture": s.opts.arch,
+		}
 	}
 
 	hwInfo.GPUs, err = s.collectGPUs()
@@ -130,6 +137,8 @@ func (s Manager) collectCPU() (cpu map[string]string, err error) {
 
 	// we are assuming all CPUs are the same
 	cpus[0]["Sockets"] = strconv.Itoa(len(cpus))
+
+	cpus[0]["Architecture"] = s.opts.arch
 
 	return cpus[0], nil
 }

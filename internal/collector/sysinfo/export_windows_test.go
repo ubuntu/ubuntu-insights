@@ -41,3 +41,9 @@ func WithScreenInfo(cmd []string) Options {
 		o.screenCmd = cmd
 	}
 }
+
+func WithArch(arch string) Options {
+	return func(o *options) {
+		o.arch = arch
+	}
+}
