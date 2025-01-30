@@ -147,6 +147,48 @@ func TestCollectWindows(t *testing.T) {
 			},
 		},
 
+		"Negative memory information": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "negative",
+			diskInfo:      "regular",
+			partitionInfo: "regular",
+			screenInfo:    "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Bad memory information": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "bad",
+			diskInfo:      "regular",
+			partitionInfo: "regular",
+			screenInfo:    "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Garbage memory information": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "garbage",
+			diskInfo:      "regular",
+			partitionInfo: "regular",
+			screenInfo:    "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
 		"Error memory information": {
 			productInfo:   "regular",
 			cpuInfo:       "regular",
@@ -214,6 +256,20 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+			},
+		},
+
+		"Malicious partition information": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
+			partitionInfo: "malicious",
+			screenInfo:    "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 6,
 			},
 		},
 
@@ -631,6 +687,19 @@ func TestFakeMemoryInfo(_ *testing.T) {
 		fmt.Println(`
 
 TotalPhysicalMemory : 68406489088`)
+	case "negative":
+		fmt.Println(`
+
+TotalPhysicalMemory : -68406489088`)
+	case "bad":
+		fmt.Println(`
+
+TotalPhysicalMemory : ONE BILLION!!!`)
+	case "garbage":
+		fmt.Println(`
+TLB:active
+Memory:mapped
+Pages:paged`)
 	case "":
 		fallthrough
 	case "missing":
@@ -863,6 +932,37 @@ RewritePartition            :
 Size                        : 1976850972672
 StartingOffset              : 23546822656
 Type                        : GPT: Basic Data`)
+	case "malicious":
+		fmt.Println(`
+
+Index                       : -1
+Name                        : Disk #0, Partition #-1
+Size                        : 314572800
+
+Index                       : alpha
+Name                        : Disk #0, Partition alpha
+DiskIndex                   : 0
+Size                        : 943718400
+
+Index                       : 4
+Name                        : Disk #0, Partition #4
+DiskIndex                   : 0
+Size                        : 22153265152
+
+Index                       : 0
+Name                        : Disk #-1, Partition #0
+DiskIndex                   : -1
+Size                        : 22153265152
+
+Index                       : 1
+Name                        : Disk #1, Partition #1
+DiskIndex                   : 1
+Size                        : 22153265152
+
+Index                       : 2
+Name                        : Disk beta, Partition #2
+DiskIndex                   : beta
+Size                        : 1976850972672`)
 	case "":
 		fallthrough
 	case "missing":

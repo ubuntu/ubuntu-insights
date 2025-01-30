@@ -181,6 +181,10 @@ func (s Manager) collectMemory() (mem map[string]int, err error) {
 			s.opts.log.Warn("memory info contained non-integer memory", "value", sm)
 			continue
 		}
+		if v < 0 {
+			s.opts.log.Warn("memory info contained negative memory", "value", sm)
+			continue
+		}
 		size += v
 	}
 
