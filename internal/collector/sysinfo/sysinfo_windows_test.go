@@ -231,6 +231,20 @@ func TestCollectWindows(t *testing.T) {
 			},
 		},
 
+		"Malicious disk information": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "malicious",
+			partitionInfo: "regular",
+			screenInfo:    "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 3,
+			},
+		},
+
 		"Missing partition information": {
 			productInfo:   "regular",
 			cpuInfo:       "regular",
@@ -772,6 +786,53 @@ SCSIPort                    : 1
 SCSITargetId                : 0
 SerialNumber                : DEAD_BEEF_D34D_B33F_DEAD_B33F_D34D_BEEF.
 Signature                   :`)
+	case "malicious":
+		fmt.Println(`
+
+Partitions                  : 999999999999
+BytesPerSector              : 512
+Index                       : 0
+SectorsPerTrack             : 63
+Size                        : 2000396321280
+TotalCylinders              : 243201
+TotalHeads                  : 255
+TotalSectors                : 3907024065
+TotalTracks                 : 62016255
+TracksPerCylinder           : 255
+Caption                     : WD Green SN350 2TB
+Description                 : Disk drive
+Name                        : \\.\PHYSICALDRIVE0
+Model                       : WD Green SN350 2TB
+
+Partitions                  : -1
+BytesPerSector              : 512
+Index                       : 1
+SectorsPerTrack             : 63
+Size                        : 2000396321280
+TotalCylinders              : 243201
+TotalHeads                  : 255
+TotalSectors                : 3907024065
+TotalTracks                 : 62016255
+TracksPerCylinder           : 255
+Caption                     : WD Green SN350 2TB
+Description                 : Disk drive
+Name                        : \\.\PHYSICALDRIVE0
+Model                       : WD Green SN350 2TB
+
+Partitions                  : one gazillion
+BytesPerSector              : 512
+Index                       : 2
+SectorsPerTrack             : 63
+Size                        : 2000396321280
+TotalCylinders              : 243201
+TotalHeads                  : 255
+TotalSectors                : 3907024065
+TotalTracks                 : 62016255
+TracksPerCylinder           : 255
+Caption                     : WD Green SN350 2TB
+Description                 : Disk drive
+Name                        : \\.\PHYSICALDRIVE0
+Model                       : WD Green SN350 2TB`)
 	case "":
 		fallthrough
 	case "missing":
@@ -937,6 +998,7 @@ Type                        : GPT: Basic Data`)
 
 Index                       : -1
 Name                        : Disk #0, Partition #-1
+DiskIndex                   : 0
 Size                        : 314572800
 
 Index                       : alpha

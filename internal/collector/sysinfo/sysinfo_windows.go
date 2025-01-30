@@ -213,6 +213,8 @@ func (s Manager) collectBlocks() (blks []diskInfo, err error) {
 		return nil, err
 	}
 
+	const maxPartitions = 128
+
 	blks = make([]diskInfo, 0, len(disks))
 	for _, d := range disks {
 		parts, err := strconv.Atoi(d["Partitions"])
@@ -223,6 +225,10 @@ func (s Manager) collectBlocks() (blks []diskInfo, err error) {
 		if parts < 0 {
 			s.opts.log.Warn("disk partitions was negative", "value", parts)
 			parts = 0
+		}
+		if parts > maxPartitions {
+			s.opts.log.Warn("disk partitions too large", "value", parts)
+			parts = maxPartitions
 		}
 
 		c := diskInfo{
