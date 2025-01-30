@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
+	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
 var (
@@ -30,7 +31,7 @@ var (
 
 // Report represents a report file.
 type Report struct {
-	Path      string // Path is the path to the report.
+	Path      string // Path is the path to the report file.
 	Name      string // Name is the name of the report file, including extension.
 	TimeStamp int64  // TimeStamp is the timestamp of the report.
 
@@ -73,6 +74,50 @@ func (r Report) ReadJSON() ([]byte, error) {
 	return data, nil
 }
 
+// MarkAsProcessed moves the report to a destination directory, and writes the data to the report.
+// The original report is removed.
+//
+// The new report is returned, and the original data is stashed for use with UndoProcessed.
+// Note that calling MarkAsProcessed multiple times on the same report will overwrite the stashed data.
+func (r Report) MarkAsProcessed(dest string, data []byte) (Report, error) {
+	origData, err := r.ReadJSON()
+	if err != nil {
+		return Report{}, fmt.Errorf("failed to read original report: %v", err)
+	}
+
+	newReport := Report{Path: filepath.Join(dest, r.Name), Name: r.Name, TimeStamp: r.TimeStamp,
+		reportStash: reportStash{Path: r.Path, Data: origData}}
+
+	if err := fileutils.AtomicWrite(newReport.Path, data); err != nil {
+		return Report{}, fmt.Errorf("failed to write report: %v", err)
+	}
+
+	if err := os.Remove(r.Path); err != nil {
+		return Report{}, fmt.Errorf("failed to remove report: %v", err)
+	}
+
+	return newReport, nil
+}
+
+// UndoProcessed moves the report back to the original directory, and writes the original data to the report.
+// The new report is returned, and the original data is removed.
+func (r Report) UndoProcessed() (Report, error) {
+	if r.reportStash.Path == "" {
+		return Report{}, errors.New("no stashed data to restore")
+	}
+
+	if err := fileutils.AtomicWrite(r.reportStash.Path, r.reportStash.Data); err != nil {
+		return Report{}, fmt.Errorf("failed to write report: %v", err)
+	}
+
+	if err := os.Remove(r.Path); err != nil {
+		return Report{}, fmt.Errorf("failed to remove report: %v", err)
+	}
+
+	newReport := Report{Path: r.reportStash.Path, Name: r.Name, TimeStamp: r.TimeStamp}
+	return newReport, nil
+}
+
 // getReportTime returns a int64 representation of the report time from the report path.
 func getReportTime(path string) (int64, error) {
 	fileName := filepath.Base(path)
@@ -108,8 +153,7 @@ func GetForPeriod(dir string, time time.Time, period int) (Report, error) {
 	var report Report
 	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
-			slog.Error("Failed to access path", "path", path, "error", err)
-			return err
+			return fmt.Errorf("failed to access path: %v", err)
 		}
 
 		// Skip subdirectories.
@@ -122,8 +166,7 @@ func GetForPeriod(dir string, time time.Time, period int) (Report, error) {
 			slog.Info("Skipping non-report file", "file", d.Name(), "error", err)
 			return nil
 		} else if err != nil {
-			slog.Error("Failed to create report object", "error", err)
-			return err
+			return fmt.Errorf("failed to create report object: %v", err)
 		}
 
 		if r.TimeStamp < periodStart {
@@ -156,8 +199,7 @@ func GetPerPeriod(dir string, period int) (map[int64]Report, error) {
 	reports := make(map[int64]Report)
 	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
-			slog.Error("Failed to access path", "path", path, "error", err)
-			return err
+			return fmt.Errorf("failed to access path: %v", err)
 		}
 
 		if d.IsDir() && path != dir {
@@ -169,8 +211,7 @@ func GetPerPeriod(dir string, period int) (map[int64]Report, error) {
 			slog.Info("Skipping non-report file", "file", d.Name(), "error", err)
 			return nil
 		} else if err != nil {
-			slog.Error("Failed to create report object", "error", err)
-			return err
+			return fmt.Errorf("failed to create report object: %v", err)
 		}
 
 		periodStart := r.TimeStamp - (r.TimeStamp % int64(period))
@@ -195,8 +236,7 @@ func GetAll(dir string) ([]Report, error) {
 	reports := make([]Report, 0)
 	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
-			slog.Error("Failed to access path", "path", path, "error", err)
-			return err
+			return fmt.Errorf("failed to access path: %v", err)
 		}
 
 		if d.IsDir() && path != dir {
@@ -208,8 +248,7 @@ func GetAll(dir string) ([]Report, error) {
 			slog.Info("Skipping non-report file", "file", d.Name(), "error", err)
 			return nil
 		} else if err != nil {
-			slog.Error("Failed to create report object", "error", err)
-			return err
+			return fmt.Errorf("failed to create report object: %v", err)
 		}
 
 		reports = append(reports, r)

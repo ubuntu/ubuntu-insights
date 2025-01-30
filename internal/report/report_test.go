@@ -3,11 +3,12 @@ package report_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
-	report "github.com/ubuntu/ubuntu-insights/internal/report"
+	"github.com/ubuntu/ubuntu-insights/internal/report"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
@@ -109,7 +110,7 @@ func TestGetForPeriod(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			dir, err := setupTmpDir(t, tc.files, tc.subDir, tc.subDirFiles)
+			dir, err := setupNoDataDir(t, tc.files, tc.subDir, tc.subDirFiles)
 			require.NoError(t, err, "Setup: failed to setup temporary directory")
 			if tc.invalidDir {
 				dir = filepath.Join(dir, "invalid dir")
@@ -169,7 +170,7 @@ func TestGetPerPeriod(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			dir, err := setupTmpDir(t, tc.files, tc.subDir, tc.subDirFiles)
+			dir, err := setupNoDataDir(t, tc.files, tc.subDir, tc.subDirFiles)
 			require.NoError(t, err, "Setup: failed to setup temporary directory")
 			if tc.invalidDir {
 				dir = filepath.Join(dir, "invalid dir")
@@ -219,7 +220,7 @@ func TestGetAll(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			dir, err := setupTmpDir(t, tc.files, tc.subDir, tc.subDirFiles)
+			dir, err := setupNoDataDir(t, tc.files, tc.subDir, tc.subDirFiles)
 			require.NoError(t, err, "Setup: failed to setup temporary directory")
 			if tc.invalidDir {
 				dir = filepath.Join(dir, "invalid dir")
@@ -242,11 +243,289 @@ func TestGetAll(t *testing.T) {
 	}
 }
 
-func setupTmpDir(t *testing.T, files []string, subDir string, subDirFiles []string) (string, error) {
+func TestMarkAsProcessed(t *testing.T) {
+	t.Parallel()
+
+	type got struct {
+		Report   report.Report
+		SrcFiles map[string]string
+		DstFiles map[string]string
+	}
+
+	tests := map[string]struct {
+		srcFile map[string]string
+		dstFile map[string]string
+
+		fileName     string
+		data         []byte
+		srcFilePerms os.FileMode
+		dstFilePerms os.FileMode
+
+		wantErrUnix bool
+		wantErrWin  bool
+		wantErr     bool
+	}{
+		"Basic Move": {
+			srcFile:      map[string]string{"1.json": `{"test": true}`},
+			dstFile:      map[string]string{},
+			fileName:     "1.json",
+			data:         []byte(`{"test": true}`),
+			srcFilePerms: os.FileMode(0o600),
+			dstFilePerms: os.FileMode(0o600),
+			wantErr:      false,
+		},
+		"Basic Move New Data": {
+			srcFile:      map[string]string{"1.json": `{"test": true}`},
+			dstFile:      map[string]string{},
+			fileName:     "1.json",
+			data:         []byte("new data"),
+			srcFilePerms: os.FileMode(0o600),
+			dstFilePerms: os.FileMode(0o600),
+			wantErr:      false,
+		},
+		"Basic Move Overwrite": {
+			srcFile:      map[string]string{"1.json": `{"test": true}`},
+			dstFile:      map[string]string{"1.json": "old data"},
+			fileName:     "1.json",
+			data:         []byte("new data"),
+			srcFilePerms: os.FileMode(0o600),
+			dstFilePerms: os.FileMode(0o600),
+			wantErr:      false,
+		}, "SrcPerm None": {
+			srcFile:      map[string]string{"1.json": `{"test": true}`},
+			dstFile:      map[string]string{},
+			fileName:     "1.json",
+			data:         []byte(`{"test": true}`),
+			srcFilePerms: os.FileMode(000),
+			dstFilePerms: os.FileMode(0o600),
+			wantErrUnix:  true,
+		}, "DstPerm None": {
+			srcFile:      map[string]string{"1.json": `{"test": true}`},
+			dstFile:      map[string]string{"1.json": "old data"},
+			fileName:     "1.json",
+			data:         []byte("new data"),
+			srcFilePerms: os.FileMode(0o600),
+			dstFilePerms: os.FileMode(000),
+			wantErrWin:   true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			rootDir, srcDir, dstDir := setupProcessingDirs(t)
+
+			setupBasicDir(t, tc.srcFile, tc.srcFilePerms, srcDir)
+			setupBasicDir(t, tc.dstFile, tc.dstFilePerms, dstDir)
+
+			r, err := report.New(filepath.Join(srcDir, tc.fileName))
+			require.NoError(t, err, "Setup: failed to create report object")
+
+			r, err = r.MarkAsProcessed(dstDir, tc.data)
+			if (tc.wantErr) || (tc.wantErrUnix && runtime.GOOS != "windows") || (tc.wantErrWin && runtime.GOOS == "windows") {
+				require.Error(t, err, "expected an error but got none")
+				return
+			}
+			require.NoError(t, err, "got an unexpected error")
+
+			dstDirContents, err := testutils.GetDirContents(t, dstDir, 2)
+			require.NoError(t, err, "failed to get directory contents")
+
+			srcDirContents, err := testutils.GetDirContents(t, srcDir, 2)
+			require.NoError(t, err, "failed to get directory contents")
+
+			r = sanitizeReportPath(t, r, rootDir)
+			got := got{Report: r, SrcFiles: srcDirContents, DstFiles: dstDirContents}
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			require.EqualExportedValues(t, want, got, "MarkAsProcessed should move the report to the processed directory")
+		})
+	}
+}
+
+func TestUndoProcessed(t *testing.T) {
+	t.Parallel()
+
+	type got struct {
+		Report   report.Report
+		SrcFiles map[string]string
+		DstFiles map[string]string
+	}
+
+	tests := map[string]struct {
+		srcFile map[string]string
+		dstFile map[string]string
+
+		fileName string
+		data     []byte
+
+		wantErr bool
+	}{
+		"Basic Move": {
+			srcFile:  map[string]string{"1.json": `{"test": true}`},
+			dstFile:  map[string]string{},
+			fileName: "1.json",
+			data:     []byte(`"new data"`),
+			wantErr:  false,
+		},
+		"Basic Move New Data": {
+			srcFile:  map[string]string{"1.json": `{"test": true}`},
+			dstFile:  map[string]string{},
+			fileName: "1.json",
+			data:     []byte("new data"),
+			wantErr:  false,
+		},
+		"Basic Move Overwrite": {
+			srcFile:  map[string]string{"1.json": `{"test": true}`},
+			dstFile:  map[string]string{"1.json": "old data"},
+			fileName: "1.json",
+			data:     []byte("new data"),
+			wantErr:  false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			rootDir, srcDir, dstDir := setupProcessingDirs(t)
+
+			setupBasicDir(t, tc.srcFile, 0600, srcDir)
+			setupBasicDir(t, tc.dstFile, 0600, dstDir)
+
+			r, err := report.New(filepath.Join(srcDir, tc.fileName))
+			require.NoError(t, err, "Setup: failed to create report object")
+
+			r, err = r.MarkAsProcessed(dstDir, tc.data)
+			require.NoError(t, err, "Setup: failed to mark report as processed")
+
+			r, err = r.UndoProcessed()
+			if tc.wantErr {
+				require.Error(t, err, "expected an error but got none")
+				return
+			}
+			require.NoError(t, err, "got an unexpected error")
+
+			dstDirContents, err := testutils.GetDirContents(t, dstDir, 2)
+			require.NoError(t, err, "failed to get directory contents")
+
+			srcDirContents, err := testutils.GetDirContents(t, srcDir, 2)
+			require.NoError(t, err, "failed to get directory contents")
+
+			r = sanitizeReportPath(t, r, rootDir)
+			got := got{Report: r, SrcFiles: srcDirContents, DstFiles: dstDirContents}
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			require.EqualExportedValues(t, want, got, "UndoProcessed should move the report to the processed directory")
+		})
+	}
+}
+
+func TestUndoProcessedNoStash(t *testing.T) {
+	t.Parallel()
+
+	r, err := report.New("1.json")
+	require.NoError(t, err, "Setup: failed to create report object")
+
+	_, err = r.UndoProcessed()
+	require.Error(t, err, "UndoProcessed should return an error if the report has not been marked as processed")
+}
+
+func TestMarkAsProcessedNoFile(t *testing.T) {
+	t.Parallel()
+
+	_, srcDir, dstDir := setupProcessingDirs(t)
+	r, err := report.New(filepath.Join(srcDir, "1.json"))
+	require.NoError(t, err, "Setup: failed to create report object")
+
+	_, err = r.MarkAsProcessed(dstDir, []byte(`"new data"`))
+	require.Error(t, err, "MarkAsProcessed should return an error if the report file does not exist")
+}
+
+func TestUndoProcessedNoFile(t *testing.T) {
+	t.Parallel()
+
+	_, srcDir, dstDir := setupProcessingDirs(t)
+	reportPath := filepath.Join(srcDir, "1.json")
+	require.NoError(t, os.WriteFile(reportPath, []byte(`{"test": true}`), 0600), "Setup: failed to write report file")
+	r, err := report.New(reportPath)
+	require.NoError(t, err, "Setup: failed to create report object")
+
+	r, err = r.MarkAsProcessed(dstDir, []byte(`"new data"`))
+	require.NoError(t, err, "Setup: failed to mark report as processed")
+
+	require.NoError(t, os.Remove(r.Path), "Setup: failed to remove report file")
+
+	_, err = r.UndoProcessed()
+	require.Error(t, err, "UndoProcessed should return an error if the report file does not exist")
+}
+
+func TestReadJSON(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		files map[string]string
+		file  string
+
+		wantErr bool
+	}{
+		"Basic Read":     {files: map[string]string{"1.json": `{"test": true}`}, file: "1.json"},
+		"Multiple Files": {files: map[string]string{"1.json": `{"test": true}`, "2.json": `{"test": false}`}, file: "1.json"},
+
+		"Empty File":   {files: map[string]string{"1.json": ""}, file: "1.json", wantErr: true},
+		"Invalid JSON": {files: map[string]string{"1.json": `{"test":::`}, file: "1.json", wantErr: true},
+		"No File":      {files: map[string]string{}, file: "1.json", wantErr: true},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			_, srcDir, _ := setupProcessingDirs(t)
+
+			setupBasicDir(t, tc.files, 0600, srcDir)
+
+			r, err := report.New(filepath.Join(srcDir, tc.file))
+			require.NoError(t, err, "Setup: failed to create report object")
+
+			data, err := r.ReadJSON()
+			if tc.wantErr {
+				require.Error(t, err, "expected an error but got none")
+				return
+			}
+			require.NoError(t, err, "got an unexpected error")
+
+			got := string(data)
+			want := testutils.LoadWithUpdateFromGolden(t, got)
+			require.Equal(t, want, got, "ReadJSON should return the data from the report file")
+		})
+	}
+}
+
+func setupProcessingDirs(t *testing.T) (rootDir, srcDir, dstDir string) {
+	t.Helper()
+	rootDir = t.TempDir()
+	srcDir = filepath.Join(rootDir, "src")
+	dstDir = filepath.Join(rootDir, "dst")
+	err := os.MkdirAll(srcDir, 0700)
+	require.NoError(t, err, "Setup: failed to create source directory")
+	err = os.MkdirAll(dstDir, 0700)
+	require.NoError(t, err, "Setup: failed to create destination directory")
+	return rootDir, srcDir, dstDir
+}
+
+func setupBasicDir(t *testing.T, files map[string]string, perms os.FileMode, dir string) {
+	t.Helper()
+	for file, data := range files {
+		path := filepath.Join(dir, file)
+		err := os.WriteFile(path, []byte(data), perms)
+		require.NoError(t, err, "Setup: failed to write file")
+		t.Cleanup(func() {
+			_ = os.Chmod(path, os.FileMode(0600))
+		})
+	}
+}
+
+func setupNoDataDir(t *testing.T, files []string, subDir string, subDirFiles []string) (string, error) {
 	t.Helper()
 
 	dir := t.TempDir()
-
 	for _, file := range files {
 		path := filepath.Join(dir, file)
 		if err := os.WriteFile(path, []byte{}, 0600); err != nil {
@@ -282,5 +561,5 @@ func sanitizeReportPath(t *testing.T, r report.Report, dir string) report.Report
 		require.NoError(t, err, "failed to get relative path")
 		return report.Report{}
 	}
-	return report.Report{Path: fp, Name: r.Name, TimeStamp: r.TimeStamp}
+	return report.Report{Path: filepath.ToSlash(fp), Name: r.Name, TimeStamp: r.TimeStamp}
 }
