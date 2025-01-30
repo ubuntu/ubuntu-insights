@@ -95,58 +95,6 @@ func TestUploadBadFile(t *testing.T) {
 	}
 }
 
-func TestMoveReport(t *testing.T) {
-	t.Parallel()
-
-	tests := map[string]struct {
-		fileExists bool
-
-		wantErr bool
-	}{
-		"File Exists": {fileExists: true},
-
-		"File Not Found": {fileExists: false, wantErr: true},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			dir := t.TempDir()
-
-			um := &Uploader{
-				collectedDir: filepath.Join(dir, constants.LocalFolder),
-				uploadedDir:  filepath.Join(dir, constants.UploadedFolder),
-			}
-
-			require.NoError(t, os.MkdirAll(um.collectedDir, 0750), "Setup: failed to create uploaded folder")
-			require.NoError(t, os.MkdirAll(um.uploadedDir, 0750), "Setup: failed to create collected folder")
-
-			cDir := filepath.Join(um.collectedDir, "report.json")
-			uDir := filepath.Join(um.uploadedDir, "report.json")
-			if tc.fileExists {
-				f, err := os.Create(cDir)
-				require.NoError(t, err)
-				f.Close()
-			}
-
-			err := um.moveReport(uDir, cDir, []byte("payload"))
-			if tc.wantErr {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-
-			_, err = os.Stat(uDir)
-			if !tc.fileExists {
-				require.Error(t, err, "File should not exist in the uploaded directory")
-				return
-			}
-
-			require.NoError(t, err, "File should exist in the uploaded directory")
-		})
-	}
-}
-
 func TestSend(t *testing.T) {
 	t.Parallel()
 

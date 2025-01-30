@@ -1,0 +1,7 @@
+report:
+    path: dst/1.json
+    name: 1.json
+    timestamp: 1
+srcfiles: {}
+dstfiles:
+    1.json: '{"test": true}'

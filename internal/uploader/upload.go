@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
-	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 	"github.com/ubuntu/ubuntu-insights/internal/report"
 )
 
@@ -25,7 +24,9 @@ var (
 )
 
 // Upload uploads the reports corresponding to the source to the configured server.
-// Does not do duplicate checks.
+//
+// It will only upload reports that are mature enough, and have not been uploaded before.
+// If force is true, maturity and duplicate check will be skipped.
 func (um Uploader) Upload(force bool) error {
 	slog.Debug("Uploading reports")
 
@@ -101,13 +102,13 @@ func (um Uploader) upload(r report.Report, url string, consent, force bool) erro
 	}
 
 	// Move report first to avoid the situation where the report is sent, but not marked as sent.
-	// TODO: maybe a method on Reports ?
-	if err := um.moveReport(filepath.Join(um.uploadedDir, r.Name), filepath.Join(um.collectedDir, r.Name), data); err != nil {
-		return fmt.Errorf("failed to move report after uploading: %v", err)
+	r, err = r.MarkAsProcessed(um.uploadedDir, data)
+	if err != nil {
+		return fmt.Errorf("failed to mark report as processed: %v", err)
 	}
 	if err := send(url, data); err != nil {
-		if moveErr := um.moveReport(filepath.Join(um.collectedDir, r.Name), filepath.Join(um.uploadedDir, r.Name), origData); moveErr != nil {
-			return fmt.Errorf("failed to send data: %v, and failed to restore the original report: %v", err, moveErr)
+		if _, err := r.UndoProcessed(); err != nil {
+			return fmt.Errorf("failed to send data: %v, and failed to restore the original report: %v", err, err)
 		}
 		return fmt.Errorf("failed to send data: %v", err)
 	}
@@ -122,23 +123,6 @@ func (um Uploader) getURL() (string, error) {
 	}
 	u.Path = path.Join(u.Path, um.source)
 	return u.String(), nil
-}
-
-func (um Uploader) moveReport(writePath, removePath string, data []byte) error {
-	// (Report).MarkAsProcessed(data)
-	// (Report).UndoProcessed
-	// moveReport writes the data to the writePath, and removes the matching file from the removePath.
-	// dest, src, data
-
-	if err := fileutils.AtomicWrite(writePath, data); err != nil {
-		return fmt.Errorf("failed to write report: %v", err)
-	}
-
-	if err := os.Remove(removePath); err != nil {
-		return fmt.Errorf("failed to remove report: %v", err)
-	}
-
-	return nil
 }
 
 func send(url string, data []byte) error {

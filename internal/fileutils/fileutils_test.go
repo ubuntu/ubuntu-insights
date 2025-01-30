@@ -3,6 +3,7 @@ package fileutils_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,21 +14,24 @@ func TestAtomicWrite(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		data       []byte
-		fileExists bool
-		invalidDir bool
+		data            []byte
+		fileExists      bool
+		fileExistsPerms os.FileMode
+		invalidDir      bool
 
 		wantError bool
 	}{
 		"Empty file":          {data: []byte{}},
 		"Non-empty file":      {data: []byte("data")},
-		"Override file":       {data: []byte("data"), fileExists: true},
-		"Override empty file": {data: []byte{}, fileExists: true},
+		"Override file":       {data: []byte("data"), fileExistsPerms: 0600, fileExists: true},
+		"Override empty file": {data: []byte{}, fileExistsPerms: 0600, fileExists: true},
 
-		"Existing empty file":     {data: []byte{}, fileExists: true},
-		"Existing non-empty file": {data: []byte("data"), fileExists: true},
+		"Existing empty file":     {data: []byte{}, fileExistsPerms: 0600, fileExists: true},
+		"Existing non-empty file": {data: []byte("data"), fileExistsPerms: 0600, fileExists: true},
 
-		"Invalid Dir": {data: []byte("data"), invalidDir: true, wantError: true},
+		"Override read-only file": {data: []byte("data"), fileExistsPerms: 0400, fileExists: true, wantError: runtime.GOOS == "windows"},
+		"Override No Perms file":  {data: []byte("data"), fileExistsPerms: 0000, fileExists: true, wantError: runtime.GOOS == "windows"},
+		"Invalid Dir":             {data: []byte("data"), invalidDir: true, wantError: true},
 	}
 
 	for name, tc := range tests {
@@ -42,8 +46,9 @@ func TestAtomicWrite(t *testing.T) {
 			}
 
 			if tc.fileExists {
-				err := fileutils.AtomicWrite(path, oldFile)
-				require.NoError(t, err, "Setup: AtomicWrite should not return an error")
+				err := os.WriteFile(path, oldFile, tc.fileExistsPerms)
+				require.NoError(t, err, "Setup: WriteFile should not return an error")
+				t.Cleanup(func() { _ = os.Chmod(path, 0600) })
 			}
 
 			err := fileutils.AtomicWrite(path, tc.data)
