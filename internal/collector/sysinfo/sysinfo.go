@@ -2,6 +2,9 @@
 package sysinfo
 
 import (
+	"fmt"
+	"log/slog"
+
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/hardware"
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/software"
 )
@@ -15,15 +18,17 @@ type Collector interface {
 type Options func(*options)
 
 type options struct {
-	hw hardware.Collector
-	sw software.Collector
+	hw  hardware.Collector
+	sw  software.Collector
+	log *slog.Logger
 }
 
 // Manager handles dependencies for collecting software & hardware information.
 // Manager implements sysinfo.Collector.
 type Manager struct {
-	hw hardware.Collector
-	sw software.Collector
+	hw  hardware.Collector
+	sw  software.Collector
+	log *slog.Logger
 }
 
 // Info contains Software and Hardware information of the system.
@@ -35,8 +40,9 @@ type Info struct {
 // New returns a new SysInfo.
 func New(args ...Options) Manager {
 	opts := &options{
-		hw: hardware.New(),
-		sw: software.New(),
+		hw:  hardware.New(),
+		sw:  software.New(),
+		log: slog.Default(),
 	}
 
 	for _, opt := range args {
@@ -44,20 +50,26 @@ func New(args ...Options) Manager {
 	}
 
 	return Manager{
-		hw: opts.hw,
-		sw: opts.sw,
+		hw:  opts.hw,
+		sw:  opts.sw,
+		log: opts.log,
 	}
 }
 
-// Collect gather system information and return it.
+// Collect gathers system information and returns it.
+// Will only return an error if both hardware and software collection fail.
 func (s Manager) Collect() (Info, error) {
-	hwInfo, err := s.hw.Collect()
-	if err != nil {
-		return Info{}, err
+	hwInfo, hwErr := s.hw.Collect()
+	swInfo, swErr := s.sw.Collect()
+
+	if hwErr != nil {
+		s.log.Warn("failed to collect hardware information", "error", hwErr)
 	}
-	swInfo, err := s.sw.Collect()
-	if err != nil {
-		return Info{}, err
+	if swErr != nil {
+		s.log.Warn("failed to collect software information", "error", swErr)
+	}
+	if hwErr != nil && swErr != nil {
+		return Info{}, fmt.Errorf("failed to collect system information")
 	}
 
 	return Info{

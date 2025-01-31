@@ -7,7 +7,7 @@ import (
 	"io"
 )
 
-// parseJSON unmarshals the data in r into v.
+// ParseJSON unmarshals the data in r into v.
 func ParseJSON(r io.Reader, v any) error {
 	// Read the entire content of the io.Reader first to check for errors even if valid json is first.
 	buf, err := io.ReadAll(r)

@@ -302,13 +302,13 @@ func TestCollectLinux(t *testing.T) {
 
 			got, err := s.Collect()
 			if tc.wantErr {
-				require.Error(t, err, "Collect should return an error and didn’t")
+				require.Error(t, err, "Collect should return an error and didn't")
 				return
 			}
 			require.NoError(t, err, "Collect should not return an error")
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-			assert.Equal(t, want, got, "Collect should return expected sys information")
+			assert.Equal(t, want, got, "Collect should return expected hardware information")
 
 			if !l.AssertLevels(t, tc.logs) {
 				l.OutputLogs(t)
