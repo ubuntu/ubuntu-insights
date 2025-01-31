@@ -1,12 +1,18 @@
 package sysinfo
 
 import (
-	"log/slog"
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/hardware"
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/software"
 )
 
-// WithLogger overrides the default logger.
-func WithLogger(logger slog.Handler) Options {
+func WithHardwareCollector(hw hardware.Collector) Options {
 	return func(o *options) {
-		o.log = slog.New(logger)
+		o.hw = hw
+	}
+}
+
+func WithSoftwareCollector(sw software.Collector) Options {
+	return func(o *options) {
+		o.sw = sw
 	}
 }

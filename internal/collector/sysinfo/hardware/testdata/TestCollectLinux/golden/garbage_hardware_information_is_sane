@@ -1,0 +1,12 @@
+product:
+    Family: ""
+    Name: ""
+    Vendor: ""
+cpu: {}
+gpus:
+    - Driver: two
+      Name: ""
+      Vendor: ""
+mem: {}
+blks: []
+screens: []
