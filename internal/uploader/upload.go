@@ -71,7 +71,7 @@ func (um Uploader) Upload(force bool) error {
 func (um Uploader) upload(r report.Report, url string, consent, force bool) error {
 	slog.Debug("Uploading report", "file", r.Name, "consent", consent, "force", force)
 
-	if um.timeProvider.Now().Add(time.Duration(-um.minAge)*time.Second).Before(time.Unix(r.TimeStamp, 0)) && !force {
+	if um.timeProvider.Now().Add(-um.minAge).Before(time.Unix(r.TimeStamp, 0)) && !force {
 		return ErrReportNotMature
 	}
 
