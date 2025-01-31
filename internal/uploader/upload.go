@@ -29,6 +29,9 @@ var (
 // If force is true, maturity and duplicate check will be skipped.
 func (um Uploader) Upload(force bool) error {
 	slog.Debug("Uploading reports")
+	if err := um.makeDirs(); err != nil {
+		return err
+	}
 
 	consent, err := um.consentM.HasConsent(um.source)
 	if err != nil {
@@ -144,5 +147,16 @@ func send(url string, data []byte) error {
 		return fmt.Errorf("server returned status code %d", resp.StatusCode)
 	}
 
+	return nil
+}
+
+// makeDirs creates the directories for the collected and uploaded reports if they don't already exist.
+func (um Uploader) makeDirs() error {
+	if err := os.MkdirAll(um.collectedDir, 0750); err != nil {
+		return fmt.Errorf("failed to create collected directory: %v", err)
+	}
+	if err := os.MkdirAll(um.uploadedDir, 0750); err != nil {
+		return fmt.Errorf("failed to create uploaded directory: %v", err)
+	}
 	return nil
 }

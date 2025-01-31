@@ -1,2 +1,2 @@
-local/1.json: '{"Content":"normal content"}'
-uploaded/1.json: bad content
+source/local/1.json: '{"Content":"normal content"}'
+source/uploaded/1.json: bad content

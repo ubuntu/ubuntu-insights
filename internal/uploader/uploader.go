@@ -78,7 +78,7 @@ func New(cm consentManager, source string, minAge uint, dryRun bool, args ...Opt
 		timeProvider: opts.timeProvider,
 
 		baseServerURL: opts.baseServerURL,
-		collectedDir:  filepath.Join(opts.cachePath, constants.LocalFolder),
-		uploadedDir:   filepath.Join(opts.cachePath, constants.UploadedFolder),
+		collectedDir:  filepath.Join(opts.cachePath, source, constants.LocalFolder),
+		uploadedDir:   filepath.Join(opts.cachePath, source, constants.UploadedFolder),
 	}, nil
 }

@@ -9,25 +9,25 @@ dummy/dummy.json: |-
     }
 dummy/empty-dummy.json: ""
 empty-dummy.json: ""
-local/-1.json: bad contents
-local/dummy.json: |-
+source/local/-1.json: bad contents
+source/local/dummy.json: |-
     {
         "OS": "something"
     }
-local/dummy/dummy.json: |-
+source/local/dummy/dummy.json: |-
     {
         "OS": "something"
     }
-local/dummy/empty-dummy.json: ""
-local/empty-dummy.json: ""
-uploaded/-1.json: bad contents
-uploaded/dummy.json: |-
+source/local/dummy/empty-dummy.json: ""
+source/local/empty-dummy.json: ""
+source/uploaded/-1.json: bad contents
+source/uploaded/dummy.json: |-
     {
         "OS": "something"
     }
-uploaded/dummy/dummy.json: |-
+source/uploaded/dummy/dummy.json: |-
     {
         "OS": "something"
     }
-uploaded/dummy/empty-dummy.json: ""
-uploaded/empty-dummy.json: ""
+source/uploaded/dummy/empty-dummy.json: ""
+source/uploaded/empty-dummy.json: ""
