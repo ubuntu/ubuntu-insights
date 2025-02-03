@@ -81,8 +81,6 @@ func (um Uploader) upload(r report.Report, url string, consent, force bool) erro
 		return fmt.Errorf("failed to check if report has already been uploaded: %v", err)
 	}
 	if err == nil && !force {
-		// TODO: What to do with the original file? Should we clean it up?
-		// Should we move it elsewhere for investigation in a "tmp" and clean it afterwards?
 		return fmt.Errorf("report has already been uploaded")
 	}
 
