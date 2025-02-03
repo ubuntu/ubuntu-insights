@@ -81,7 +81,7 @@ func TestCollect(t *testing.T) {
 
 		"Missing CPU information": {
 			root:       "regular",
-			cpuInfo:    "missing",
+			cpuInfo:    "",
 			blkInfo:    "regular",
 			screenInfo: "regular",
 

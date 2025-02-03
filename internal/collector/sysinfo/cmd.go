@@ -23,7 +23,7 @@ func runCmd(ctx context.Context, cmd string, args ...string) (stdout, stderr *by
 	return stdout, stderr, err
 }
 
-func runCmdWithTimeout(ctx context.Context, timeout time.Duration, cmd string, args ...string) (*bytes.Buffer, *bytes.Buffer, error) {
+func runCmdWithTimeout(ctx context.Context, timeout time.Duration, cmd string, args ...string) (stdout, stderr *bytes.Buffer, err error) {
 	c, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 

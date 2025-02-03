@@ -21,6 +21,7 @@ func WithBlkInfo(cmd []string) Options {
 	}
 }
 
+// WithScreenInfo overrides default screen info.
 func WithScreenInfo(cmd []string) Options {
 	return func(o *options) {
 		o.screenCmd = cmd
