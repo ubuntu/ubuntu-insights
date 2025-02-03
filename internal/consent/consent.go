@@ -30,12 +30,12 @@ func New(path string) *Manager {
 	return &Manager{path: path}
 }
 
-// GetConsentState gets the consent state for the given source.
+// GetState gets the consent state for the given source.
 // If the source do not have a consent file, it will be considered as a false state.
 // If the source is an empty string, then the global consent state will be returned.
 // If the target consent file does not exist, it will not be created.
-func (cm Manager) GetConsentState(source string) (bool, error) {
-	sourceConsent, err := readConsentFile(cm.getConsentFile(source))
+func (cm Manager) GetState(source string) (bool, error) {
+	sourceConsent, err := readFile(cm.getFile(source))
 	if err != nil {
 		slog.Error("Error reading source consent file", "source", source, "error", err)
 		return false, err
@@ -46,20 +46,33 @@ func (cm Manager) GetConsentState(source string) (bool, error) {
 
 var consentSourceFilePattern = `%s` + constants.ConsentSourceBaseSeparator + constants.GlobalFileName
 
-// SetConsentState updates the consent state for the given source.
+// SetState updates the consent state for the given source.
 // If the source is an empty string, then the global consent state will be set.
 // If the target consent file does not exist, it will be created.
-func (cm Manager) SetConsentState(source string, state bool) (err error) {
+func (cm Manager) SetState(source string, state bool) (err error) {
 	defer decorate.OnError(&err, "could not set consent state")
 
 	consent := consentFile{ConsentState: state}
-	return consent.write(cm.getConsentFile(source))
+	return consent.write(cm.getFile(source))
 }
 
-// getConsentFile returns the expected path to the consent file for the given source.
+// HasConsent returns true if there is consent for the given source, based on the hierarchy rules.
+// If the source has a consent file, its value is returned.
+// Otherwise, the global consent state is returned.
+func (cm Manager) HasConsent(source string) (bool, error) {
+	consent, err := cm.GetState(source)
+	if err != nil {
+		slog.Warn("Could not get source specific consent state, falling back to global consent state", "source", source, "error", err)
+		return cm.GetState("")
+	}
+
+	return consent, nil
+}
+
+// getFile returns the expected path to the consent file for the given source.
 // If source is blank, it returns the path to the global consent file.
 // It does not check if the file exists, or if it is valid.
-func (cm Manager) getConsentFile(source string) string {
+func (cm Manager) getFile(source string) string {
 	p := filepath.Join(cm.path, constants.GlobalFileName)
 	if source != "" {
 		p = filepath.Join(cm.path, fmt.Sprintf(consentSourceFilePattern, source))
@@ -69,7 +82,7 @@ func (cm Manager) getConsentFile(source string) string {
 }
 
 // getSourceConsentFiles returns a map of all paths to validly named consent files in the folder, other than the global file.
-func (cm Manager) getConsentFiles() (map[string]string, error) {
+func (cm Manager) getFiles() (map[string]string, error) {
 	sourceFiles := make(map[string]string)
 
 	entries, err := os.ReadDir(cm.path)
@@ -94,7 +107,7 @@ func (cm Manager) getConsentFiles() (map[string]string, error) {
 	return sourceFiles, nil
 }
 
-func readConsentFile(path string) (consentFile, error) {
+func readFile(path string) (consentFile, error) {
 	var consent consentFile
 	_, err := toml.DecodeFile(path, &consent)
 	slog.Debug("Read consent file", "file", path, "consent", consent.ConsentState)
