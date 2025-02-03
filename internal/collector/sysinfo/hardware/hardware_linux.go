@@ -211,7 +211,7 @@ func (s Collector) collectMemory() (info memory, err error) {
 		}
 
 		m := meminfoRegex.FindStringSubmatch(l)
-		if m == nil {
+		if len(m) != 4 {
 			s.opts.log.Warn("meminfo contains invalid line", "line", l, "linenum", i)
 			continue
 		}
@@ -336,7 +336,7 @@ func (s Collector) collectScreens() (info []screen, err error) {
 	for i, header := range headers {
 		v := screenConfigRegex.FindStringSubmatch(screens[i+1])
 
-		if len(v) < 3 {
+		if len(v) < 3 || len(header) != 5 {
 			s.opts.log.Warn("xrandr screen info malformed", "screen", header[1])
 			continue
 		}
