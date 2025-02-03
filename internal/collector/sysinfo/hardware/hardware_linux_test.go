@@ -267,7 +267,7 @@ func TestCollectLinux(t *testing.T) {
 			t.Parallel()
 
 			tmp := t.TempDir()
-			err := testutils.CopyDir("testdata/linuxfs", tmp)
+			err := testutils.CopyDir(t, "testdata/linuxfs", tmp)
 			require.NoError(t, err, "setup: failed to copy test data directory: ")
 
 			root := filepath.Join(tmp, tc.root)
