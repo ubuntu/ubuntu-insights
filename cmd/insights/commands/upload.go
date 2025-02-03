@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/spf13/cobra"
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
 type uploadConfig struct {
@@ -16,7 +17,7 @@ type uploadConfig struct {
 
 var defaultUploadConfig = uploadConfig{
 	sources: []string{""},
-	server:  "https://metrics.ubuntu.com",
+	server:  constants.DefaultServerURL,
 	minAge:  604800,
 	force:   false,
 	dryRun:  false,

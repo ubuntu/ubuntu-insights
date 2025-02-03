@@ -11,7 +11,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
-func TestGetConsentState(t *testing.T) {
+func TestGetState(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -55,10 +55,9 @@ func TestGetConsentState(t *testing.T) {
 			t.Parallel()
 			dir, err := setupTmpConsentFiles(t, tc.globalFile)
 			require.NoError(t, err, "Setup: failed to setup temporary consent files")
-			defer testutils.CleanupDir(t, dir)
 			cm := consent.New(dir)
 
-			got, err := cm.GetConsentState(tc.source)
+			got, err := cm.GetState(tc.source)
 			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return
@@ -71,7 +70,7 @@ func TestGetConsentState(t *testing.T) {
 	}
 }
 
-func TestSetConsentStates(t *testing.T) {
+func TestSetState(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -112,10 +111,9 @@ func TestSetConsentStates(t *testing.T) {
 			t.Parallel()
 			dir, err := setupTmpConsentFiles(t, tc.globalFile)
 			require.NoError(t, err, "Setup: failed to setup temporary consent files")
-			defer testutils.CleanupDir(t, dir)
 			cm := consent.New(dir)
 
-			err = cm.SetConsentState(tc.writeSource, tc.writeState)
+			err = cm.SetState(tc.writeSource, tc.writeState)
 			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return
@@ -135,23 +133,69 @@ func TestSetConsentStates(t *testing.T) {
 	}
 }
 
+func TestHasConsent(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		source string
+
+		globalFile string
+
+		want    bool
+		wantErr bool
+	}{
+		"True Global-True Source":          {source: "valid_true", globalFile: "valid_true-consent.toml", want: true},
+		"True Global-False Source":         {source: "valid_false", globalFile: "valid_true-consent.toml", want: false},
+		"True Global-Invalid Value Source": {source: "invalid_value", globalFile: "valid_true-consent.toml", want: true},
+		"True Global-Invalid File Source":  {source: "invalid_file", globalFile: "valid_true-consent.toml", want: true},
+		"True Global-Not A File Source":    {source: "not_a_file", globalFile: "valid_true-consent.toml", want: true},
+
+		"False Global-True Source":          {source: "valid_true", globalFile: "valid_false-consent.toml", want: true},
+		"False Global-False Source":         {source: "valid_false", globalFile: "valid_false-consent.toml", want: false},
+		"False Global-Invalid Value Source": {source: "invalid_value", globalFile: "valid_false-consent.toml", want: false},
+		"False Global-Invalid File Source":  {source: "invalid_file", globalFile: "valid_false-consent.toml", want: false},
+		"False Global-Not A File Source":    {source: "not_a_file", globalFile: "valid_false-consent.toml", want: false},
+
+		"No Global-True Source":          {source: "valid_true", want: true},
+		"No Global-False Source":         {source: "valid_false", want: false},
+		"No Global-Invalid Value Source": {source: "invalid_value", wantErr: true},
+		"No Global-Invalid File Source":  {source: "invalid_file", wantErr: true},
+		"No Global-Not A File Source":    {source: "not_a_file", wantErr: true},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			dir, err := setupTmpConsentFiles(t, tc.globalFile)
+			require.NoError(t, err, "Setup: failed to setup temporary consent files")
+			cm := consent.New(dir)
+
+			got, err := cm.HasConsent(tc.source)
+			if tc.wantErr {
+				require.Error(t, err, "expected an error but got none")
+				return
+			}
+			require.NoError(t, err, "got an unexpected error")
+
+			require.Equal(t, tc.want, got, "HasConsent should return expected consent state")
+		})
+	}
+}
+
 func setupTmpConsentFiles(t *testing.T, globalFile string) (string, error) {
 	t.Helper()
 
 	// Setup temporary directory
 	var err error
-	dir, err := os.MkdirTemp("", "consent-files")
-	if err != nil {
-		return dir, fmt.Errorf("failed to create temporary directory: %v", err)
-	}
+	dir := t.TempDir()
 
-	if err = testutils.CopyDir(filepath.Join("testdata", "consent_files"), dir); err != nil {
+	if err = testutils.CopyDir(t, filepath.Join("testdata", "consent_files"), dir); err != nil {
 		return dir, fmt.Errorf("failed to copy testdata directory to temporary directory: %v", err)
 	}
 
 	// Setup globalFile if provided
 	if globalFile != "" {
-		if err = testutils.CopyFile(filepath.Join(dir, globalFile), filepath.Join(dir, "consent.toml")); err != nil {
+		if err = testutils.CopyFile(t, filepath.Join(dir, globalFile), filepath.Join(dir, "consent.toml")); err != nil {
 			return dir, fmt.Errorf("failed to copy requested global consent file: %v", err)
 		}
 	}
