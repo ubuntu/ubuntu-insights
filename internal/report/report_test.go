@@ -17,10 +17,12 @@ func TestGetPeriodStart(t *testing.T) {
 
 	tests := map[string]struct {
 		period int
+		time   int64
 
 		wantErr error
 	}{
-		"Valid Period": {period: 500},
+		"Valid Period":   {period: 500, time: 100000},
+		"Negative Time:": {period: 500, time: -100000},
 
 		"Invalid Negative Period": {period: -500, wantErr: report.ErrInvalidPeriod},
 		"Invalid Zero Period":     {period: 0, wantErr: report.ErrInvalidPeriod},
@@ -30,7 +32,7 @@ func TestGetPeriodStart(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := report.GetPeriodStart(tc.period)
+			got, err := report.GetPeriodStart(tc.period, time.Unix(tc.time, 0))
 			if tc.wantErr != nil {
 				require.ErrorIs(t, err, tc.wantErr)
 				return
@@ -38,6 +40,8 @@ func TestGetPeriodStart(t *testing.T) {
 			require.NoError(t, err, "got an unexpected error")
 
 			require.IsType(t, int64(0), got)
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			require.Equal(t, want, got, "GetPeriodStart should return the expect start of the period window")
 		})
 	}
 }
@@ -233,7 +237,7 @@ func TestGetAll(t *testing.T) {
 			}
 			require.NoError(t, err, "got an unexpected error")
 
-			got := make([]report.Report, len(reports))
+			got := make([]report.Report, 0, len(reports))
 			for _, r := range reports {
 				got = append(got, sanitizeReportPath(t, r, dir))
 			}
