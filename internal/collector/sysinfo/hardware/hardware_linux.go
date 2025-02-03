@@ -35,7 +35,7 @@ func defaultOptions() *options {
 }
 
 // collectProduct reads sysfs to find information about the system.
-func (s Manager) collectProduct() (product, error) {
+func (s Collector) collectProduct() (product, error) {
 	info := product{
 		"Vendor": fileutils.ReadFileLogError(filepath.Join(s.opts.root, "sys/class/dmi/id/sys_vendor"), s.opts.log),
 		"Name":   fileutils.ReadFileLogError(filepath.Join(s.opts.root, "sys/class/dmi/id/product_name"), s.opts.log),
@@ -53,7 +53,7 @@ func (s Manager) collectProduct() (product, error) {
 }
 
 // collectCPU uses lscpu to collect information about the CPUs.
-func (s Manager) collectCPU() (info cpu, err error) {
+func (s Collector) collectCPU() (info cpu, err error) {
 	defer func() {
 		if err == nil && len(info) == 0 {
 			err = fmt.Errorf("no CPU information found")
@@ -98,7 +98,7 @@ type lscpuEntry struct {
 }
 
 // populateCPUInfo recursively searches the lscpu JSON for desired fields.
-func (s Manager) populateCPUInfo(entries []lscpuEntry, info cpu) cpu {
+func (s Collector) populateCPUInfo(entries []lscpuEntry, info cpu) cpu {
 	for _, entry := range entries {
 		if _, ok := usedCPUFields[entry.Field]; ok {
 			info[entry.Field] = entry.Data
@@ -116,7 +116,7 @@ func (s Manager) populateCPUInfo(entries []lscpuEntry, info cpu) cpu {
 var gpuSymlinkRegex = regexp.MustCompile("^card[0-9]+$")
 
 // collectGPUs uses sysfs to collect information about the GPUs.
-func (s Manager) collectGPUs() (gpus []gpu, err error) {
+func (s Collector) collectGPUs() (gpus []gpu, err error) {
 	defer func() {
 		if err == nil && len(gpus) == 0 {
 			err = fmt.Errorf("no GPU information found")
@@ -149,7 +149,7 @@ func (s Manager) collectGPUs() (gpus []gpu, err error) {
 }
 
 // collectGPU handles gathering information for a single GPU.
-func (s Manager) collectGPU(card string) (info gpu, err error) {
+func (s Collector) collectGPU(card string) (info gpu, err error) {
 	cardDir, err := filepath.EvalSymlinks(filepath.Join(s.opts.root, "sys/class/drm", card))
 	if err != nil {
 		return nil, fmt.Errorf("failed to follow %s symlink: %v", card, err)
@@ -191,7 +191,7 @@ var usedMemFields = map[string]struct{}{
 var meminfoRegex = regexp.MustCompile(`^([^\s:]+):\s*([0-9]+)(?:\s+([^\s]+))?\s*$`)
 
 // collectMemory uses meminfo to collect information about RAM.
-func (s Manager) collectMemory() (info memory, err error) {
+func (s Collector) collectMemory() (info memory, err error) {
 	defer func() {
 		if err == nil && len(info) == 0 {
 			err = fmt.Errorf("no Memory information found")
@@ -244,7 +244,7 @@ type lsblkEntry struct {
 }
 
 // populateBlkInfo parses lsblkEntries to diskInfo structs.
-func (s Manager) populateBlkInfo(entries []lsblkEntry) []disk {
+func (s Collector) populateBlkInfo(entries []lsblkEntry) []disk {
 	info := []disk{}
 
 	for _, e := range entries {
@@ -268,7 +268,7 @@ func (s Manager) populateBlkInfo(entries []lsblkEntry) []disk {
 }
 
 // collectBlocks uses lsblk to collect information about Blocks.
-func (s Manager) collectDisks() (info []disk, err error) {
+func (s Collector) collectDisks() (info []disk, err error) {
 	defer func() {
 		if err == nil && len(info) == 0 {
 			err = fmt.Errorf("no Block information found")
@@ -308,7 +308,7 @@ var screenHeaderRegex = regexp.MustCompile(`(?m)^(\S+)\s+connected\s+(?:(primary
 var screenConfigRegex = regexp.MustCompile(`(?m)^\s*([0-9]+x[0-9]+)\s.*?([0-9]+\.[0-9]+)\+?\*\+?.*$`)
 
 // collectScreens uses xrandr to collect information about screens.
-func (s Manager) collectScreens() (info []screen, err error) {
+func (s Collector) collectScreens() (info []screen, err error) {
 	defer func() {
 		if err == nil && len(info) == 0 {
 			err = fmt.Errorf("no Screen information found")

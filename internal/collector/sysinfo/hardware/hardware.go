@@ -1,11 +1,6 @@
 // Package hardware handles collecting "common" hardware information for all insight reports.
 package hardware
 
-// Collector describes a type that collects hardware information.
-type Collector interface {
-	Collect() (Info, error)
-}
-
 // Info aggregates hardware info.
 type Info struct {
 	Product product
@@ -39,30 +34,30 @@ type screen struct {
 	RefreshRate        string `json:"refreshRate"`
 }
 
-// Manager handles dependencies for collecting hardware information.
-// Manager implements hardware.Collector.
-type Manager struct {
+// Collector handles dependencies for collecting hardware information.
+// Collector implements CollectorT[hardware.Info].
+type Collector struct {
 	opts options
 }
 
-// Options are the variadic options available to the manager.
+// Options are the variadic options available to the Collector.
 type Options func(*options)
 
-// New returns a new Manager.
-func New(args ...Options) Manager {
+// New returns a new Collector.
+func New(args ...Options) Collector {
 	// options defaults are platform dependent.
 	opts := defaultOptions()
 	for _, opt := range args {
 		opt(opts)
 	}
 
-	return Manager{
+	return Collector{
 		opts: *opts,
 	}
 }
 
 // Collect aggregates the data from all the other hardware collect functions.
-func (s Manager) Collect() (info Info, err error) {
+func (s Collector) Collect() (info Info, err error) {
 	info.Product, err = s.collectProduct()
 	if err != nil {
 		s.opts.log.Warn("failed to collect Product info", "error", err)

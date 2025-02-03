@@ -30,7 +30,7 @@ func TestNewLinux(t *testing.T) {
 
 	tests := map[string]struct {
 	}{
-		"Instantiate a sys info manager": {},
+		"Instantiate a sys info Collector": {},
 	}
 	for name := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -38,7 +38,7 @@ func TestNewLinux(t *testing.T) {
 
 			s := hardware.New(hardware.WithRoot("/myspecialroot"))
 
-			require.NotEmpty(t, s, "sysinfo manager has custom fields")
+			require.NotEmpty(t, s, "sysinfo Collector has custom fields")
 		})
 	}
 }

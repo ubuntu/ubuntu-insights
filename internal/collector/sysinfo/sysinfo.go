@@ -9,25 +9,25 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/software"
 )
 
-// Collector describes a type that collects "common" information.
-type Collector interface {
-	Collect() (Info, error)
+// CollectorT describes a type that collects some information T.
+type CollectorT[T any] interface {
+	Collect() (T, error)
 }
 
-// Options is the variadic options available to the manager.
+// Options is the variadic options available to the Collector.
 type Options func(*options)
 
 type options struct {
-	hw  hardware.Collector
-	sw  software.Collector
+	hw  CollectorT[hardware.Info]
+	sw  CollectorT[software.Info]
 	log *slog.Logger
 }
 
-// Manager handles dependencies for collecting software & hardware information.
-// Manager implements sysinfo.Collector.
-type Manager struct {
-	hw  hardware.Collector
-	sw  software.Collector
+// Collector handles dependencies for collecting software & hardware information.
+// Collector implements CollectorT[sysinfo.Info].
+type Collector struct {
+	hw  CollectorT[hardware.Info]
+	sw  CollectorT[software.Info]
 	log *slog.Logger
 }
 
@@ -38,7 +38,7 @@ type Info struct {
 }
 
 // New returns a new SysInfo.
-func New(args ...Options) Manager {
+func New(args ...Options) Collector {
 	opts := &options{
 		hw:  hardware.New(),
 		sw:  software.New(),
@@ -49,7 +49,7 @@ func New(args ...Options) Manager {
 		opt(opts)
 	}
 
-	return Manager{
+	return Collector{
 		hw:  opts.hw,
 		sw:  opts.sw,
 		log: opts.log,
@@ -58,7 +58,7 @@ func New(args ...Options) Manager {
 
 // Collect gathers system information and returns it.
 // Will only return an error if both hardware and software collection fail.
-func (s Manager) Collect() (Info, error) {
+func (s Collector) Collect() (Info, error) {
 	hwInfo, hwErr := s.hw.Collect()
 	swInfo, swErr := s.sw.Collect()
 

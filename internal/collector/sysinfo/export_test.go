@@ -8,14 +8,14 @@ import (
 )
 
 // WithHardwareCollector overrides the default hardware collector.
-func WithHardwareCollector(hw hardware.Collector) Options {
+func WithHardwareCollector(hw CollectorT[hardware.Info]) Options {
 	return func(o *options) {
 		o.hw = hw
 	}
 }
 
 // WithSoftwareCollector overrides the default software collector.
-func WithSoftwareCollector(sw software.Collector) Options {
+func WithSoftwareCollector(sw CollectorT[software.Info]) Options {
 	return func(o *options) {
 		o.sw = sw
 	}
