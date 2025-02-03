@@ -141,16 +141,15 @@ func GetPeriodStart(period int, t time.Time) (int64, error) {
 //
 // For example, given reports 1 and 7, with time 2 and period 7, the function will return the path for report 1.
 func GetForPeriod(dir string, t time.Time, period int) (Report, error) {
-	if period <= 0 {
-		return Report{}, ErrInvalidPeriod
+	periodStart, err := GetPeriodStart(period, t)
+	if err != nil {
+		return Report{}, err
 	}
-
-	periodStart := t.Unix() - (t.Unix() % int64(period))
 	periodEnd := periodStart + int64(period)
 
 	// Reports names are utc timestamps. Get the most recent report within the period window.
 	var report Report
-	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+	err = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return fmt.Errorf("failed to access path: %v", err)
 		}

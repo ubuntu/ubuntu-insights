@@ -21,8 +21,9 @@ func TestGetPeriodStart(t *testing.T) {
 
 		wantErr error
 	}{
-		"Valid Period":   {period: 500, time: 100000},
-		"Negative Time:": {period: 500, time: -100000},
+		"Valid Period":      {period: 500, time: 100000},
+		"Negative Time:":    {period: 500, time: -100000},
+		"Non-Multiple Time": {period: 500, time: 1051},
 
 		"Invalid Negative Period": {period: -500, wantErr: report.ErrInvalidPeriod},
 		"Invalid Zero Period":     {period: 0, wantErr: report.ErrInvalidPeriod},
