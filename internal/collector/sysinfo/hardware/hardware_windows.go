@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ubuntu/ubuntu-insights/internal/cmdutils"
+	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
 type platformOptions struct {
@@ -159,8 +160,9 @@ func (s Collector) collectMemory() (mem memory, err error) {
 		size += v
 	}
 
+	m, _ := fileutils.ConvertUnitToStandard("b", size)
 	return memory{
-		Total: size,
+		Total: m,
 	}, nil
 }
 
@@ -179,6 +181,16 @@ var usedPartitionFields = map[string]struct{}{
 
 // collectDisks uses Win32_DiskDrive and Win32_DiskPartition to collect information about disks.
 func (s Collector) collectDisks() (blks []disk, err error) {
+	getSize := func(b string) uint64 {
+		v, err := strconv.ParseUint(b, 10, 64)
+		if err != nil {
+			s.log.Warn("disk partition contains invalid size")
+			return 0
+		}
+		v, _ = fileutils.ConvertUnitToStandard("b", v)
+		return v
+	}
+
 	disks, err := s.runWMI(s.platform.diskCmd, usedDiskFields)
 	if err != nil {
 		return nil, err
@@ -204,7 +216,7 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 
 		c := disk{
 			Name:       d["Name"],
-			Size:       d["Size"],
+			Size:       getSize(d["Size"]),
 			Partitions: make([]disk, parts),
 		}
 		for i := range c.Partitions {
@@ -250,7 +262,7 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 
 		blks[d].Partitions[idx] = disk{
 			Name:       p["Name"],
-			Size:       p["Size"],
+			Size:       getSize(p["Size"]),
 			Partitions: []disk{},
 		}
 	}

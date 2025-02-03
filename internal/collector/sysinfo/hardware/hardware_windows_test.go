@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo"
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/hardware"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
@@ -320,49 +320,49 @@ func TestCollectWindows(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			l := testutils.NewMockHandler()
+			l := testutils.NewMockHandler(slog.LevelDebug)
 
-			options := []sysinfo.Options{
-				sysinfo.WithLogger(&l),
-				sysinfo.WithArch("amd64"),
+			options := []hardware.Options{
+				hardware.WithLogger(&l),
+				hardware.WithArch("amd64"),
 			}
 
 			if tc.productInfo != "-" {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeProductInfo", tc.productInfo)
-				options = append(options, sysinfo.WithProductInfo(cmdArgs))
+				options = append(options, hardware.WithProductInfo(cmdArgs))
 			}
 
 			if tc.cpuInfo != "-" {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeCPUInfo", tc.cpuInfo)
-				options = append(options, sysinfo.WithCPUInfo(cmdArgs))
+				options = append(options, hardware.WithCPUInfo(cmdArgs))
 			}
 
 			if tc.gpuInfo != "-" {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeGPUInfo", tc.gpuInfo)
-				options = append(options, sysinfo.WithGPUInfo(cmdArgs))
+				options = append(options, hardware.WithGPUInfo(cmdArgs))
 			}
 
 			if tc.memoryInfo != "-" {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeMemoryInfo", tc.memoryInfo)
-				options = append(options, sysinfo.WithMemoryInfo(cmdArgs))
+				options = append(options, hardware.WithMemoryInfo(cmdArgs))
 			}
 
 			if tc.diskInfo != "-" {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeDiskInfo", tc.diskInfo)
-				options = append(options, sysinfo.WithDiskInfo(cmdArgs))
+				options = append(options, hardware.WithDiskInfo(cmdArgs))
 			}
 
 			if tc.partitionInfo != "-" {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestFakePartitionInfo", tc.partitionInfo)
-				options = append(options, sysinfo.WithPartitionInfo(cmdArgs))
+				options = append(options, hardware.WithPartitionInfo(cmdArgs))
 			}
 
 			if tc.screenInfo != "-" {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeScreenInfo", tc.screenInfo)
-				options = append(options, sysinfo.WithScreenInfo(cmdArgs))
+				options = append(options, hardware.WithScreenInfo(cmdArgs))
 			}
 
-			s := sysinfo.New(options...)
+			s := hardware.New(options...)
 
 			got, err := s.Collect()
 			if tc.wantErr {

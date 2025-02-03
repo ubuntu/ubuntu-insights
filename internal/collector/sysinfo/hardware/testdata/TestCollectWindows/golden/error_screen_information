@@ -1,39 +1,38 @@
-hardware:
-    product:
-        Family: "1582.3"
-        Model: Star 11 CPP
-        Vendor: Micro-Star International Co., Ltd.
-    cpu:
-        Architecture: amd64
-        Manufacturer: GenuineIntel
-        Name: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz
-        NumberOfCores: "8"
-        NumberOfLogicalProcessors: "16"
-        Sockets: "1"
-    gpus:
-        - Driver: nvldumdx.dll
-          Name: NVIDIA GeForce RTX 3050 Ti Laptop GPU
-          Vendor: NVIDIA
-        - Driver: igdumdim0.dll
-          Name: Intel(R) UHD Graphics
-          Vendor: Intel Corporation
-    mem:
-        MemTotal: 68406489088
-    blks:
-        - name: \\.\PHYSICALDRIVE0
-          size: "2000396321280"
-          partitions:
-            - name: 'Disk #0, Partition #0'
-              size: "314572800"
-              partitions: []
-            - name: 'Disk #0, Partition #1'
-              size: "943718400"
-              partitions: []
-            - name: 'Disk #0, Partition #2'
-              size: "22153265152"
-              partitions: []
-            - name: 'Disk #0, Partition #3'
-              size: "1976850972672"
-              partitions: []
-    screens: []
-software: {}
+product:
+    family: "1582.3"
+    name: Star 11 CPP
+    vendor: Micro-Star International Co., Ltd.
+cpu:
+    name: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz
+    vendor: GenuineIntel
+    arch: amd64
+    cpus: 16
+    sockets: 1
+    cores: 8
+    threads: 2
+gpus:
+    - name: NVIDIA GeForce RTX 3050 Ti Laptop GPU
+      vendor: NVIDIA
+      driver: nvldumdx.dll
+    - name: Intel(R) UHD Graphics
+      vendor: Intel Corporation
+      driver: igdumdim0.dll
+mem:
+    total: 65237
+blks:
+    - name: \\.\PHYSICALDRIVE0
+      size: 1907726
+      partitions:
+        - name: 'Disk #0, Partition #0'
+          size: 300
+          partitions: []
+        - name: 'Disk #0, Partition #1'
+          size: 900
+          partitions: []
+        - name: 'Disk #0, Partition #2'
+          size: 21127
+          partitions: []
+        - name: 'Disk #0, Partition #3'
+          size: 1885272
+          partitions: []
+screens: []
