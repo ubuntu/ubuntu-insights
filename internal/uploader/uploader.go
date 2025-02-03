@@ -5,7 +5,6 @@ package uploader
 import (
 	"fmt"
 	"log/slog"
-	"math"
 	"path/filepath"
 	"time"
 
@@ -26,7 +25,7 @@ func (realTimeProvider) Now() time.Time {
 type Uploader struct {
 	source   string
 	consentM consentManager
-	minAge   int64
+	minAge   time.Duration
 	dryRun   bool
 
 	baseServerURL string
@@ -57,7 +56,7 @@ func New(cm consentManager, source string, minAge uint, dryRun bool, args ...Opt
 		return Uploader{}, fmt.Errorf("source cannot be an empty string")
 	}
 
-	if minAge > math.MaxInt64 {
+	if minAge > (1<<63-1)/uint(time.Second) {
 		return Uploader{}, fmt.Errorf("min age %d is too large, would overflow", minAge)
 	}
 
@@ -73,12 +72,12 @@ func New(cm consentManager, source string, minAge uint, dryRun bool, args ...Opt
 	return Uploader{
 		source:       source,
 		consentM:     cm,
-		minAge:       int64(minAge),
+		minAge:       time.Duration(minAge) * time.Second,
 		dryRun:       dryRun,
 		timeProvider: opts.timeProvider,
 
 		baseServerURL: opts.baseServerURL,
-		collectedDir:  filepath.Join(opts.cachePath, constants.LocalFolder),
-		uploadedDir:   filepath.Join(opts.cachePath, constants.UploadedFolder),
+		collectedDir:  filepath.Join(opts.cachePath, source, constants.LocalFolder),
+		uploadedDir:   filepath.Join(opts.cachePath, source, constants.UploadedFolder),
 	}, nil
 }

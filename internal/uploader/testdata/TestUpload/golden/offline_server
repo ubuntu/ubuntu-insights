@@ -1,1 +1,1 @@
-local/1.json: '{"Content":"normal content"}'
+source/local/1.json: '{"Content":"normal content"}'

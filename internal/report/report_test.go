@@ -261,9 +261,7 @@ func TestMarkAsProcessed(t *testing.T) {
 		srcFilePerms os.FileMode
 		dstFilePerms os.FileMode
 
-		wantErrUnix bool
-		wantErrWin  bool
-		wantErr     bool
+		wantErr bool
 	}{
 		"Basic Move": {
 			srcFile:      map[string]string{"1.json": `{"test": true}`},
@@ -298,7 +296,7 @@ func TestMarkAsProcessed(t *testing.T) {
 			data:         []byte(`{"test": true}`),
 			srcFilePerms: os.FileMode(000),
 			dstFilePerms: os.FileMode(0o600),
-			wantErrUnix:  true,
+			wantErr:      runtime.GOOS != "windows",
 		}, "DstPerm None": {
 			srcFile:      map[string]string{"1.json": `{"test": true}`},
 			dstFile:      map[string]string{"1.json": "old data"},
@@ -306,7 +304,7 @@ func TestMarkAsProcessed(t *testing.T) {
 			data:         []byte("new data"),
 			srcFilePerms: os.FileMode(0o600),
 			dstFilePerms: os.FileMode(000),
-			wantErrWin:   true,
+			wantErr:      runtime.GOOS == "windows",
 		},
 	}
 
@@ -322,7 +320,7 @@ func TestMarkAsProcessed(t *testing.T) {
 			require.NoError(t, err, "Setup: failed to create report object")
 
 			r, err = r.MarkAsProcessed(dstDir, tc.data)
-			if (tc.wantErr) || (tc.wantErrUnix && runtime.GOOS != "windows") || (tc.wantErrWin && runtime.GOOS == "windows") {
+			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return
 			}

@@ -30,8 +30,8 @@ func TestAtomicWrite(t *testing.T) {
 		"Existing empty file":     {data: []byte{}, fileExistsPerms: 0600, fileExists: true},
 		"Existing non-empty file": {data: []byte("data"), fileExistsPerms: 0600, fileExists: true},
 
-		"Override read-only file": {data: []byte("data"), fileExistsPerms: 0400, fileExists: true, wantErrWin: true},
-		"Override No Perms file":  {data: []byte("data"), fileExistsPerms: 0000, fileExists: true, wantErrWin: true},
+		"Override read-only file": {data: []byte("data"), fileExistsPerms: 0400, fileExists: true, wantError: runtime.GOOS == "windows"},
+		"Override No Perms file":  {data: []byte("data"), fileExistsPerms: 0000, fileExists: true, wantError: runtime.GOOS == "windows"},
 		"Invalid Dir":             {data: []byte("data"), invalidDir: true, wantError: true},
 	}
 
