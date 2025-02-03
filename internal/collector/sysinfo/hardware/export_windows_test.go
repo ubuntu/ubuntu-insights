@@ -1,4 +1,4 @@
-package sysinfo
+package hardware
 
 func WithProductInfo(cmd []string) Options {
 	return func(o *options) {

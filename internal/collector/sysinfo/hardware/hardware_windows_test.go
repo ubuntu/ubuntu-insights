@@ -1,4 +1,4 @@
-package sysinfo_test
+package hardware_test
 
 import (
 	"flag"
