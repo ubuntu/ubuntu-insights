@@ -129,24 +129,23 @@ func getReportTime(path string) (int64, error) {
 }
 
 // GetPeriodStart returns the start of the period window for a given period in seconds.
-func GetPeriodStart(period int) (int64, error) {
+func GetPeriodStart(period int, t time.Time) (int64, error) {
 	if period <= 0 {
 		return 0, ErrInvalidPeriod
 	}
-	utcTime := time.Now().UTC().Unix()
-	return utcTime - (utcTime % int64(period)), nil
+	return t.Unix() - (t.Unix() % int64(period)), nil
 }
 
 // GetForPeriod returns the most recent report within a period window for a given directory.
 // Not inclusive of the period end (periodStart + period).
 //
 // For example, given reports 1 and 7, with time 2 and period 7, the function will return the path for report 1.
-func GetForPeriod(dir string, time time.Time, period int) (Report, error) {
+func GetForPeriod(dir string, t time.Time, period int) (Report, error) {
 	if period <= 0 {
 		return Report{}, ErrInvalidPeriod
 	}
 
-	periodStart := time.Unix() - (time.Unix() % int64(period))
+	periodStart := t.Unix() - (t.Unix() % int64(period))
 	periodEnd := periodStart + int64(period)
 
 	// Reports names are utc timestamps. Get the most recent report within the period window.
