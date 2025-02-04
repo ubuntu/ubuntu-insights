@@ -54,5 +54,9 @@ func (s Collector) collectOS() (info os, err error) {
 		}
 	}
 
+	if len(info) == 1 {
+		s.opts.log.Warn("lsb_release contained invalid data")
+	}
+
 	return info, nil
 }

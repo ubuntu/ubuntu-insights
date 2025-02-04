@@ -1,8 +1,6 @@
 os:
-    Distributor ID: Ubuntu
     Family: linux
-    Release: "24.04"
 src:
     name: test
     version: v1.2.3
-type: regular
+type: install

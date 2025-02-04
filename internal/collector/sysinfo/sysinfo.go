@@ -38,10 +38,10 @@ type Info struct {
 }
 
 // New returns a new SysInfo.
-func New(args ...Options) Collector {
+func New(source software.Source, tipe string, args ...Options) Collector {
 	opts := &options{
 		hw:  hardware.New(),
-		sw:  software.New(),
+		sw:  software.New(source, tipe),
 		log: slog.Default(),
 	}
 

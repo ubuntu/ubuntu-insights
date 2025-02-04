@@ -16,20 +16,53 @@ func TestCollectLinux(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
+		src    software.Source
+		tipe   string
 		osInfo string
 
 		logs    map[slog.Level]uint
 		wantErr bool
 	}{
 		"Regular software information": {
+			src: software.Source{
+				Name:    "test",
+				Version: "v1.2.3",
+			},
+			tipe:   software.TypeRegular,
 			osInfo: "regular",
+		},
+
+		"Missing OS information": {
+			src: software.Source{
+				Name:    "test",
+				Version: "v1.2.3",
+			},
+			tipe:   software.TypeManual,
+			osInfo: "",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Error OS information": {
+			src: software.Source{
+				Name:    "test",
+				Version: "v1.2.3",
+			},
+			tipe:   software.TypeInstall,
+			osInfo: "error",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
 		},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			l := testutils.NewMockHandler()
+			l := testutils.NewMockHandler(slog.LevelDebug)
 
 			options := []software.Options{
 				software.WithLogger(&l),
@@ -40,9 +73,14 @@ func TestCollectLinux(t *testing.T) {
 				options = append(options, software.WithOSInfo(cmdArgs))
 			}
 
-			s := software.New(options...)
+			s := software.New(tc.src, tc.tipe, options...)
 
 			got, err := s.Collect()
+
+			if !l.AssertLevels(t, tc.logs) {
+				l.OutputLogs(t)
+			}
+
 			if tc.wantErr {
 				require.Error(t, err, "Collect should return an error and didn't")
 				return
@@ -51,10 +89,6 @@ func TestCollectLinux(t *testing.T) {
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			assert.Equal(t, want, got, "Collect should return expected software information")
-
-			if !l.AssertLevels(t, tc.logs) {
-				l.OutputLogs(t)
-			}
 		})
 	}
 }
