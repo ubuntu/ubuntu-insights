@@ -6,3 +6,6 @@ src:
 type: manual
 timezone: CEN
 lang: fr_FR
+bios:
+    Vendor: AMI
+    Version: F.03

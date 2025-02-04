@@ -8,3 +8,6 @@ src:
 type: regular
 timezone: EST
 lang: ""
+bios:
+    Vendor: AMI
+    Version: F.03

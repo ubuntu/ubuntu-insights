@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,6 +17,9 @@ func TestCollectLinux(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
+		root         string
+		missingFiles []string
+
 		src      software.Source
 		tipe     string
 		osInfo   string
@@ -28,6 +32,7 @@ func TestCollectLinux(t *testing.T) {
 		wantErr bool
 	}{
 		"Regular software information": {
+			root: "regular",
 			src: software.Source{
 				Name:    "test",
 				Version: "v1.2.3",
@@ -39,6 +44,7 @@ func TestCollectLinux(t *testing.T) {
 		},
 
 		"Missing OS information": {
+			root: "regular",
 			src: software.Source{
 				Name:    "test souce",
 				Version: "v4.3.2",
@@ -54,6 +60,7 @@ func TestCollectLinux(t *testing.T) {
 		},
 
 		"Error OS information": {
+			root: "regular",
 			src: software.Source{
 				Name:    "test",
 				Version: "v1.1.1",
@@ -69,6 +76,7 @@ func TestCollectLinux(t *testing.T) {
 		},
 
 		"Missing language information": {
+			root: "regular",
 			src: software.Source{
 				Name:    "test",
 				Version: "v1.7.10",
@@ -82,14 +90,41 @@ func TestCollectLinux(t *testing.T) {
 				slog.LevelWarn: 1,
 			},
 		},
+
+		"Missing BIOS information": {
+			root: "empty",
+			src: software.Source{
+				Name:    "src",
+				Version: "v1.6.4",
+			},
+			tipe:     software.TypeRegular,
+			osInfo:   "regular",
+			timezone: "JST",
+			language: "ja",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 2,
+			},
+		},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			tmp := t.TempDir()
+			err := testutils.CopyDir(t, "testdata/linuxfs", tmp)
+			require.NoError(t, err, "setup: failed to copy test data directory: ")
+
+			root := filepath.Join(tmp, tc.root)
+			for _, f := range tc.missingFiles {
+				err := os.Remove(filepath.Join(root, f))
+				require.NoError(t, err, "setup: failed to remove file %s: ", f)
+			}
+
 			l := testutils.NewMockHandler(slog.LevelDebug)
 
 			options := []software.Options{
+				software.WithRoot(root),
 				software.WithLogger(&l),
 				software.WithTimezone(func() string { return tc.timezone }),
 				software.WithLang(func() (string, bool) { return tc.language, !tc.missingLanguage }),

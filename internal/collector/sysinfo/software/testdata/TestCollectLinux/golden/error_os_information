@@ -6,3 +6,6 @@ src:
 type: install
 timezone: PST
 lang: en_ZA
+bios:
+    Vendor: AMI
+    Version: F.03

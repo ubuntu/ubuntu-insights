@@ -10,6 +10,7 @@ type Info struct {
 	Type     string
 	Timezone string
 	Lang     string
+	Bios     bios
 }
 
 // Source is info about the collection source.
@@ -26,6 +27,7 @@ const (
 )
 
 type osInfo = map[string]string
+type bios = map[string]string
 
 // Collector handles dependencies for collecting software information.
 // Collector implements CollectorT[software.Info].
@@ -75,6 +77,11 @@ func (s Collector) Collect() (info Info, err error) {
 	info.Lang, err = s.collectLang()
 	if err != nil {
 		s.opts.log.Warn("failed to collect language info", "error", err)
+	}
+
+	info.Bios, err = s.collectBios()
+	if err != nil {
+		s.opts.log.Warn("failed to collect BIOS info", "error", err)
 	}
 
 	return info, nil

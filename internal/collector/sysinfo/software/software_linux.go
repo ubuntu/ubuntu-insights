@@ -6,15 +6,18 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
 	"time"
 
 	"github.com/ubuntu/ubuntu-insights/internal/cmdutils"
+	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
 type options struct {
+	root     string
 	osCmd    []string
 	langFunc func() (string, bool)
 
@@ -25,6 +28,7 @@ type options struct {
 // defaultOptions returns options for when running under a normal environment.
 func defaultOptions() *options {
 	return &options{
+		root:  "/",
 		osCmd: []string{"lsb_release", "-a"},
 		langFunc: func() (string, bool) {
 			return os.LookupEnv("LANG")
@@ -81,4 +85,20 @@ func (s Collector) collectLang() (string, error) {
 
 	l, _, _ := strings.Cut(lang, ".")
 	return l, nil
+}
+
+func (s Collector) collectBios() (bios, error) {
+	info := bios{
+		"Vendor":  fileutils.ReadFileLogError(filepath.Join(s.opts.root, "sys/class/dmi/id/bios_vendor"), s.opts.log),
+		"Version": fileutils.ReadFileLogError(filepath.Join(s.opts.root, "sys/class/dmi/id/bios_version"), s.opts.log),
+	}
+
+	for k, v := range info {
+		if strings.ContainsRune(v, '\n') {
+			s.opts.log.Warn(fmt.Sprintf("BIOS info %s contains invalid value", k))
+			info[k] = ""
+		}
+	}
+
+	return info, nil
 }

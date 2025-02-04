@@ -20,3 +20,7 @@ func (s Collector) collectOS() (info osInfo, err error) {
 func (s Collector) collectLang() (string, error) {
 	return "", nil
 }
+
+func (s Collector) collectBios() (bios, error) {
+	return bios{}, nil
+}
