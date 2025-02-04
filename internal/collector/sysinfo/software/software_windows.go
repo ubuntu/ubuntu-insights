@@ -1,9 +1,12 @@
 package software
 
-import "log/slog"
+import (
+	"log/slog"
+)
 
 type options struct {
-	log *slog.Logger
+	timezone func() string
+	log      *slog.Logger
 }
 
 func defaultOptions() *options {

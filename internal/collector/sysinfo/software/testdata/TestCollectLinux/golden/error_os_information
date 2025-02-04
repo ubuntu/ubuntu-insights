@@ -4,3 +4,4 @@ src:
     name: test
     version: v1.2.3
 type: install
+timezone: PST

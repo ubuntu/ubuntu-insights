@@ -16,9 +16,10 @@ func TestCollectLinux(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		src    software.Source
-		tipe   string
-		osInfo string
+		src      software.Source
+		tipe     string
+		osInfo   string
+		timezone string
 
 		logs    map[slog.Level]uint
 		wantErr bool
@@ -28,8 +29,9 @@ func TestCollectLinux(t *testing.T) {
 				Name:    "test",
 				Version: "v1.2.3",
 			},
-			tipe:   software.TypeRegular,
-			osInfo: "regular",
+			tipe:     software.TypeRegular,
+			osInfo:   "regular",
+			timezone: "EST",
 		},
 
 		"Missing OS information": {
@@ -37,8 +39,9 @@ func TestCollectLinux(t *testing.T) {
 				Name:    "test",
 				Version: "v1.2.3",
 			},
-			tipe:   software.TypeManual,
-			osInfo: "",
+			tipe:     software.TypeManual,
+			osInfo:   "",
+			timezone: "CEN",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -50,8 +53,9 @@ func TestCollectLinux(t *testing.T) {
 				Name:    "test",
 				Version: "v1.2.3",
 			},
-			tipe:   software.TypeInstall,
-			osInfo: "error",
+			tipe:     software.TypeInstall,
+			osInfo:   "error",
+			timezone: "PST",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -66,6 +70,7 @@ func TestCollectLinux(t *testing.T) {
 
 			options := []software.Options{
 				software.WithLogger(&l),
+				software.WithTimezone(func() string { return tc.timezone }),
 			}
 
 			if tc.osInfo != "-" {

@@ -14,7 +14,8 @@ import (
 type options struct {
 	osCmd []string
 
-	log *slog.Logger
+	timezone func() string
+	log      *slog.Logger
 }
 
 // defaultOptions returns options for when running under a normal environment.
@@ -22,6 +23,10 @@ func defaultOptions() *options {
 	return &options{
 		osCmd: []string{"lsb_release", "-a"},
 
+		timezone: func() string {
+			zone, _ := time.Now().Zone()
+			return zone
+		},
 		log: slog.Default(),
 	}
 }

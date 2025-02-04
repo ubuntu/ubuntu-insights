@@ -5,16 +5,19 @@ import "runtime"
 
 // Info is the software specific part.
 type Info struct {
-	OS   os
-	Src  Source
-	Type string
+	OS       os
+	Src      Source
+	Type     string
+	Timezone string
 }
 
+// Source is info about the collection source.
 type Source struct {
 	Name    string
 	Version string
 }
 
+// Theses types represent how collection was triggered.
 const (
 	TypeRegular = "regular"
 	TypeInstall = "install"
@@ -58,6 +61,7 @@ func (s Collector) Collect() (info Info, err error) {
 
 	info.Src = s.Src
 	info.Type = s.Type
+	info.Timezone = s.opts.timezone()
 
 	info.OS, err = s.collectOS()
 	if err != nil {
