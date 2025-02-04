@@ -21,6 +21,9 @@ func TestCollectLinux(t *testing.T) {
 		osInfo   string
 		timezone string
 
+		language        string
+		missingLanguage bool
+
 		logs    map[slog.Level]uint
 		wantErr bool
 	}{
@@ -32,16 +35,18 @@ func TestCollectLinux(t *testing.T) {
 			tipe:     software.TypeRegular,
 			osInfo:   "regular",
 			timezone: "EST",
+			language: "en_US",
 		},
 
 		"Missing OS information": {
 			src: software.Source{
-				Name:    "test",
-				Version: "v1.2.3",
+				Name:    "test souce",
+				Version: "v4.3.2",
 			},
 			tipe:     software.TypeManual,
 			osInfo:   "",
 			timezone: "CEN",
+			language: "fr_FR",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -51,11 +56,27 @@ func TestCollectLinux(t *testing.T) {
 		"Error OS information": {
 			src: software.Source{
 				Name:    "test",
-				Version: "v1.2.3",
+				Version: "v1.1.1",
 			},
 			tipe:     software.TypeInstall,
 			osInfo:   "error",
 			timezone: "PST",
+			language: "en_ZA",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Missing language information": {
+			src: software.Source{
+				Name:    "test",
+				Version: "v1.7.10",
+			},
+			tipe:            software.TypeRegular,
+			osInfo:          "regular",
+			timezone:        "EST",
+			missingLanguage: true,
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -71,6 +92,7 @@ func TestCollectLinux(t *testing.T) {
 			options := []software.Options{
 				software.WithLogger(&l),
 				software.WithTimezone(func() string { return tc.timezone }),
+				software.WithLang(func() (string, bool) { return tc.language, !tc.missingLanguage }),
 			}
 
 			if tc.osInfo != "-" {

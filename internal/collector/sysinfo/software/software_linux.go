@@ -2,17 +2,21 @@ package software
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"regexp"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/ubuntu/ubuntu-insights/internal/cmdutils"
 )
 
 type options struct {
-	osCmd []string
+	osCmd    []string
+	langFunc func() (string, bool)
 
 	timezone func() string
 	log      *slog.Logger
@@ -22,6 +26,9 @@ type options struct {
 func defaultOptions() *options {
 	return &options{
 		osCmd: []string{"lsb_release", "-a"},
+		langFunc: func() (string, bool) {
+			return os.LookupEnv("LANG")
+		},
 
 		timezone: func() string {
 			zone, _ := time.Now().Zone()
@@ -39,7 +46,7 @@ var usedOSFields = map[string]struct{}{
 	"Release":        {},
 }
 
-func (s Collector) collectOS() (info os, err error) {
+func (s Collector) collectOS() (info osInfo, err error) {
 	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, s.opts.osCmd[0], s.opts.osCmd[1:]...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run lsb_release: %v", err)
@@ -48,7 +55,7 @@ func (s Collector) collectOS() (info os, err error) {
 		s.opts.log.Info("lsb_release output to stderr", "stderr", stderr)
 	}
 
-	info = os{
+	info = osInfo{
 		"Family": runtime.GOOS,
 	}
 
@@ -64,4 +71,14 @@ func (s Collector) collectOS() (info os, err error) {
 	}
 
 	return info, nil
+}
+
+func (s Collector) collectLang() (string, error) {
+	lang, ok := s.opts.langFunc()
+	if !ok {
+		return lang, errors.New("LANG environment variable not set")
+	}
+
+	l, _, _ := strings.Cut(lang, ".")
+	return l, nil
 }

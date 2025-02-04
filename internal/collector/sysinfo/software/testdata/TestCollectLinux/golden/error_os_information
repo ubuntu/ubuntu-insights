@@ -2,6 +2,7 @@ os:
     Family: linux
 src:
     name: test
-    version: v1.2.3
+    version: v1.1.1
 type: install
 timezone: PST
+lang: en_ZA

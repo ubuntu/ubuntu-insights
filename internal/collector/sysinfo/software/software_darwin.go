@@ -13,6 +13,10 @@ func defaultOptions() *options {
 	return &options{}
 }
 
-func (s Collector) collectOS() (info os, err error) {
+func (s Collector) collectOS() (info osInfo, err error) {
 	return info, nil
+}
+
+func (s Collector) collectLang() (string, error) {
+	return "", nil
 }

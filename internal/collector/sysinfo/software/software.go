@@ -5,10 +5,11 @@ import "runtime"
 
 // Info is the software specific part.
 type Info struct {
-	OS       os
+	OS       osInfo
 	Src      Source
 	Type     string
 	Timezone string
+	Lang     string
 }
 
 // Source is info about the collection source.
@@ -24,7 +25,7 @@ const (
 	TypeManual  = "manual"
 )
 
-type os = map[string]string
+type osInfo = map[string]string
 
 // Collector handles dependencies for collecting software information.
 // Collector implements CollectorT[software.Info].
@@ -66,9 +67,14 @@ func (s Collector) Collect() (info Info, err error) {
 	info.OS, err = s.collectOS()
 	if err != nil {
 		s.opts.log.Warn("failed to collect OS info", "error", err)
-		info.OS = os{
+		info.OS = osInfo{
 			"Family": runtime.GOOS,
 		}
+	}
+
+	info.Lang, err = s.collectLang()
+	if err != nil {
+		s.opts.log.Warn("failed to collect language info", "error", err)
 	}
 
 	return info, nil

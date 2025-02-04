@@ -4,7 +4,7 @@ os:
     Release: "24.04"
 src:
     name: test
-    version: v1.2.3
+    version: v1.7.10
 type: regular
 timezone: EST
-lang: en_US
+lang: ""
