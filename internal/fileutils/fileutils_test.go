@@ -19,8 +19,7 @@ func TestAtomicWrite(t *testing.T) {
 		fileExistsPerms os.FileMode
 		invalidDir      bool
 
-		wantErrWin bool
-		wantError  bool
+		wantError bool
 	}{
 		"Empty file":          {data: []byte{}},
 		"Non-empty file":      {data: []byte("data")},
@@ -53,7 +52,7 @@ func TestAtomicWrite(t *testing.T) {
 			}
 
 			err := fileutils.AtomicWrite(path, tc.data)
-			if tc.wantError || (tc.wantErrWin && runtime.GOOS == "windows") {
+			if tc.wantError {
 				require.Error(t, err, "AtomicWrite should return an error")
 
 				// Check that the file was not overwritten
