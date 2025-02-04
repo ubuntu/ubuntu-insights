@@ -76,7 +76,7 @@ func TestCollect(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			l := testutils.NewMockHandler()
+			l := testutils.NewMockHandler(slog.LevelDebug)
 
 			s := sysinfo.New(
 				sysinfo.WithHardwareCollector(makeFakeCollector(tc.hw, tc.hwErr)),

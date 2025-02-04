@@ -59,6 +59,8 @@ func New(args ...Options) Collector {
 // Collect gathers system information and returns it.
 // Will only return an error if both hardware and software collection fail.
 func (s Collector) Collect() (Info, error) {
+	s.log.Debug("collecting sysinfo")
+
 	hwInfo, hwErr := s.hw.Collect()
 	swInfo, swErr := s.sw.Collect()
 

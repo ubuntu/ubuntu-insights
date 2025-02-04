@@ -58,6 +58,8 @@ func New(args ...Options) Collector {
 
 // Collect aggregates the data from all the other hardware collect functions.
 func (s Collector) Collect() (info Info, err error) {
+	s.opts.log.Debug("collecting hardware info")
+
 	info.Product, err = s.collectProduct()
 	if err != nil {
 		s.opts.log.Warn("failed to collect Product info", "error", err)

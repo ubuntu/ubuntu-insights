@@ -276,7 +276,7 @@ func TestCollectLinux(t *testing.T) {
 				require.NoError(t, err, "setup: failed to remove file %s: ", f)
 			}
 
-			l := testutils.NewMockHandler()
+			l := testutils.NewMockHandler(slog.LevelDebug)
 
 			options := []hardware.Options{
 				hardware.WithRoot(root),

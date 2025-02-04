@@ -10,6 +10,7 @@ import (
 
 // MockHandler tracks calls to logging functions and implements slog.Handler.
 type MockHandler struct {
+	IgnoreBelow    slog.Level
 	EnabledCalls   []slog.Level
 	HandleCalls    []slog.Record
 	WithAttrsCalls [][]slog.Attr
@@ -17,8 +18,10 @@ type MockHandler struct {
 }
 
 // NewMockHandler returns a new MockHandler.
-func NewMockHandler() MockHandler {
+// levels <= ignoreBelow will not call handle.
+func NewMockHandler(ignoreBelow slog.Level) MockHandler {
 	return MockHandler{
+		IgnoreBelow:    ignoreBelow,
 		EnabledCalls:   make([]slog.Level, 0),
 		HandleCalls:    make([]slog.Record, 0),
 		WithAttrsCalls: make([][]slog.Attr, 0),
@@ -58,7 +61,7 @@ func (h MockHandler) OutputLogs(t *testing.T) {
 // Enabled implements Handler.Enabled.
 func (h *MockHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	h.EnabledCalls = append(h.EnabledCalls, level)
-	return true
+	return level > h.IgnoreBelow
 }
 
 // Handle implements Handler.Handle.

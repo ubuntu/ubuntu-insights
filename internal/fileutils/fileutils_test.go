@@ -102,7 +102,7 @@ func TestReadFileLogError(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			l := testutils.NewMockHandler()
+			l := testutils.NewMockHandler(slog.LevelDebug)
 
 			got := fileutils.ReadFileLogError(tc.file, slog.New(&l))
 

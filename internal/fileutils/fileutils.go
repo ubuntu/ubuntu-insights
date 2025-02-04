@@ -40,6 +40,7 @@ func AtomicWrite(path string, data []byte) error {
 
 // ReadFileLogError returns the data in the file path, trimming whitespace, or "" on error.
 func ReadFileLogError(path string, log *slog.Logger) string {
+	log.Debug("reading file", "file", path)
 	f, err := os.ReadFile(path)
 	if err != nil {
 		log.Warn("failed to read file", "file", path, "error", err)
