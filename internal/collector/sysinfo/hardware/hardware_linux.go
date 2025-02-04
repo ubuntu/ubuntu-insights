@@ -336,7 +336,7 @@ func (s Collector) collectScreens() (info []screen, err error) {
 	for i, header := range headers {
 		v := screenConfigRegex.FindStringSubmatch(screens[i+1])
 
-		if len(v) < 3 || len(header) != 5 {
+		if len(v) != 3 || len(header) != 5 {
 			s.opts.log.Warn("xrandr screen info malformed", "screen", header[1])
 			continue
 		}
