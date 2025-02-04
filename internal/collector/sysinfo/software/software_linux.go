@@ -34,7 +34,7 @@ var usedOSFields = map[string]struct{}{
 	"Release":        {},
 }
 
-func (s Collector) collectOS() (info map[string]string, err error) {
+func (s Collector) collectOS() (info os, err error) {
 	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, s.opts.osCmd[0], s.opts.osCmd[1:]...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run lsb_release: %v", err)
@@ -43,7 +43,7 @@ func (s Collector) collectOS() (info map[string]string, err error) {
 		s.opts.log.Info("lsb_release output to stderr", "stderr", stderr)
 	}
 
-	info = map[string]string{
+	info = os{
 		"Family": runtime.GOOS,
 	}
 

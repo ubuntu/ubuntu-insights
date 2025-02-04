@@ -5,8 +5,10 @@ import "runtime"
 
 // Info is the software specific part.
 type Info struct {
-	OS map[string]string
+	OS os
 }
+
+type os = map[string]string
 
 // Collector handles dependencies for collecting software information.
 // Collector implements CollectorT[software.Info].
@@ -35,7 +37,7 @@ func (s Collector) Collect() (info Info, err error) {
 	info.OS, err = s.collectOS()
 	if err != nil {
 		s.opts.log.Warn("failed to collect OS info", "error", err)
-		info.OS = map[string]string{
+		info.OS = os{
 			"Family": runtime.GOOS,
 		}
 	}
