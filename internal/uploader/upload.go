@@ -23,6 +23,13 @@ var (
 	ErrReportNotMature = errors.New("report is not mature enough to be uploaded")
 )
 
+// WithCachePath sets the cache path for the uploader.
+func WithCachePath(path string) Options {
+	return func(o *options) {
+		o.cachePath = path
+	}
+}
+
 // Upload uploads the reports corresponding to the source to the configured server.
 //
 // It will only upload reports that are mature enough, and have not been uploaded before.

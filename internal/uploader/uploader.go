@@ -5,6 +5,7 @@ package uploader
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -80,4 +81,33 @@ func New(cm consentManager, source string, minAge uint, dryRun bool, args ...Opt
 		collectedDir:  filepath.Join(opts.cachePath, source, constants.LocalFolder),
 		uploadedDir:   filepath.Join(opts.cachePath, source, constants.UploadedFolder),
 	}, nil
+}
+
+// GetAllSources returns a list of the source directories in the cache directory.
+func GetAllSources(dir string) ([]string, error) {
+	sources := make([]string, 0)
+	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip files.
+		if !d.IsDir() {
+			return nil
+		}
+
+		// Skip the root directory.
+		if path == dir {
+			return nil
+		}
+
+		// Skip subdirectories.
+		if d.IsDir() && filepath.Dir(path) != dir {
+			return filepath.SkipDir
+		}
+
+		sources = append(sources, filepath.Base(path))
+		return nil
+	})
+	return sources, err
 }

@@ -175,6 +175,76 @@ func TestUpload(t *testing.T) {
 	}
 }
 
+func TestGetAllSources(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		folders       []string
+		files         []string
+		subDirs       []string
+		subFiles      []string
+		noFolderPerms bool
+		noFilePerms   bool
+
+		wantErr bool
+	}{
+		"Empty":                                {},
+		"Single Source":                        {folders: []string{"source"}},
+		"Multiple Sources":                     {folders: []string{"source1", "source2"}},
+		"Source with Files":                    {folders: []string{"source"}, files: []string{"1.json", "2.json"}},
+		"Source with Subdirectories":           {folders: []string{"source"}, subDirs: []string{"sub1", "sub2"}},
+		"Source with Subdirectories and Files": {folders: []string{"source"}, subDirs: []string{"sub1", "sub2"}, subFiles: []string{"1.json", "2.json"}},
+
+		"Source with No Folder Perms": {folders: []string{"source"}, noFolderPerms: true, wantErr: runtime.GOOS != "windows"},
+		"Source with No File Perms":   {folders: []string{"source"}, files: []string{"1.json", "2.json"}, noFilePerms: true, wantErr: runtime.GOOS != "windows"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			fPerms := os.FileMode(0750)
+			if tc.noFolderPerms {
+				fPerms = 0
+			}
+			dPerms := os.FileMode(0750)
+			if tc.noFilePerms {
+				dPerms = 0
+			}
+
+			for _, folder := range tc.folders {
+				fPath := filepath.Join(dir, folder)
+				require.NoError(t, os.Mkdir(fPath, dPerms), "Setup: failed to create source directory")
+
+				for _, subDir := range tc.subDirs {
+					sdPath := filepath.Join(fPath, subDir)
+					require.NoError(t, os.Mkdir(sdPath, dPerms), "Setup: failed to create subdirectory")
+				}
+
+				for _, file := range tc.files {
+					fPath := filepath.Join(fPath, file)
+					require.NoError(t, os.WriteFile(fPath, []byte{}, fPerms), "Setup: failed to create file")
+				}
+			}
+
+			for _, file := range tc.files {
+				fPath := filepath.Join(dir, tc.folders[0], file)
+				require.NoError(t, os.WriteFile(fPath, []byte{}, fPerms), "Setup: failed to create file")
+			}
+
+			got, err := uploader.GetAllSources(dir)
+			if tc.wantErr {
+				require.Error(t, err, "GetAllSources should return an error")
+				return
+			}
+			require.NoError(t, err, "GetAllSources should not return an error")
+
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			require.Equal(t, want, got, "GetAllSources should return expected sources")
+		})
+	}
+}
+
 func setupTmpDir(t *testing.T, localFiles, uploadedFiles map[string]reportType, source string, dummy bool) string {
 	t.Helper()
 	dir := t.TempDir()

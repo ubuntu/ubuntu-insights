@@ -1,10 +1,13 @@
 package commands
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/spf13/cobra"
+	"github.com/ubuntu/ubuntu-insights/internal/consent"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
+	"github.com/ubuntu/ubuntu-insights/internal/uploader"
 )
 
 type uploadConfig struct {
@@ -23,6 +26,9 @@ var defaultUploadConfig = uploadConfig{
 	dryRun:  false,
 }
 
+type upload interface {
+}
+
 func installUploadCmd(app *App) {
 	app.uploadConfig = defaultUploadConfig
 
@@ -33,11 +39,18 @@ func installUploadCmd(app *App) {
 		Args:  cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set Sources to Args
+			if args == nil {
+				slog.Info("No sources provided, uploading all sources")
+				var err error
+				args, err = uploader.GetAllSources(app.rootConfig.InsightsDir)
+				if err != nil {
+					return fmt.Errorf("failed to get all sources: %v", err)
+				}
+			}
 			app.uploadConfig.sources = args
 
 			slog.Info("Running upload command")
-
-			return nil
+			return app.uploadRun()
 		},
 	}
 
@@ -47,4 +60,22 @@ func installUploadCmd(app *App) {
 	uploadCmd.Flags().BoolVarP(&app.uploadConfig.dryRun, "dry-run", "d", app.uploadConfig.dryRun, "go through the motions of doing an upload, but do not communicate with the server or send the payload")
 
 	app.cmd.AddCommand(uploadCmd)
+}
+
+func (a App) uploadRun() error {
+	cm := consent.New(a.rootConfig.ConsentDir)
+	opts := uploader.WithCachePath(a.rootConfig.InsightsDir)
+
+	for _, source := range a.uploadConfig.sources {
+		u, err := uploader.New(cm, source, a.uploadConfig.minAge, a.uploadConfig.dryRun, opts)
+		if err != nil {
+			return fmt.Errorf("failed to create uploader for source %s: %v", source, err)
+		}
+
+		if err := u.Upload(a.uploadConfig.force); err != nil {
+			return fmt.Errorf("failed to upload reports for source %s: %v", source, err)
+		}
+	}
+
+	return nil
 }

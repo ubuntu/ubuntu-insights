@@ -104,3 +104,92 @@ func TestConsent(t *testing.T) {
 		)
 	}
 }
+
+// TestUpload is focused on testing the CLI command for uploading files.
+// The intracacies of the component itself are tested separately.
+func TestUpload(t *testing.T) {
+	t.Parallel()
+	var consentAll = map[string]bool{"consent.toml": true, "A-consent.toml": true, "B-consent.toml": true, "C-consent.toml": true}
+
+	tests := map[string]struct {
+		args []string
+
+		consentFiles map[string]bool
+		removeFiles  []string
+
+		wantErr      bool
+		wantUsageErr bool
+	}{
+		"Upload All Sources": {
+			args:         []string{"upload"},
+			consentFiles: consentAll},
+		"Upload Source A": {
+			args:         []string{"upload", "A"},
+			consentFiles: consentAll,
+		},
+		"Upload Source B": {
+			args:         []string{"upload", "B"},
+			consentFiles: consentAll,
+		},
+		"Upload Source C": {
+			args:         []string{"upload", "C"},
+			consentFiles: consentAll,
+		},
+		"Upload Source AB": {
+			args:         []string{"upload", "A", "B"},
+			consentFiles: consentAll,
+		},
+		"Upload All Sources, Partial Consent AB": {
+			args:         []string{"upload"},
+			consentFiles: map[string]bool{"consent.toml": true, "A-consent.toml": true, "C-consent.toml": true},
+		},
+		"Upload All Sources, No Global Consent": {
+			args:         []string{"upload"},
+			consentFiles: map[string]bool{"A-consent.toml": true, "B-consent.toml": true, "C-consent.toml": true},
+		},
+		"Upload All Source, Partial Consent AB, No Global Consent": {
+			args:         []string{"upload"},
+			consentFiles: map[string]bool{"A-consent.toml": true, "C-consent.toml": true},
+		},
+		"Upload All Sources, Dry Run": {
+			args:         []string{"upload", "--dry-run"},
+			consentFiles: consentAll,
+		},
+		"Upload All High Min Age": {
+			args:         []string{"upload", "--min-age=1000000"},
+			consentFiles: consentAll,
+		},
+		"Upload All Sources, Force": {
+			args:         []string{"upload", "--force"},
+			consentFiles: consentAll,
+		},
+		"Upload All Sources, Force, Dry Run": {
+			args:         []string{"upload", "--force", "--dry-run"},
+			consentFiles: consentAll,
+		},
+		"Upload All Sources, Bad Flag": {
+			args:         []string{"upload", "--unknown"},
+			consentFiles: consentAll,
+			wantUsageErr: true,
+			wantErr:      true,
+		},
+		"Upload All Sources, Bad Min Age": {
+			args:         []string{"upload", "--min-age=bad"},
+			consentFiles: consentAll,
+			wantUsageErr: true,
+			wantErr:      true,
+		},
+		"Upload All Sources, High Min Age, Force": {
+			args:         []string{"upload", "--min-age=1000000", "--force"},
+			consentFiles: consentAll,
+		},
+		}
+	
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+
+		})
+
+	}
+}
