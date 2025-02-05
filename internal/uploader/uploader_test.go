@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
@@ -196,40 +197,43 @@ func TestGetAllSources(t *testing.T) {
 		"Source with Subdirectories and Files": {folders: []string{"source"}, subDirs: []string{"sub1", "sub2"}, subFiles: []string{"1.json", "2.json"}},
 
 		"Source with No Folder Perms": {folders: []string{"source"}, noFolderPerms: true, wantErr: runtime.GOOS != "windows"},
-		"Source with No File Perms":   {folders: []string{"source"}, files: []string{"1.json", "2.json"}, noFilePerms: true, wantErr: runtime.GOOS != "windows"},
+		"Source with No File Perms":   {folders: []string{"source"}, files: []string{"1.json", "2.json"}, noFilePerms: true},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			dir := t.TempDir()
-			fPerms := os.FileMode(0750)
+			folderPerms := os.FileMode(0750)
 			if tc.noFolderPerms {
-				fPerms = 0
+				folderPerms = 0
 			}
-			dPerms := os.FileMode(0750)
+			filePerms := os.FileMode(0600)
 			if tc.noFilePerms {
-				dPerms = 0
+				filePerms = 0
 			}
 
 			for _, folder := range tc.folders {
 				fPath := filepath.Join(dir, folder)
-				require.NoError(t, os.Mkdir(fPath, dPerms), "Setup: failed to create source directory")
+				require.NoError(t, os.Mkdir(fPath, folderPerms), "Setup: failed to create source directory")
 
 				for _, subDir := range tc.subDirs {
 					sdPath := filepath.Join(fPath, subDir)
-					require.NoError(t, os.Mkdir(sdPath, dPerms), "Setup: failed to create subdirectory")
+					require.NoError(t, os.Mkdir(sdPath, folderPerms), "Setup: failed to create subdirectory")
+					t.Cleanup(func() { assert.NoError(t, os.Chmod(sdPath, 0750), "Cleanup: Failed to restore folder perms") }) //nolint:gosec //0750 is fine for folders
 				}
 
 				for _, file := range tc.files {
 					fPath := filepath.Join(fPath, file)
-					require.NoError(t, os.WriteFile(fPath, []byte{}, fPerms), "Setup: failed to create file")
+					require.NoError(t, os.WriteFile(fPath, []byte{}, filePerms), "Setup: failed to create file")
+					t.Cleanup(func() { assert.NoError(t, os.Chmod(fPath, 0600), "Cleanup: Failed to restore file perms") })
 				}
 			}
 
 			for _, file := range tc.files {
-				fPath := filepath.Join(dir, tc.folders[0], file)
-				require.NoError(t, os.WriteFile(fPath, []byte{}, fPerms), "Setup: failed to create file")
+				fPath := filepath.Join(dir, file)
+				require.NoError(t, os.WriteFile(fPath, []byte{}, filePerms), "Setup: failed to create file")
+				t.Cleanup(func() { assert.NoError(t, os.Chmod(fPath, 0600), "Cleanup: Failed to restore file perms") })
 			}
 
 			got, err := uploader.GetAllSources(dir)
