@@ -1,16 +1,10 @@
 package software
 
-import (
-	"log/slog"
-)
-
-type options struct {
-	timezone func() string
-	log      *slog.Logger
+type platformOptions struct {
 }
 
-func defaultOptions() *options {
-	return &options{}
+func defaultPlatformOptions() platformOptions {
+	return platformOptions{}
 }
 
 func (s Collector) collectOS() (info osInfo, err error) {

@@ -1,29 +1,33 @@
 // Package software handles collecting "common" software information for all insight reports.
 package software
 
-import "runtime"
+import (
+	"log/slog"
+	"runtime"
+	"time"
+)
 
 // Info is the software specific part.
 type Info struct {
-	OS       osInfo
-	Src      Source
-	Type     string
-	Timezone string
-	Lang     string
-	Bios     bios
+	OS       osInfo `json:"os"`
+	Src      Source `json:"source"`
+	Trigger  string `json:"trigger"`
+	Timezone string `json:"timezone"`
+	Lang     string `json:"language"`
+	Bios     bios   `json:"bios"`
 }
 
 // Source is info about the collection source.
 type Source struct {
-	Name    string
-	Version string
+	Name    string `json:"name"`
+	Version string `json:"version"`
 }
 
 // Theses types represent how collection was triggered.
 const (
-	TypeRegular = "regular"
-	TypeInstall = "install"
-	TypeManual  = "manual"
+	TriggerRegular = "regular"
+	TriggerInstall = "install"
+	TriggerManual  = "manual"
 )
 
 type osInfo = map[string]string
@@ -32,43 +36,59 @@ type bios = map[string]string
 // Collector handles dependencies for collecting software information.
 // Collector implements CollectorT[software.Info].
 type Collector struct {
-	Src  Source
-	Type string
+	Src     Source
+	Trigger string
 
-	opts options
+	log      *slog.Logger
+	timezone func() string
+	platform platformOptions
 }
 
 // Options are the variadic options available to the Collector.
 type Options func(*options)
 
+type options struct {
+	log      *slog.Logger
+	timezone func() string
+
+	platform platformOptions
+}
+
 // New returns a new Collector.
-// Since "type" is a keyword, the parameter is tipe instead.
-func New(source Source, tipe string, args ...Options) Collector {
-	// options defaults are platform dependent.
-	opts := defaultOptions()
+func New(source Source, trigger string, args ...Options) Collector {
+	opts := &options{
+		log: slog.Default(),
+		timezone: func() string {
+			zone, _ := time.Now().Zone()
+			return zone
+		},
+	}
+	opts.platform = defaultPlatformOptions()
 	for _, opt := range args {
 		opt(opts)
 	}
 
 	return Collector{
-		Src:  source,
-		Type: tipe,
+		Src:     source,
+		Trigger: trigger,
 
-		opts: *opts,
+		log:      opts.log,
+		timezone: opts.timezone,
+		platform: opts.platform,
 	}
 }
 
 // Collect aggregates the data from all the other software collect functions.
 func (s Collector) Collect() (info Info, err error) {
-	s.opts.log.Debug("collecting software info")
+	s.log.Debug("collecting software info")
 
 	info.Src = s.Src
-	info.Type = s.Type
-	info.Timezone = s.opts.timezone()
+	info.Trigger = s.Trigger
+	info.Timezone = s.timezone()
 
 	info.OS, err = s.collectOS()
 	if err != nil {
-		s.opts.log.Warn("failed to collect OS info", "error", err)
+		s.log.Warn("failed to collect OS info", "error", err)
 		info.OS = osInfo{
 			"Family": runtime.GOOS,
 		}
@@ -76,12 +96,12 @@ func (s Collector) Collect() (info Info, err error) {
 
 	info.Lang, err = s.collectLang()
 	if err != nil {
-		s.opts.log.Warn("failed to collect language info", "error", err)
+		s.log.Warn("failed to collect language info", "error", err)
 	}
 
 	info.Bios, err = s.collectBios()
 	if err != nil {
-		s.opts.log.Warn("failed to collect BIOS info", "error", err)
+		s.log.Warn("failed to collect BIOS info", "error", err)
 	}
 
 	return info, nil

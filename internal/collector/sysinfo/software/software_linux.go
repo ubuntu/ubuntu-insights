@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -16,29 +15,20 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
-type options struct {
+type platformOptions struct {
 	root     string
 	osCmd    []string
 	langFunc func() (string, bool)
-
-	timezone func() string
-	log      *slog.Logger
 }
 
 // defaultOptions returns options for when running under a normal environment.
-func defaultOptions() *options {
-	return &options{
+func defaultPlatformOptions() platformOptions {
+	return platformOptions{
 		root:  "/",
 		osCmd: []string{"lsb_release", "-a"},
 		langFunc: func() (string, bool) {
 			return os.LookupEnv("LANG")
 		},
-
-		timezone: func() string {
-			zone, _ := time.Now().Zone()
-			return zone
-		},
-		log: slog.Default(),
 	}
 }
 
@@ -51,12 +41,12 @@ var usedOSFields = map[string]struct{}{
 }
 
 func (s Collector) collectOS() (info osInfo, err error) {
-	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, s.opts.osCmd[0], s.opts.osCmd[1:]...)
+	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, s.platform.osCmd[0], s.platform.osCmd[1:]...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run lsb_release: %v", err)
 	}
 	if stderr.Len() > 0 {
-		s.opts.log.Info("lsb_release output to stderr", "stderr", stderr)
+		s.log.Info("lsb_release output to stderr", "stderr", stderr)
 	}
 
 	info = osInfo{
@@ -71,14 +61,14 @@ func (s Collector) collectOS() (info osInfo, err error) {
 	}
 
 	if len(info) == 1 {
-		s.opts.log.Warn("lsb_release contained invalid data")
+		s.log.Warn("lsb_release contained invalid data")
 	}
 
 	return info, nil
 }
 
 func (s Collector) collectLang() (string, error) {
-	lang, ok := s.opts.langFunc()
+	lang, ok := s.platform.langFunc()
 	if !ok {
 		return lang, errors.New("LANG environment variable not set")
 	}
@@ -89,13 +79,13 @@ func (s Collector) collectLang() (string, error) {
 
 func (s Collector) collectBios() (bios, error) {
 	info := bios{
-		"Vendor":  fileutils.ReadFileLogError(filepath.Join(s.opts.root, "sys/class/dmi/id/bios_vendor"), s.opts.log),
-		"Version": fileutils.ReadFileLogError(filepath.Join(s.opts.root, "sys/class/dmi/id/bios_version"), s.opts.log),
+		"Vendor":  fileutils.ReadFileLogError(filepath.Join(s.platform.root, "sys/class/dmi/id/bios_vendor"), s.log),
+		"Version": fileutils.ReadFileLogError(filepath.Join(s.platform.root, "sys/class/dmi/id/bios_version"), s.log),
 	}
 
 	for k, v := range info {
 		if strings.ContainsRune(v, '\n') {
-			s.opts.log.Warn(fmt.Sprintf("BIOS info %s contains invalid value", k))
+			s.log.Warn(fmt.Sprintf("BIOS info %s contains invalid value", k))
 			info[k] = ""
 		}
 	}

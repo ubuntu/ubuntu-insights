@@ -5,7 +5,7 @@ os:
 src:
     name: src
     version: v1.6.4
-type: regular
+trigger: regular
 timezone: JST
 lang: ja
 bios:

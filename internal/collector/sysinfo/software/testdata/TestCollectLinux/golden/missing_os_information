@@ -3,7 +3,7 @@ os:
 src:
     name: test souce
     version: v4.3.2
-type: manual
+trigger: manual
 timezone: CEN
 lang: fr_FR
 bios:

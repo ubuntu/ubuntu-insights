@@ -5,7 +5,7 @@ os:
 src:
     name: test
     version: v1.7.10
-type: regular
+trigger: regular
 timezone: EST
 lang: ""
 bios:

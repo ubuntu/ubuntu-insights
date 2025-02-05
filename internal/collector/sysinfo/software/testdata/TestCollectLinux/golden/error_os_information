@@ -3,7 +3,7 @@ os:
 src:
     name: test
     version: v1.1.1
-type: install
+trigger: install
 timezone: PST
 lang: en_ZA
 bios:

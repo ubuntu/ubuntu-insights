@@ -43,7 +43,7 @@ func TestNew(t *testing.T) {
 
 			s := sysinfo.New(
 				software.Source{},
-				software.TypeRegular,
+				software.TriggerRegular,
 				sysinfo.WithHardwareCollector(makeFakeCollector(hardware.Info{}, nil)),
 				sysinfo.WithSoftwareCollector(makeFakeCollector(software.Info{}, nil)),
 			)
@@ -82,7 +82,7 @@ func TestCollect(t *testing.T) {
 
 			s := sysinfo.New(
 				software.Source{},
-				software.TypeRegular,
+				software.TriggerRegular,
 				sysinfo.WithHardwareCollector(makeFakeCollector(tc.hw, tc.hwErr)),
 				sysinfo.WithSoftwareCollector(makeFakeCollector(tc.sw, tc.swErr)),
 				sysinfo.WithLogger(&l),
