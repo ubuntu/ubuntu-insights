@@ -6,14 +6,14 @@ cpu:
     name: Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz
     vendor: GenuineIntel
     arch: x86_64
-    cpus: 12
-    sockets: 1
-    cores: 6
-    threads: 2
+    cpus: 0
+    sockets: 0
+    cores: 0
+    threads: 0
 gpus:
-    - name: ""
-      vendor: ""
-      driver: ""
+    - name: Onboard - Video
+      vendor: "0x8086"
+      driver: i915
     - name: NVIDIA GeForce GTX 1050 Ti
       vendor: "0x10de"
       driver: nvidia

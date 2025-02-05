@@ -1,9 +1,17 @@
 product:
-    Family: ""
-    Name: ""
-    Vendor: ""
-cpu: {}
+    family: ""
+    name: ""
+    vendor: ""
+cpu:
+    name: ""
+    vendor: ""
+    arch: amd64
+    cpus: 0
+    sockets: 0
+    cores: 0
+    threads: 0
 gpus: []
-mem: {}
+mem:
+    total: 0
 blks: []
 screens: []

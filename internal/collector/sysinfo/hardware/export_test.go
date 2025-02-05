@@ -10,3 +10,10 @@ func WithLogger(logger slog.Handler) Options {
 		o.log = slog.New(logger)
 	}
 }
+
+// WithArch overrides the default architecture.
+func WithArch(arch string) Options {
+	return func(o *options) {
+		o.arch = arch
+	}
+}

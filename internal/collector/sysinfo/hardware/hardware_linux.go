@@ -3,7 +3,6 @@ package hardware
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -15,57 +14,55 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
-type options struct {
+type platformOptions struct {
 	root       string
 	cpuInfoCmd []string
 	lsblkCmd   []string
 	screenCmd  []string
-	log        *slog.Logger
 }
 
 // defaultOptions returns options for when running under a normal environment.
-func defaultOptions() *options {
-	return &options{
+func defaultPlatformOptions() platformOptions {
+	return platformOptions{
 		root:       "/",
 		cpuInfoCmd: []string{"lscpu", "-J"},
 		lsblkCmd:   []string{"lsblk", "-o", "NAME,SIZE,TYPE", "--tree", "-J"},
 		screenCmd:  []string{"xrandr"},
-		log:        slog.Default(),
 	}
 }
 
 // collectProduct reads sysfs to find information about the system.
-func (s Collector) collectProduct() (product, error) {
+func (h Collector) collectProduct() (product, error) {
 	info := product{
-		"Vendor": fileutils.ReadFileLogError(filepath.Join(s.opts.root, "sys/class/dmi/id/sys_vendor"), s.opts.log),
-		"Name":   fileutils.ReadFileLogError(filepath.Join(s.opts.root, "sys/class/dmi/id/product_name"), s.opts.log),
-		"Family": fileutils.ReadFileLogError(filepath.Join(s.opts.root, "sys/class/dmi/id/product_family"), s.opts.log),
+		Vendor: fileutils.ReadFileLogError(filepath.Join(h.platform.root, "sys/class/dmi/id/sys_vendor"), h.log),
+		Name:   fileutils.ReadFileLogError(filepath.Join(h.platform.root, "sys/class/dmi/id/product_name"), h.log),
+		Family: fileutils.ReadFileLogError(filepath.Join(h.platform.root, "sys/class/dmi/id/product_family"), h.log),
 	}
 
-	for k, v := range info {
-		if strings.ContainsRune(v, '\n') {
-			s.opts.log.Warn(fmt.Sprintf("product %s contains invalid value", k))
-			info[k] = ""
-		}
+	if strings.ContainsRune(info.Vendor, '\n') {
+		h.log.Warn("product vendor contains invalid value")
+		info.Vendor = ""
+	}
+	if strings.ContainsRune(info.Name, '\n') {
+		h.log.Warn("product name contains invalid value")
+		info.Name = ""
+	}
+	if strings.ContainsRune(info.Family, '\n') {
+		h.log.Warn("product family contains invalid value")
+		info.Family = ""
 	}
 
 	return info, nil
 }
 
 // collectCPU uses lscpu to collect information about the CPUs.
-func (s Collector) collectCPU() (info cpu, err error) {
-	defer func() {
-		if err == nil && len(info) == 0 {
-			err = fmt.Errorf("no CPU information found")
-		}
-	}()
-
-	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, s.opts.cpuInfoCmd[0], s.opts.cpuInfoCmd[1:]...)
+func (h Collector) collectCPU() (cpu, error) {
+	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, h.platform.cpuInfoCmd[0], h.platform.cpuInfoCmd[1:]...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to run lscpu: %v", err)
+		return cpu{}, fmt.Errorf("failed to run lscpu: %v", err)
 	}
 	if stderr.Len() > 0 {
-		s.opts.log.Info("lscpu output to stderr", "stderr", stderr)
+		h.log.Info("lscpu output to stderr", "stderr", stderr)
 	}
 
 	type lscpu struct {
@@ -74,10 +71,46 @@ func (s Collector) collectCPU() (info cpu, err error) {
 	var result = &lscpu{}
 	err = fileutils.ParseJSON(stdout, result)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse CPU json: %v", err)
+		return cpu{}, fmt.Errorf("failed to parse CPU json: %v", err)
 	}
 
-	return s.populateCPUInfo(result.Lscpu, cpu{}), nil
+	data := h.populateCPUInfo(result.Lscpu, map[string]string{})
+
+	sockets, err := strconv.ParseUint(data["Socket(s):"], 10, 64)
+	if err != nil {
+		h.log.Warn("CPU info contained invalid sockets", "value", data["Socket(s):"])
+		sockets = 0
+	}
+	cores, err := strconv.ParseUint(data["Core(s) per socket:"], 10, 64)
+	if err != nil {
+		h.log.Warn("CPU info contained invalid cores per socket", "value", data["Core(s) per socket:"])
+		cores = 0
+	}
+	threads, err := strconv.ParseUint(data["Thread(s) per core:"], 10, 64)
+	if err != nil {
+		h.log.Warn("CPU info contained invalid threads per core", "value", data["Thread(s) per core:"])
+		threads = 0
+	}
+	cpus, err := strconv.ParseUint(data["CPU(s):"], 10, 64)
+	if err != nil {
+		h.log.Warn("CPU info contained invalid cpus", "value", data["CPU(s):"])
+		cpus = threads * cores * sockets
+	}
+
+	arch := h.arch
+	if v, ok := data["Architecture:"]; ok {
+		arch = v
+	}
+
+	return cpu{
+		Name:    data["Model name:"],
+		Vendor:  data["Vendor ID:"],
+		Arch:    arch,
+		Cpus:    cpus,
+		Sockets: sockets,
+		Cores:   cores,
+		Threads: threads,
+	}, nil
 }
 
 // usedCPUFields is a set that defines what json fields we want.
@@ -98,14 +131,14 @@ type lscpuEntry struct {
 }
 
 // populateCPUInfo recursively searches the lscpu JSON for desired fields.
-func (s Collector) populateCPUInfo(entries []lscpuEntry, info cpu) cpu {
+func (h Collector) populateCPUInfo(entries []lscpuEntry, info map[string]string) map[string]string {
 	for _, entry := range entries {
 		if _, ok := usedCPUFields[entry.Field]; ok {
 			info[entry.Field] = entry.Data
 		}
 
 		if len(entry.Children) > 0 {
-			s.populateCPUInfo(entry.Children, info)
+			h.populateCPUInfo(entry.Children, info)
 		}
 	}
 
@@ -116,7 +149,7 @@ func (s Collector) populateCPUInfo(entries []lscpuEntry, info cpu) cpu {
 var gpuSymlinkRegex = regexp.MustCompile("^card[0-9]+$")
 
 // collectGPUs uses sysfs to collect information about the GPUs.
-func (s Collector) collectGPUs() (gpus []gpu, err error) {
+func (h Collector) collectGPUs() (gpus []gpu, err error) {
 	defer func() {
 		if err == nil && len(gpus) == 0 {
 			err = fmt.Errorf("no GPU information found")
@@ -124,7 +157,7 @@ func (s Collector) collectGPUs() (gpus []gpu, err error) {
 	}()
 
 	// Using ReadDir instead of WalkDir since we don't want recursive directories.
-	ds, err := os.ReadDir(filepath.Join(s.opts.root, "sys/class/drm"))
+	ds, err := os.ReadDir(filepath.Join(h.platform.root, "sys/class/drm"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read GPU directory in sysfs: %v", err)
 	}
@@ -136,9 +169,9 @@ func (s Collector) collectGPUs() (gpus []gpu, err error) {
 			continue
 		}
 
-		gpu, err := s.collectGPU(n)
+		gpu, err := h.collectGPU(n)
 		if err != nil {
-			s.opts.log.Warn("failed to get GPU info", "GPU", n, "error", err)
+			h.log.Warn("failed to get GPU info", "GPU", n, "error", err)
 			continue
 		}
 
@@ -149,34 +182,35 @@ func (s Collector) collectGPUs() (gpus []gpu, err error) {
 }
 
 // collectGPU handles gathering information for a single GPU.
-func (s Collector) collectGPU(card string) (info gpu, err error) {
-	cardDir, err := filepath.EvalSymlinks(filepath.Join(s.opts.root, "sys/class/drm", card))
+func (h Collector) collectGPU(card string) (info gpu, err error) {
+	cardDir, err := filepath.EvalSymlinks(filepath.Join(h.platform.root, "sys/class/drm", card))
 	if err != nil {
-		return nil, fmt.Errorf("failed to follow %s symlink: %v", card, err)
+		return info, fmt.Errorf("failed to follow %s symlink: %v", card, err)
 	}
 
 	devDir, err := filepath.EvalSymlinks(filepath.Join(cardDir, "device"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to follow %s device symlink: %v", card, err)
+		return info, fmt.Errorf("failed to follow %s device symlink: %v", card, err)
 	}
 
-	info = gpu{}
-	info["Vendor"] = fileutils.ReadFileLogError(filepath.Join(devDir, "vendor"), s.opts.log)
-	info["Name"] = fileutils.ReadFileLogError(filepath.Join(devDir, "label"), s.opts.log)
+	info.Vendor = fileutils.ReadFileLogError(filepath.Join(devDir, "vendor"), h.log)
+	info.Name = fileutils.ReadFileLogError(filepath.Join(devDir, "label"), h.log)
+
+	if strings.ContainsRune(info.Vendor, '\n') {
+		h.log.Warn("gpu vendor contains invalid value", "GPU", card)
+		info.Vendor = ""
+	}
+	if strings.ContainsRune(info.Name, '\n') {
+		h.log.Warn("gpu name contains invalid value", "GPU", card)
+		info.Name = ""
+	}
 
 	driverLink, err := os.Readlink(filepath.Join(devDir, "driver"))
 	if err != nil {
-		s.opts.log.Warn("failed to get GPU driver", "GPU", card, "error", err)
+		h.log.Warn("failed to get GPU driver", "GPU", card, "error", err)
 		return info, nil
 	}
-	info["Driver"] = filepath.Base(driverLink)
-
-	for k, v := range info {
-		if strings.ContainsRune(v, '\n') {
-			s.opts.log.Warn(fmt.Sprintf("GPU info contains invalid value for %s", k), "GPU", card)
-			info[k] = ""
-		}
-	}
+	info.Driver = filepath.Base(driverLink)
 
 	return info, nil
 }
@@ -191,19 +225,13 @@ var usedMemFields = map[string]struct{}{
 var meminfoRegex = regexp.MustCompile(`^([^\s:]+):\s*([0-9]+)(?:\s+([^\s]+))?\s*$`)
 
 // collectMemory uses meminfo to collect information about RAM.
-func (s Collector) collectMemory() (info memory, err error) {
-	defer func() {
-		if err == nil && len(info) == 0 {
-			err = fmt.Errorf("no Memory information found")
-		}
-	}()
-
-	f, err := os.ReadFile(filepath.Join(s.opts.root, "proc/meminfo"))
+func (h Collector) collectMemory() (memory, error) {
+	f, err := os.ReadFile(filepath.Join(h.platform.root, "proc/meminfo"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to read meminfo: %v", err)
+		return memory{}, fmt.Errorf("failed to read meminfo: %v", err)
 	}
 
-	info = memory{}
+	data := map[string]int{}
 	lines := strings.Split(string(f), "\n")
 	for i, l := range lines {
 		if l == "" {
@@ -212,7 +240,7 @@ func (s Collector) collectMemory() (info memory, err error) {
 
 		m := meminfoRegex.FindStringSubmatch(l)
 		if len(m) != 4 {
-			s.opts.log.Warn("meminfo contains invalid line", "line", l, "linenum", i)
+			h.log.Warn("meminfo contains invalid line", "line", l, "linenum", i)
 			continue
 		}
 
@@ -222,18 +250,20 @@ func (s Collector) collectMemory() (info memory, err error) {
 
 		v, err := strconv.Atoi(m[2])
 		if err != nil {
-			s.opts.log.Warn("meminfo value was not an integer", "value", v, "error", err, "linenum", i)
+			h.log.Warn("meminfo value was not an integer", "value", v, "error", err, "linenum", i)
 			continue
 		}
 
-		info[m[1]], err = fileutils.ConvertUnitToBytes(m[3], v)
+		data[m[1]], err = fileutils.ConvertUnitToBytes(m[3], v)
 		if err != nil {
-			s.opts.log.Warn("meminfo had invalid unit", "unit", m[3], "error", err, "linenum", i)
+			h.log.Warn("meminfo had invalid unit", "unit", m[3], "error", err, "linenum", i)
 			continue
 		}
 	}
 
-	return info, nil
+	return memory{
+		Total: data["MemTotal"],
+	}, nil
 }
 
 type lsblkEntry struct {
@@ -244,7 +274,7 @@ type lsblkEntry struct {
 }
 
 // populateBlkInfo parses lsblkEntries to diskInfo structs.
-func (s Collector) populateBlkInfo(entries []lsblkEntry) []disk {
+func (h Collector) populateBlkInfo(entries []lsblkEntry) []disk {
 	info := []disk{}
 
 	for _, e := range entries {
@@ -253,7 +283,7 @@ func (s Collector) populateBlkInfo(entries []lsblkEntry) []disk {
 			info = append(info, disk{
 				Name:       e.Name,
 				Size:       e.Size,
-				Partitions: s.populateBlkInfo(e.Children),
+				Partitions: h.populateBlkInfo(e.Children),
 			})
 		case "part":
 			info = append(info, disk{
@@ -268,19 +298,19 @@ func (s Collector) populateBlkInfo(entries []lsblkEntry) []disk {
 }
 
 // collectBlocks uses lsblk to collect information about Blocks.
-func (s Collector) collectDisks() (info []disk, err error) {
+func (h Collector) collectDisks() (info []disk, err error) {
 	defer func() {
 		if err == nil && len(info) == 0 {
 			err = fmt.Errorf("no Block information found")
 		}
 	}()
 
-	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, s.opts.lsblkCmd[0], s.opts.lsblkCmd[1:]...)
+	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, h.platform.lsblkCmd[0], h.platform.lsblkCmd[1:]...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run lsblk: %v", err)
 	}
 	if stderr.Len() > 0 {
-		s.opts.log.Info("lsblk output to stderr", "stderr", stderr)
+		h.log.Info("lsblk output to stderr", "stderr", stderr)
 	}
 
 	type lsblk struct {
@@ -292,7 +322,7 @@ func (s Collector) collectDisks() (info []disk, err error) {
 		return nil, fmt.Errorf("failed to convert json to a valid lsblk struct: %v", err)
 	}
 
-	return s.populateBlkInfo(result.Lsblk), nil
+	return h.populateBlkInfo(result.Lsblk), nil
 }
 
 // This regex matches the name, primary status, real resolution, and physical size from xrandr.
@@ -308,19 +338,19 @@ var screenHeaderRegex = regexp.MustCompile(`(?m)^(\S+)\s+connected\s+(?:(primary
 var screenConfigRegex = regexp.MustCompile(`(?m)^\s*([0-9]+x[0-9]+)\s.*?([0-9]+\.[0-9]+)\+?\*\+?.*$`)
 
 // collectScreens uses xrandr to collect information about screens.
-func (s Collector) collectScreens() (info []screen, err error) {
+func (h Collector) collectScreens() (info []screen, err error) {
 	defer func() {
 		if err == nil && len(info) == 0 {
 			err = fmt.Errorf("no Screen information found")
 		}
 	}()
 
-	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, s.opts.screenCmd[0], s.opts.screenCmd[1:]...)
+	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, h.platform.screenCmd[0], h.platform.screenCmd[1:]...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run xrandr: %v", err)
 	}
 	if stderr.Len() > 0 {
-		s.opts.log.Info("xrandr output to stderr", "stderr", stderr)
+		h.log.Info("xrandr output to stderr", "stderr", stderr)
 	}
 
 	data := stdout.String()
@@ -337,7 +367,7 @@ func (s Collector) collectScreens() (info []screen, err error) {
 		v := screenConfigRegex.FindStringSubmatch(screens[i+1])
 
 		if len(v) != 3 || len(header) != 5 {
-			s.opts.log.Warn("xrandr screen info malformed", "screen", header[1])
+			h.log.Warn("xrandr screen info malformed", "screen", header[1])
 			continue
 		}
 

@@ -90,6 +90,28 @@ func TestCollectLinux(t *testing.T) {
 			},
 		},
 
+		"Some CPU information is derived when missing": {
+			root:       "regular",
+			cpuInfo:    "some missing",
+			blkInfo:    "regular",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"CPU information with negative values is handled": {
+			root:       "regular",
+			cpuInfo:    "negative ints",
+			blkInfo:    "regular",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 4,
+			},
+		},
+
 		"Error CPU information": {
 			root:       "regular",
 			cpuInfo:    "error",
@@ -248,7 +270,7 @@ func TestCollectLinux(t *testing.T) {
 			blkInfo:    "",
 			screenInfo: "",
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 4,
+				slog.LevelWarn: 3,
 			},
 		},
 
@@ -258,7 +280,7 @@ func TestCollectLinux(t *testing.T) {
 			blkInfo:    "garbage",
 			screenInfo: "garbage",
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 19,
+				slog.LevelWarn: 18,
 			},
 		},
 	}
@@ -280,6 +302,7 @@ func TestCollectLinux(t *testing.T) {
 
 			options := []hardware.Options{
 				hardware.WithRoot(root),
+				hardware.WithArch("amd64"),
 				hardware.WithLogger(&l),
 			}
 
@@ -416,6 +439,78 @@ func TestFakeCPUList(_ *testing.T) {
             },{
                "field": "L3:",
                "data": "9 MiB (1 instance)"
+            }
+         ]
+      }
+   ]
+}`)
+	case "some missing":
+		fmt.Println(`{
+   "lscpu": [
+      {
+         "field": "Vendor ID:",
+         "data": "GenuineIntel",
+         "children": [
+            {
+               "field": "Model name:",
+               "data": "Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz",
+               "children": [
+                  {
+                     "field": "CPU family:",
+                     "data": "6"
+                  },{
+                     "field": "Model:",
+                     "data": "158"
+                  },{
+                     "field": "Thread(s) per core:",
+                     "data": "2"
+                  },{
+                     "field": "Core(s) per socket:",
+                     "data": "6"
+                  },{
+                     "field": "Socket(s):",
+                     "data": "1"
+                  }
+               ]
+            }
+         ]
+      }
+   ]
+}`)
+	case "negative ints":
+		fmt.Println(`{
+   "lscpu": [
+      {
+         "field": "Architecture:",
+         "data": "x86_64"
+      },{
+         "field": "CPU(s):",
+         "data": "-12"
+      },{
+         "field": "Vendor ID:",
+         "data": "GenuineIntel",
+         "children": [
+            {
+               "field": "Model name:",
+               "data": "Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz",
+               "children": [
+                  {
+                     "field": "CPU family:",
+                     "data": "6"
+                  },{
+                     "field": "Model:",
+                     "data": "158"
+                  },{
+                     "field": "Thread(s) per core:",
+                     "data": "-2"
+                  },{
+                     "field": "Core(s) per socket:",
+                     "data": "-6"
+                  },{
+                     "field": "Socket(s):",
+                     "data": "-1"
+                  }
+               ]
             }
          ]
       }

@@ -1,18 +1,18 @@
 product:
-    Family: Framework DIY
-    Name: DIY Framework Laptop 16
-    Vendor: Framework
+    family: Framework DIY
+    name: DIY Framework Laptop 16
+    vendor: Framework
 cpu:
-    'Architecture:': x86_64
-    'CPU(s):': "12"
-    'Core(s) per socket:': "6"
-    'Model name:': Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz
-    'Socket(s):': "1"
-    'Thread(s) per core:': "2"
-    'Vendor ID:': GenuineIntel
+    name: Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz
+    vendor: GenuineIntel
+    arch: x86_64
+    cpus: 12
+    sockets: 1
+    cores: 6
+    threads: 2
 gpus: []
 mem:
-    MemTotal: 33493504000
+    total: 33493504000
 blks:
     - name: sda
       size: 931.5G

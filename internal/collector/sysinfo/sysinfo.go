@@ -33,8 +33,8 @@ type Collector struct {
 
 // Info contains Software and Hardware information of the system.
 type Info struct {
-	Hardware hardware.Info
-	Software software.Info
+	Hardware hardware.Info `json:"hardware"`
+	Software software.Info `json:"software"`
 }
 
 // New returns a new SysInfo.

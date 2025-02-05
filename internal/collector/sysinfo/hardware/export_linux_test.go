@@ -3,27 +3,27 @@ package hardware
 // WithRoot overrides default root directory of the system.
 func WithRoot(root string) Options {
 	return func(o *options) {
-		o.root = root
+		o.platform.root = root
 	}
 }
 
 // WithCpuInfo overrides default cpu info.
 func WithCPUInfo(cmd []string) Options {
 	return func(o *options) {
-		o.cpuInfoCmd = cmd
+		o.platform.cpuInfoCmd = cmd
 	}
 }
 
-// WithCpuInfo overrides default blk info.
+// WithBlkInfo overrides default blk info.
 func WithBlkInfo(cmd []string) Options {
 	return func(o *options) {
-		o.lsblkCmd = cmd
+		o.platform.lsblkCmd = cmd
 	}
 }
 
 // WithScreenInfo overrides default screen info.
 func WithScreenInfo(cmd []string) Options {
 	return func(o *options) {
-		o.screenCmd = cmd
+		o.platform.screenCmd = cmd
 	}
 }

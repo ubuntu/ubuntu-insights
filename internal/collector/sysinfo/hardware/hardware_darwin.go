@@ -1,13 +1,10 @@
 package hardware
 
-import "log/slog"
-
-type options struct {
-	log *slog.Logger
+type platformOptions struct {
 }
 
-func defaultOptions() *options {
-	return &options{}
+func defaultPlatformOptions() platformOptions {
+	return platformOptions{}
 }
 
 func (s Collector) collectProduct() (product, error) {

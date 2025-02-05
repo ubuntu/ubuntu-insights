@@ -1,15 +1,23 @@
 product:
-    Family: ""
-    Name: ""
-    Vendor: ""
-cpu: {}
+    family: ""
+    name: ""
+    vendor: ""
+cpu:
+    name: ""
+    vendor: ""
+    arch: amd64
+    cpus: 0
+    sockets: 0
+    cores: 0
+    threads: 0
 gpus:
-    - Driver: .
-      Name: ""
-      Vendor: ""
-    - Driver: .
-      Name: ""
-      Vendor: ""
-mem: {}
+    - name: ""
+      vendor: ""
+      driver: .
+    - name: ""
+      vendor: ""
+      driver: .
+mem:
+    total: 0
 blks: []
 screens: []

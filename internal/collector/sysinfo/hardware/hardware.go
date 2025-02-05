@@ -1,23 +1,52 @@
 // Package hardware handles collecting "common" hardware information for all insight reports.
 package hardware
 
+import (
+	"log/slog"
+	"runtime"
+)
+
 // Info aggregates hardware info.
 type Info struct {
-	Product product
-
-	CPU     cpu
-	GPUs    []gpu
-	Mem     memory
-	Blks    []disk
-	Screens []screen
+	Product product  `json:"product"`
+	CPU     cpu      `json:"cpu"`
+	GPUs    []gpu    `json:"gpus"`
+	Mem     memory   `json:"memory"`
+	Blks    []disk   `json:"disks"`
+	Screens []screen `json:"screens"`
 }
 
-type product map[string]string
-type cpu map[string]string
-type gpu map[string]string
-type memory map[string]int
+// product contains information for a system's product.
+type product struct {
+	Family string `json:"family"`
+	Name   string `json:"name"`
+	Vendor string `json:"vendor"`
+}
 
-// DiskInfo contains information of a disk or partition.
+// cpu contains information for a system's cpus.
+type cpu struct {
+	Name    string `json:"name"`
+	Vendor  string `json:"vendor"`
+	Arch    string `json:"architecture"`
+	Cpus    uint64 `json:"cpus"`
+	Sockets uint64 `json:"sockets"`
+	Cores   uint64 `json:"cores per socket"`
+	Threads uint64 `json:"threads per core"`
+}
+
+// gpu contains information for a gpu.
+type gpu struct {
+	Name   string `json:"name"`
+	Vendor string `json:"vendor"`
+	Driver string `json:"driver"`
+}
+
+// memory contains information for the system's memory.
+type memory struct {
+	Total int `json:"size"`
+}
+
+// disk contains information of a disk or partition.
 type disk struct {
 	Name string `json:"name"`
 	Size string `json:"size"`
@@ -25,7 +54,7 @@ type disk struct {
 	Partitions []disk `json:"partitions,omitempty"`
 }
 
-// Screen contains information for a screen.
+// screen contains information for a screen.
 type screen struct {
 	Name               string `json:"name"`
 	PhysicalResolution string `json:"physicalResolution"`
@@ -37,62 +66,81 @@ type screen struct {
 // Collector handles dependencies for collecting hardware information.
 // Collector implements CollectorT[hardware.Info].
 type Collector struct {
-	opts options
+	log  *slog.Logger
+	arch string
+
+	platform platformOptions
 }
 
 // Options are the variadic options available to the Collector.
 type Options func(*options)
 
+type options struct {
+	log  *slog.Logger
+	arch string
+
+	platform platformOptions
+}
+
 // New returns a new Collector.
 func New(args ...Options) Collector {
-	// options defaults are platform dependent.
-	opts := defaultOptions()
+	opts := &options{
+		log:  slog.Default(),
+		arch: runtime.GOARCH,
+	}
+	opts.platform = defaultPlatformOptions()
+
 	for _, opt := range args {
 		opt(opts)
 	}
 
 	return Collector{
-		opts: *opts,
+		log:  opts.log,
+		arch: opts.arch,
+
+		platform: opts.platform,
 	}
 }
 
 // Collect aggregates the data from all the other hardware collect functions.
-func (s Collector) Collect() (info Info, err error) {
-	s.opts.log.Debug("collecting hardware info")
+func (h Collector) Collect() (info Info, err error) {
+	h.log.Debug("collecting hardware info")
 
-	info.Product, err = s.collectProduct()
+	info.Product, err = h.collectProduct()
 	if err != nil {
-		s.opts.log.Warn("failed to collect Product info", "error", err)
+		h.log.Warn("failed to collect Product info", "error", err)
 		info.Product = product{}
 	}
 
-	info.CPU, err = s.collectCPU()
+	info.CPU, err = h.collectCPU()
 	if err != nil {
-		s.opts.log.Warn("failed to collect CPU info", "error", err)
-		info.CPU = cpu{}
+		h.log.Warn("failed to collect CPU info", "error", err)
+		info.CPU = cpu{
+			Arch: h.arch,
+		}
 	}
 
-	info.GPUs, err = s.collectGPUs()
+	info.GPUs, err = h.collectGPUs()
 	if err != nil {
-		s.opts.log.Warn("failed to collect GPU info", "error", err)
+		h.log.Warn("failed to collect GPU info", "error", err)
 		info.GPUs = []gpu{}
 	}
 
-	info.Mem, err = s.collectMemory()
+	info.Mem, err = h.collectMemory()
 	if err != nil {
-		s.opts.log.Warn("failed to collect memory info", "error", err)
+		h.log.Warn("failed to collect memory info", "error", err)
 		info.Mem = memory{}
 	}
 
-	info.Blks, err = s.collectDisks()
+	info.Blks, err = h.collectDisks()
 	if err != nil {
-		s.opts.log.Warn("failed to collect disk info", "error", err)
+		h.log.Warn("failed to collect disk info", "error", err)
 		info.Blks = []disk{}
 	}
 
-	info.Screens, err = s.collectScreens()
+	info.Screens, err = h.collectScreens()
 	if err != nil {
-		s.opts.log.Warn("failed to collect screen info", "error", err)
+		h.log.Warn("failed to collect screen info", "error", err)
 		info.Screens = []screen{}
 	}
 

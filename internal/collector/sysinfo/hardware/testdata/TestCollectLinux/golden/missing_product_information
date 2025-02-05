@@ -1,24 +1,24 @@
 product:
-    Family: ""
-    Name: ""
-    Vendor: ""
+    family: ""
+    name: ""
+    vendor: ""
 cpu:
-    'Architecture:': x86_64
-    'CPU(s):': "12"
-    'Core(s) per socket:': "6"
-    'Model name:': Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz
-    'Socket(s):': "1"
-    'Thread(s) per core:': "2"
-    'Vendor ID:': GenuineIntel
+    name: Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz
+    vendor: GenuineIntel
+    arch: x86_64
+    cpus: 12
+    sockets: 1
+    cores: 6
+    threads: 2
 gpus:
-    - Driver: i915
-      Name: Onboard - Video
-      Vendor: "0x8086"
-    - Driver: nvidia
-      Name: NVIDIA GeForce GTX 1050 Ti
-      Vendor: "0x10de"
+    - name: Onboard - Video
+      vendor: "0x8086"
+      driver: i915
+    - name: NVIDIA GeForce GTX 1050 Ti
+      vendor: "0x10de"
+      driver: nvidia
 mem:
-    MemTotal: 33493504000
+    total: 33493504000
 blks:
     - name: sda
       size: 931.5G
