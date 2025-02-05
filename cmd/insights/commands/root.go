@@ -6,34 +6,57 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
+	"github.com/ubuntu/ubuntu-insights/internal/uploader"
 )
+
+type newUploader func(cm uploader.ConsentManager, cachePath, source string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error)
 
 // App represents the application.
 type App struct {
 	cmd *cobra.Command
 
-	rootConfig    rootConfig
-	collectConfig collectConfig
-	uploadConfig  uploadConfig
-	consentConfig consentConfig
+	config struct {
+		verbose     bool
+		consentDir  string
+		insightsDir string
+		upload      struct {
+			sources []string
+			minAge  uint
+			force   bool
+			dryRun  bool
+		}
+		collect struct {
+			source       string
+			period       uint
+			force        bool
+			dryRun       bool
+			extraMetrics string
+		}
+		consent struct {
+			sources []string
+			state   string
+		}
+	}
+
+	newUploader newUploader
 }
 
-type rootConfig struct {
-	Verbose     bool
-	ConsentDir  string
-	InsightsDir string
+type options struct {
+	newUploader newUploader
 }
 
-var defaultRootConfig = rootConfig{
-	Verbose:     false,
-	ConsentDir:  constants.GetDefaultConfigPath(),
-	InsightsDir: constants.GetDefaultCachePath(),
-}
+// Options represents an optional function to override App default values.
+type Options func(*options)
 
 // New registers commands and returns a new App.
-func New() (*App, error) {
-	a := App{}
-
+func New(args ...Options) (*App, error) {
+	opts := options{
+		newUploader: uploader.New,
+	}
+	for _, opt := range args {
+		opt(&opts)
+	}
+	a := App{newUploader: opts.newUploader}
 	a.cmd = &cobra.Command{
 		Use:           constants.CmdName + " [COMMAND]",
 		Short:         "",
@@ -44,7 +67,7 @@ func New() (*App, error) {
 			// Command parsing has been successful. Returns to not print usage anymore.
 			a.cmd.SilenceUsage = true
 
-			setVerbosity(a.rootConfig.Verbose)
+			setVerbosity(a.config.verbose)
 			return nil
 		},
 	}
@@ -60,11 +83,9 @@ func New() (*App, error) {
 func installRootCmd(app *App) error {
 	cmd := app.cmd
 
-	app.rootConfig = defaultRootConfig
-
-	cmd.PersistentFlags().BoolVarP(&app.rootConfig.Verbose, "verbose", "v", app.rootConfig.Verbose, "enable verbose logging")
-	cmd.PersistentFlags().StringVar(&app.rootConfig.ConsentDir, "consent-dir", app.rootConfig.ConsentDir, "the base directory of the consent state files")
-	cmd.PersistentFlags().StringVar(&app.rootConfig.InsightsDir, "insights-dir", app.rootConfig.InsightsDir, "the base directory of the insights report cache")
+	cmd.PersistentFlags().BoolVarP(&app.config.verbose, "verbose", "v", false, "enable verbose logging")
+	cmd.PersistentFlags().StringVar(&app.config.consentDir, "consent-dir", constants.DefaultConfigPath, "the base directory of the consent state files")
+	cmd.PersistentFlags().StringVar(&app.config.insightsDir, "insights-dir", constants.DefaultCachePath, "the base directory of the insights report cache")
 
 	if err := cmd.MarkPersistentFlagDirname("consent-dir"); err != nil {
 		slog.Error("An error occurred while initializing Ubuntu Insights", "error", err.Error())
@@ -97,9 +118,4 @@ func (a *App) Run() error {
 // UsageError returns if the error is a command parsing or runtime one.
 func (a App) UsageError() bool {
 	return !a.cmd.SilenceUsage
-}
-
-// Quit gracefully exits the application.
-func (a App) Quit() {
-	// Not implemented
 }

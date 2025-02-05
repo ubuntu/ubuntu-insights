@@ -23,12 +23,11 @@ func main() {
 type app interface {
 	Run() error
 	UsageError() bool
-	Quit()
 }
 
 func run(a app) int {
-	if er := a.Run(); er != nil {
-		slog.Error(er.Error())
+	if err := a.Run(); err != nil {
+		slog.Error(err.Error())
 
 		if a.UsageError() {
 			return 2
