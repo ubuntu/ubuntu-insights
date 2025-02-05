@@ -52,6 +52,10 @@ func TestUpload(t *testing.T) {
 			wantUsageErr: true,
 			wantErr:      true,
 		},
+		"Min-Age Overflow": {
+			args:    []string{"upload", "--min-age=18446744073709551615"},
+			wantErr: true,
+		},
 	}
 
 	for name, tc := range tests {
@@ -77,6 +81,12 @@ func TestUpload(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
+			}
+
+			if tc.wantUsageErr {
+				require.True(t, a.UsageError())
+			} else {
+				require.False(t, a.UsageError())
 			}
 
 			type results struct {
