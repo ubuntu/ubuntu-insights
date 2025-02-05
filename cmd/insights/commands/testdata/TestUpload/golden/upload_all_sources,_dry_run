@@ -3,4 +3,4 @@ sources:
     - "True"
     - Unknown-A
 minage: 604800
-dryrun: false
+dryrun: true

@@ -42,6 +42,9 @@ func TestUpload(t *testing.T) {
 		"Upload All Sources, Force": {
 			args: []string{"upload", "--force"},
 		},
+		"Upload All Sources, Dry Run": {
+			args: []string{"upload", "--dry-run"},
+		},
 		"Upload All Sources, Bad Flag": {
 			args:         []string{"upload", "--unknown"},
 			wantUsageErr: true,
@@ -67,11 +70,14 @@ func TestUpload(t *testing.T) {
 			}
 
 			gotSources := make([]string, 0)
-			var gotMinAge uint
-
+			var (
+				gotMinAge uint
+				dRun      bool
+			)
 			newUploader := func(cm uploader.ConsentManager, cachePath, source string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error) {
 				gotSources = append(gotSources, source)
 				gotMinAge = minAge
+				dRun = dryRun
 
 				return uploader.New(cm, cachePath, source, minAge, true, args...)
 			}
@@ -92,11 +98,13 @@ func TestUpload(t *testing.T) {
 			type results struct {
 				Sources []string
 				MinAge  uint
+				DryRun  bool
 			}
 
 			got := results{
 				Sources: gotSources,
 				MinAge:  gotMinAge,
+				DryRun:  dRun,
 			}
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
