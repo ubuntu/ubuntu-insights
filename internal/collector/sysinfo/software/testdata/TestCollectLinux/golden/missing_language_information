@@ -1,7 +1,8 @@
 os:
-    Distributor ID: Ubuntu
-    Family: linux
-    Release: "24.04"
+    family: linux
+    distro: Ubuntu
+    version: "24.04"
+    edition: ""
 src:
     name: test
     version: v1.7.10
@@ -9,5 +10,5 @@ trigger: regular
 timezone: EST
 lang: ""
 bios:
-    Vendor: AMI
-    Version: F.03
+    vendor: AMI
+    version: F.03

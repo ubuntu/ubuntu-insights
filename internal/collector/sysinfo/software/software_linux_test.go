@@ -106,6 +106,22 @@ func TestCollectLinux(t *testing.T) {
 				slog.LevelWarn: 2,
 			},
 		},
+
+		"Garbage BIOS information": {
+			root: "garbage",
+			src: software.Source{
+				Name:    "out",
+				Version: "v1.20.1",
+			},
+			tipe:     software.TriggerRegular,
+			osInfo:   "regular",
+			timezone: "EDT",
+			language: "en-CA",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 2,
+			},
+		},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {

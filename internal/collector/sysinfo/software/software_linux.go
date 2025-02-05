@@ -40,31 +40,32 @@ var usedOSFields = map[string]struct{}{
 	"Release":        {},
 }
 
-func (s Collector) collectOS() (info osInfo, err error) {
+func (s Collector) collectOS() (osInfo, error) {
 	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, s.platform.osCmd[0], s.platform.osCmd[1:]...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to run lsb_release: %v", err)
+		return osInfo{}, fmt.Errorf("failed to run lsb_release: %v", err)
 	}
 	if stderr.Len() > 0 {
 		s.log.Info("lsb_release output to stderr", "stderr", stderr)
 	}
 
-	info = osInfo{
-		"Family": runtime.GOOS,
-	}
-
+	data := map[string]string{}
 	entries := osInfoRegex.FindAllStringSubmatch(stdout.String(), -1)
 	for _, entry := range entries {
 		if _, ok := usedOSFields[entry[1]]; ok {
-			info[entry[1]] = entry[2]
+			data[entry[1]] = entry[2]
 		}
 	}
 
-	if len(info) == 1 {
+	if len(data) == 0 {
 		s.log.Warn("lsb_release contained invalid data")
 	}
 
-	return info, nil
+	return osInfo{
+		Family:  runtime.GOOS,
+		Distro:  data["Distributor ID"],
+		Version: data["Release"],
+	}, nil
 }
 
 func (s Collector) collectLang() (string, error) {
@@ -79,15 +80,17 @@ func (s Collector) collectLang() (string, error) {
 
 func (s Collector) collectBios() (bios, error) {
 	info := bios{
-		"Vendor":  fileutils.ReadFileLogError(filepath.Join(s.platform.root, "sys/class/dmi/id/bios_vendor"), s.log),
-		"Version": fileutils.ReadFileLogError(filepath.Join(s.platform.root, "sys/class/dmi/id/bios_version"), s.log),
+		Vendor:  fileutils.ReadFileLogError(filepath.Join(s.platform.root, "sys/class/dmi/id/bios_vendor"), s.log),
+		Version: fileutils.ReadFileLogError(filepath.Join(s.platform.root, "sys/class/dmi/id/bios_version"), s.log),
 	}
 
-	for k, v := range info {
-		if strings.ContainsRune(v, '\n') {
-			s.log.Warn(fmt.Sprintf("BIOS info %s contains invalid value", k))
-			info[k] = ""
-		}
+	if strings.ContainsRune(info.Vendor, '\n') {
+		s.log.Warn("BIOS info vendor contains invalid value")
+		info.Vendor = ""
+	}
+	if strings.ContainsRune(info.Version, '\n') {
+		s.log.Warn("BIOS info version contains invalid value")
+		info.Version = ""
 	}
 
 	return info, nil

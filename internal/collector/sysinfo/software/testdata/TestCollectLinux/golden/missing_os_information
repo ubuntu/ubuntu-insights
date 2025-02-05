@@ -1,5 +1,8 @@
 os:
-    Family: linux
+    family: linux
+    distro: ""
+    version: ""
+    edition: ""
 src:
     name: test souce
     version: v4.3.2
@@ -7,5 +10,5 @@ trigger: manual
 timezone: CEN
 lang: fr_FR
 bios:
-    Vendor: AMI
-    Version: F.03
+    vendor: AMI
+    version: F.03

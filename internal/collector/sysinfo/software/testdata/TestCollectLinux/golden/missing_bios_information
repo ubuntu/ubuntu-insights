@@ -1,7 +1,8 @@
 os:
-    Distributor ID: Ubuntu
-    Family: linux
-    Release: "24.04"
+    family: linux
+    distro: Ubuntu
+    version: "24.04"
+    edition: ""
 src:
     name: src
     version: v1.6.4
@@ -9,5 +10,5 @@ trigger: regular
 timezone: JST
 lang: ja
 bios:
-    Vendor: ""
-    Version: ""
+    vendor: ""
+    version: ""

@@ -30,8 +30,17 @@ const (
 	TriggerManual  = "manual"
 )
 
-type osInfo = map[string]string
-type bios = map[string]string
+type osInfo struct {
+	Family  string `json:"family"`
+	Distro  string `json:"distribution"`
+	Version string `json:"version"`
+	Edition string `json:"edition,omitempty"`
+}
+
+type bios struct {
+	Vendor  string
+	Version string
+}
 
 // Collector handles dependencies for collecting software information.
 // Collector implements CollectorT[software.Info].
@@ -90,7 +99,7 @@ func (s Collector) Collect() (info Info, err error) {
 	if err != nil {
 		s.log.Warn("failed to collect OS info", "error", err)
 		info.OS = osInfo{
-			"Family": runtime.GOOS,
+			Family: runtime.GOOS,
 		}
 	}
 
