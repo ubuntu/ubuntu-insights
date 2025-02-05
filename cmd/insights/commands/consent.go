@@ -73,10 +73,17 @@ func (a App) consentRun() error {
 	}
 
 	// Get consent state
+	var failedSources []string
 	for _, source := range a.config.consent.sources {
 		state, err := cm.GetState(source)
 		if err != nil {
-			return err
+			s := source
+			if s == "" {
+				s = "Global"
+			}
+			slog.Error("Failed to get consent state for source", "source", s, "error", err)
+			failedSources = append(failedSources, s)
+			continue
 		}
 
 		if source == "" {
@@ -85,5 +92,8 @@ func (a App) consentRun() error {
 		fmt.Printf("%s: %t\n", source, state)
 	}
 
+	if len(failedSources) > 0 {
+		return fmt.Errorf("failed to get consent state for sources: %s", strings.Join(failedSources, ", "))
+	}
 	return nil
 }
