@@ -12,6 +12,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
+// platformOptions are platform specific options.
 type platformOptions struct {
 	productCmd []string
 	cpuCmd     []string
