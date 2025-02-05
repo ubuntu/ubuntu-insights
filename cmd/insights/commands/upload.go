@@ -13,10 +13,9 @@ const defaultMinAge = 604800
 
 func installUploadCmd(app *App) {
 	uploadCmd := &cobra.Command{
-		Use:   "upload [sources](optional arguments)",
-		Short: "Upload metrics to the Ubuntu Insights server",
-		Long:  "Upload metrics to the Ubuntu Insights server",
-		Args:  cobra.ArbitraryArgs,
+		Use:  "upload [sources](optional arguments)",
+		Long: "Upload metrics to the Ubuntu Insights server",
+		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set Sources to Args
 			if len(args) == 0 {
