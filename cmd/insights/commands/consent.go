@@ -18,13 +18,10 @@ func installConsentCmd(app *App) {
 		Long:  "Manage or get user consent state for data collection and upload",
 		Args:  cobra.ArbitraryArgs,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			app.cmd.SilenceUsage = false
-
 			if _, err := strconv.ParseBool(app.config.consent.state); app.config.consent.state != "" && err != nil {
-				return fmt.Errorf("consent-state must be either true or false, or not set")
+				app.cmd.SilenceUsage = false
+				return fmt.Errorf("consent-state must be either true or false, or not set: %v", err)
 			}
-
-			app.cmd.SilenceUsage = true
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -76,19 +73,15 @@ func (a App) consentRun() error {
 	var failedSources []string
 	for _, source := range a.config.consent.sources {
 		state, err := cm.GetState(source)
-		if err != nil {
-			s := source
-			if s == "" {
-				s = "Global"
-			}
-			slog.Error("Failed to get consent state for source", "source", s, "error", err)
-			failedSources = append(failedSources, s)
-			continue
-		}
-
 		if source == "" {
 			source = "Global"
 		}
+		if err != nil {
+			slog.Error("Failed to get consent state for source", "source", source, "error", err)
+			failedSources = append(failedSources, source)
+			continue
+		}
+
 		fmt.Printf("%s: %t\n", source, state)
 	}
 
