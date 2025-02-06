@@ -1,6 +1,6 @@
 module github.com/ubuntu/ubuntu-insights
 
-go 1.23.5
+go 1.23.6
 
 require (
 	github.com/BurntSushi/toml v1.4.0
