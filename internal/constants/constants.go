@@ -3,9 +3,15 @@
 package constants
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
+)
+
+var (
+	// Version is the version of the application.
+	Version = "Dev"
 )
 
 const (
@@ -37,40 +43,25 @@ const (
 	ReportExt = ".json"
 )
 
-// OptOutJSON is the data sent in case of Opt-Out choice.
-var OptOutJSON = struct{ OptOut bool }{true}
+var (
+	// DefaultConfigPath is the default app user configuration path. It's overridden when imported.
+	DefaultConfigPath = DefaultAppFolder
+	// DefaultCachePath is the default app user cache path. It's overridden when imported.
+	DefaultCachePath = DefaultAppFolder
+	// OptOutJSON is the data sent in case of Opt-Out choice.
+	OptOutJSON = struct{ OptOut bool }{true}
+)
 
-type options struct {
-	baseDir func() (string, error)
-}
-
-type option func(*options)
-
-// GetDefaultConfigPath is the default path to the configuration file.
-func GetDefaultConfigPath(opts ...option) string {
-	o := options{baseDir: os.UserConfigDir}
-	for _, opt := range opts {
-		opt(&o)
-	}
-
-	return filepath.Join(getBaseDir(o.baseDir), DefaultAppFolder)
-}
-
-// GetDefaultCachePath is the default path to the cache directory.
-func GetDefaultCachePath(opts ...option) string {
-	o := options{baseDir: os.UserCacheDir}
-	for _, opt := range opts {
-		opt(&o)
-	}
-
-	return filepath.Join(getBaseDir(o.baseDir), DefaultAppFolder)
-}
-
-// getBaseDir is a helper function to handle the case where the baseDir function returns an error, and instead return an empty string.
-func getBaseDir(baseDirFunc func() (string, error)) string {
-	dir, err := baseDirFunc()
+func init() {
+	userConfigDir, err := os.UserConfigDir()
 	if err != nil {
-		return ""
+		panic(fmt.Sprintf("Could not fetch config directory: %v", err))
 	}
-	return dir
+	userCacheDir, err := os.UserCacheDir()
+	if err != nil {
+		panic(fmt.Sprintf("Could not fetch cache directory: %v", err))
+	}
+
+	DefaultConfigPath = filepath.Join(userConfigDir, DefaultConfigPath)
+	DefaultCachePath = filepath.Join(userCacheDir, DefaultCachePath)
 }

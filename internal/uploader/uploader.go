@@ -5,6 +5,7 @@ package uploader
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -24,7 +25,7 @@ func (realTimeProvider) Now() time.Time {
 // Uploader is an abstraction of the uploader component.
 type Uploader struct {
 	source   string
-	consentM consentManager
+	consentM ConsentManager
 	minAge   time.Duration
 	dryRun   bool
 
@@ -37,19 +38,19 @@ type Uploader struct {
 type options struct {
 	// Private members exported for tests.
 	baseServerURL string
-	cachePath     string
 	timeProvider  timeProvider
 }
 
 // Options represents an optional function to override Upload Manager default values.
 type Options func(*options)
 
-type consentManager interface {
+// ConsentManager is an interface for the consent manager.
+type ConsentManager interface {
 	HasConsent(source string) (bool, error)
 }
 
 // New returns a new UploaderManager.
-func New(cm consentManager, source string, minAge uint, dryRun bool, args ...Options) (Uploader, error) {
+func New(cm ConsentManager, cachePath, source string, minAge uint, dryRun bool, args ...Options) (Uploader, error) {
 	slog.Debug("Creating new uploader manager", "source", source, "minAge", minAge, "dryRun", dryRun)
 
 	if source == "" {
@@ -62,7 +63,6 @@ func New(cm consentManager, source string, minAge uint, dryRun bool, args ...Opt
 
 	opts := options{
 		baseServerURL: constants.DefaultServerURL,
-		cachePath:     constants.GetDefaultCachePath(),
 		timeProvider:  realTimeProvider{},
 	}
 	for _, opt := range args {
@@ -77,7 +77,36 @@ func New(cm consentManager, source string, minAge uint, dryRun bool, args ...Opt
 		timeProvider: opts.timeProvider,
 
 		baseServerURL: opts.baseServerURL,
-		collectedDir:  filepath.Join(opts.cachePath, source, constants.LocalFolder),
-		uploadedDir:   filepath.Join(opts.cachePath, source, constants.UploadedFolder),
+		collectedDir:  filepath.Join(cachePath, source, constants.LocalFolder),
+		uploadedDir:   filepath.Join(cachePath, source, constants.UploadedFolder),
 	}, nil
+}
+
+// GetAllSources returns a list of the source directories in the cache directory.
+func GetAllSources(dir string) ([]string, error) {
+	sources := make([]string, 0)
+	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip files.
+		if !d.IsDir() {
+			return nil
+		}
+
+		// Skip the root directory.
+		if path == dir {
+			return nil
+		}
+
+		// Skip subdirectories.
+		if d.IsDir() && filepath.Dir(path) != dir {
+			return filepath.SkipDir
+		}
+
+		sources = append(sources, filepath.Base(path))
+		return nil
+	})
+	return sources, err
 }

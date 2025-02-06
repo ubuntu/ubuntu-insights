@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
@@ -55,7 +56,7 @@ func TestNew(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := uploader.New(tc.consent, tc.source, tc.minAge, tc.dryRun)
+			_, err := uploader.New(tc.consent, "", tc.source, tc.minAge, tc.dryRun)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
@@ -147,8 +148,8 @@ func TestUpload(t *testing.T) {
 				t.Cleanup(func() { require.NoError(t, os.Chmod(localDir, 0750), "Cleanup: failed to restore permissions") }) //nolint:gosec //0750 is fine for folders
 			}
 
-			mgr, err := uploader.New(tc.consent, source, tc.minAge, tc.dryRun,
-				uploader.WithBaseServerURL(tc.url), uploader.WithCachePath(dir), uploader.WithTimeProvider(uploader.MockTimeProvider{CurrentTime: mockTime}))
+			mgr, err := uploader.New(tc.consent, dir, source, tc.minAge, tc.dryRun,
+				uploader.WithBaseServerURL(tc.url), uploader.WithTimeProvider(uploader.MockTimeProvider{CurrentTime: mockTime}))
 			require.NoError(t, err, "Setup: failed to create new uploader manager")
 
 			err = mgr.Upload(tc.force)
@@ -171,6 +172,79 @@ func TestUpload(t *testing.T) {
 			require.NoError(t, err)
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			require.EqualValues(t, want, got)
+		})
+	}
+}
+
+func TestGetAllSources(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		folders       []string
+		files         []string
+		subDirs       []string
+		subFiles      []string
+		noFolderPerms bool
+		noFilePerms   bool
+
+		wantErr bool
+	}{
+		"Empty":                                {},
+		"Single Source":                        {folders: []string{"source"}},
+		"Multiple Sources":                     {folders: []string{"source1", "source2"}},
+		"Source with Files":                    {folders: []string{"source"}, files: []string{"1.json", "2.json"}},
+		"Source with Subdirectories":           {folders: []string{"source"}, subDirs: []string{"sub1", "sub2"}},
+		"Source with Subdirectories and Files": {folders: []string{"source"}, subDirs: []string{"sub1", "sub2"}, subFiles: []string{"1.json", "2.json"}},
+
+		"Source with No Folder Perms": {folders: []string{"source"}, noFolderPerms: true, wantErr: runtime.GOOS != "windows"},
+		"Source with No File Perms":   {folders: []string{"source"}, files: []string{"1.json", "2.json"}, noFilePerms: true},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			folderPerms := os.FileMode(0750)
+			if tc.noFolderPerms {
+				folderPerms = 0
+			}
+			filePerms := os.FileMode(0600)
+			if tc.noFilePerms {
+				filePerms = 0
+			}
+
+			for _, folder := range tc.folders {
+				fPath := filepath.Join(dir, folder)
+				require.NoError(t, os.Mkdir(fPath, folderPerms), "Setup: failed to create source directory")
+
+				for _, subDir := range tc.subDirs {
+					sdPath := filepath.Join(fPath, subDir)
+					require.NoError(t, os.Mkdir(sdPath, folderPerms), "Setup: failed to create subdirectory")
+					t.Cleanup(func() { assert.NoError(t, os.Chmod(sdPath, 0750), "Cleanup: Failed to restore folder perms") }) //nolint:gosec //0750 is fine for folders
+				}
+
+				for _, file := range tc.files {
+					fPath := filepath.Join(fPath, file)
+					require.NoError(t, os.WriteFile(fPath, []byte{}, filePerms), "Setup: failed to create file")
+					t.Cleanup(func() { assert.NoError(t, os.Chmod(fPath, 0600), "Cleanup: Failed to restore file perms") })
+				}
+			}
+
+			for _, file := range tc.files {
+				fPath := filepath.Join(dir, file)
+				require.NoError(t, os.WriteFile(fPath, []byte{}, filePerms), "Setup: failed to create file")
+				t.Cleanup(func() { assert.NoError(t, os.Chmod(fPath, 0600), "Cleanup: Failed to restore file perms") })
+			}
+
+			got, err := uploader.GetAllSources(dir)
+			if tc.wantErr {
+				require.Error(t, err, "GetAllSources should return an error")
+				return
+			}
+			require.NoError(t, err, "GetAllSources should not return an error")
+
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			require.Equal(t, want, got, "GetAllSources should return expected sources")
 		})
 	}
 }

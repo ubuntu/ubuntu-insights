@@ -3,59 +3,90 @@ package commands
 import (
 	"fmt"
 	"log/slog"
-	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/ubuntu/ubuntu-insights/internal/consent"
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
-type consentConfig struct {
-	sources      []string
-	consentState string
-}
-
-var defaultConsentConfig = consentConfig{
-	sources:      []string{""},
-	consentState: "",
-}
-
 func installConsentCmd(app *App) {
-	app.consentConfig = defaultConsentConfig
-
 	consentCmd := &cobra.Command{
 		Use:   "consent [SOURCES](optional arguments)",
 		Short: "Manage or get user consent state",
 		Long:  "Manage or get user consent state for data collection and upload",
 		Args:  cobra.ArbitraryArgs,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			app.rootCmd.SilenceUsage = false
-
-			validConsentStates := []string{"true", "false", ""}
-			if !slices.Contains(validConsentStates, strings.ToLower(app.consentConfig.consentState)) {
-				return fmt.Errorf("consent-state must be either true, false, or not set")
+			if _, err := strconv.ParseBool(app.config.consent.state); app.config.consent.state != "" && err != nil {
+				app.cmd.SilenceUsage = false
+				return fmt.Errorf("consent-state must be either true or false, or not set: %v", err)
 			}
-
-			app.rootCmd.SilenceUsage = true
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set Sources to Args
-			app.consentConfig.sources = args
+			app.config.consent.sources = args
 
 			// Ensure consent state is case insensitive
-			app.consentConfig.consentState = strings.ToLower(app.consentConfig.consentState)
+			app.config.consent.state = strings.ToLower(app.config.consent.state)
 
 			// If insights-dir is set, warn the user that it is not used
-			if app.rootConfig.InsightsDir != defaultRootConfig.InsightsDir {
+			if app.config.insightsDir != constants.DefaultCachePath {
 				slog.Warn("The insights-dir flag was provided but it is not used in the consent command")
 			}
 
-			slog.Info("Running consent command")
-			return nil
+			slog.Debug("Running consent command")
+			return app.consentRun()
 		},
 	}
 
-	consentCmd.Flags().StringVarP(&app.consentConfig.consentState, "consent-state", "c", "", "the consent state to set (true or false), the current consent state is displayed if not set")
+	consentCmd.Flags().StringVarP(&app.config.consent.state, "consent-state", "c", "", "the consent state to set (true or false), the current consent state is displayed if not set")
 
-	app.rootCmd.AddCommand(consentCmd)
+	app.cmd.AddCommand(consentCmd)
+}
+
+func (a App) consentRun() error {
+	cm := consent.New(a.config.consentDir)
+
+	if len(a.config.consent.sources) == 0 {
+		// Global consent state to be changed
+		a.config.consent.sources = append(a.config.consent.sources, "")
+	}
+
+	// Set consent state
+	if a.config.consent.state != "" {
+		state, err := strconv.ParseBool(a.config.consent.state)
+		if err != nil {
+			a.cmd.SilenceUsage = false
+			return fmt.Errorf("consent-state must be either true or false, or not set")
+		}
+
+		for _, source := range a.config.consent.sources {
+			if err := cm.SetState(source, state); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Get consent state
+	var failedSources []string
+	for _, source := range a.config.consent.sources {
+		state, err := cm.GetState(source)
+		if source == "" {
+			source = "Global"
+		}
+		if err != nil {
+			slog.Error("Failed to get consent state for source", "source", source, "error", err)
+			failedSources = append(failedSources, source)
+			continue
+		}
+
+		fmt.Printf("%s: %t\n", source, state)
+	}
+
+	if len(failedSources) > 0 {
+		return fmt.Errorf("failed to get consent state for sources: %s", strings.Join(failedSources, ", "))
+	}
+	return nil
 }

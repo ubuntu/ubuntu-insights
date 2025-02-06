@@ -8,25 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type collectConfig struct {
-	source       string
-	period       uint
-	force        bool
-	dryRun       bool
-	extraMetrics string
-}
-
-var defaultCollectConfig = collectConfig{
-	source:       "",
-	period:       1,
-	force:        false,
-	dryRun:       false,
-	extraMetrics: "",
-}
-
 func installCollectCmd(app *App) {
-	app.collectConfig = defaultCollectConfig
-
 	collectCmd := &cobra.Command{
 		Use:   "collect [SOURCE] [SOURCE-METRICS-PATH](required if source provided)",
 		Short: "Collect system information",
@@ -58,8 +40,8 @@ func installCollectCmd(app *App) {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set Sources to Args
 			if len(args) == 2 {
-				app.collectConfig.source = args[0]
-				app.collectConfig.extraMetrics = args[1]
+				app.config.collect.source = args[0]
+				app.config.collect.extraMetrics = args[1]
 			}
 
 			slog.Info("Running collect command")
@@ -68,9 +50,9 @@ func installCollectCmd(app *App) {
 		},
 	}
 
-	collectCmd.Flags().UintVarP(&app.collectConfig.period, "period", "p", 1, "the minimum period between 2 collection periods for validation purposes in seconds")
-	collectCmd.Flags().BoolVarP(&app.collectConfig.force, "force", "f", false, "force a collection, override the report if there are any conflicts (doesn't ignore consent)")
-	collectCmd.Flags().BoolVarP(&app.collectConfig.dryRun, "dry-run", "d", false, "perform a dry-run where a report is collected, but not written to disk")
+	collectCmd.Flags().UintVarP(&app.config.collect.period, "period", "p", 1, "the minimum period between 2 collection periods for validation purposes in seconds")
+	collectCmd.Flags().BoolVarP(&app.config.collect.force, "force", "f", false, "force a collection, override the report if there are any conflicts (doesn't ignore consent)")
+	collectCmd.Flags().BoolVarP(&app.config.collect.dryRun, "dry-run", "d", false, "perform a dry-run where a report is collected, but not written to disk")
 
-	app.rootCmd.AddCommand(collectCmd)
+	app.cmd.AddCommand(collectCmd)
 }

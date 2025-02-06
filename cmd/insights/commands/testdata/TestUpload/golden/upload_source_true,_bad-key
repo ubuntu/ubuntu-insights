@@ -1,0 +1,5 @@
+sources:
+    - "True"
+    - Bad-Key
+minage: 604800
+dryrun: false

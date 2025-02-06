@@ -19,8 +19,8 @@ type Manager struct {
 	path string
 }
 
-// consentFile is a struct that represents a consent file.
-type consentFile struct {
+// CFile is a struct that represents a consent file.
+type CFile struct {
 	ConsentState bool `toml:"consent_state"`
 }
 
@@ -37,7 +37,6 @@ func New(path string) *Manager {
 func (cm Manager) GetState(source string) (bool, error) {
 	sourceConsent, err := readFile(cm.getFile(source))
 	if err != nil {
-		slog.Error("Error reading source consent file", "source", source, "error", err)
 		return false, err
 	}
 
@@ -52,7 +51,7 @@ var consentSourceFilePattern = `%s` + constants.ConsentSourceBaseSeparator + con
 func (cm Manager) SetState(source string, state bool) (err error) {
 	defer decorate.OnError(&err, "could not set consent state")
 
-	consent := consentFile{ConsentState: state}
+	consent := CFile{ConsentState: state}
 	return consent.write(cm.getFile(source))
 }
 
@@ -107,8 +106,8 @@ func (cm Manager) getFiles() (map[string]string, error) {
 	return sourceFiles, nil
 }
 
-func readFile(path string) (consentFile, error) {
-	var consent consentFile
+func readFile(path string) (CFile, error) {
+	var consent CFile
 	_, err := toml.DecodeFile(path, &consent)
 	slog.Debug("Read consent file", "file", path, "consent", consent.ConsentState)
 
@@ -117,7 +116,11 @@ func readFile(path string) (consentFile, error) {
 
 // writeConsentFile writes the given consent file to the given path atomically, replacing it if it already exists.
 // Not atomic on Windows.
-func (cf consentFile) write(path string) (err error) {
+// Makes dir if it does not exist.
+func (cf CFile) write(path string) (err error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
+		return fmt.Errorf("could not create directory: %v", err)
+	}
 	tmp, err := os.CreateTemp(filepath.Dir(path), "consent-*.tmp")
 	if err != nil {
 		return fmt.Errorf("could not create temporary file: %v", err)

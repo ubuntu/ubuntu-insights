@@ -53,10 +53,10 @@ func TestUsageError(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test when SilenceUsage is true
-	app.rootCmd.SilenceUsage = true
+	app.cmd.SilenceUsage = true
 	assert.False(t, app.UsageError())
 
 	// Test when SilenceUsage is false
-	app.rootCmd.SilenceUsage = false
+	app.cmd.SilenceUsage = false
 	assert.True(t, app.UsageError())
 }
