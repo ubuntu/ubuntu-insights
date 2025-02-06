@@ -30,8 +30,8 @@ type cpu struct {
 	Arch    string `json:"architecture"`
 	Cpus    uint64 `json:"cpus"`
 	Sockets uint64 `json:"sockets"`
-	Cores   uint64 `json:"cores per socket"`
-	Threads uint64 `json:"threads per core"`
+	Cores   uint64 `json:"coresPerSocket"`
+	Threads uint64 `json:"threadsPerCore"`
 }
 
 // gpu contains information for a gpu.
