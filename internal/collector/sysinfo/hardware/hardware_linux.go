@@ -215,11 +215,6 @@ func (h Collector) collectGPU(card string) (info gpu, err error) {
 	return info, nil
 }
 
-// usedMemFields is a set which defines which fields from meminfo we want.
-var usedMemFields = map[string]struct{}{
-	"MemTotal": {},
-}
-
 // Lines are in the form `key`:   `bytes` (`unit`).
 // For example: "MemTotal: 123 kb" or "MemTotal:   421".
 var meminfoRegex = regexp.MustCompile(`^([^\s:]+):\s*([0-9]+)(?:\s+([^\s]+))?\s*$`)
@@ -244,21 +239,21 @@ func (h Collector) collectMemory() (memory, error) {
 			continue
 		}
 
-		if _, ok := usedMemFields[m[1]]; !ok {
+		if m[1] != "MemTotal" {
 			continue
 		}
 
 		v, err := strconv.Atoi(m[2])
 		if err != nil {
 			h.log.Warn("meminfo value was not an integer", "value", v, "error", err, "linenum", i)
-			continue
+			break
 		}
 
-		data[m[1]], err = fileutils.ConvertUnitToBytes(m[3], v)
+		data[m[1]], err = fileutils.ConvertUnitToStandard(m[3], v)
 		if err != nil {
 			h.log.Warn("meminfo had invalid unit", "unit", m[3], "error", err, "linenum", i)
-			continue
 		}
+		break
 	}
 
 	return memory{
@@ -273,22 +268,44 @@ type lsblkEntry struct {
 	Children []lsblkEntry `json:"children,omitempty"`
 }
 
+// blockSizeRegex matches a number with unit prefix.
+// For example:  " 5.5G " is matched with "5.5" and "G".
+var blockSizeRegex = regexp.MustCompile(`^\s*([0-9]+(?:\.[0-9]*)?)\s*([^\s]*)\s*$`)
+
 // populateBlkInfo parses lsblkEntries to diskInfo structs.
 func (h Collector) populateBlkInfo(entries []lsblkEntry) []disk {
-	info := []disk{}
+	getSize := func(s string) uint64 {
+		m := blockSizeRegex.FindStringSubmatch(s)
+		if len(m) != 3 {
+			h.log.Warn("block info contains invalid size", "value", s)
+			return 0
+		}
+		v, err := strconv.ParseFloat(m[1], 64)
+		if err != nil {
+			h.log.Warn("block info contains invalid size", "value", m[1])
+			return 0
+		}
 
+		r, err := fileutils.ConvertUnitToStandard(m[2], v)
+		if err != nil {
+			h.log.Warn("block info contains invalid unit", "unit", m[2])
+		}
+		return uint64(r)
+	}
+
+	info := []disk{}
 	for _, e := range entries {
 		switch strings.ToLower(e.Type) {
 		case "disk":
 			info = append(info, disk{
 				Name:       e.Name,
-				Size:       e.Size,
+				Size:       getSize(e.Size),
 				Partitions: h.populateBlkInfo(e.Children),
 			})
 		case "part":
 			info = append(info, disk{
 				Name:       e.Name,
-				Size:       e.Size,
+				Size:       getSize(e.Size),
 				Partitions: []disk{},
 			})
 		}

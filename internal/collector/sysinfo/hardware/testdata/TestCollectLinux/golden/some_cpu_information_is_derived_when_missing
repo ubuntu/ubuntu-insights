@@ -18,19 +18,19 @@ gpus:
       vendor: "0x10de"
       driver: nvidia
 mem:
-    total: 33493504000
+    total: 31941
 blks:
     - name: sda
-      size: 931.5G
+      size: 953856
       partitions:
         - name: sda1
-          size: 1G
+          size: 1024
           partitions: []
         - name: sda2
-          size: 2G
+          size: 2048
           partitions: []
         - name: sda3
-          size: 928.5G
+          size: 950784
           partitions: []
 screens:
     - name: HDMI-0

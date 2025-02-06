@@ -49,7 +49,7 @@ type memory struct {
 // disk contains information of a disk or partition.
 type disk struct {
 	Name string `json:"name"`
-	Size string `json:"size"`
+	Size uint64 `json:"size"`
 
 	Partitions []disk `json:"partitions,omitempty"`
 }
