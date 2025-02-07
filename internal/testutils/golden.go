@@ -1,5 +1,5 @@
+// Package testutils provides helper functions for testing
 // TiCS: disabled // Test helpers.
-
 package testutils
 
 import (
