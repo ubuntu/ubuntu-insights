@@ -1,11 +1,11 @@
 # Welcome to Ubuntu Insights
 
-[actions-image]: https://github.com/ubuntu/ubuntu-insights/actions/workflows/test.yaml/badge.svg?branch=main
+[actions-image]: https://github.com/ubuntu/ubuntu-insights/actions/workflows/qa.yaml/badge.svg?branch=main
 [actions-url]: https://github.com/ubuntu/ubuntu-insights/actions?query=branch%3Amain+event%3Apush
 
 [license-image]: https://img.shields.io/badge/License-GPL3.0-blue.svg
 
-[codecov-image]: https://codecov.io/gh/ubuntu/ubuntu-insights/branch/master/graph/badge.svg
+[codecov-image]: https://codecov.io/gh/ubuntu/ubuntu-insights/branch/main/graph/badge.svg
 [codecov-url]: https://codecov.io/gh/ubuntu/ubuntu-insights
 
 [goreport-image]: https://goreportcard.com/badge/github.com/ubuntu/ubuntu-insights
