@@ -2,9 +2,11 @@
 package commands
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/uploader"
 )
@@ -13,10 +15,11 @@ type newUploader func(cm uploader.ConsentManager, cachePath, source string, minA
 
 // App represents the application.
 type App struct {
-	cmd *cobra.Command
+	cmd   *cobra.Command
+	viper *viper.Viper
 
 	config struct {
-		verbose     bool
+		verbose     int
 		consentDir  string
 		insightsDir string
 		upload      struct {
@@ -67,23 +70,38 @@ func New(args ...Options) (*App, error) {
 			// Command parsing has been successful. Returns to not print usage anymore.
 			a.cmd.SilenceUsage = true
 
+			if err := initViperConfig(constants.CmdName, a.cmd, a.viper); err != nil {
+				return err
+			}
+			if err := a.viper.Unmarshal(&a.config); err != nil {
+				return fmt.Errorf("unable to decode configuration into struct: %w", err)
+			}
+
 			setVerbosity(a.config.verbose)
 			return nil
 		},
 	}
+	a.viper = viper.New()
 
-	err := installRootCmd(&a)
+	if err := installRootCmd(&a); err != nil {
+		return nil, err
+	}
+	installConfigFlag(&a)
 	installCollectCmd(&a)
 	installUploadCmd(&a)
 	installConsentCmd(&a)
 
-	return &a, err
+	if err := a.viper.BindPFlags(a.cmd.PersistentFlags()); err != nil {
+		return nil, err
+	}
+
+	return &a, nil
 }
 
 func installRootCmd(app *App) error {
 	cmd := app.cmd
 
-	cmd.PersistentFlags().BoolVarP(&app.config.verbose, "verbose", "v", false, "enable verbose logging")
+	cmd.PersistentFlags().CountVarP(&app.config.verbose, "verbose", "v", "issue INFO (-v), DEBUG (-vv)")
 	cmd.PersistentFlags().StringVar(&app.config.consentDir, "consent-dir", constants.DefaultConfigPath, "the base directory of the consent state files")
 	cmd.PersistentFlags().StringVar(&app.config.insightsDir, "insights-dir", constants.DefaultCachePath, "the base directory of the insights report cache")
 
@@ -100,13 +118,15 @@ func installRootCmd(app *App) error {
 	return nil
 }
 
-// setVerbosity sets the global logging level based on the verbose flag. If verbose is true, it sets the logging level to debug, otherwise it sets it to info.
-func setVerbosity(verbose bool) {
-	if verbose {
-		slog.SetLogLoggerLevel(slog.LevelDebug)
-		slog.Debug("Verbose logging enabled")
-	} else {
+// setVerbosity sets the global logging level based on the verbose flag count.
+func setVerbosity(level int) {
+	switch level {
+	case 0:
 		slog.SetLogLoggerLevel(constants.DefaultLogLevel)
+	case 1:
+		slog.SetLogLoggerLevel(slog.LevelInfo)
+	default:
+		slog.SetLogLoggerLevel(slog.LevelDebug)
 	}
 }
 
