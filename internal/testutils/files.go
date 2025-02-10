@@ -32,10 +32,26 @@ func CopyFile(t *testing.T, src, dst string) error {
 	return err
 }
 
+// CopySymlink copies a symlink from source to destination.
+func CopySymlink(t *testing.T, src, dst string) error {
+	t.Helper()
+
+	lnk, err := os.Readlink(src)
+	if err != nil {
+		return err
+	}
+
+	err = os.Symlink(lnk, dst)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // CopyDir copies the contents of a directory to another directory.
 func CopyDir(t *testing.T, srcDir, dstDir string) error {
 	t.Helper()
-	return filepath.WalkDir(srcDir, func(path string, d fs.DirEntry, err error) error {
+	return filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -44,8 +60,11 @@ func CopyDir(t *testing.T, srcDir, dstDir string) error {
 			return err
 		}
 		dstPath := filepath.Join(dstDir, relPath)
-		if d.IsDir() {
+		if info.IsDir() {
 			return os.MkdirAll(dstPath, 0700)
+		}
+		if info.Mode()&fs.ModeSymlink > 0 {
+			return CopySymlink(t, path, dstPath)
 		}
 		return CopyFile(t, path, dstPath)
 	})

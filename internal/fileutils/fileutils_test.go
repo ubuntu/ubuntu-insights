@@ -1,13 +1,16 @@
 package fileutils_test
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
+	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
 func TestAtomicWrite(t *testing.T) {
@@ -76,6 +79,77 @@ func TestAtomicWrite(t *testing.T) {
 			data, err := os.ReadFile(path)
 			require.NoError(t, err, "ReadFile should not return an error")
 			require.Equal(t, tc.data, data, "AtomicWrite should write the data to the file")
+		})
+	}
+}
+
+func TestReadFileLogError(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		file string
+		want string
+
+		log bool
+	}{
+		"No file": {file: "", want: "", log: true},
+
+		"Empty file":  {file: "testdata/empty", want: ""},
+		"Normal file": {file: "testdata/random", want: "Leftover vegetables!"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			l := testutils.NewMockHandler(slog.LevelDebug)
+
+			got := fileutils.ReadFileLogError(tc.file, slog.New(&l))
+
+			assert.Equal(t, tc.want, got, "ReadFileLogError should return the expected result")
+
+			if tc.log {
+				assert.NotEmpty(t, l.HandleCalls, "ReadFileLogError should log the expected errors")
+			} else {
+				assert.Empty(t, l.HandleCalls, "ReadFileLogError should not log unless expected")
+			}
+		})
+	}
+}
+
+func TestConvertUnitToBytes(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		unit  string
+		value int
+
+		want      int
+		wantError bool
+	}{
+		"No unit": {unit: "", value: 256, want: 256},
+
+		"Lowercase unit": {unit: "m", value: 2, want: 2048 * 1024},
+		"Uppercase unit": {unit: "GB", value: 4, want: 4096 * 1024 * 1024},
+
+		"Mixed unit": {unit: "TiB", value: 1, want: 1024 * 1024 * 1024 * 1024},
+
+		"Odd unit": {unit: "gigahertz", value: 1024, want: 1024, wantError: true},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := fileutils.ConvertUnitToBytes(tc.unit, tc.value)
+
+			assert.Equal(t, tc.want, got, "ConvertUnitToBytes should return the expected result")
+
+			if tc.wantError {
+				assert.Error(t, err, "ConvertUnitToBytes should error the expected errors")
+			} else {
+				assert.NoError(t, err, "ConvertUnitToBytes should not error unless expected")
+			}
 		})
 	}
 }
