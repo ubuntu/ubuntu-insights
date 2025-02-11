@@ -1,0 +1,25 @@
+#include <iostream>
+
+// this is a program that hello world.
+int main() {
+	std::cout << "Hello World!\n";
+	return 0;
+}
+
+// this function prints is a number is odd, at compile time!
+template <size_t i> [[nodiscard]]
+constexpr bool isOdd() {
+  if constexpr (i == 0) {
+    return false;
+  }
+  else if constexpr (i == 1) {
+    return true;
+  }
+  else {
+    return !isOdd<i - 1>();
+  }
+}
+
+// @TODO figure out why this crashes the compiler.
+constexpr bool isNegative1odd = isOdd<size_t(-1)>();
+

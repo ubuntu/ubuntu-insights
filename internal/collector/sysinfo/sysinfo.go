@@ -1,61 +1,80 @@
 // Package sysinfo allows collecting "common" system information for all insight reports.
 package sysinfo
 
-type options struct {
-	root string
+import (
+	"fmt"
+	"log/slog"
+
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/hardware"
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/software"
+)
+
+// CollectorT describes a type that collects some information T.
+type CollectorT[T any] interface {
+	Collect() (T, error)
 }
 
-// Options is the variadic options available to the manager.
+// Options is the variadic options available to the Collector.
 type Options func(*options)
 
-// Manager allows collecting Software and Hardware information of the system.
-type Manager struct {
-	root string
+type options struct {
+	hw  CollectorT[hardware.Info]
+	sw  CollectorT[software.Info]
+	log *slog.Logger
 }
 
-// SysInfo contains Software and Hardware information of the system.
-type SysInfo struct {
-	Hardware HwInfo
-	Software SwInfo
+// Collector handles dependencies for collecting software & hardware information.
+// Collector implements CollectorT[sysinfo.Info].
+type Collector struct {
+	hw  CollectorT[hardware.Info]
+	sw  CollectorT[software.Info]
+	log *slog.Logger
 }
 
-// HwInfo is the hardware specific part.
-type HwInfo struct {
-	Product map[string]string
-}
-
-// SwInfo is the software specific part.
-type SwInfo struct {
+// Info contains Software and Hardware information of the system.
+type Info struct {
+	Hardware hardware.Info `json:"hardware"`
+	Software software.Info `json:"software"`
 }
 
 // New returns a new SysInfo.
-func New(args ...Options) Manager {
-	// options defaults
+func New(args ...Options) Collector {
 	opts := &options{
-		root: "/",
+		hw:  hardware.New(),
+		sw:  software.New(),
+		log: slog.Default(),
 	}
 
 	for _, opt := range args {
 		opt(opts)
 	}
 
-	return Manager{
-		root: opts.root,
+	return Collector{
+		hw:  opts.hw,
+		sw:  opts.sw,
+		log: opts.log,
 	}
 }
 
-// Collect gather system information and return it.
-func (s Manager) Collect() (SysInfo, error) {
-	hwInfo, err := s.collectHardware()
-	if err != nil {
-		return SysInfo{}, err
+// Collect gathers system information and returns it.
+// Will only return an error if both hardware and software collection fail.
+func (s Collector) Collect() (Info, error) {
+	s.log.Debug("collecting sysinfo")
+
+	hwInfo, hwErr := s.hw.Collect()
+	swInfo, swErr := s.sw.Collect()
+
+	if hwErr != nil {
+		s.log.Warn("failed to collect hardware information", "error", hwErr)
 	}
-	swInfo, err := s.collectSoftware()
-	if err != nil {
-		return SysInfo{}, err
+	if swErr != nil {
+		s.log.Warn("failed to collect software information", "error", swErr)
+	}
+	if hwErr != nil && swErr != nil {
+		return Info{}, fmt.Errorf("failed to collect system information")
 	}
 
-	return SysInfo{
+	return Info{
 		Hardware: hwInfo,
 		Software: swInfo,
 	}, nil
