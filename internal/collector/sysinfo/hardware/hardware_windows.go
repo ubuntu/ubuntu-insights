@@ -22,7 +22,8 @@ type platformOptions struct {
 	diskCmd      []string
 	partitionCmd []string
 
-	screenCmd []string
+	screenResCmd  []string
+	screenSizeCmd []string
 }
 
 // defaultOptions returns options for when running under a normal environment.
@@ -36,7 +37,8 @@ func defaultPlatformOptions() platformOptions {
 		diskCmd:      []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_DiskDrive", "|", "Format-List", "-Property", "*"},
 		partitionCmd: []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_DiskPartition", "|", "Format-List", "-Property", "*"},
 
-		screenCmd: []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_DesktopMonitor", "|", "Format-List", "-Property", "*"},
+		screenResCmd:  []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_DesktopMonitor", "|", "Format-List", "-Property", "*"},
+		screenSizeCmd: []string{"powershell.exe", "-Command", "Get-CIMInstance", "-Namespace", "root\\wmi", "WmiMonitorBasicDisplayParams", "|", "Format-List", "-Property", "*"},
 	}
 }
 
@@ -271,15 +273,20 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 	return blks, nil
 }
 
-var usedScreenFields = map[string]struct{}{
+var usedScreenResFields = map[string]struct{}{
 	"Name":         {},
 	"ScreenWidth":  {},
 	"ScreenHeight": {},
 }
 
+var usedScreenSizeFields = map[string]struct{}{
+	"MaxHorizontalImageSize": {},
+	"MaxVerticalImageSize":   {},
+}
+
 // collectScreens uses Win32_DesktopMonitor to collect information about screens.
 func (s Collector) collectScreens() (screens []screen, err error) {
-	monitors, err := s.runWMI(s.platform.screenCmd, usedScreenFields)
+	monitors, err := s.runWMI(s.platform.screenResCmd, usedScreenResFields)
 	if err != nil {
 		return nil, err
 	}
@@ -291,6 +298,22 @@ func (s Collector) collectScreens() (screens []screen, err error) {
 			Name:       s["Name"],
 			Resolution: fmt.Sprintf("%sx%s", s["ScreenWidth"], s["ScreenHeight"]),
 		})
+	}
+
+	monitors, err = s.runWMI(s.platform.screenSizeCmd, usedScreenSizeFields)
+	if err != nil {
+		s.log.Warn("physical screen size could not be determined", "error", err)
+		return screens, nil
+	}
+	if len(monitors) != len(screens) {
+		s.log.Warn("different number of screens than physical size returned", "value", len(monitors))
+		return screens, nil
+	}
+
+	// assuming that the order of the monitors returned is the same.
+	for i, s := range monitors {
+		str := fmt.Sprintf("%s0mm x %s0mm", s["MaxHorizontalImageSize"], s["MaxVerticalImageSize"])
+		screens[i].Size = str
 	}
 
 	return screens, nil

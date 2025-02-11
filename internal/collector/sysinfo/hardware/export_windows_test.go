@@ -42,9 +42,16 @@ func WithPartitionInfo(cmd []string) Options {
 	}
 }
 
-// WithScreenInfo overrides default screen info.
-func WithScreenInfo(cmd []string) Options {
+// WithScreenResInfo overrides default screen resolution info.
+func WithScreenResInfo(cmd []string) Options {
 	return func(o *options) {
-		o.platform.screenCmd = cmd
+		o.platform.screenResCmd = cmd
+	}
+}
+
+// WithScreenResInfo overrides default screen size info.
+func WithScreenSizeInfo(cmd []string) Options {
+	return func(o *options) {
+		o.platform.screenSizeCmd = cmd
 	}
 }

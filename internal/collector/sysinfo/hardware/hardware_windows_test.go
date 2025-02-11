@@ -28,13 +28,14 @@ func TestCollectWindows(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		productInfo   string
-		cpuInfo       string
-		gpuInfo       string
-		memoryInfo    string
-		diskInfo      string
-		partitionInfo string
-		screenInfo    string
+		productInfo    string
+		cpuInfo        string
+		gpuInfo        string
+		memoryInfo     string
+		diskInfo       string
+		partitionInfo  string
+		screenResInfo  string
+		screenSizeInfo string
 
 		logs    map[slog.Level]uint
 		wantErr bool
@@ -46,7 +47,9 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "regular",
 			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 		},
 
 		"Missing product information": {
@@ -56,7 +59,9 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "regular",
 			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -70,7 +75,9 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "regular",
 			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -84,7 +91,9 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "regular",
 			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -98,7 +107,9 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "regular",
 			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -112,7 +123,9 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "regular",
 			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -126,7 +139,9 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "regular",
 			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -140,7 +155,9 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "missing",
 			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -154,7 +171,9 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "negative",
 			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -168,7 +187,9 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "bad",
 			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -182,7 +203,9 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "garbage",
 			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -196,7 +219,9 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "error",
 			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -210,7 +235,9 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "regular",
 			diskInfo:      "missing",
 			partitionInfo: "regular",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -224,7 +251,9 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "regular",
 			diskInfo:      "error",
 			partitionInfo: "regular",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -238,7 +267,9 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "regular",
 			diskInfo:      "malicious",
 			partitionInfo: "regular",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 3,
@@ -252,7 +283,9 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "regular",
 			diskInfo:      "regular",
 			partitionInfo: "missing",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -266,7 +299,9 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "regular",
 			diskInfo:      "regular",
 			partitionInfo: "error",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -280,35 +315,73 @@ func TestCollectWindows(t *testing.T) {
 			memoryInfo:    "regular",
 			diskInfo:      "regular",
 			partitionInfo: "malicious",
-			screenInfo:    "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 6,
 			},
 		},
 
-		"Missing screen information": {
+		"Missing screen resolution information": {
 			productInfo:   "regular",
 			cpuInfo:       "regular",
 			gpuInfo:       "regular",
 			memoryInfo:    "regular",
 			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo:    "missing",
+
+			screenResInfo:  "missing",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
 			},
 		},
 
-		"Error screen information": {
+		"Error screen resolution information": {
 			productInfo:   "regular",
 			cpuInfo:       "regular",
 			gpuInfo:       "regular",
 			memoryInfo:    "regular",
 			diskInfo:      "regular",
 			partitionInfo: "regular",
-			screenInfo:    "error",
+
+			screenResInfo:  "error",
+			screenSizeInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Missing screen size information": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
+			partitionInfo: "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "missing",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Error screen size information": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
+			partitionInfo: "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "error",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -357,9 +430,14 @@ func TestCollectWindows(t *testing.T) {
 				options = append(options, hardware.WithPartitionInfo(cmdArgs))
 			}
 
-			if tc.screenInfo != "-" {
-				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeScreenInfo", tc.screenInfo)
-				options = append(options, hardware.WithScreenInfo(cmdArgs))
+			if tc.screenResInfo != "-" {
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeScreenResInfo", tc.screenResInfo)
+				options = append(options, hardware.WithScreenResInfo(cmdArgs))
+			}
+
+			if tc.screenSizeInfo != "-" {
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeScreenSizeInfo", tc.screenSizeInfo)
+				options = append(options, hardware.WithScreenSizeInfo(cmdArgs))
 			}
 
 			s := hardware.New(options...)
@@ -1033,7 +1111,7 @@ Size                        : 1976850972672`)
 	}
 }
 
-func TestFakeScreenInfo(_ *testing.T) {
+func TestFakeScreenResInfo(_ *testing.T) {
 	args, err := testutils.GetFakeCmdArgs()
 	if err != nil {
 		return
@@ -1042,7 +1120,7 @@ func TestFakeScreenInfo(_ *testing.T) {
 
 	switch args[0] {
 	case "error":
-		fmt.Fprint(os.Stderr, "Error requested in fake screen info")
+		fmt.Fprint(os.Stderr, "Error requested in fake screen resolution info")
 		os.Exit(1)
 	case "regular":
 		fmt.Println(`
@@ -1104,6 +1182,42 @@ Bandwidth                   :
 DisplayType                 :
 MonitorManufacturer         : (Standard monitor types)
 MonitorType                 : Generic PnP Monitor`)
+	case "":
+		fallthrough
+	case "missing":
+		os.Exit(0)
+	}
+}
+
+func TestFakeScreenSizeInfo(_ *testing.T) {
+	args, err := testutils.GetFakeCmdArgs()
+	if err != nil {
+		return
+	}
+	defer os.Exit(0)
+
+	switch args[0] {
+	case "error":
+		fmt.Fprint(os.Stderr, "Error requested in fake screen size info")
+		os.Exit(1)
+	case "regular":
+		fmt.Println(`
+
+Active                        : True
+DisplayTransferCharacteristic : 120
+InstanceName                  : DISPLAY\AUOAF90\4&28fe40f5&0&UID1234
+MaxHorizontalImageSize        : 34
+MaxVerticalImageSize          : 19
+SupportedDisplayFeatures      : WmiMonitorSupportedDisplayFeatures
+VideoInputType                : 1
+
+Active                        : True
+DisplayTransferCharacteristic : 120
+InstanceName                  : DISPLAY\ACR09D8\4&28fe40f5&0&UID4321
+MaxHorizontalImageSize        : 60
+MaxVerticalImageSize          : 34
+SupportedDisplayFeatures      : WmiMonitorSupportedDisplayFeatures
+VideoInputType                : 1`)
 	case "":
 		fallthrough
 	case "missing":

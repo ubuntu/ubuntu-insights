@@ -23,11 +23,11 @@ blks: []
 screens:
     - name: Default Monitor
       physicalresolution: ""
-      size: ""
+      size: 340mm x 190mm
       resolution: 1920x1080
       refreshrate: ""
     - name: Generic PnP Monitor
       physicalresolution: ""
-      size: ""
+      size: 600mm x 340mm
       resolution: 1920x1080
       refreshrate: ""
