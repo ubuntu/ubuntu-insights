@@ -1,0 +1,14 @@
+os:
+    family: windows
+    distro: Microsoft Windows 10 Home
+    version: 10.0.19045
+    edition: "101"
+src:
+    name: src
+    version: v1.6.4
+trigger: regular
+timezone: JST
+lang: en-US
+bios:
+    vendor: ""
+    version: ""

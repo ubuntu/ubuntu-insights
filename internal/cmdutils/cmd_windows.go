@@ -2,10 +2,9 @@
 package cmdutils
 
 import (
-	"log/slog"
-
 	"context"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"time"
 )

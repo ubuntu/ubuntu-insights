@@ -15,7 +15,7 @@ type platformOptions struct {
 func defaultPlatformOptions() platformOptions {
 	return platformOptions{
 		osCmd:   []string{"powershell.exe", "-Command", "Get-CimInstance", "Win32_OperatingSystem", "|", "Format-List", "*"},
-		langCmd: []string{"powershell.exe", "-Command", "Get-WinSystemLocale", "-Property", "IetfLanguageTag", "|", "Format-List"},
+		langCmd: []string{"powershell.exe", "-Command", "Get-WinSystemLocale", "|", "Format-List", "IetfLanguageTag"},
 		biosCmd: []string{"powershell.exe", "-Command", "Get-CimInstance", "Win32_BIOS", "|", "Format-List"},
 	}
 }
@@ -69,7 +69,7 @@ func (s Collector) collectBios() (bios, error) {
 	}
 
 	if len(b) > 1 {
-		s.log.Warn("multiple operating systems were reported")
+		s.log.Warn("multiple BIOS were reported")
 	}
 
 	return bios{

@@ -1,0 +1,14 @@
+os:
+    family: windows
+    distro: Microsoft Windows 10 Home
+    version: 10.0.19045
+    edition: "101"
+src:
+    name: test
+    version: v1.7.10
+trigger: regular
+timezone: EST
+lang: ""
+bios:
+    vendor: American Megatrends International, LLC.
+    version: MSI_NB - 1061003
