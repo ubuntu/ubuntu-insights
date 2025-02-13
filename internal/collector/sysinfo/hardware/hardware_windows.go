@@ -1,12 +1,9 @@
 package hardware
 
 import (
-	"context"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/ubuntu/ubuntu-insights/internal/cmdutils"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
@@ -50,7 +47,7 @@ func (s Collector) collectProduct() (product, error) {
 		"SystemSKUNumber": {},
 	}
 
-	products, err := s.runWMI(s.platform.productCmd, usedProductFields)
+	products, err := cmdutils.RunWMI(s.platform.productCmd, usedProductFields, s.log)
 	if err != nil {
 		return product{}, err
 	}
@@ -74,7 +71,7 @@ func (s Collector) collectCPU() (cpu, error) {
 		"Name":                      {},
 	}
 
-	cpus, err := s.runWMI(s.platform.cpuCmd, usedCPUFields)
+	cpus, err := cmdutils.RunWMI(s.platform.cpuCmd, usedCPUFields, s.log)
 	if err != nil {
 		return cpu{}, err
 	}
@@ -116,7 +113,7 @@ func (s Collector) collectGPUs() (info []gpu, err error) {
 		"AdapterCompatibility":    {},
 	}
 
-	gpus, err := s.runWMI(s.platform.gpuCmd, usedGPUFields)
+	gpus, err := cmdutils.RunWMI(s.platform.gpuCmd, usedGPUFields, s.log)
 	if err != nil {
 		return []gpu{}, err
 	}
@@ -143,7 +140,7 @@ func (s Collector) collectMemory() (mem memory, err error) {
 		"TotalPhysicalMemory": {},
 	}
 
-	oses, err := s.runWMI(s.platform.memoryCmd, usedMemoryFields)
+	oses, err := cmdutils.RunWMI(s.platform.memoryCmd, usedMemoryFields, s.log)
 	if err != nil {
 		return memory{}, err
 	}
@@ -194,7 +191,7 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 		return v
 	}
 
-	disks, err := s.runWMI(s.platform.diskCmd, usedDiskFields)
+	disks, err := cmdutils.RunWMI(s.platform.diskCmd, usedDiskFields, s.log)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +225,7 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 		blks = append(blks, c)
 	}
 
-	parts, err := s.runWMI(s.platform.partitionCmd, usedPartitionFields)
+	parts, err := cmdutils.RunWMI(s.platform.partitionCmd, usedPartitionFields, s.log)
 	if err != nil {
 		s.log.Warn("can't get partitions", "error", err)
 		return blks, nil
@@ -286,7 +283,7 @@ func (s Collector) collectScreens() (screens []screen, err error) {
 		"MaxVerticalImageSize":   {},
 	}
 
-	monitors, err := s.runWMI(s.platform.screenResCmd, usedScreenResFields)
+	monitors, err := cmdutils.RunWMI(s.platform.screenResCmd, usedScreenResFields, s.log)
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +297,7 @@ func (s Collector) collectScreens() (screens []screen, err error) {
 		})
 	}
 
-	monitors, err = s.runWMI(s.platform.screenSizeCmd, usedScreenSizeFields)
+	monitors, err = cmdutils.RunWMI(s.platform.screenSizeCmd, usedScreenSizeFields, s.log)
 	if err != nil {
 		s.log.Warn("physical screen size could not be determined", "error", err)
 		return screens, nil
@@ -317,66 +314,4 @@ func (s Collector) collectScreens() (screens []screen, err error) {
 	}
 
 	return screens, nil
-}
-
-// wmiEntryRegex matches the key and value (if any) from gwmi output.
-// For example: "Status   : OK " matches and has "Status", "OK".
-// Or: "DitherType:" matches and has "DitherType", "".
-// However: "   : OK" does not match.
-var wmiEntryRegex = regexp.MustCompile(`(?m)^\s*(\S+)\s*:[^\S\n]*(.*?)\s*$`)
-
-var wmiReplaceRegex = regexp.MustCompile(`\r?\n\s*`)
-
-// wmiSplitRegex splits on two consecutive newlines, but \r needs special handling.
-var wmiSplitRegex = regexp.MustCompile(`\r?\n\r?\n`)
-
-// runWMI runs the cmdlet specified by args and only includes fields in the filter.
-// Returns an error if no data is found, the filter is empty, or the command could not be run.
-func (s Collector) runWMI(args []string, filter map[string]struct{}) (out []map[string]string, err error) {
-	defer func() {
-		if err == nil && len(out) == 0 {
-			err = fmt.Errorf("%v output contained no sections", args)
-		}
-	}()
-
-	if len(filter) == 0 {
-		return nil, fmt.Errorf("empty filter will always produce nothing for cmdlet %v", args)
-	}
-
-	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, args[0], args[1:]...)
-	if err != nil {
-		return nil, err
-	}
-	if stderr.Len() > 0 {
-		s.log.Info(fmt.Sprintf("%v output to stderr", args), "stderr", stderr)
-	}
-
-	sections := wmiSplitRegex.Split(stdout.String(), -1)
-	out = make([]map[string]string, 0, len(sections))
-
-	for _, section := range sections {
-		if section == "" {
-			continue
-		}
-
-		entries := wmiEntryRegex.FindAllStringSubmatch(section, -1)
-		if len(entries) == 0 {
-			s.log.Info(fmt.Sprintf("%v output has malformed section", args), "section", section)
-			continue
-		}
-
-		v := make(map[string]string, len(filter))
-		for _, e := range entries {
-			if _, ok := filter[e[1]]; !ok {
-				continue
-			}
-
-			// Get-WmiObject injects newlines and whitespace into values for formatting
-			v[e[1]] = wmiReplaceRegex.ReplaceAllString(e[2], "")
-		}
-
-		out = append(out, v)
-	}
-
-	return out, nil
 }
