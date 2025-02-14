@@ -49,10 +49,13 @@ func TestSetVerbosity(t *testing.T) {
 				switch p {
 				case 0:
 					assert.True(t, slog.Default().Enabled(context.Background(), constants.DefaultLogLevel))
+					assert.False(t, slog.Default().Enabled(context.Background(), constants.DefaultLogLevel-1))
 				case 1:
 					assert.True(t, slog.Default().Enabled(context.Background(), slog.LevelInfo))
+					assert.False(t, slog.Default().Enabled(context.Background(), slog.LevelInfo-1))
 				default:
 					assert.True(t, slog.Default().Enabled(context.Background(), slog.LevelDebug))
+					assert.False(t, slog.Default().Enabled(context.Background(), slog.LevelDebug-1))
 				}
 			}
 		})
