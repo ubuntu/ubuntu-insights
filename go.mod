@@ -5,7 +5,6 @@ go 1.23.6
 require (
 	github.com/BurntSushi/toml v1.4.0
 	github.com/spf13/cobra v1.8.1
-	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.10.0
 	github.com/ubuntu/decorate v0.0.0-20240820145549-b76bb81d1209
@@ -27,6 +26,7 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
