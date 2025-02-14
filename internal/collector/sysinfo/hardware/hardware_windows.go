@@ -47,7 +47,7 @@ func (s Collector) collectProduct() (product, error) {
 		"SystemSKUNumber": {},
 	}
 
-	products, err := cmdutils.RunWMI(s.platform.productCmd, usedProductFields, s.log)
+	products, err := cmdutils.RunListFmt(s.platform.productCmd, usedProductFields, s.log)
 	if err != nil {
 		return product{}, err
 	}
@@ -71,7 +71,7 @@ func (s Collector) collectCPU() (cpu, error) {
 		"Name":                      {},
 	}
 
-	cpus, err := cmdutils.RunWMI(s.platform.cpuCmd, usedCPUFields, s.log)
+	cpus, err := cmdutils.RunListFmt(s.platform.cpuCmd, usedCPUFields, s.log)
 	if err != nil {
 		return cpu{}, err
 	}
@@ -113,7 +113,7 @@ func (s Collector) collectGPUs() (info []gpu, err error) {
 		"AdapterCompatibility":    {},
 	}
 
-	gpus, err := cmdutils.RunWMI(s.platform.gpuCmd, usedGPUFields, s.log)
+	gpus, err := cmdutils.RunListFmt(s.platform.gpuCmd, usedGPUFields, s.log)
 	if err != nil {
 		return []gpu{}, err
 	}
@@ -140,7 +140,7 @@ func (s Collector) collectMemory() (mem memory, err error) {
 		"TotalPhysicalMemory": {},
 	}
 
-	oses, err := cmdutils.RunWMI(s.platform.memoryCmd, usedMemoryFields, s.log)
+	oses, err := cmdutils.RunListFmt(s.platform.memoryCmd, usedMemoryFields, s.log)
 	if err != nil {
 		return memory{}, err
 	}
@@ -191,7 +191,7 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 		return v
 	}
 
-	disks, err := cmdutils.RunWMI(s.platform.diskCmd, usedDiskFields, s.log)
+	disks, err := cmdutils.RunListFmt(s.platform.diskCmd, usedDiskFields, s.log)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +225,7 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 		blks = append(blks, c)
 	}
 
-	parts, err := cmdutils.RunWMI(s.platform.partitionCmd, usedPartitionFields, s.log)
+	parts, err := cmdutils.RunListFmt(s.platform.partitionCmd, usedPartitionFields, s.log)
 	if err != nil {
 		s.log.Warn("can't get partitions", "error", err)
 		return blks, nil
@@ -283,7 +283,7 @@ func (s Collector) collectScreens() (screens []screen, err error) {
 		"MaxVerticalImageSize":   {},
 	}
 
-	monitors, err := cmdutils.RunWMI(s.platform.screenResCmd, usedScreenResFields, s.log)
+	monitors, err := cmdutils.RunListFmt(s.platform.screenResCmd, usedScreenResFields, s.log)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +297,7 @@ func (s Collector) collectScreens() (screens []screen, err error) {
 		})
 	}
 
-	monitors, err = cmdutils.RunWMI(s.platform.screenSizeCmd, usedScreenSizeFields, s.log)
+	monitors, err = cmdutils.RunListFmt(s.platform.screenSizeCmd, usedScreenSizeFields, s.log)
 	if err != nil {
 		s.log.Warn("physical screen size could not be determined", "error", err)
 		return screens, nil

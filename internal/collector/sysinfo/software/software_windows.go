@@ -27,7 +27,7 @@ var usedOSFields = map[string]struct{}{
 }
 
 func (s Collector) collectOS() (osInfo, error) {
-	os, err := cmdutils.RunWMI(s.platform.osCmd, usedOSFields, s.log)
+	os, err := cmdutils.RunListFmt(s.platform.osCmd, usedOSFields, s.log)
 	if err != nil {
 		return osInfo{}, err
 	}
@@ -45,7 +45,7 @@ func (s Collector) collectOS() (osInfo, error) {
 }
 
 func (s Collector) collectLang() (string, error) {
-	lang, err := cmdutils.RunWMI(s.platform.langCmd, nil, s.log)
+	lang, err := cmdutils.RunListFmt(s.platform.langCmd, nil, s.log)
 	if err != nil {
 		return "", err
 	}
@@ -63,7 +63,7 @@ var usedBIOSFields = map[string]struct{}{
 }
 
 func (s Collector) collectBios() (bios, error) {
-	b, err := cmdutils.RunWMI(s.platform.biosCmd, usedBIOSFields, s.log)
+	b, err := cmdutils.RunListFmt(s.platform.biosCmd, usedBIOSFields, s.log)
 	if err != nil {
 		return bios{}, err
 	}
