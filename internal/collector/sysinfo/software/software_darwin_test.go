@@ -1,6 +1,7 @@
 package software_test
 
 import (
+	"flag"
 	"fmt"
 	"log/slog"
 	"os"
@@ -12,7 +13,18 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
-func TestCollectWindows(t *testing.T) {
+func TestMain(m *testing.M) {
+	flag.Parse()
+	dir, ok := testutils.SetupHelperCoverdir()
+
+	r := m.Run()
+	if ok {
+		os.Remove(dir)
+	}
+	os.Exit(r)
+}
+
+func TestCollectMacos(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -20,7 +32,8 @@ func TestCollectWindows(t *testing.T) {
 		tipe     string
 		timezone string
 
-		osInfo string
+		osInfo   string
+		language string
 
 		logs    map[slog.Level]uint
 		wantErr bool
@@ -33,7 +46,8 @@ func TestCollectWindows(t *testing.T) {
 			tipe:     software.TriggerRegular,
 			timezone: "EST",
 
-			osInfo: "regular",
+			osInfo:   "regular",
+			language: "regular",
 		},
 
 		"Missing OS information": {
@@ -44,7 +58,8 @@ func TestCollectWindows(t *testing.T) {
 			tipe:     software.TriggerManual,
 			timezone: "CEN",
 
-			osInfo: "",
+			osInfo:   "",
+			language: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -59,7 +74,40 @@ func TestCollectWindows(t *testing.T) {
 			tipe:     software.TriggerInstall,
 			timezone: "PST",
 
-			osInfo: "error",
+			osInfo:   "error",
+			language: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Missing language information": {
+			src: software.Source{
+				Name:    "test",
+				Version: "v1.7.10",
+			},
+			tipe:     software.TriggerRegular,
+			timezone: "EST",
+
+			osInfo:   "regular",
+			language: "",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Error language information": {
+			src: software.Source{
+				Name:    "test",
+				Version: "v1.7.10",
+			},
+			tipe:     software.TriggerRegular,
+			timezone: "EST",
+
+			osInfo:   "regular",
+			language: "error",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -80,6 +128,11 @@ func TestCollectWindows(t *testing.T) {
 			if tc.osInfo != "-" {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeOSInfo", tc.osInfo)
 				options = append(options, software.WithOSInfo(cmdArgs))
+			}
+
+			if tc.language != "-" {
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeLangInfo", tc.language)
+				options = append(options, software.WithLang(cmdArgs))
 			}
 
 			s := software.New(tc.src, tc.tipe, options...)
@@ -118,6 +171,26 @@ func TestFakeOSInfo(_ *testing.T) {
 ProductName:	Mac OS X
 ProductVersion: 10.11.1
 BuildVersion:   15B42`)
+	case "":
+		fallthrough
+	case "missing":
+		os.Exit(0)
+	}
+}
+
+func TestFakeLangInfo(_ *testing.T) {
+	args, err := testutils.GetFakeCmdArgs()
+	if err != nil {
+		return
+	}
+	defer os.Exit(0)
+
+	switch args[0] {
+	case "error":
+		fmt.Fprint(os.Stderr, "Error requested in fake language")
+		os.Exit(1)
+	case "regular":
+		fmt.Println(`en-US`)
 	case "":
 		fallthrough
 	case "missing":
