@@ -66,7 +66,7 @@ func (s Collector) collectProduct() (product, error) {
 }
 
 // collectCPU uses Win32_Processor to collect information about the CPUs.
-func (s Collector) collectCPU() (info cpu, err error) {
+func (s Collector) collectCPU() (cpu, error) {
 	var usedCPUFields = map[string]struct{}{
 		"NumberOfLogicalProcessors": {},
 		"NumberOfCores":             {},
@@ -80,11 +80,6 @@ func (s Collector) collectCPU() (info cpu, err error) {
 	}
 
 	// we are assuming all CPUs are the same
-	info.Sockets = uint64(len(cpus))
-	info.Arch = s.arch
-
-	info.Name = cpus[0]["Name"]
-	info.Vendor = cpus[0]["Manufacturer"]
 
 	total, err := strconv.ParseUint(cpus[0]["NumberOfLogicalProcessors"], 10, 64)
 	if err != nil {
@@ -94,7 +89,12 @@ func (s Collector) collectCPU() (info cpu, err error) {
 	cores, err := strconv.ParseUint(cpus[0]["NumberOfCores"], 10, 64)
 	if err != nil {
 		s.log.Warn("CPU info contained invalid cores per socket", "value", cpus[0]["NumberOfCores"])
-		cores = 0
+		cores = 1
+	}
+
+	if cores == 0 {
+		s.log.Warn("CPU info contained 0 cores")
+		cores = 1
 	}
 
 	return cpu{
