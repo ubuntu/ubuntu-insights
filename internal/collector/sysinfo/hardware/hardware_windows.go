@@ -42,20 +42,20 @@ func defaultPlatformOptions() platformOptions {
 	}
 }
 
-var usedProductFields = map[string]struct{}{
-	"Model":           {},
-	"Manufacturer":    {},
-	"SystemSKUNumber": {},
-}
-
 // collectProduct uses Win32_ComputerSystem to find information about the system.
 func (s Collector) collectProduct() (product, error) {
+	var usedProductFields = map[string]struct{}{
+		"Model":           {},
+		"Manufacturer":    {},
+		"SystemSKUNumber": {},
+	}
+
 	products, err := s.runWMI(s.platform.productCmd, usedProductFields)
 	if err != nil {
 		return product{}, err
 	}
 	if len(products) > 1 {
-		s.log.Info("product information more than 1 products", "count", len(products))
+		s.log.Warn("product information more than 1 products", "count", len(products))
 	}
 
 	return product{
@@ -65,15 +65,15 @@ func (s Collector) collectProduct() (product, error) {
 	}, nil
 }
 
-var usedCPUFields = map[string]struct{}{
-	"NumberOfLogicalProcessors": {},
-	"NumberOfCores":             {},
-	"Manufacturer":              {},
-	"Name":                      {},
-}
-
 // collectCPU uses Win32_Processor to collect information about the CPUs.
 func (s Collector) collectCPU() (info cpu, err error) {
+	var usedCPUFields = map[string]struct{}{
+		"NumberOfLogicalProcessors": {},
+		"NumberOfCores":             {},
+		"Manufacturer":              {},
+		"Name":                      {},
+	}
+
 	cpus, err := s.runWMI(s.platform.cpuCmd, usedCPUFields)
 	if err != nil {
 		return cpu{}, err
@@ -108,14 +108,14 @@ func (s Collector) collectCPU() (info cpu, err error) {
 	}, nil
 }
 
-var usedGPUFields = map[string]struct{}{
-	"Name":                    {},
-	"InstalledDisplayDrivers": {},
-	"AdapterCompatibility":    {},
-}
-
 // collectGPUs uses Win32_VideoController to collect information about the GPUs.
 func (s Collector) collectGPUs() (info []gpu, err error) {
+	var usedGPUFields = map[string]struct{}{
+		"Name":                    {},
+		"InstalledDisplayDrivers": {},
+		"AdapterCompatibility":    {},
+	}
+
 	gpus, err := s.runWMI(s.platform.gpuCmd, usedGPUFields)
 	if err != nil {
 		return []gpu{}, err
@@ -137,12 +137,12 @@ func (s Collector) collectGPUs() (info []gpu, err error) {
 	return info, nil
 }
 
-var usedMemoryFields = map[string]struct{}{
-	"TotalPhysicalMemory": {},
-}
-
 // collectMemory uses Win32_ComputerSystem to collect information about RAM.
 func (s Collector) collectMemory() (mem memory, err error) {
+	var usedMemoryFields = map[string]struct{}{
+		"TotalPhysicalMemory": {},
+	}
+
 	oses, err := s.runWMI(s.platform.memoryCmd, usedMemoryFields)
 	if err != nil {
 		return memory{}, err
@@ -169,21 +169,21 @@ func (s Collector) collectMemory() (mem memory, err error) {
 	}, nil
 }
 
-var usedDiskFields = map[string]struct{}{
-	"Name":       {},
-	"Size":       {},
-	"Partitions": {},
-}
-
-var usedPartitionFields = map[string]struct{}{
-	"DiskIndex": {},
-	"Index":     {},
-	"Name":      {},
-	"Size":      {},
-}
-
 // collectDisks uses Win32_DiskDrive and Win32_DiskPartition to collect information about disks.
 func (s Collector) collectDisks() (blks []disk, err error) {
+	var usedDiskFields = map[string]struct{}{
+		"Name":       {},
+		"Size":       {},
+		"Partitions": {},
+	}
+
+	var usedPartitionFields = map[string]struct{}{
+		"DiskIndex": {},
+		"Index":     {},
+		"Name":      {},
+		"Size":      {},
+	}
+
 	getSize := func(b string) uint64 {
 		v, err := strconv.ParseUint(b, 10, 64)
 		if err != nil {
@@ -273,19 +273,19 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 	return blks, nil
 }
 
-var usedScreenResFields = map[string]struct{}{
-	"Name":         {},
-	"ScreenWidth":  {},
-	"ScreenHeight": {},
-}
-
-var usedScreenSizeFields = map[string]struct{}{
-	"MaxHorizontalImageSize": {},
-	"MaxVerticalImageSize":   {},
-}
-
 // collectScreens uses Win32_DesktopMonitor to collect information about screens.
 func (s Collector) collectScreens() (screens []screen, err error) {
+	var usedScreenResFields = map[string]struct{}{
+		"Name":         {},
+		"ScreenWidth":  {},
+		"ScreenHeight": {},
+	}
+
+	var usedScreenSizeFields = map[string]struct{}{
+		"MaxHorizontalImageSize": {},
+		"MaxVerticalImageSize":   {},
+	}
+
 	monitors, err := s.runWMI(s.platform.screenResCmd, usedScreenResFields)
 	if err != nil {
 		return nil, err
