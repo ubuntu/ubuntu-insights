@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -229,7 +230,7 @@ func GetPerPeriod(dir string, period int) (map[int64]Report, error) {
 
 // GetAll returns all reports in a given directory.
 // Reports are expected to have the correct file extension, and have a name which can be parsed by a timestamp.
-// Does not traverse subdirectories.
+// Does not traverse subdirectories. Returns in lexical order.
 func GetAll(dir string) ([]Report, error) {
 	reports := make([]Report, 0)
 	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
@@ -257,4 +258,37 @@ func GetAll(dir string) ([]Report, error) {
 	}
 
 	return reports, nil
+}
+
+// Cleanup removes reports in a directory, keeping the most recent maxReports reports.
+// If a file does it appear to be a report, it is skipped and ignored.
+// If a file is unable to be removed, then it will be logged, but the function will continue.
+func Cleanup(dir string, maxReports int) error {
+	if maxReports < 0 {
+		return fmt.Errorf("max reports must be a non-negative integer")
+	}
+
+	reports, err := GetAll(dir)
+	if err != nil {
+		return err
+	}
+
+	if len(reports) <= maxReports {
+		slog.Debug("no reports to cleanup", "maxReports", maxReports, "numReports", len(reports))
+		return nil
+	}
+
+	// Sort the reports by timestamp, and keep the most recent maxReports.
+	slices.SortStableFunc(reports, func(i, j Report) int {
+		return int(i.TimeStamp - j.TimeStamp)
+	})
+
+	// Remove the oldest reports, keeping the most recent maxReports.
+	for _, report := range reports[:len(reports)-maxReports] {
+		if err := os.Remove(report.Path); err != nil {
+			slog.Error("failed to remove report", "path", report.Path, "error", err)
+		}
+	}
+
+	return nil
 }
