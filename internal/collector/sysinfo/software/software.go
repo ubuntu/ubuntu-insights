@@ -10,8 +10,6 @@ import (
 // Info is the software specific part.
 type Info struct {
 	OS       osInfo `json:"os"`
-	Src      Source `json:"source"`
-	Trigger  string `json:"trigger"`
 	Timezone string `json:"timezone"`
 	Lang     string `json:"language"`
 	Bios     bios   `json:"bios"`
@@ -23,13 +21,6 @@ type Source struct {
 	Version string `json:"version"`
 }
 
-// Theses types represent how collection was triggered.
-const (
-	TriggerRegular = "regular"
-	TriggerInstall = "install"
-	TriggerManual  = "manual"
-)
-
 type osInfo struct {
 	Family  string `json:"family"`
 	Distro  string `json:"distribution"`
@@ -38,8 +29,8 @@ type osInfo struct {
 }
 
 type bios struct {
-	Vendor  string
-	Version string
+	Vendor  string `json:"vendor"`
+	Version string `json:"version"`
 }
 
 // Collector handles dependencies for collecting software information.
@@ -64,7 +55,7 @@ type options struct {
 }
 
 // New returns a new Collector.
-func New(source Source, trigger string, args ...Options) Collector {
+func New(args ...Options) Collector {
 	opts := &options{
 		log: slog.Default(),
 		timezone: func() string {
@@ -78,9 +69,6 @@ func New(source Source, trigger string, args ...Options) Collector {
 	}
 
 	return Collector{
-		Src:     source,
-		Trigger: trigger,
-
 		log:      opts.log,
 		timezone: opts.timezone,
 		platform: opts.platform,
@@ -91,8 +79,6 @@ func New(source Source, trigger string, args ...Options) Collector {
 func (s Collector) Collect() (info Info, err error) {
 	s.log.Debug("collecting software info")
 
-	info.Src = s.Src
-	info.Trigger = s.Trigger
 	info.Timezone = s.timezone()
 
 	info.OS, err = s.collectOS()

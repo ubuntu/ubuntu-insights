@@ -32,24 +32,14 @@ func TestCollectLinux(t *testing.T) {
 		wantErr bool
 	}{
 		"Regular software information": {
-			root: "regular",
-			src: software.Source{
-				Name:    "test",
-				Version: "v1.2.3",
-			},
-			tipe:     software.TriggerRegular,
+			root:     "regular",
 			osInfo:   "regular",
 			timezone: "EST",
 			language: "en_US",
 		},
 
 		"Missing OS information": {
-			root: "regular",
-			src: software.Source{
-				Name:    "test souce",
-				Version: "v4.3.2",
-			},
-			tipe:     software.TriggerManual,
+			root:     "regular",
 			osInfo:   "",
 			timezone: "CEN",
 			language: "fr_FR",
@@ -60,12 +50,7 @@ func TestCollectLinux(t *testing.T) {
 		},
 
 		"Error OS information": {
-			root: "regular",
-			src: software.Source{
-				Name:    "test",
-				Version: "v1.1.1",
-			},
-			tipe:     software.TriggerInstall,
+			root:     "regular",
 			osInfo:   "error",
 			timezone: "PST",
 			language: "en_ZA",
@@ -76,12 +61,7 @@ func TestCollectLinux(t *testing.T) {
 		},
 
 		"Missing language information": {
-			root: "regular",
-			src: software.Source{
-				Name:    "test",
-				Version: "v1.7.10",
-			},
-			tipe:            software.TriggerRegular,
+			root:            "regular",
 			osInfo:          "regular",
 			timezone:        "EST",
 			missingLanguage: true,
@@ -92,12 +72,7 @@ func TestCollectLinux(t *testing.T) {
 		},
 
 		"Missing BIOS information": {
-			root: "empty",
-			src: software.Source{
-				Name:    "src",
-				Version: "v1.6.4",
-			},
-			tipe:     software.TriggerRegular,
+			root:     "empty",
 			osInfo:   "regular",
 			timezone: "JST",
 			language: "ja",
@@ -108,12 +83,7 @@ func TestCollectLinux(t *testing.T) {
 		},
 
 		"Garbage BIOS information": {
-			root: "garbage",
-			src: software.Source{
-				Name:    "out",
-				Version: "v1.20.1",
-			},
-			tipe:     software.TriggerRegular,
+			root:     "garbage",
 			osInfo:   "regular",
 			timezone: "EDT",
 			language: "en-CA",
@@ -151,7 +121,7 @@ func TestCollectLinux(t *testing.T) {
 				options = append(options, software.WithOSInfo(cmdArgs))
 			}
 
-			s := software.New(tc.src, tc.tipe, options...)
+			s := software.New(options...)
 
 			got, err := s.Collect()
 
