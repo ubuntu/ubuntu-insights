@@ -3,8 +3,8 @@ os:
     distro: ""
     version: ""
     edition: ""
-timezone: CEN
-lang: fr_FR
+timezone: EDT
+lang: en-CA
 bios:
     vendor: AMI
     version: F.03

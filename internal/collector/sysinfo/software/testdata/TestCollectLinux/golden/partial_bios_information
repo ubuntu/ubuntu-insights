@@ -4,7 +4,7 @@ os:
     version: "24.04"
     edition: ""
 timezone: EST
-lang: ""
+lang: en_US
 bios:
-    vendor: AMI
+    vendor: ""
     version: F.03

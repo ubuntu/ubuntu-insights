@@ -49,6 +49,28 @@ func TestCollectLinux(t *testing.T) {
 			},
 		},
 
+		"Missing distributor OS information": {
+			root:     "regular",
+			osInfo:   "no distributor",
+			timezone: "EST",
+			language: "fr_FR",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Missing release OS information": {
+			root:     "regular",
+			osInfo:   "no release",
+			timezone: "EST",
+			language: "fr_FR",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
 		"Error OS information": {
 			root:     "regular",
 			osInfo:   "error",
@@ -60,11 +82,37 @@ func TestCollectLinux(t *testing.T) {
 			},
 		},
 
+		"Garbage OS information": {
+			root:     "regular",
+			osInfo:   "garbage",
+			timezone: "EDT",
+			language: "en-CA",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
 		"Missing language information": {
 			root:            "regular",
 			osInfo:          "regular",
 			timezone:        "EST",
 			missingLanguage: true,
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Partial BIOS information": {
+			root:     "regular",
+			osInfo:   "regular",
+			timezone: "EST",
+			language: "en_US",
+
+			missingFiles: []string{
+				"sys/class/dmi/id/bios_vendor",
+			},
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -158,6 +206,18 @@ Distributor ID:	Ubuntu
 Description:	Ubuntu 24.04.1 LTS
 Release:	24.04
 Codename:	noble`)
+	case "no distributor":
+		fmt.Println(`
+Release:	24.04`)
+	case "no release":
+		fmt.Println(`
+Distributor ID:	Ubuntu`)
+	case "garbage":
+		fmt.Println(`
+ID:	664z708,as
+sdlfk oabgr3w90
+bam398b-9a:c;;;
+zbnznr89;'`)
 	case "":
 		fallthrough
 	case "missing":

@@ -1,9 +1,9 @@
 os:
     family: linux
-    distro: ""
+    distro: Ubuntu
     version: ""
     edition: ""
-timezone: CEN
+timezone: EST
 lang: fr_FR
 bios:
     vendor: AMI

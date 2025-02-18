@@ -1,9 +1,9 @@
 os:
     family: linux
     distro: ""
-    version: ""
+    version: "24.04"
     edition: ""
-timezone: CEN
+timezone: EST
 lang: fr_FR
 bios:
     vendor: AMI

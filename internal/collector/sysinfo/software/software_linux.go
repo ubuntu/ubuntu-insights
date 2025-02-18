@@ -57,8 +57,15 @@ func (s Collector) collectOS() (osInfo, error) {
 		}
 	}
 
-	if len(data) == 0 {
-		s.log.Warn("lsb_release contained invalid data")
+	if len(data) != 0 {
+		if _, ok := data["Distributor ID"]; !ok {
+			s.log.Warn("lsb_release missing distributor data")
+		}
+		if _, ok := data["Release"]; !ok {
+			s.log.Warn("lsb_release missing release data")
+		}
+	} else {
+		s.log.Warn("lsb_release contained no data")
 	}
 
 	return osInfo{

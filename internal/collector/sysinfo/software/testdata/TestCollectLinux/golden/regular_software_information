@@ -3,10 +3,6 @@ os:
     distro: Ubuntu
     version: "24.04"
     edition: ""
-src:
-    name: test
-    version: v1.2.3
-trigger: regular
 timezone: EST
 lang: en_US
 bios:
