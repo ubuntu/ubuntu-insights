@@ -32,12 +32,14 @@ type Uploader struct {
 	baseServerURL string
 	collectedDir  string
 	uploadedDir   string
+	maxReports    int
 	timeProvider  timeProvider
 }
 
 type options struct {
 	// Private members exported for tests.
 	baseServerURL string
+	maxReports    int
 	timeProvider  timeProvider
 }
 
@@ -63,6 +65,7 @@ func New(cm ConsentManager, cachePath, source string, minAge uint, dryRun bool, 
 
 	opts := options{
 		baseServerURL: constants.DefaultServerURL,
+		maxReports:    constants.MaxReports,
 		timeProvider:  realTimeProvider{},
 	}
 	for _, opt := range args {
@@ -79,6 +82,7 @@ func New(cm ConsentManager, cachePath, source string, minAge uint, dryRun bool, 
 		baseServerURL: opts.baseServerURL,
 		collectedDir:  filepath.Join(cachePath, source, constants.LocalFolder),
 		uploadedDir:   filepath.Join(cachePath, source, constants.UploadedFolder),
+		maxReports:    opts.maxReports,
 	}, nil
 }
 
