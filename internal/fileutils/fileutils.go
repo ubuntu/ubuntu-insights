@@ -52,7 +52,7 @@ func ReadFileLogError(path string, log *slog.Logger) string {
 
 // ConvertUnitToBytes takes a string bytes unit and converts value to bytes.
 // If the unit is not recognized an error is returned, value is returned as is.
-func ConvertUnitToBytes[T ~int | ~uint | ~float64](unit string, value T) (T, error) {
+func ConvertUnitToBytes[T ~int | ~uint | ~uint64 | ~float64](unit string, value T) (T, error) {
 	switch strings.ToLower(unit) {
 	case "":
 		fallthrough
@@ -89,7 +89,7 @@ func ConvertUnitToBytes[T ~int | ~uint | ~float64](unit string, value T) (T, err
 
 // ConvertUnitToStandard takes a string bytes unit and converts value to the standard unit (Mebibytes).
 // If the unit is not recognized an error is returned, value is returned as is.
-func ConvertUnitToStandard[T ~int | ~uint | ~float64](unit string, value T) (T, error) {
+func ConvertUnitToStandard[T ~int | ~uint | ~uint64 | ~float64](unit string, value T) (T, error) {
 	v, err := ConvertUnitToBytes(unit, value)
 	if err != nil {
 		return v, err
