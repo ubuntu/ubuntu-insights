@@ -50,6 +50,7 @@ var listSplitRegex = regexp.MustCompile(`\r?\n\r?\n`)
 // RunListFmt runs the command specified by args and only includes fields in the filter.
 // The list format is of `key`: `value` lines with sections separated by two consecutive newlines.
 // if filter is nil then nothing is filtered out.
+// Returns an error if no data is found, the command could not be run, the filter is empty and not nil.
 func RunListFmt(args []string, filter map[string]struct{}, log *slog.Logger) (out []map[string]string, err error) {
 	defer func() {
 		if err == nil && len(out) == 0 {
