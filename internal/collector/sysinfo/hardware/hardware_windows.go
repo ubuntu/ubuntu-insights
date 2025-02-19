@@ -331,6 +331,7 @@ var wmiReplaceRegex = regexp.MustCompile(`\r?\n\s*`)
 var wmiSplitRegex = regexp.MustCompile(`\r?\n\r?\n`)
 
 // runWMI runs the cmdlet specified by args and only includes fields in the filter.
+// Returns an error if no data is found, the filter is empty, or the command could not be run.
 func (s Collector) runWMI(args []string, filter map[string]struct{}) (out []map[string]string, err error) {
 	defer func() {
 		if err == nil && len(out) == 0 {
