@@ -15,12 +15,6 @@ type Info struct {
 	Bios     bios   `json:"bios"`
 }
 
-// Source is info about the collection source.
-type Source struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-}
-
 type osInfo struct {
 	Family  string `json:"family"`
 	Distro  string `json:"distribution"`
@@ -36,9 +30,6 @@ type bios struct {
 // Collector handles dependencies for collecting software information.
 // Collector implements CollectorT[software.Info].
 type Collector struct {
-	Src     Source
-	Trigger string
-
 	log      *slog.Logger
 	timezone func() string
 	platform platformOptions
