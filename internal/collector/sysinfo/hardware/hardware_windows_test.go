@@ -100,6 +100,38 @@ func TestCollectWindows(t *testing.T) {
 			},
 		},
 
+		"Negative valued CPU information": {
+			productInfo:   "regular",
+			cpuInfo:       "negative",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
+			partitionInfo: "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 2,
+			},
+		},
+
+		"Zero valued CPU information": {
+			productInfo:   "regular",
+			cpuInfo:       "zero",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
+			partitionInfo: "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
 		"Error CPU information": {
 			productInfo:   "regular",
 			cpuInfo:       "error",
@@ -615,6 +647,20 @@ SerialNumber                            : To Be Filled By O.E.M.
 ThreadCount                             : 16
 VirtualizationFirmwareEnabled           : False
 VMMonitorModeExtensions                 : False`)
+	case "negative":
+		fmt.Println(`
+
+Name                                    : 11th Gen Intel(R) Core(TM) i7-11800H @ -2.30GHz
+Manufacturer                            : GenuineIntel
+NumberOfCores                           : -8
+NumberOfLogicalProcessors               : -16`)
+	case "zero":
+		fmt.Println(`
+
+Name                                    : 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz
+Manufacturer                            : GenuineIntel
+NumberOfCores                           : 0
+NumberOfLogicalProcessors               : 0`)
 	case "":
 		fallthrough
 	case "missing":
