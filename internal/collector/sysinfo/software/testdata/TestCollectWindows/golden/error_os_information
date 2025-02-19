@@ -1,0 +1,14 @@
+os:
+    family: windows
+    distro: ""
+    version: ""
+    edition: ""
+src:
+    name: test
+    version: v1.1.1
+trigger: install
+timezone: PST
+lang: en-US
+bios:
+    vendor: American Megatrends International, LLC.
+    version: MSI_NB - 1061003

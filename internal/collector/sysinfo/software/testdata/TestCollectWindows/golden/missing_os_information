@@ -1,0 +1,14 @@
+os:
+    family: windows
+    distro: ""
+    version: ""
+    edition: ""
+src:
+    name: test souce
+    version: v4.3.2
+trigger: manual
+timezone: CEN
+lang: en-US
+bios:
+    vendor: American Megatrends International, LLC.
+    version: MSI_NB - 1061003
