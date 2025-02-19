@@ -1,0 +1,10 @@
+os:
+    family: linux
+    distro: Ubuntu
+    version: "24.04"
+    edition: ""
+timezone: EST
+lang: en_US
+bios:
+    vendor: AMI
+    version: F.03

@@ -1,0 +1,10 @@
+os:
+    family: linux
+    distro: ""
+    version: ""
+    edition: ""
+timezone: CEN
+lang: fr_FR
+bios:
+    vendor: AMI
+    version: F.03

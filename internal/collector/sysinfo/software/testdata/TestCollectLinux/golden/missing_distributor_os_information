@@ -1,0 +1,10 @@
+os:
+    family: linux
+    distro: ""
+    version: "24.04"
+    edition: ""
+timezone: EST
+lang: fr_FR
+bios:
+    vendor: AMI
+    version: F.03

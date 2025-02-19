@@ -1,0 +1,10 @@
+os:
+    family: linux
+    distro: Ubuntu
+    version: "24.04"
+    edition: ""
+timezone: EDT
+lang: en-CA
+bios:
+    vendor: ""
+    version: ""
