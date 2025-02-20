@@ -218,6 +218,7 @@ func TestGetAll(t *testing.T) {
 		"Invalid File Extension":   {files: []string{"1.txt", "2.txt"}},
 		"Invalid File Names":       {files: []string{"i-1.json", "i-2.json", "i-3.json", "test.json", "one.json"}},
 		"Mix of Valid and Invalid": {files: []string{"1.json", "2.json", "500.json", "i-1.json", "i-2.json", "i-3.json", "test.json", "five.json"}},
+		"Lexical Order Check":      {files: []string{"500.json", "2.json", "120.json", "1.json", "0.json", "51230.json", "-1234.json", "121.json"}},
 
 		"Invalid Dir": {invalidDir: true, wantErr: true},
 	}
@@ -497,6 +498,83 @@ func TestReadJSON(t *testing.T) {
 			got := string(data)
 			want := testutils.LoadWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "ReadJSON should return the data from the report file")
+		})
+	}
+}
+
+func TestCleanup(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		files      []string
+		maxReports int
+		badPerms   bool
+
+		wantErr bool
+	}{
+		"Empty Directory": {maxReports: 5},
+		"Less than maxReports": {
+			files:      []string{"1.json", "2.json", "3.json", "4.json"},
+			maxReports: 5,
+		},
+		"Equal to maxReports": {
+			files:      []string{"1.json", "2.json", "3.json", "4.json", "5.json"},
+			maxReports: 5,
+		},
+		"More than maxReports": {
+			files:      []string{"1.json", "2.json", "3.json", "4.json", "5.json", "6.json"},
+			maxReports: 5,
+		},
+		"Unordered Creation": {
+			files:      []string{"-100.json", "-2.json", "0.json", "150.json", "151.json", "120.json", "121.json", "122.json"},
+			maxReports: 5,
+		},
+		"Non-Report Files": {
+			files:      []string{"1.json", "2.json", "3.json", "4.json", "5.json", "6.json", "7.txt", "8.txt", "9.txt", "seven.json"},
+			maxReports: 6,
+		},
+		"Zero maxReports": {
+			files:      []string{"1.json", "2.json", "3.json", "4.json", "5.json", "6.json"},
+			maxReports: 0,
+		},
+		"Negative maxReports": {
+			files:      []string{"1.json", "2.json", "3.json", "4.json", "5.json", "6.json"},
+			maxReports: -1,
+			wantErr:    true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			perms := os.FileMode(0600)
+			if tc.badPerms {
+				perms = os.FileMode(0000)
+			}
+
+			for _, file := range tc.files {
+				path := filepath.Join(dir, file)
+				require.NoError(t, os.WriteFile(path, []byte(`{"test": true}`), perms), "Setup: failed to write report file")
+			}
+
+			err := report.Cleanup(dir, tc.maxReports)
+			if tc.wantErr {
+				require.Error(t, err, "expected an error but got none")
+			} else {
+				require.NoError(t, err, "got an unexpected error")
+			}
+
+			// Restore perms for cleanup for remaining files in the directory
+			for _, file := range tc.files {
+				path := filepath.Join(dir, file)
+				_ = os.Chmod(path, os.FileMode(0600))
+			}
+			got, err := testutils.GetDirContents(t, dir, 2)
+			require.NoError(t, err, "failed to get directory contents")
+
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			require.Equal(t, want, got, "Cleanup should remove the oldest reports, keeping the most recent maxReports")
 		})
 	}
 }
