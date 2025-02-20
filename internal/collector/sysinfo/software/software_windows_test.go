@@ -28,8 +28,6 @@ func TestCollectWindows(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		src      software.Source
-		tipe     string
 		timezone string
 
 		osInfo   string
