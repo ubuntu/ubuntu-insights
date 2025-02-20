@@ -139,6 +139,7 @@ func GetPeriodStart(period int, t time.Time) (int64, error) {
 
 // GetForPeriod returns the most recent report within a period window for a given directory.
 // Not inclusive of the period end (periodStart + period).
+// If no report is found, an empty report is returned.
 //
 // For example, given reports 1 and 7, with time 2 and period 7, the function will return the path for report 1.
 func GetForPeriod(dir string, t time.Time, period int) (Report, error) {
