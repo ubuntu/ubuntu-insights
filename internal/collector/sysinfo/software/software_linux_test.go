@@ -20,8 +20,6 @@ func TestCollectLinux(t *testing.T) {
 		root         string
 		missingFiles []string
 
-		src      software.Source
-		tipe     string
 		osInfo   string
 		timezone string
 
