@@ -508,7 +508,7 @@ func TestCleanup(t *testing.T) {
 	tests := map[string]struct {
 		files      []string
 		maxReports int
-		badPerms   bool
+		noDir      bool
 
 		wantErr bool
 	}{
@@ -537,6 +537,12 @@ func TestCleanup(t *testing.T) {
 			files:      []string{"1.json", "2.json", "3.json", "4.json", "5.json", "6.json"},
 			maxReports: 0,
 		},
+		"Bad Path": {
+			files:      []string{"1.json", "2.json", "3.json", "4.json", "5.json", "6.json"},
+			maxReports: 5,
+			noDir:      true,
+			wantErr:    true,
+		},
 		"Negative maxReports": {
 			files:      []string{"1.json", "2.json", "3.json", "4.json", "5.json", "6.json"},
 			maxReports: -1,
@@ -547,30 +553,25 @@ func TestCleanup(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			dir := t.TempDir()
-			perms := os.FileMode(0600)
-			if tc.badPerms {
-				perms = os.FileMode(0000)
-			}
+			baseDir := t.TempDir()
 
 			for _, file := range tc.files {
-				path := filepath.Join(dir, file)
-				require.NoError(t, os.WriteFile(path, []byte(`{"test": true}`), perms), "Setup: failed to write report file")
+				path := filepath.Join(baseDir, file)
+				require.NoError(t, os.WriteFile(path, []byte(`{"test": true}`), 0o600), "Setup: failed to write report file")
 			}
 
+			dir := baseDir
+			if tc.noDir {
+				dir = filepath.Join(baseDir, "invalid dir")
+			}
 			err := report.Cleanup(dir, tc.maxReports)
 			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
-			} else {
-				require.NoError(t, err, "got an unexpected error")
+				return
 			}
+			require.NoError(t, err, "got an unexpected error")
 
-			// Restore perms for cleanup for remaining files in the directory
-			for _, file := range tc.files {
-				path := filepath.Join(dir, file)
-				_ = os.Chmod(path, os.FileMode(0600))
-			}
-			got, err := testutils.GetDirContents(t, dir, 2)
+			got, err := testutils.GetDirContents(t, baseDir, 2)
 			require.NoError(t, err, "failed to get directory contents")
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
