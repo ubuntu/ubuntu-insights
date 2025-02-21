@@ -2,7 +2,10 @@ package software
 
 import (
 	"context"
+	"errors"
+	"regexp"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/ubuntu/ubuntu-insights/internal/cmdutils"
@@ -11,12 +14,14 @@ import (
 type platformOptions struct {
 	osCmd   []string
 	langCmd []string
+	biosCmd []string
 }
 
 func defaultPlatformOptions() platformOptions {
 	return platformOptions{
 		osCmd:   []string{"sw_vers"},
 		langCmd: []string{"defaults", "read", "-g", "AppleLocale"},
+		biosCmd: []string{"system_profiler", "SPHardwareDataType", "-detailLevel", "mini"},
 	}
 }
 
@@ -48,9 +53,32 @@ func (s Collector) collectLang() (string, error) {
 		s.log.Info("locale command output to stderr", "stderr", stderr)
 	}
 
-	return stdout.String(), nil
+	l := strings.TrimSpace(stdout.String())
+	if l == "" {
+		return "", errors.New("locale was empty")
+	}
+
+	return l, nil
 }
 
+var biosRegex = regexp.MustCompile(`(?m)^\s*Boot ROM Version\s*:\s*(.+?)\s*$`)
+
 func (s Collector) collectBios() (bios, error) {
-	return bios{}, nil
+	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, s.platform.biosCmd[0], s.platform.biosCmd[1:]...)
+	if err != nil {
+		return bios{}, err
+	}
+	if stderr.Len() > 0 {
+		s.log.Info("BIOS command output to stderr", "stderr", stderr)
+	}
+
+	m := biosRegex.FindStringSubmatch(stdout.String())
+	if len(m) != 2 {
+		return bios{}, errors.New("failed to parse BIOS info")
+	}
+
+	return bios{
+		Vendor:  "Apple",
+		Version: m[1],
+	}, nil
 }
