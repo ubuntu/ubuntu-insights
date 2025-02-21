@@ -63,7 +63,11 @@ func (um Uploader) Upload(force bool) error {
 	}
 	wg.Wait()
 
-	return nil
+	if um.dryRun {
+		return nil
+	}
+
+	return report.Cleanup(um.uploadedDir, um.maxReports)
 }
 
 // upload uploads an individual report to the server. It returns an error if the report is not mature enough to be uploaded, or if the upload fails.

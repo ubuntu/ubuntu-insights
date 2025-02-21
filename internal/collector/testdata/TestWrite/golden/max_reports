@@ -1,0 +1,5 @@
+local/5.txt: ""
+local/10.json: '{"insights_version":"","system_info":{"hardware":{"product":{"family":"","name":"","vendor":""},"cpu":{"name":"","vendor":"","architecture":"","cpus":0,"sockets":0,"coresPerSocket":0,"threadsPerCore":0},"gpus":null,"memory":{"size":0},"disks":null,"screens":null},"software":{"os":{"family":"","distribution":"","version":""},"timezone":"","language":"","bios":{"vendor":"","version":""}}},"source_metrics":null}'
+local/20.json: ""
+uploaded/5.json: ""
+uploaded/30.json: ""
