@@ -13,3 +13,10 @@ func WithLang(cmd []string) Options {
 		o.platform.langCmd = cmd
 	}
 }
+
+// WithLang overrides default BIOS command.
+func WithBIOS(cmd []string) Options {
+	return func(o *options) {
+		o.platform.biosCmd = cmd
+	}
+}

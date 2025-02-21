@@ -28,38 +28,29 @@ func TestCollectMacos(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		src      software.Source
-		tipe     string
 		timezone string
 
 		osInfo   string
 		language string
+		bios     string
 
 		logs    map[slog.Level]uint
 		wantErr bool
 	}{
 		"Regular software information": {
-			src: software.Source{
-				Name:    "test",
-				Version: "v1.2.3",
-			},
-			tipe:     software.TriggerRegular,
 			timezone: "EST",
 
 			osInfo:   "regular",
 			language: "regular",
+			bios:     "regular",
 		},
 
 		"Missing OS information": {
-			src: software.Source{
-				Name:    "test souce",
-				Version: "v4.3.2",
-			},
-			tipe:     software.TriggerManual,
 			timezone: "CEN",
 
 			osInfo:   "",
 			language: "regular",
+			bios:     "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -67,15 +58,11 @@ func TestCollectMacos(t *testing.T) {
 		},
 
 		"Error OS information": {
-			src: software.Source{
-				Name:    "test",
-				Version: "v1.1.1",
-			},
-			tipe:     software.TriggerInstall,
 			timezone: "PST",
 
 			osInfo:   "error",
 			language: "regular",
+			bios:     "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -83,15 +70,11 @@ func TestCollectMacos(t *testing.T) {
 		},
 
 		"Missing language information": {
-			src: software.Source{
-				Name:    "test",
-				Version: "v1.7.10",
-			},
-			tipe:     software.TriggerRegular,
 			timezone: "EST",
 
 			osInfo:   "regular",
 			language: "",
+			bios:     "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -99,15 +82,35 @@ func TestCollectMacos(t *testing.T) {
 		},
 
 		"Error language information": {
-			src: software.Source{
-				Name:    "test",
-				Version: "v1.7.10",
-			},
-			tipe:     software.TriggerRegular,
 			timezone: "EST",
 
 			osInfo:   "regular",
 			language: "error",
+			bios:     "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Missing BIOS information": {
+			timezone: "EST",
+
+			osInfo:   "regular",
+			language: "regular",
+			bios:     "",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Error BIOS information": {
+			timezone: "EST",
+
+			osInfo:   "regular",
+			language: "regular",
+			bios:     "error",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -135,7 +138,12 @@ func TestCollectMacos(t *testing.T) {
 				options = append(options, software.WithLang(cmdArgs))
 			}
 
-			s := software.New(tc.src, tc.tipe, options...)
+			if tc.language != "-" {
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeBIOSInfo", tc.bios)
+				options = append(options, software.WithBIOS(cmdArgs))
+			}
+
+			s := software.New(options...)
 
 			got, err := s.Collect()
 
@@ -190,7 +198,42 @@ func TestFakeLangInfo(_ *testing.T) {
 		fmt.Fprint(os.Stderr, "Error requested in fake language")
 		os.Exit(1)
 	case "regular":
-		fmt.Println(`en-US`)
+		fmt.Println(`en_US`)
+	case "":
+		fallthrough
+	case "missing":
+		os.Exit(0)
+	}
+}
+
+func TestFakeBIOSInfo(_ *testing.T) {
+	args, err := testutils.GetFakeCmdArgs()
+	if err != nil {
+		return
+	}
+	defer os.Exit(0)
+
+	switch args[0] {
+	case "error":
+		fmt.Fprint(os.Stderr, "Error requested in BIOS info")
+		os.Exit(1)
+	case "regular":
+		fmt.Println(`Hardware:
+
+    Hardware Overview:
+
+      Model Name: Mac mini
+      Model Identifier: Macmini6,2
+      Processor Name: Quad-Core Intel Core i7
+      Processor Speed: 2.3 GHz
+      Number of Processors: 1
+      Total Number of Cores: 4
+      L2 Cache (per Core): 256 KB
+      L3 Cache: 6 MB
+      Hyper-Threading Technology: Enabled
+      Memory: 16 GB
+      Boot ROM Version: 429.0.0.0.0
+      SMC Version (system): 2.8f1`)
 	case "":
 		fallthrough
 	case "missing":
