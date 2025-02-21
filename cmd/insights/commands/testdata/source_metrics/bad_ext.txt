@@ -1,0 +1,12 @@
+{
+    "data_int": 1,
+    "data_bool": true,
+    "data_float": 1.1,
+    "data_string": "string",
+    "data_array": [1, 2, 3],
+    "data_object": {
+        "key1": "value1",
+        "key2": "value2"
+    },
+    "runes": "🔥☆*: .｡. o(≧▽≦)o .｡.:*☆🔥"
+}
