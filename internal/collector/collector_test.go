@@ -3,6 +3,7 @@ package collector_test
 import (
 	"fmt"
 	"math"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -154,11 +155,16 @@ func TestCompile(t *testing.T) {
 			source:            "source",
 			sourceMetricsFile: "normal.json",
 		},
-
 		"Consent False": {
 			period:   1,
 			consentM: cFalse,
 			source:   "source",
+		},
+		"Duplicate report force": {
+			period:   20,
+			consentM: cTrue,
+			source:   "source",
+			force:    true,
 		},
 		"Consent Error": {
 			period:   1,
@@ -278,4 +284,93 @@ func TestCompile(t *testing.T) {
 
 func TestWrite(t *testing.T) {
 	t.Parallel()
+
+	const (
+		mockTime = 10
+		source   = "source"
+	)
+
+	var cyclicalPayload struct{ Payload any } // cyclic reference
+	cyclicalPayload.Payload = &cyclicalPayload
+
+	tests := map[string]struct {
+		period     uint
+		dryRun     bool
+		maxReports int
+		insights   interface{}
+
+		noDir bool
+
+		wantErr bool
+	}{
+		"Basic": {
+			period:     1,
+			maxReports: 5,
+			insights:   collector.Insights{},
+		},
+		"Dry Run": {
+			period:     1,
+			dryRun:     true,
+			maxReports: 5,
+			insights:   collector.Insights{},
+		},
+		"Max Reports": {
+			period:     5,
+			maxReports: 2,
+			insights:   collector.Insights{},
+		},
+		"Max Reports dryRun": {
+			period:     5,
+			dryRun:     true,
+			maxReports: 2,
+			insights:   collector.Insights{},
+		},
+		"No Dir": {
+			period:     1,
+			maxReports: 5,
+			insights:   collector.Insights{},
+			noDir:      true,
+		},
+		"Cyclical Payload": {
+			period:     1,
+			maxReports: 5,
+			insights:   cyclicalPayload,
+			wantErr:    true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+
+			sdir := filepath.Join(dir, source)
+			require.NoError(t, testutils.CopyDir(t, filepath.Join("testdata", "reports_cache"), sdir), "Setup: failed to copy reports cache")
+			if tc.noDir {
+				require.NoError(t, os.RemoveAll(sdir), "Setup: failed to remove reports cache")
+			}
+
+			opts := []collector.Options{
+				collector.WithTimeProvider(MockTimeProvider{CurrentTime: mockTime}),
+				collector.WithMaxReports(tc.maxReports),
+			}
+
+			c, err := collector.New(cTrue, dir, source, tc.period, tc.dryRun, opts...)
+			require.NoError(t, err, "Setup: failed to create collector")
+
+			err = c.Write(tc.insights)
+			if tc.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+
+			got, err := testutils.GetDirContents(t, sdir, 5)
+			require.NoError(t, err)
+
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			require.EqualValues(t, want, got)
+		})
+	}
 }

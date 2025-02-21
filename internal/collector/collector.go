@@ -132,8 +132,8 @@ func New(cm ConsentManager, cachePath, source string, period uint, dryRun bool, 
 
 // Compile checks if appropriate to make a new report, and if so, collects and compiles the data into a report.
 func (c Collector) Compile(force bool) (insights interface{}, err error) {
-	slog.Debug("Collecting data", "dryRun", c.dryRun, "force", force)
-	defer decorate.OnError(&err, "collect failed")
+	slog.Debug("Collecting data", "force", force)
+	defer decorate.OnError(&err, "insights compile failed")
 
 	if err := c.makeDirs(); err != nil {
 		return nil, err
@@ -167,12 +167,20 @@ func (c Collector) Compile(force bool) (insights interface{}, err error) {
 }
 
 // Write writes the insights report to disk, and cleans up old reports.
+// Does not check for duplicates, as this should be done in Compile.
 //
 // If the dryRun is true, then Write does nothing.
-func (c Collector) Write(insights interface{}) error {
+func (c Collector) Write(insights interface{}) (err error) {
+	slog.Debug("Writing data", "dryRun", c.dryRun)
+	defer decorate.OnError(&err, "insights write failed")
+
 	if c.dryRun {
 		slog.Info("Dry run, not writing insights report")
 		return nil
+	}
+
+	if err := c.makeDirs(); err != nil {
+		return fmt.Errorf("failed to create directories: %v", err)
 	}
 
 	if err := c.write(insights); err != nil {
@@ -253,20 +261,16 @@ func (c Collector) getSourceMetrics() (map[string]interface{}, error) {
 		return nil, fmt.Errorf("failed to read source metrics file: %v", err)
 	}
 
-	if !json.Valid(data) {
-		return nil, fmt.Errorf("invalid JSON data in source metrics file")
-	}
-
 	var metrics map[string]interface{}
 	if err := json.Unmarshal(data, &metrics); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal source metrics: %v", err)
+		return nil, fmt.Errorf("failed to unmarshal source metrics, might be invalid JSON: %v", err)
 	}
 
 	return metrics, nil
 }
 
 // write writes the insights report to disk, with the appropriate name.
-func (c Collector) write(insights interface{}) error {
+func (c Collector) write(insights any) error {
 	time, err := report.GetPeriodStart(c.period, c.time)
 	if err != nil {
 		return fmt.Errorf("failed to get report name: %v", err)
