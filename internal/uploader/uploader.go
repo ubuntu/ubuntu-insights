@@ -32,14 +32,14 @@ type Uploader struct {
 	baseServerURL string
 	collectedDir  string
 	uploadedDir   string
-	maxReports    int
+	maxReports    uint
 	timeProvider  timeProvider
 }
 
 type options struct {
 	// Private members exported for tests.
 	baseServerURL string
-	maxReports    int
+	maxReports    uint
 	timeProvider  timeProvider
 }
 

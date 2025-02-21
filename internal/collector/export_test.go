@@ -1,7 +1,7 @@
 package collector
 
 // WithMaxReports sets the maximum number of reports to keep.
-func WithMaxReports(maxReports int) Options {
+func WithMaxReports(maxReports uint) Options {
 	return func(o *options) {
 		o.maxReports = maxReports
 	}
