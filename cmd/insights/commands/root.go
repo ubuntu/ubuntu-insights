@@ -7,11 +7,13 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/ubuntu/ubuntu-insights/internal/collector"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/uploader"
 )
 
 type newUploader func(cm uploader.ConsentManager, cachePath, source string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error)
+type newCollector func(cm collector.ConsentManager, cachePath, source string, period uint, dryRun bool, args ...collector.Options) (collector.Collector, error)
 
 // App represents the application.
 type App struct {
@@ -29,11 +31,11 @@ type App struct {
 			dryRun  bool
 		}
 		collect struct {
-			source       string
-			period       uint
-			force        bool
-			dryRun       bool
-			extraMetrics string
+			source        string
+			period        uint
+			force         bool
+			dryRun        bool
+			sourceMetrics string
 		}
 		consent struct {
 			sources []string
@@ -41,11 +43,13 @@ type App struct {
 		}
 	}
 
-	newUploader newUploader
+	newUploader  newUploader
+	newCollector newCollector
 }
 
 type options struct {
-	newUploader newUploader
+	newUploader  newUploader
+	newCollector newCollector
 }
 
 // Options represents an optional function to override App default values.
@@ -54,15 +58,18 @@ type Options func(*options)
 // New registers commands and returns a new App.
 func New(args ...Options) (*App, error) {
 	opts := options{
-		newUploader: uploader.New,
+		newUploader:  uploader.New,
+		newCollector: collector.New,
 	}
 	for _, opt := range args {
 		opt(&opts)
 	}
-	a := App{newUploader: opts.newUploader}
+	a := App{
+		newUploader:  opts.newUploader,
+		newCollector: opts.newCollector,
+	}
 	a.cmd = &cobra.Command{
 		Use:           constants.CmdName + " [COMMAND]",
-		Short:         "",
 		Long:          "",
 		SilenceErrors: true,
 		Version:       constants.Version,
