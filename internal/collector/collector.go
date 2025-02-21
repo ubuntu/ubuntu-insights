@@ -18,6 +18,9 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/report"
 )
 
+// ErrDuplicateReport is returned when a report already exists for the current period.
+var ErrDuplicateReport = fmt.Errorf("report already exists for this period")
+
 // Insights contains the insights report compiled by the collector.
 type Insights struct {
 	InsightsVersion string                 `json:"insights_version"`
@@ -119,47 +122,54 @@ func New(cm ConsentManager, cachePath, source string, period uint, dryRun bool, 
 		source:   source,
 
 		time:              opts.timeProvider.Now(),
-		collectedDir:      filepath.Join(cachePath, source, "collected"),
-		uploadedDir:       filepath.Join(cachePath, source, "uploaded"),
+		collectedDir:      filepath.Join(cachePath, source, constants.LocalFolder),
+		uploadedDir:       filepath.Join(cachePath, source, constants.UploadedFolder),
 		sourceMetricsPath: opts.sourceMetricsPath,
 		maxReports:        opts.maxReports,
 		sysInfo:           opts.sysInfo,
 	}, nil
 }
 
-// Collect checks if appropriate to make a new report, and if so, collects and compiles the data into a report, writing it to disk.
-func (c Collector) Collect(force bool) (err error) {
+// Compile checks if appropriate to make a new report, and if so, collects and compiles the data into a report.
+func (c Collector) Compile(force bool) (insights interface{}, err error) {
 	slog.Debug("Collecting data", "dryRun", c.dryRun, "force", force)
 	defer decorate.OnError(&err, "collect failed")
 
 	if err := c.makeDirs(); err != nil {
-		return err
+		return nil, err
 	}
 
 	if !force {
 		duplicate, err := c.duplicateExists()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if duplicate {
-			return nil
+			return nil, ErrDuplicateReport
 		}
 	}
 
 	consent, err := c.consentM.HasConsent(c.source)
 	if err != nil {
-		return fmt.Errorf("failed to get consent state: %v", err)
+		return nil, fmt.Errorf("failed to get consent state: %v", err)
 	}
 
-	var insights interface{} = constants.OptOutJSON
+	insights = constants.OptOutJSON
 	if consent {
 		insights, err = c.compile()
 		if err != nil {
-			return fmt.Errorf("failed to compile insights: %v", err)
+			return nil, fmt.Errorf("failed to compile insights: %v", err)
 		}
 		slog.Info("Insights report compiled", "report", insights)
 	}
 
+	return insights, nil
+}
+
+// Write writes the insights report to disk, and cleans up old reports.
+//
+// If the dryRun is true, then Write does nothing.
+func (c Collector) Write(insights interface{}) error {
 	if c.dryRun {
 		slog.Info("Dry run, not writing insights report")
 		return nil

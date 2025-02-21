@@ -7,9 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/internal/collector"
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo"
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
@@ -114,7 +116,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestCollect(t *testing.T) {
+func TestCompile(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -130,9 +132,8 @@ func TestCollect(t *testing.T) {
 		dryRun            bool
 		force             bool
 
-		sysInfo     collector.SysInfo
-		noDir       bool
-		removeFiles []string
+		sysInfo collector.SysInfo
+		noDir   bool
 
 		wantErr bool
 	}{
@@ -205,6 +206,19 @@ func TestCollect(t *testing.T) {
 			sourceMetricsFile: "empty.json",
 			wantErr:           true,
 		},
+		"Duplicate report": {
+			period:   20,
+			consentM: cTrue,
+			source:   "source",
+			wantErr:  true,
+		},
+		"SysInfo Collect Error": {
+			period:   1,
+			consentM: cTrue,
+			source:   "source",
+			sysInfo:  testSysInfo{info: sysinfo.Info{}, err: fmt.Errorf("sysinfo error")},
+			wantErr:  true,
+		},
 	}
 
 	for name, tc := range tests {
@@ -212,6 +226,9 @@ func TestCollect(t *testing.T) {
 			t.Parallel()
 
 			dir := t.TempDir()
+
+			sdir := filepath.Join(dir, tc.source)
+			require.NoError(t, testutils.CopyDir(t, filepath.Join("testdata", "reports_cache"), sdir), "Setup: failed to copy reports cache")
 
 			if tc.sysInfo == nil {
 				tc.sysInfo = testSysInfo{info: sysinfo.Info{}, err: nil}
@@ -230,19 +247,35 @@ func TestCollect(t *testing.T) {
 			c, err := collector.New(tc.consentM, dir, tc.source, tc.period, tc.dryRun, opts...)
 			require.NoError(t, err, "Setup: failed to create collector")
 
-			err = c.Collect(tc.force)
+			got, err := c.Compile(tc.force)
 			if tc.wantErr {
 				require.Error(t, err)
+				require.Nil(t, got)
 				return
 			}
 			require.NoError(t, err)
+			assert.NotNil(t, got)
 
-			// Get contents of the collected directory
-			got, err := testutils.GetDirContents(t, dir, 5)
-			require.NoError(t, err, "failed to get contents of collected directory")
+			if insights, ok := got.(collector.Insights); ok {
+				assert.NotEmpty(t, insights)
+				if insights.SourceMetrics == nil {
+					insights.SourceMetrics = make(map[string]interface{})
+				}
 
-			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-			require.Equal(t, want, got)
+				g := struct {
+					InsightsVersion string
+					SourceMetrics   map[string]interface{}
+				}{InsightsVersion: insights.InsightsVersion, SourceMetrics: insights.SourceMetrics}
+				want := testutils.LoadWithUpdateFromGoldenYAML(t, g)
+				require.EqualValues(t, want, g)
+				return
+			}
+
+			require.Equal(t, constants.OptOutJSON, got)
 		})
 	}
+}
+
+func TestWrite(t *testing.T) {
+	t.Parallel()
 }

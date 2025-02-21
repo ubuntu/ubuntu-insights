@@ -104,6 +104,7 @@ func TestGetForPeriod(t *testing.T) {
 		"Specific Time Single Valid Report": {files: []string{"1.json", "2.json"}, time: 2, period: 1},
 		"Negative Timestamp":                {files: []string{"-100.json", "-101.json"}, time: -150, period: 100},
 		"Not Inclusive Period":              {files: []string{"1.json", "7.json"}, time: 2, period: 7},
+		"Lexical Order Check":               {files: []string{"5.json", "20.json"}, time: 10, period: 20},
 
 		"Invalid Negative Period": {files: []string{"1.json", "7.json"}, time: 2, period: -7, wantSpecificErr: report.ErrInvalidPeriod},
 		"Invalid Zero Period":     {files: []string{"1.json", "7.json"}, time: 2, period: 0, wantSpecificErr: report.ErrInvalidPeriod},

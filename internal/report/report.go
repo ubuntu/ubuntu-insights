@@ -173,7 +173,7 @@ func GetForPeriod(dir string, t time.Time, period int) (Report, error) {
 			return nil
 		}
 		if r.TimeStamp >= periodEnd {
-			return filepath.SkipDir
+			return nil
 		}
 
 		report = r
