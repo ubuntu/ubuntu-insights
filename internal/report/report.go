@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -262,20 +263,22 @@ func GetAll(dir string) ([]Report, error) {
 }
 
 // Cleanup removes reports in a directory, keeping the most recent maxReports reports.
-// If a file does it appear to be a report, it is skipped and ignored.
+// If a file does not appear to be a report, it is skipped and ignored.
 // If a file is unable to be removed, then it will be logged, but the function will continue.
-func Cleanup(dir string, maxReports int) error {
-	if maxReports < 0 {
-		return fmt.Errorf("max reports must be a non-negative integer")
+func Cleanup(dir string, maxReports uint) error {
+	if maxReports > math.MaxInt {
+		return fmt.Errorf("maxReports is too large and would result in an overflow: %d", maxReports)
 	}
+
+	mReports := int(maxReports)
 
 	reports, err := GetAll(dir)
 	if err != nil {
 		return err
 	}
 
-	if len(reports) <= maxReports {
-		slog.Debug("no reports to cleanup", "maxReports", maxReports, "numReports", len(reports))
+	if len(reports) <= mReports {
+		slog.Debug("no reports to cleanup", "maxReports", mReports, "numReports", len(reports))
 		return nil
 	}
 
@@ -285,7 +288,7 @@ func Cleanup(dir string, maxReports int) error {
 	})
 
 	// Remove the oldest reports, keeping the most recent maxReports.
-	for _, report := range reports[:len(reports)-maxReports] {
+	for _, report := range reports[:len(reports)-mReports] {
 		if err := os.Remove(report.Path); err != nil {
 			slog.Error("failed to remove report", "path", report.Path, "error", err)
 		}

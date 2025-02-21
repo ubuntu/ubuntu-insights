@@ -1,6 +1,7 @@
 package report_test
 
 import (
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -508,7 +509,7 @@ func TestCleanup(t *testing.T) {
 
 	tests := map[string]struct {
 		files      []string
-		maxReports int
+		maxReports uint
 		noDir      bool
 
 		wantErr bool
@@ -544,9 +545,9 @@ func TestCleanup(t *testing.T) {
 			noDir:      true,
 			wantErr:    true,
 		},
-		"Negative maxReports": {
+		"Max Reports Overflow": {
 			files:      []string{"1.json", "2.json", "3.json", "4.json", "5.json", "6.json"},
-			maxReports: -1,
+			maxReports: math.MaxInt + 1,
 			wantErr:    true,
 		},
 	}

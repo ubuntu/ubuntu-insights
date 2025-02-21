@@ -58,7 +58,7 @@ type Collector struct {
 	collectedDir      string
 	uploadedDir       string
 	sourceMetricsPath string
-	maxReports        int
+	maxReports        uint
 	time              time.Time
 	sysInfo           SysInfo
 }
@@ -66,7 +66,7 @@ type Collector struct {
 type options struct {
 	sourceMetricsPath string
 	// Private members exported for tests.
-	maxReports   int
+	maxReports   uint
 	timeProvider timeProvider
 	sysInfo      SysInfo
 }

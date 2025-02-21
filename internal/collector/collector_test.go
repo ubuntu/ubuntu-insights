@@ -296,7 +296,7 @@ func TestWrite(t *testing.T) {
 	tests := map[string]struct {
 		period     uint
 		dryRun     bool
-		maxReports int
+		maxReports uint
 		insights   interface{}
 
 		noDir bool
