@@ -1,0 +1,10 @@
+os:
+    family: darwin
+    distro: ""
+    version: ""
+    edition: ""
+timezone: CEN
+lang: en_US
+bios:
+    vendor: Apple
+    version: 429.0.0.0.0

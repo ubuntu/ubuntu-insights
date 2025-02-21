@@ -1,0 +1,10 @@
+os:
+    family: darwin
+    distro: Mac OS X
+    version: 10.11.1
+    edition: 15B42
+timezone: EST
+lang: en_US
+bios:
+    vendor: ""
+    version: ""
