@@ -81,6 +81,14 @@ func TestCollect(t *testing.T) {
 		}, "Collect dry run, verbose 2": {
 			args:           []string{"collect", "--dry-run", "-vv"},
 			platformSource: true,
+		}, "Collect False-consent source": {
+			args: []string{"collect", "False", filepath.Join("testdata", "source_metrics", "normal.json")},
+		}, "Collect Bad-File-consent source": {
+			args: []string{"collect", "Bad-File", filepath.Join("testdata", "source_metrics", "normal.json")},
+		}, "Collect Bad-File consent global source": {
+			args:       []string{"collect", "Bad-File", filepath.Join("testdata", "source_metrics", "normal.json")},
+			consentDir: "bad-file-global",
+			wantErr:    true,
 		}, "Collect nArgs 3": {
 			args:         []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "extra-arg"},
 			wantErr:      true,
