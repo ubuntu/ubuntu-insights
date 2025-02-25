@@ -1,11 +1,16 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
+	"runtime"
 
 	"github.com/spf13/cobra"
+	"github.com/ubuntu/decorate"
+	"github.com/ubuntu/ubuntu-insights/internal/collector"
+	"github.com/ubuntu/ubuntu-insights/internal/consent"
 )
 
 func installCollectCmd(app *App) {
@@ -38,15 +43,17 @@ func installCollectCmd(app *App) {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Default source to platform
+			app.config.collect.source = runtime.GOOS
+
 			// Set Sources to Args
 			if len(args) == 2 {
 				app.config.collect.source = args[0]
-				app.config.collect.extraMetrics = args[1]
+				app.config.collect.sourceMetrics = args[1]
 			}
 
 			slog.Info("Running collect command")
-
-			return nil
+			return app.collectRun()
 		},
 	}
 
@@ -55,4 +62,38 @@ func installCollectCmd(app *App) {
 	collectCmd.Flags().BoolVarP(&app.config.collect.dryRun, "dry-run", "d", false, "perform a dry-run where a report is collected, but not written to disk")
 
 	app.cmd.AddCommand(collectCmd)
+}
+
+// collectRun runs the collect command.
+func (a App) collectRun() (err error) {
+	defer decorate.OnError(&err, "failed to collect insights")
+
+	cConfig := a.config.collect
+	cm := consent.New(a.config.consentDir)
+
+	opts := []collector.Options{}
+	if cConfig.sourceMetrics != "" {
+		opts = append(opts, collector.WithSourceMetricsPath(cConfig.sourceMetrics))
+	}
+
+	c, err := a.newCollector(cm, a.config.insightsDir, cConfig.source, cConfig.period, cConfig.dryRun, opts...)
+	if err != nil {
+		return err
+	}
+
+	insights, err := c.Compile(cConfig.force)
+	if err != nil {
+		return err
+	}
+
+	// Pretty print insights
+	sInsights, err := json.MarshalIndent(insights, "", "    ")
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%+v\n", string(sInsights))
+
+	err = c.Write(insights)
+
+	return err
 }

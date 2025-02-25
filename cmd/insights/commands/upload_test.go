@@ -1,7 +1,6 @@
 package commands_test
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -81,7 +80,7 @@ func TestUpload(t *testing.T) {
 
 				return uploader.New(cm, cachePath, source, minAge, true, args...)
 			}
-			a, _, _ := newAppUploaderForTests(t, tc.args, newUploader, tc.consentDir)
+			a, _, _ := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewUploader(newUploader))
 			err := a.Run()
 			if tc.wantErr {
 				require.Error(t, err)
@@ -111,26 +110,4 @@ func TestUpload(t *testing.T) {
 			require.Equal(t, want, got, "Unexpected upload command state")
 		})
 	}
-}
-
-func newAppUploaderForTests(t *testing.T, args []string, newUploader commands.NewUploader, consentDir string) (app *commands.App, consentPath, cachePath string) {
-	t.Helper()
-
-	cachePath = filepath.Join(t.TempDir())
-	cacheDir := filepath.Join("testdata", "reports")
-	require.NoError(t, testutils.CopyDir(t, cacheDir, cachePath), "Setup: could not copy cache dir")
-	args = append(args, "--insights-dir", cachePath)
-
-	consentPath = t.TempDir()
-	consentDir = filepath.Join("testdata", "consents", consentDir)
-	require.NoError(t, testutils.CopyDir(t, consentDir, consentPath), "Setup: could not copy consent dir")
-
-	args = append(args, "--consent-dir", consentPath)
-
-	app, err := commands.New(commands.WithNewUploader(newUploader))
-	require.NoError(t, err, "Setup: could not create app")
-
-	app.SetArgs(args)
-
-	return app, consentPath, cachePath
 }
