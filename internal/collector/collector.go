@@ -23,9 +23,9 @@ var ErrDuplicateReport = fmt.Errorf("report already exists for this period")
 
 // Insights contains the insights report compiled by the collector.
 type Insights struct {
-	InsightsVersion string                 `json:"insights_version"`
-	SysInfo         sysinfo.Info           `json:"system_info"`
-	SourceMetrics   map[string]interface{} `json:"source_metrics"`
+	InsightsVersion string         `json:"insightsVersion"`
+	SysInfo         sysinfo.Info   `json:"systemInfo"`
+	SourceMetrics   map[string]any `json:"sourceMetrics"`
 }
 
 type timeProvider interface {
@@ -38,8 +38,8 @@ func (realTimeProvider) Now() time.Time {
 	return time.Now()
 }
 
-// ConsentManager is an interface for the consent manager.
-type ConsentManager interface {
+// Consent is an interface for getting the consent state for a given source.
+type Consent interface {
 	HasConsent(source string) (bool, error)
 }
 
@@ -50,10 +50,10 @@ type SysInfo interface {
 
 // Collector is an abstraction of the collector component.
 type Collector struct {
-	consentM ConsentManager
-	period   int
-	dryRun   bool
-	source   string
+	consent Consent
+	period  int
+	dryRun  bool
+	source  string
 
 	collectedDir      string
 	uploadedDir       string
@@ -82,7 +82,9 @@ func WithSourceMetricsPath(path string) Options {
 }
 
 // New returns a new Collector.
-func New(cm ConsentManager, cachePath, source string, period uint, dryRun bool, args ...Options) (Collector, error) {
+//
+// The internal time used for collecting and writing reports is the current time at the moment of creation of the Collector.
+func New(cm Consent, cachePath, source string, period uint, dryRun bool, args ...Options) (Collector, error) {
 	slog.Debug("Creating new collector", "source", source, "period", period, "dryRun", dryRun)
 
 	if source == "" {
@@ -116,10 +118,10 @@ func New(cm ConsentManager, cachePath, source string, period uint, dryRun bool, 
 	}
 
 	return Collector{
-		consentM: cm,
-		period:   int(period),
-		dryRun:   dryRun,
-		source:   source,
+		consent: cm,
+		period:  int(period),
+		dryRun:  dryRun,
+		source:  source,
 
 		time:              opts.timeProvider.Now(),
 		collectedDir:      filepath.Join(cachePath, source, constants.LocalFolder),
@@ -131,7 +133,7 @@ func New(cm ConsentManager, cachePath, source string, period uint, dryRun bool, 
 }
 
 // Compile checks if appropriate to make a new report, and if so, collects and compiles the data into a report.
-func (c Collector) Compile(force bool) (insights interface{}, err error) {
+func (c Collector) Compile(force bool) (insights []byte, err error) {
 	slog.Debug("Collecting data", "force", force)
 	defer decorate.OnError(&err, "insights compile failed")
 
@@ -149,12 +151,15 @@ func (c Collector) Compile(force bool) (insights interface{}, err error) {
 		}
 	}
 
-	consent, err := c.consentM.HasConsent(c.source)
+	consent, err := c.consent.HasConsent(c.source)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get consent state: %v", err)
 	}
 
-	insights = constants.OptOutJSON
+	insights, err = json.Marshal(constants.OptOutJSON)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal opt-out JSON: %v", err)
+	}
 	if consent {
 		insights, err = c.compile()
 		if err != nil {
@@ -170,7 +175,7 @@ func (c Collector) Compile(force bool) (insights interface{}, err error) {
 // Does not check for duplicates, as this should be done in Compile.
 //
 // If the dryRun is true, then Write does nothing.
-func (c Collector) Write(insights interface{}) (err error) {
+func (c Collector) Write(insights []byte) (err error) {
 	slog.Debug("Writing data", "dryRun", c.dryRun)
 	defer decorate.OnError(&err, "insights write failed")
 
@@ -221,7 +226,7 @@ func (c Collector) duplicateExists() (bool, error) {
 }
 
 // compile collects data from sources, and returns an Insights object.
-func (c Collector) compile() (Insights, error) {
+func (c Collector) compile() ([]byte, error) {
 	insights := Insights{
 		InsightsVersion: constants.Version,
 	}
@@ -229,18 +234,18 @@ func (c Collector) compile() (Insights, error) {
 	// Collect system information.
 	info, err := c.sysInfo.Collect()
 	if err != nil {
-		return insights, fmt.Errorf("failed to collect system information: %v", err)
+		return nil, fmt.Errorf("failed to collect system information: %v", err)
 	}
 	insights.SysInfo = info
 
 	// Load source specific metrics.
 	metrics, err := c.getSourceMetrics()
 	if err != nil {
-		return insights, fmt.Errorf("failed to load source metrics: %v", err)
+		return nil, fmt.Errorf("failed to load source metrics: %v", err)
 	}
 	insights.SourceMetrics = metrics
 
-	return insights, nil
+	return json.Marshal(insights)
 }
 
 // getSourceMetrics loads source specific metrics from a JSON file.
@@ -248,7 +253,7 @@ func (c Collector) compile() (Insights, error) {
 //
 // If the file does not exist, or cannot be read, it returns an error.
 // If the file is not valid JSON, it returns an error.
-func (c Collector) getSourceMetrics() (map[string]interface{}, error) {
+func (c Collector) getSourceMetrics() (map[string]any, error) {
 	slog.Debug("Loading source metrics", "path", c.sourceMetricsPath)
 
 	if c.sourceMetricsPath == "" {
@@ -261,7 +266,7 @@ func (c Collector) getSourceMetrics() (map[string]interface{}, error) {
 		return nil, fmt.Errorf("failed to read source metrics file: %v", err)
 	}
 
-	var metrics map[string]interface{}
+	var metrics map[string]any
 	if err := json.Unmarshal(data, &metrics); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal source metrics, might be invalid JSON: %v", err)
 	}
@@ -270,19 +275,14 @@ func (c Collector) getSourceMetrics() (map[string]interface{}, error) {
 }
 
 // write writes the insights report to disk, with the appropriate name.
-func (c Collector) write(insights any) error {
+func (c Collector) write(insights []byte) error {
 	time, err := report.GetPeriodStart(c.period, c.time)
 	if err != nil {
 		return fmt.Errorf("failed to get report name: %v", err)
 	}
 
-	data, err := json.Marshal(insights)
-	if err != nil {
-		return fmt.Errorf("failed to marshal insights: %v", err)
-	}
-
 	reportPath := filepath.Join(c.collectedDir, fmt.Sprintf("%v.json", time))
-	if err := fileutils.AtomicWrite(reportPath, data); err != nil {
+	if err := fileutils.AtomicWrite(reportPath, insights); err != nil {
 		return fmt.Errorf("failed to write to disk: %v", err)
 	}
 	slog.Info("Insights report written", "file", reportPath)

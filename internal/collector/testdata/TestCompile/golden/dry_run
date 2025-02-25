@@ -1,2 +1,31 @@
-insightsversion: Dev
-sourcemetrics: {}
+insightsVersion: Dev
+sourceMetrics: null
+systemInfo:
+    hardware:
+        cpu:
+            architecture: ""
+            coresPerSocket: 0
+            cpus: 0
+            name: ""
+            sockets: 0
+            threadsPerCore: 0
+            vendor: ""
+        disks: null
+        gpus: null
+        memory:
+            size: 0
+        product:
+            family: ""
+            name: ""
+            vendor: ""
+        screens: null
+    software:
+        bios:
+            vendor: ""
+            version: ""
+        language: ""
+        os:
+            distribution: ""
+            family: ""
+            version: ""
+        timezone: ""
