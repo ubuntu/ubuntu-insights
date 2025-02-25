@@ -1,6 +1,10 @@
 package commands_test
 
 import (
+	"fmt"
+	"math"
+	"math/big"
+	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -13,6 +17,10 @@ import (
 
 func TestCollect(t *testing.T) {
 	t.Parallel()
+
+	overflowInt := big.NewInt(math.MaxInt)
+	overflowInt.Add(overflowInt, big.NewInt(1))
+
 	tests := map[string]struct {
 		args []string
 
@@ -26,6 +34,57 @@ func TestCollect(t *testing.T) {
 		"Collect Basic": {
 			args:           []string{"collect"},
 			platformSource: true,
+		}, "Collect Source no Metrics": {
+			args:         []string{"collect", "source"},
+			wantErr:      true,
+			wantUsageErr: true,
+		}, "Collect source normal": {
+			args: []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json")},
+		}, "Collect source normal, period": {
+			args: []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "--period=10"},
+		}, "Collect source normal, dry-run": {
+			args: []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "--dry-run"},
+		}, "Collect source normal, period, dry-run": {
+			args: []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "--period=10", "--dry-run"},
+		}, "Collect source normal, period, dry-run, force": {
+			args: []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "--period=10", "--dry-run", "--force"},
+		}, "Collect source dir": {
+			args:         []string{"collect", "source", filepath.Join("testdata", "source_metrics")},
+			wantErr:      true,
+			wantUsageErr: true,
+		}, "Collect source invalid path": {
+			args:         []string{"collect", "source", "invalid-path"},
+			wantErr:      true,
+			wantUsageErr: true,
+		}, "Collect source invalid JSON": {
+			args:    []string{"collect", "source", filepath.Join("testdata", "source_metrics", "invalid.json")},
+			wantErr: true,
+		}, "Collect bad flag": {
+			args:         []string{"collect", "--bad-flag"},
+			wantErr:      true,
+			wantUsageErr: true,
+		}, "Collect period not int": {
+			args:         []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "--period=not-int"},
+			wantErr:      true,
+			wantUsageErr: true,
+		}, "Collect period negative": {
+			args:         []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "--period=-1"},
+			wantErr:      true,
+			wantUsageErr: true,
+		}, "Collect period overflow": {
+			args:           []string{"collect", fmt.Sprintf("--period=%s", overflowInt.String())},
+			platformSource: true,
+			wantErr:        true,
+		}, "Collect dry run, verbose 1": {
+			args:           []string{"collect", "--dry-run", "-v"},
+			platformSource: true,
+		}, "Collect dry run, verbose 2": {
+			args:           []string{"collect", "--dry-run", "-vv"},
+			platformSource: true,
+		}, "Collect nArgs 3": {
+			args:         []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "extra-arg"},
+			wantErr:      true,
+			wantUsageErr: true,
 		},
 	}
 
@@ -61,9 +120,9 @@ func TestCollect(t *testing.T) {
 			}
 			if tc.wantUsageErr {
 				require.True(t, a.UsageError())
-			} else {
-				require.False(t, a.UsageError())
+				return
 			}
+			require.False(t, a.UsageError())
 
 			if tc.platformSource {
 				assert.Equal(t, runtime.GOOS, gotSource)
