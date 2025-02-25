@@ -24,9 +24,6 @@ const (
 	// DefaultLogLevel is the default log level selected without any verbosity flags.
 	DefaultLogLevel = slog.LevelWarn
 
-	// DefaultServerURL is the default base URL for the server that reports are uploaded to.
-	DefaultServerURL = "https://metrics.ubuntu.com"
-
 	// LocalFolder is the default name of the local collected reports folder.
 	LocalFolder = "local"
 

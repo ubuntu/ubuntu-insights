@@ -39,7 +39,6 @@ func initViperConfig(cmdName string, cmd *cobra.Command, vip *viper.Viper) error
 			vip.AddConfigPath(filepath.Dir(binPath))
 		}
 	}
-
 	if err := vip.ReadInConfig(); err != nil {
 		var e viper.ConfigFileNotFoundError
 		if errors.As(err, &e) {

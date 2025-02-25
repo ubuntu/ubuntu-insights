@@ -1,0 +1,14 @@
+consent:
+  sources:
+    - "Bad-Ext"
+    - "Bad-File"
+    - "Bad-Key"
+    - "Bad-Value"
+    - "Empty"
+    - "Improper-Name"
+    - "Missing"
+    - "True"
+    - "False"
+    - "True"
+    - "Long-Source-True"
+    - "Extra-Entries"

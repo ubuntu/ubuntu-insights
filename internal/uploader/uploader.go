@@ -43,6 +43,12 @@ type options struct {
 	timeProvider  timeProvider
 }
 
+var defaultOptions = options{
+	baseServerURL: "https://metrics.ubuntu.com",
+	maxReports:    constants.MaxReports,
+	timeProvider:  realTimeProvider{},
+}
+
 // Options represents an optional function to override Upload Manager default values.
 type Options func(*options)
 
@@ -63,11 +69,7 @@ func New(cm Consent, cachePath, source string, minAge uint, dryRun bool, args ..
 		return Uploader{}, fmt.Errorf("min age %d is too large, would overflow", minAge)
 	}
 
-	opts := options{
-		baseServerURL: constants.DefaultServerURL,
-		maxReports:    constants.MaxReports,
-		timeProvider:  realTimeProvider{},
-	}
+	opts := defaultOptions
 	for _, opt := range args {
 		opt(&opts)
 	}
