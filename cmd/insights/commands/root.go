@@ -12,8 +12,8 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/uploader"
 )
 
-type newUploader func(cm uploader.ConsentManager, cachePath, source string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error)
-type newCollector func(cm collector.ConsentManager, cachePath, source string, period uint, dryRun bool, args ...collector.Options) (collector.Collector, error)
+type newUploader func(cm uploader.Consent, cachePath, source string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error)
+type newCollector func(cm collector.Consent, cachePath, source string, period uint, dryRun bool, args ...collector.Options) (collector.Collector, error)
 
 // App represents the application.
 type App struct {

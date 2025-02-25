@@ -102,7 +102,7 @@ func TestCollect(t *testing.T) {
 				gotPeriod    uint
 				gotDryRun    bool
 			)
-			newCollector := func(cm collector.ConsentManager, cachePath, source string, period uint, dryRun bool, args ...collector.Options) (collector.Collector, error) {
+			newCollector := func(cm collector.Consent, cachePath, source string, period uint, dryRun bool, args ...collector.Options) (collector.Collector, error) {
 				gotCachePath = cachePath
 				gotSource = source
 				gotPeriod = period

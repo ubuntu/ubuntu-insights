@@ -73,7 +73,7 @@ func TestUpload(t *testing.T) {
 				gotMinAge uint
 				dRun      bool
 			)
-			newUploader := func(cm uploader.ConsentManager, cachePath, source string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error) {
+			newUploader := func(cm uploader.Consent, cachePath, source string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error) {
 				gotSources = append(gotSources, source)
 				gotMinAge = minAge
 				dRun = dryRun

@@ -1,6 +1,7 @@
 package collector_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"os"
@@ -12,8 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/internal/collector"
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo"
-	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -53,7 +54,7 @@ func TestNew(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		consentM       collector.ConsentManager
+		consentM       collector.Consent
 		source         string
 		period         uint
 		dryRun         bool
@@ -126,7 +127,7 @@ func TestCompile(t *testing.T) {
 	)
 
 	tests := map[string]struct {
-		consentM          collector.ConsentManager
+		consentM          collector.Consent
 		source            string
 		sourceMetricsFile string
 		period            uint
@@ -253,31 +254,20 @@ func TestCompile(t *testing.T) {
 			c, err := collector.New(tc.consentM, dir, tc.source, tc.period, tc.dryRun, opts...)
 			require.NoError(t, err, "Setup: failed to create collector")
 
-			got, err := c.Compile(tc.force)
+			results, err := c.Compile(tc.force)
 			if tc.wantErr {
 				require.Error(t, err)
-				require.Nil(t, got)
+				require.Nil(t, results)
 				return
 			}
 			require.NoError(t, err)
-			assert.NotNil(t, got)
+			assert.NotNil(t, results)
 
-			if insights, ok := got.(collector.Insights); ok {
-				assert.NotEmpty(t, insights)
-				if insights.SourceMetrics == nil {
-					insights.SourceMetrics = make(map[string]interface{})
-				}
-
-				g := struct {
-					InsightsVersion string
-					SourceMetrics   map[string]interface{}
-				}{InsightsVersion: insights.InsightsVersion, SourceMetrics: insights.SourceMetrics}
-				want := testutils.LoadWithUpdateFromGoldenYAML(t, g)
-				require.EqualValues(t, want, g)
-				return
-			}
-
-			require.Equal(t, constants.OptOutJSON, got)
+			var got map[string]any
+			err = yaml.Unmarshal(results, &got)
+			require.NoError(t, err)
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			require.EqualValues(t, want, got)
 		})
 	}
 }
@@ -290,14 +280,11 @@ func TestWrite(t *testing.T) {
 		source   = "source"
 	)
 
-	var cyclicalPayload struct{ Payload any } // cyclic reference
-	cyclicalPayload.Payload = &cyclicalPayload
-
 	tests := map[string]struct {
 		period     uint
 		dryRun     bool
 		maxReports uint
-		insights   interface{}
+		insights   any
 
 		noDir bool
 
@@ -331,12 +318,6 @@ func TestWrite(t *testing.T) {
 			insights:   collector.Insights{},
 			noDir:      true,
 		},
-		"Cyclical Payload": {
-			period:     1,
-			maxReports: 5,
-			insights:   cyclicalPayload,
-			wantErr:    true,
-		},
 	}
 
 	for name, tc := range tests {
@@ -359,7 +340,9 @@ func TestWrite(t *testing.T) {
 			c, err := collector.New(cTrue, dir, source, tc.period, tc.dryRun, opts...)
 			require.NoError(t, err, "Setup: failed to create collector")
 
-			err = c.Write(tc.insights)
+			data, err := json.Marshal(tc.insights)
+			require.NoError(t, err)
+			err = c.Write(data)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
