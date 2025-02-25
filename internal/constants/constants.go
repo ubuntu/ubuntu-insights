@@ -41,6 +41,9 @@ const (
 
 	// ReportExt is the default extension for the report files.
 	ReportExt = ".json"
+
+	// MaxReports is the maximum number of report files that can exist in a folder.
+	MaxReports = 150
 )
 
 var (

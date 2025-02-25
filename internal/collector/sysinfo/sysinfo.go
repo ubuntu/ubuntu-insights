@@ -37,7 +37,7 @@ type Info struct {
 	Software software.Info `json:"software"`
 }
 
-// New returns a new SysInfo.
+// New returns a new Collector.
 func New(args ...Options) Collector {
 	opts := &options{
 		hw:  hardware.New(),

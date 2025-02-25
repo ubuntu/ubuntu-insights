@@ -24,33 +24,35 @@ func (realTimeProvider) Now() time.Time {
 
 // Uploader is an abstraction of the uploader component.
 type Uploader struct {
-	source   string
-	consentM ConsentManager
-	minAge   time.Duration
-	dryRun   bool
+	source  string
+	consent Consent
+	minAge  time.Duration
+	dryRun  bool
 
 	baseServerURL string
 	collectedDir  string
 	uploadedDir   string
+	maxReports    uint
 	timeProvider  timeProvider
 }
 
 type options struct {
 	// Private members exported for tests.
 	baseServerURL string
+	maxReports    uint
 	timeProvider  timeProvider
 }
 
 // Options represents an optional function to override Upload Manager default values.
 type Options func(*options)
 
-// ConsentManager is an interface for the consent manager.
-type ConsentManager interface {
+// Consent is an interface for getting the consent state for a given source.
+type Consent interface {
 	HasConsent(source string) (bool, error)
 }
 
 // New returns a new UploaderManager.
-func New(cm ConsentManager, cachePath, source string, minAge uint, dryRun bool, args ...Options) (Uploader, error) {
+func New(cm Consent, cachePath, source string, minAge uint, dryRun bool, args ...Options) (Uploader, error) {
 	slog.Debug("Creating new uploader manager", "source", source, "minAge", minAge, "dryRun", dryRun)
 
 	if source == "" {
@@ -63,6 +65,7 @@ func New(cm ConsentManager, cachePath, source string, minAge uint, dryRun bool, 
 
 	opts := options{
 		baseServerURL: constants.DefaultServerURL,
+		maxReports:    constants.MaxReports,
 		timeProvider:  realTimeProvider{},
 	}
 	for _, opt := range args {
@@ -71,7 +74,7 @@ func New(cm ConsentManager, cachePath, source string, minAge uint, dryRun bool, 
 
 	return Uploader{
 		source:       source,
-		consentM:     cm,
+		consent:      cm,
 		minAge:       time.Duration(minAge) * time.Second,
 		dryRun:       dryRun,
 		timeProvider: opts.timeProvider,
@@ -79,6 +82,7 @@ func New(cm ConsentManager, cachePath, source string, minAge uint, dryRun bool, 
 		baseServerURL: opts.baseServerURL,
 		collectedDir:  filepath.Join(cachePath, source, constants.LocalFolder),
 		uploadedDir:   filepath.Join(cachePath, source, constants.UploadedFolder),
+		maxReports:    opts.maxReports,
 	}, nil
 }
 

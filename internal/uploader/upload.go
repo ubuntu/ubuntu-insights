@@ -33,7 +33,7 @@ func (um Uploader) Upload(force bool) error {
 		return err
 	}
 
-	consent, err := um.consentM.HasConsent(um.source)
+	consent, err := um.consent.HasConsent(um.source)
 	if err != nil {
 		return fmt.Errorf("upload failed to get consent state: %v", err)
 	}
@@ -63,7 +63,11 @@ func (um Uploader) Upload(force bool) error {
 	}
 	wg.Wait()
 
-	return nil
+	if um.dryRun {
+		return nil
+	}
+
+	return report.Cleanup(um.uploadedDir, um.maxReports)
 }
 
 // upload uploads an individual report to the server. It returns an error if the report is not mature enough to be uploaded, or if the upload fails.
