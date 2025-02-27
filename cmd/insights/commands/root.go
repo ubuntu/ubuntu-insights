@@ -24,11 +24,11 @@ type App struct {
 		Verbose     int
 		consentDir  string
 		insightsDir string
-		upload      struct {
-			sources []string
-			minAge  uint
-			force   bool
-			dryRun  bool
+		Upload      struct {
+			Sources []string
+			MinAge  uint `mapstructure:"minAge"`
+			Force   bool
+			DryRun  bool `mapstructure:"dryRun"`
 		}
 		collect struct {
 			source        string

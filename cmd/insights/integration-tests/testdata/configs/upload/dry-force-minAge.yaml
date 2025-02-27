@@ -1,0 +1,4 @@
+upload:
+  dryRun: true
+  force: true
+  minAge: 10

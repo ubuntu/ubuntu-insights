@@ -13,7 +13,6 @@ import (
 
 func TestConsent(t *testing.T) {
 	t.Parallel()
-	const defaultConsentFixture = "true-global"
 
 	readOnlyErrorCode := func() int {
 		if runtime.GOOS == "windows" {
