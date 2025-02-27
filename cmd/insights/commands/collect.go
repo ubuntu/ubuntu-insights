@@ -44,12 +44,12 @@ func installCollectCmd(app *App) {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Default source to platform
-			app.config.collect.source = runtime.GOOS
+			app.config.Collect.Source = runtime.GOOS
 
 			// Set Sources to Args
 			if len(args) == 2 {
-				app.config.collect.source = args[0]
-				app.config.collect.sourceMetrics = args[1]
+				app.config.Collect.Source = args[0]
+				app.config.Collect.SourceMetrics = args[1]
 			}
 
 			slog.Info("Running collect command")
@@ -57,9 +57,9 @@ func installCollectCmd(app *App) {
 		},
 	}
 
-	collectCmd.Flags().UintVarP(&app.config.collect.period, "period", "p", 1, "the minimum period between 2 collection periods for validation purposes in seconds")
-	collectCmd.Flags().BoolVarP(&app.config.collect.force, "force", "f", false, "force a collection, override the report if there are any conflicts (doesn't ignore consent)")
-	collectCmd.Flags().BoolVarP(&app.config.collect.dryRun, "dry-run", "d", false, "perform a dry-run where a report is collected, but not written to disk")
+	collectCmd.Flags().UintVarP(&app.config.Collect.Period, "period", "p", 1, "the minimum period between 2 collection periods for validation purposes in seconds")
+	collectCmd.Flags().BoolVarP(&app.config.Collect.Force, "force", "f", false, "force a collection, override the report if there are any conflicts (doesn't ignore consent)")
+	collectCmd.Flags().BoolVarP(&app.config.Collect.DryRun, "dry-run", "d", false, "perform a dry-run where a report is collected, but not written to disk")
 
 	app.cmd.AddCommand(collectCmd)
 }
@@ -68,20 +68,20 @@ func installCollectCmd(app *App) {
 func (a App) collectRun() (err error) {
 	defer decorate.OnError(&err, "failed to collect insights")
 
-	cConfig := a.config.collect
+	cConfig := a.config.Collect
 	cm := consent.New(a.config.consentDir)
 
 	opts := []collector.Options{}
-	if cConfig.sourceMetrics != "" {
-		opts = append(opts, collector.WithSourceMetricsPath(cConfig.sourceMetrics))
+	if cConfig.SourceMetrics != "" {
+		opts = append(opts, collector.WithSourceMetricsPath(cConfig.SourceMetrics))
 	}
 
-	c, err := a.newCollector(cm, a.config.insightsDir, cConfig.source, cConfig.period, cConfig.dryRun, opts...)
+	c, err := a.newCollector(cm, a.config.insightsDir, cConfig.Source, cConfig.Period, cConfig.DryRun, opts...)
 	if err != nil {
 		return err
 	}
 
-	insights, err := c.Compile(cConfig.force)
+	insights, err := c.Compile(cConfig.Force)
 	if err != nil {
 		return err
 	}

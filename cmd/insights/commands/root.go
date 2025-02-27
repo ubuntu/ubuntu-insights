@@ -30,12 +30,12 @@ type App struct {
 			Force   bool
 			DryRun  bool `mapstructure:"dryRun"`
 		}
-		collect struct {
-			source        string
-			period        uint
-			force         bool
-			dryRun        bool
-			sourceMetrics string
+		Collect struct {
+			Source        string
+			Period        uint
+			Force         bool
+			DryRun        bool
+			SourceMetrics string
 		}
 		Consent struct {
 			Sources []string

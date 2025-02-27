@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo"
+	collectortestutils "github.com/ubuntu/ubuntu-insights/internal/collector/testutils"
 	uploadertestutils "github.com/ubuntu/ubuntu-insights/internal/uploader/testutils"
 )
 
@@ -31,6 +33,7 @@ func init() {
 			panic(fmt.Sprintf("failed to parse UBUNTU_INSIGHTS_INTEGRATIONTESTS_MAX_REPORTS: %v", err))
 		}
 		uploadertestutils.SetMaxReports(uint(mr))
+		collectortestutils.SetMaxReports(uint(mr))
 	}
 
 	if time := os.Getenv("UBUNTU_INSIGHTS_INTEGRATIONTESTS_TIME"); time != "" {
@@ -39,5 +42,23 @@ func init() {
 			panic(fmt.Sprintf("failed to parse UBUNTU_INSIGHTS_INTEGRATIONTESTS_TIME: %v", err))
 		}
 		uploadertestutils.SetTimeProvider(MockTimeProvider{CurrentTime: t})
+		collectortestutils.SetTimeProvider(MockTimeProvider{CurrentTime: t})
 	}
+
+	if os.Getenv("UBUNTU_INSIGHTS_INTEGRATIONTESTS_SYSINFO") != "" {
+		si := testSysInfo{}
+		if sysinfoErr := os.Getenv("UBUNTU_INSIGHTS_INTEGRATIONTESTS_SYSINFO_ERR"); sysinfoErr != "" {
+			si.err = fmt.Errorf(sysinfoErr)
+		}
+		collectortestutils.SetSysInfo(si)
+	}
+}
+
+type testSysInfo struct {
+	info sysinfo.Info
+	err  error
+}
+
+func (m testSysInfo) Collect() (sysinfo.Info, error) {
+	return m.info, m.err
 }
