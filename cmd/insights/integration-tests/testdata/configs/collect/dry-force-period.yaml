@@ -1,0 +1,4 @@
+Collect:
+  DryRun: true
+  Force: true
+  Period: 50000

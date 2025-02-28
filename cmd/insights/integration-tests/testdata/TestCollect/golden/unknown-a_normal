@@ -1,0 +1,75 @@
+False/local/1.json: |-
+    {
+        "id": "1 False local"
+    }
+False/local/500.json: |-
+    {
+        "id": "500 False local"
+    }
+False/local/1000.json: "{   \n    \"id\": \"1000 False local\",\n    \"duplicate\": true\n}"
+False/local/2000.json: ""
+False/local/2501.json: |-
+    {
+        "id": "2501 False local"
+    }
+False/local/invalid.json: |-
+    {
+        "id": "invalid False local"
+    }
+False/uploaded/1000.json: |-
+    {
+        "id": "1000 False uploaded",
+        "duplicate": true
+    }
+False/uploaded/1500.json: |-
+    {
+        "id": "1500 False uploaded",
+        "only in uploaded": true
+    }
+True/local/1.json: |-
+    {
+        "id": "1 True local"
+    }
+True/local/500.json: |-
+    {
+        "id": "500 True local"
+    }
+True/local/1000.json: |-
+    {
+        "id": "1000 True local",
+        "duplicate": true
+    }
+True/local/2000.json: ""
+True/local/2501.json: |-
+    {
+        "id": "2501 True local"
+    }
+True/local/invalid.json: "{   \n    \"id\": \"invalid True local\"\n}"
+True/uploaded/1000.json: "{   \n    \"id\": \"1000 True uploaded\",\n    \"duplicate\": true\n}"
+True/uploaded/1500.json: |-
+    {
+        "id": "1500 True uploaded",
+        "only in uploaded": true
+    }
+Unknown-A/local/1.json: |-
+    {
+        "id": "1 Unknown-A local"
+    }
+Unknown-A/local/500.json: |-
+    {
+        "id": "500 Unknown-A local"
+    }
+Unknown-A/local/1000.json: "{   \n    \"id\": \"1000 Unknown-A local\",\n    \"duplicate\": true\n}"
+Unknown-A/local/2000.json: ""
+Unknown-A/local/2501.json: |-
+    {
+        "id": "2501 Unknown-A local"
+    }
+Unknown-A/local/50000.json: "{\"insightsVersion\":\"Dev\",\"systemInfo\":{\"hardware\":{\"product\":{\"family\":\"\",\"name\":\"\",\"vendor\":\"\"},\"cpu\":{\"name\":\"\",\"vendor\":\"\",\"architecture\":\"\",\"cpus\":0,\"sockets\":0,\"coresPerSocket\":0,\"threadsPerCore\":0},\"gpus\":null,\"memory\":{\"size\":0},\"disks\":null,\"screens\":null},\"software\":{\"os\":{\"family\":\"\",\"distribution\":\"\",\"version\":\"\"},\"timezone\":\"\",\"language\":\"\",\"bios\":{\"vendor\":\"\",\"version\":\"\"}}},\"sourceMetrics\":{\"data_array\":[1.1,2.2,3.3],\"data_bool\":true,\"data_float\":1.1,\"data_object\":{\"key1\":\"value1\",\"key2\":\"value2\"},\"data_string\":\"string\",\"runes\":\"\U0001F525☆*: .｡. o(≧▽≦)o .｡.:*☆\U0001F525\"}}"
+Unknown-A/local/invalid.json: |-
+    {
+        "id": "invalid Unknown-A local",
+        "test": "500"
+    }
+Unknown-A/uploaded/1000.json: "{   \n    \"id\": \"1000 Unknown-A uploaded\",\n    \"duplicate\": true\n}"
+Unknown-A/uploaded/1500.json: "{   \n    \"id\": \"1500 Unknown-A uploaded\",\n    \"only in uploaded\": true\n}"

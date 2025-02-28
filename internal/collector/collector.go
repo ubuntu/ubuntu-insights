@@ -71,6 +71,12 @@ type options struct {
 	sysInfo      SysInfo
 }
 
+var defaultOptions = options{
+	maxReports:   constants.MaxReports,
+	timeProvider: realTimeProvider{},
+	sysInfo:      sysinfo.New(),
+}
+
 // Options represents an optional function to override Collector default values.
 type Options func(*options)
 
@@ -107,14 +113,9 @@ func New(cm Consent, cachePath, source string, period uint, dryRun bool, args ..
 		return Collector{}, fmt.Errorf("failed to create cache directory: %v", err)
 	}
 
-	opts := &options{
-		maxReports:   constants.MaxReports,
-		timeProvider: realTimeProvider{},
-		sysInfo:      sysinfo.New(),
-	}
-
+	opts := defaultOptions
 	for _, opt := range args {
-		opt(opts)
+		opt(&opts)
 	}
 
 	return Collector{
