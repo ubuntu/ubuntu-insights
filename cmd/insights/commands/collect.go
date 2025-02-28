@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -87,11 +88,11 @@ func (a App) collectRun() (err error) {
 	}
 
 	// Pretty print insights
-	sInsights, err := json.MarshalIndent(insights, "", "    ")
-	if err != nil {
+	var prettyJSON bytes.Buffer
+	if err := json.Indent(&prettyJSON, insights, "", "    "); err != nil {
 		return err
 	}
-	fmt.Printf("%+v\n", string(sInsights))
+	fmt.Println(prettyJSON.String())
 
 	err = c.Write(insights)
 
