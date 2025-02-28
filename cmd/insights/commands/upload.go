@@ -17,7 +17,11 @@ func installUploadCmd(app *App) {
 		Long: "Upload metrics to the Ubuntu Insights server",
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Set Sources to Args
+			// Persist viper config if no args passed
+			if len(args) == 0 && len(app.config.Upload.Sources) > 0 {
+				args = app.config.Upload.Sources
+			}
+
 			if len(args) == 0 {
 				slog.Info("No sources provided, uploading all sources")
 				var err error
@@ -26,16 +30,16 @@ func installUploadCmd(app *App) {
 					return fmt.Errorf("failed to get all sources: %v", err)
 				}
 			}
-			app.config.upload.sources = args
+			app.config.Upload.Sources = args
 
 			slog.Info("Running upload command")
 			return app.uploadRun()
 		},
 	}
 
-	uploadCmd.Flags().UintVar(&app.config.upload.minAge, "min-age", defaultMinAge, "the minimum age (in seconds) of a report before the uploader will attempt to upload it")
-	uploadCmd.Flags().BoolVarP(&app.config.upload.force, "force", "f", false, "force an upload, ignoring min age and clashes between the collected file and a file in the uploaded folder, replacing the clashing uploaded report if it exists")
-	uploadCmd.Flags().BoolVarP(&app.config.upload.dryRun, "dry-run", "d", false, "go through the motions of doing an upload, but do not communicate with the server or send the payload")
+	uploadCmd.Flags().UintVar(&app.config.Upload.MinAge, "min-age", defaultMinAge, "the minimum age (in seconds) of a report before the uploader will attempt to upload it")
+	uploadCmd.Flags().BoolVarP(&app.config.Upload.Force, "force", "f", false, "force an upload, ignoring min age and clashes between the collected file and a file in the uploaded folder, replacing the clashing uploaded report if it exists")
+	uploadCmd.Flags().BoolVarP(&app.config.Upload.DryRun, "dry-run", "d", false, "go through the motions of doing an upload, but do not communicate with the server or send the payload")
 
 	app.cmd.AddCommand(uploadCmd)
 }
@@ -43,13 +47,13 @@ func installUploadCmd(app *App) {
 func (a App) uploadRun() error {
 	cm := consent.New(a.config.consentDir)
 
-	for _, source := range a.config.upload.sources {
-		u, err := a.newUploader(cm, a.config.insightsDir, source, a.config.upload.minAge, a.config.upload.dryRun)
+	for _, source := range a.config.Upload.Sources {
+		u, err := a.newUploader(cm, a.config.insightsDir, source, a.config.Upload.MinAge, a.config.Upload.DryRun)
 		if err != nil {
 			return fmt.Errorf("failed to create uploader for source %s: %v", source, err)
 		}
 
-		if err := u.Upload(a.config.upload.force); err != nil {
+		if err := u.Upload(a.config.Upload.Force); err != nil {
 			return fmt.Errorf("failed to upload reports for source %s: %v", source, err)
 		}
 	}

@@ -1,0 +1,82 @@
+payloads:
+    - |-
+      {
+          "id": "1 True local"
+      }
+    - |-
+      {
+          "id": "1000 True local",
+          "duplicate": true
+      }
+    - |-
+      {
+          "id": "2501 True local"
+      }
+    - |-
+      {
+          "id": "500 True local"
+      }
+    - '{"OptOut":true}'
+    - '{"OptOut":true}'
+    - '{"OptOut":true}'
+    - '{"OptOut":true}'
+reportscontents:
+    False/local/2000.json: ""
+    False/local/invalid.json: |-
+        {
+            "id": "invalid False local"
+        }
+    False/uploaded/1.json: '{"OptOut":true}'
+    False/uploaded/500.json: '{"OptOut":true}'
+    False/uploaded/1000.json: '{"OptOut":true}'
+    False/uploaded/1500.json: |-
+        {
+            "id": "1500 False uploaded",
+            "only in uploaded": true
+        }
+    False/uploaded/2501.json: '{"OptOut":true}'
+    True/local/2000.json: ""
+    True/local/invalid.json: "{   \n    \"id\": \"invalid True local\"\n}"
+    True/uploaded/1.json: |-
+        {
+            "id": "1 True local"
+        }
+    True/uploaded/500.json: |-
+        {
+            "id": "500 True local"
+        }
+    True/uploaded/1000.json: |-
+        {
+            "id": "1000 True local",
+            "duplicate": true
+        }
+    True/uploaded/1500.json: |-
+        {
+            "id": "1500 True uploaded",
+            "only in uploaded": true
+        }
+    True/uploaded/2501.json: |-
+        {
+            "id": "2501 True local"
+        }
+    Unknown-A/local/1.json: |-
+        {
+            "id": "1 Unknown-A local"
+        }
+    Unknown-A/local/500.json: |-
+        {
+            "id": "500 Unknown-A local"
+        }
+    Unknown-A/local/1000.json: "{   \n    \"id\": \"1000 Unknown-A local\",\n    \"duplicate\": true\n}"
+    Unknown-A/local/2000.json: ""
+    Unknown-A/local/2501.json: |-
+        {
+            "id": "2501 Unknown-A local"
+        }
+    Unknown-A/local/invalid.json: |-
+        {
+            "id": "invalid Unknown-A local",
+            "test": "500"
+        }
+    Unknown-A/uploaded/1000.json: "{   \n    \"id\": \"1000 Unknown-A uploaded\",\n    \"duplicate\": true\n}"
+    Unknown-A/uploaded/1500.json: "{   \n    \"id\": \"1500 Unknown-A uploaded\",\n    \"only in uploaded\": true\n}"
