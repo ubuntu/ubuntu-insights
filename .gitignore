@@ -13,3 +13,6 @@
 
 # Code editors/IDEs
 .vscode
+
+# Built CLI-executable binary
+cmd/insights/insights

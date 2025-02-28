@@ -21,7 +21,7 @@ type App struct {
 	viper *viper.Viper
 
 	config struct {
-		verbose     int
+		Verbose     int
 		consentDir  string
 		insightsDir string
 		upload      struct {
@@ -37,9 +37,9 @@ type App struct {
 			dryRun        bool
 			sourceMetrics string
 		}
-		consent struct {
-			sources []string
-			state   string
+		Consent struct {
+			Sources []string
+			State   string
 		}
 	}
 
@@ -84,7 +84,7 @@ func New(args ...Options) (*App, error) {
 				return fmt.Errorf("unable to decode configuration into struct: %w", err)
 			}
 
-			setVerbosity(a.config.verbose)
+			setVerbosity(a.config.Verbose)
 			return nil
 		},
 	}
@@ -108,7 +108,7 @@ func New(args ...Options) (*App, error) {
 func installRootCmd(app *App) error {
 	cmd := app.cmd
 
-	cmd.PersistentFlags().CountVarP(&app.config.verbose, "verbose", "v", "issue INFO (-v), DEBUG (-vv)")
+	cmd.PersistentFlags().CountVarP(&app.config.Verbose, "verbose", "v", "issue INFO (-v), DEBUG (-vv)")
 	cmd.PersistentFlags().StringVar(&app.config.consentDir, "consent-dir", constants.DefaultConfigPath, "the base directory of the consent state files")
 	cmd.PersistentFlags().StringVar(&app.config.insightsDir, "insights-dir", constants.DefaultCachePath, "the base directory of the insights report cache")
 

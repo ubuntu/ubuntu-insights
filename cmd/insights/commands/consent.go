@@ -18,7 +18,7 @@ func installConsentCmd(app *App) {
 		Long:  "Manage or get user consent state for data collection and upload",
 		Args:  cobra.ArbitraryArgs,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if _, err := strconv.ParseBool(app.config.consent.state); app.config.consent.state != "" && err != nil {
+			if _, err := strconv.ParseBool(app.config.Consent.State); app.config.Consent.State != "" && err != nil {
 				app.cmd.SilenceUsage = false
 				return fmt.Errorf("consent-state must be either true or false, or not set: %v", err)
 			}
@@ -26,10 +26,13 @@ func installConsentCmd(app *App) {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set Sources to Args
-			app.config.consent.sources = args
+			if len(args) > 0 {
+				// Persist viper config if no args passed
+				app.config.Consent.Sources = args
+			}
 
 			// Ensure consent state is case insensitive
-			app.config.consent.state = strings.ToLower(app.config.consent.state)
+			app.config.Consent.State = strings.ToLower(app.config.Consent.State)
 
 			// If insights-dir is set, warn the user that it is not used
 			if app.config.insightsDir != constants.DefaultCachePath {
@@ -41,7 +44,7 @@ func installConsentCmd(app *App) {
 		},
 	}
 
-	consentCmd.Flags().StringVarP(&app.config.consent.state, "consent-state", "c", "", "the consent state to set (true or false), the current consent state is displayed if not set")
+	consentCmd.Flags().StringVarP(&app.config.Consent.State, "consent-state", "c", "", "the consent state to set (true or false), the current consent state is displayed if not set")
 
 	app.cmd.AddCommand(consentCmd)
 }
@@ -49,20 +52,20 @@ func installConsentCmd(app *App) {
 func (a App) consentRun() error {
 	cm := consent.New(a.config.consentDir)
 
-	if len(a.config.consent.sources) == 0 {
+	if len(a.config.Consent.Sources) == 0 {
 		// Global consent state to be changed
-		a.config.consent.sources = append(a.config.consent.sources, "")
+		a.config.Consent.Sources = append(a.config.Consent.Sources, "")
 	}
 
 	// Set consent state
-	if a.config.consent.state != "" {
-		state, err := strconv.ParseBool(a.config.consent.state)
+	if a.config.Consent.State != "" {
+		state, err := strconv.ParseBool(a.config.Consent.State)
 		if err != nil {
 			a.cmd.SilenceUsage = false
 			return fmt.Errorf("consent-state must be either true or false, or not set")
 		}
 
-		for _, source := range a.config.consent.sources {
+		for _, source := range a.config.Consent.Sources {
 			if err := cm.SetState(source, state); err != nil {
 				return err
 			}
@@ -71,7 +74,7 @@ func (a App) consentRun() error {
 
 	// Get consent state
 	var failedSources []string
-	for _, source := range a.config.consent.sources {
+	for _, source := range a.config.Consent.Sources {
 		state, err := cm.GetState(source)
 		if source == "" {
 			source = "Global"
