@@ -9,9 +9,27 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo"
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/hardware"
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/platform"
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/software"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
+
+// fakePCollector implements PCollector (for several interfaces).
+type fakePCollector[T any] struct {
+	fn func() (T, error)
+}
+
+func (f fakePCollector[T]) Collect(platform.Info) (T, error) {
+	return f.fn()
+}
+
+func makeFakePCollector[T any](info T, err error) fakePCollector[T] {
+	return fakePCollector[T]{
+		fn: func() (T, error) {
+			return info, err
+		},
+	}
+}
 
 // fakeCollector implements Collector (for several interfaces).
 type fakeCollector[T any] struct {
@@ -42,8 +60,9 @@ func TestNew(t *testing.T) {
 			t.Parallel()
 
 			s := sysinfo.New(
-				sysinfo.WithHardwareCollector(makeFakeCollector(hardware.Info{}, nil)),
-				sysinfo.WithSoftwareCollector(makeFakeCollector(software.Info{}, nil)),
+				sysinfo.WithHardwareCollector(makeFakePCollector(hardware.Info{}, nil)),
+				sysinfo.WithSoftwareCollector(makeFakePCollector(software.Info{}, nil)),
+				sysinfo.WithPlatformCollector(makeFakeCollector(platform.Info{}, nil)),
 			)
 
 			require.NotEmpty(t, s, "sysinfo manager has custom fields")
@@ -79,8 +98,8 @@ func TestCollect(t *testing.T) {
 			l := testutils.NewMockHandler(slog.LevelDebug)
 
 			s := sysinfo.New(
-				sysinfo.WithHardwareCollector(makeFakeCollector(tc.hw, tc.hwErr)),
-				sysinfo.WithSoftwareCollector(makeFakeCollector(tc.sw, tc.swErr)),
+				sysinfo.WithHardwareCollector(makeFakePCollector(tc.hw, tc.hwErr)),
+				sysinfo.WithSoftwareCollector(makeFakePCollector(tc.sw, tc.swErr)),
 				sysinfo.WithLogger(&l),
 			)
 

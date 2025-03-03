@@ -4,6 +4,7 @@ import (
 	"runtime"
 
 	"github.com/ubuntu/ubuntu-insights/internal/cmdutils"
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/platform"
 )
 
 type platformOptions struct {
@@ -62,7 +63,7 @@ var usedBIOSFields = map[string]struct{}{
 	"Version":      {},
 }
 
-func (s Collector) collectBios() (bios, error) {
+func (s Collector) collectBios(platform.Info) (bios, error) {
 	b, err := cmdutils.RunListFmt(s.platform.biosCmd, usedBIOSFields, s.log)
 	if err != nil {
 		return bios{}, err

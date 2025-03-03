@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/platform"
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/software"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
@@ -19,6 +20,7 @@ func TestCollectLinux(t *testing.T) {
 	tests := map[string]struct {
 		root         string
 		missingFiles []string
+		pInfo        platform.Info
 
 		osInfo   string
 		timezone string
@@ -138,6 +140,16 @@ func TestCollectLinux(t *testing.T) {
 				slog.LevelWarn: 2,
 			},
 		},
+		"WSL": {
+			root: "empty",
+			pInfo: platform.Info{
+				WSL: platform.WSL{
+					WSL: true},
+			},
+			osInfo:   "regular",
+			timezone: "JST",
+			language: "ja",
+		},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -169,7 +181,7 @@ func TestCollectLinux(t *testing.T) {
 
 			s := software.New(options...)
 
-			got, err := s.Collect()
+			got, err := s.Collect(tc.pInfo)
 
 			if !l.AssertLevels(t, tc.logs) {
 				l.OutputLogs(t)

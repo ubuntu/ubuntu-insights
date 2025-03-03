@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ubuntu/ubuntu-insights/internal/cmdutils"
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/platform"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
@@ -85,7 +86,12 @@ func (s Collector) collectLang() (string, error) {
 	return l, nil
 }
 
-func (s Collector) collectBios() (bios, error) {
+func (s Collector) collectBios(pi platform.Info) (bios, error) {
+	if pi.WSL.WSL {
+		s.log.Debug("skipping BIOS info collection on WSL")
+		return bios{}, nil
+	}
+
 	info := bios{
 		Vendor:  fileutils.ReadFileLogError(filepath.Join(s.platform.root, "sys/class/dmi/id/bios_vendor"), s.log),
 		Version: fileutils.ReadFileLogError(filepath.Join(s.platform.root, "sys/class/dmi/id/bios_version"), s.log),
