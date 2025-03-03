@@ -4,6 +4,8 @@ package hardware
 import (
 	"log/slog"
 	"runtime"
+
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/platform"
 )
 
 // Info aggregates hardware info.
@@ -103,10 +105,10 @@ func New(args ...Options) Collector {
 }
 
 // Collect aggregates the data from all the other hardware collect functions.
-func (h Collector) Collect() (info Info, err error) {
+func (h Collector) Collect(pi platform.Info) (info Info, err error) {
 	h.log.Debug("collecting hardware info")
 
-	info.Product, err = h.collectProduct()
+	info.Product, err = h.collectProduct(pi)
 	if err != nil {
 		h.log.Warn("failed to collect Product info", "error", err)
 		info.Product = product{}
@@ -120,7 +122,7 @@ func (h Collector) Collect() (info Info, err error) {
 		}
 	}
 
-	info.GPUs, err = h.collectGPUs()
+	info.GPUs, err = h.collectGPUs(pi)
 	if err != nil {
 		h.log.Warn("failed to collect GPU info", "error", err)
 		info.GPUs = []gpu{}
@@ -138,7 +140,7 @@ func (h Collector) Collect() (info Info, err error) {
 		info.Blks = []disk{}
 	}
 
-	info.Screens, err = h.collectScreens()
+	info.Screens, err = h.collectScreens(pi)
 	if err != nil {
 		h.log.Warn("failed to collect screen info", "error", err)
 		info.Screens = []screen{}

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/ubuntu/ubuntu-insights/internal/cmdutils"
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/platform"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
@@ -40,7 +41,7 @@ func defaultPlatformOptions() platformOptions {
 }
 
 // collectProduct uses Win32_ComputerSystem to find information about the system.
-func (s Collector) collectProduct() (product, error) {
+func (s Collector) collectProduct(_ platform.Info) (product, error) {
 	var usedProductFields = map[string]struct{}{
 		"Model":           {},
 		"Manufacturer":    {},
@@ -106,7 +107,7 @@ func (s Collector) collectCPU() (cpu, error) {
 }
 
 // collectGPUs uses Win32_VideoController to collect information about the GPUs.
-func (s Collector) collectGPUs() (info []gpu, err error) {
+func (s Collector) collectGPUs(_ platform.Info) (info []gpu, err error) {
 	var usedGPUFields = map[string]struct{}{
 		"Name":                    {},
 		"InstalledDisplayDrivers": {},
@@ -271,7 +272,7 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 }
 
 // collectScreens uses Win32_DesktopMonitor to collect information about screens.
-func (s Collector) collectScreens() (screens []screen, err error) {
+func (s Collector) collectScreens(_ platform.Info) (screens []screen, err error) {
 	var usedScreenResFields = map[string]struct{}{
 		"Name":         {},
 		"ScreenWidth":  {},
