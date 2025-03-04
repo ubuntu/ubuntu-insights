@@ -1,7 +1,6 @@
 package platform_test
 
 import (
-	"flag"
 	"fmt"
 	"log/slog"
 	"os"
@@ -13,33 +12,11 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
-func TestMain(m *testing.M) {
-	flag.Parse()
-	dir, ok := testutils.SetupHelperCoverdir()
-
-	r := m.Run()
-	if ok {
-		os.Remove(dir)
-	}
-	os.Exit(r)
-}
-
 func TestNewLinux(t *testing.T) {
 	t.Parallel()
 
-	tests := map[string]struct {
-	}{
-		"Instantiate a platform sys info Collector": {},
-	}
-	for name := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			s := platform.New(platform.WithRoot("/myspecialroot"))
-
-			require.NotEmpty(t, s, "platform sysinfo Collector has custom fields")
-		})
-	}
+	s := platform.New(platform.WithRoot("/myspecialroot"))
+	require.NotEmpty(t, s, "platform sysinfo Collector has custom fields")
 }
 
 func TestCollectLinux(t *testing.T) {
