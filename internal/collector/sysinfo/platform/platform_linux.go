@@ -2,6 +2,7 @@ package platform
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -44,7 +45,7 @@ func defaultPlatformOptions() platformOptions {
 		interopEnv:    "WSL_INTEROP",
 		detectVirtCmd: []string{"systemd-detect-virt"},
 		wslVersionCmd: []string{"wsl.exe", "-v"},
-		proStatusCmd:  []string{"pro", "status"},
+		proStatusCmd:  []string{"pro", "api", "u.pro.status.is_attached.v1"},
 	}
 }
 
@@ -180,8 +181,22 @@ func (p Collector) isProAttached() bool {
 		return false
 	}
 	if stderr.Len() > 0 {
-		p.log.Info("pro status output to stderr", "stderr", stderr)
+		p.log.Info("pro api output to stderr", "stderr", stderr)
 	}
 
-	return strings.Contains(stdout.String(), "Subscription: Ubuntu Pro")
+	// Parse json output to get is_attached field
+	var proStatus struct {
+		Data struct {
+			Attributes struct {
+				IsAttached bool `json:"is_attached"`
+			}
+		}
+	}
+	println(stdout.String())
+	err = json.Unmarshal(stdout.Bytes(), &proStatus)
+	if err != nil {
+		p.log.Warn("failed to parse pro api return", "error", err)
+		return false
+	}
+	return proStatus.Data.Attributes.IsAttached
 }

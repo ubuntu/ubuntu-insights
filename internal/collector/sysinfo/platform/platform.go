@@ -3,7 +3,6 @@ package platform
 
 import (
 	"log/slog"
-	"time"
 )
 
 // Collector handles dependencies for collecting platform information.
@@ -17,8 +16,7 @@ type Collector struct {
 type Options func(*options)
 
 type options struct {
-	log      *slog.Logger
-	timezone func() string
+	log *slog.Logger
 
 	platform platformOptions
 }
@@ -27,10 +25,6 @@ type options struct {
 func New(args ...Options) Collector {
 	opts := &options{
 		log: slog.Default(),
-		timezone: func() string {
-			zone, _ := time.Now().Zone()
-			return zone
-		},
 	}
 	opts.platform = defaultPlatformOptions()
 	for _, opt := range args {
