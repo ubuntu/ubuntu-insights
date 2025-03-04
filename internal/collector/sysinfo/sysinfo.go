@@ -6,8 +6,14 @@ import (
 	"log/slog"
 
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/hardware"
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/platform"
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/software"
 )
+
+// PCollectorT describes a type that collects some information T while using platform.Info.
+type PCollectorT[T any] interface {
+	Collect(platform.Info) (T, error)
+}
 
 // CollectorT describes a type that collects some information T.
 type CollectorT[T any] interface {
@@ -18,23 +24,28 @@ type CollectorT[T any] interface {
 type Options func(*options)
 
 type options struct {
-	hw  CollectorT[hardware.Info]
-	sw  CollectorT[software.Info]
+	hw PCollectorT[hardware.Info]
+	sw PCollectorT[software.Info]
+	pl CollectorT[platform.Info]
+
 	log *slog.Logger
 }
 
 // Collector handles dependencies for collecting software & hardware information.
 // Collector implements CollectorT[sysinfo.Info].
 type Collector struct {
-	hw  CollectorT[hardware.Info]
-	sw  CollectorT[software.Info]
+	hw PCollectorT[hardware.Info]
+	sw PCollectorT[software.Info]
+	pl CollectorT[platform.Info]
+
 	log *slog.Logger
 }
 
 // Info contains Software and Hardware information of the system.
 type Info struct {
-	Hardware hardware.Info `json:"hardware"`
-	Software software.Info `json:"software"`
+	Hardware hardware.Info  `json:"hardware"`
+	Software software.Info  `json:"software"`
+	Platform *platform.Info `json:"platform,omitempty"`
 }
 
 // New returns a new Collector.
@@ -42,6 +53,7 @@ func New(args ...Options) Collector {
 	opts := &options{
 		hw:  hardware.New(),
 		sw:  software.New(),
+		pl:  platform.New(),
 		log: slog.Default(),
 	}
 
@@ -52,6 +64,7 @@ func New(args ...Options) Collector {
 	return Collector{
 		hw:  opts.hw,
 		sw:  opts.sw,
+		pl:  opts.pl,
 		log: opts.log,
 	}
 }
@@ -61,8 +74,18 @@ func New(args ...Options) Collector {
 func (s Collector) Collect() (Info, error) {
 	s.log.Debug("collecting sysinfo")
 
-	hwInfo, hwErr := s.hw.Collect()
-	swInfo, swErr := s.sw.Collect()
+	plInfo, plErr := s.pl.Collect()
+	if plErr != nil {
+		s.log.Warn("failed to collect platform information", "error", plErr)
+		plInfo = platform.Info{}
+	}
+
+	hwInfo, hwErr := s.hw.Collect(plInfo)
+	swInfo, swErr := s.sw.Collect(plInfo)
+
+	if plErr != nil {
+		s.log.Warn("failed to collect platform information", "error", plErr)
+	}
 
 	if hwErr != nil {
 		s.log.Warn("failed to collect hardware information", "error", hwErr)
@@ -75,6 +98,7 @@ func (s Collector) Collect() (Info, error) {
 	}
 
 	return Info{
+		Platform: &plInfo,
 		Hardware: hwInfo,
 		Software: swInfo,
 	}, nil
