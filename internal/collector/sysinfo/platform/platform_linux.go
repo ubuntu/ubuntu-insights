@@ -20,6 +20,7 @@ type Info struct {
 	ProAttached bool `json:"proAttached,omitempty"`
 }
 
+// WSL contains platform information specific to Windows Subsystem for Linux.
 type WSL struct {
 	WSL              bool   `json:"wsl,omitempty"`
 	WSLInterop       string `json:"wslInterop,omitempty"`

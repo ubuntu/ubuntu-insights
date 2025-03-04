@@ -1,6 +1,7 @@
 package sysinfo_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"testing"
@@ -80,6 +81,9 @@ func TestCollect(t *testing.T) {
 		sw    software.Info
 		swErr error
 
+		p    platform.Info
+		pErr error
+
 		logs map[slog.Level]uint
 	}{
 		"Hardware and Software error is error": {
@@ -89,6 +93,11 @@ func TestCollect(t *testing.T) {
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 2,
 			},
+		},
+		"Platform, Hardware and Software error is error": {
+			hwErr: fmt.Errorf("fake hardware error"),
+			swErr: fmt.Errorf("fake software error"),
+			pErr:  fmt.Errorf("fake platform error"),
 		},
 	}
 	for name, tc := range tests {
@@ -100,19 +109,22 @@ func TestCollect(t *testing.T) {
 			s := sysinfo.New(
 				sysinfo.WithHardwareCollector(makeFakePCollector(tc.hw, tc.hwErr)),
 				sysinfo.WithSoftwareCollector(makeFakePCollector(tc.sw, tc.swErr)),
+				sysinfo.WithPlatformCollector(makeFakeCollector(tc.p, tc.pErr)),
 				sysinfo.WithLogger(&l),
 			)
 
 			got, err := s.Collect()
 
-			if tc.hwErr != nil && tc.swErr != nil {
+			if tc.hwErr != nil && tc.swErr != nil && tc.pErr != nil {
 				require.Error(t, err, "Collect should return an error and didn't")
 				return
 			}
 			require.NoError(t, err, "Collect should not return an error and did")
+			sGot, err := json.Marshal(got)
+			require.NoError(t, err, "Collect should marshal sys information")
 
-			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-			assert.Equal(t, want, got, "Collect should return expected sys information")
+			want := testutils.LoadWithUpdateFromGolden(t, string(sGot))
+			assert.Equal(t, want, string(sGot), "Collect should return expected sys information")
 
 			if !l.AssertLevels(t, tc.logs) {
 				l.OutputLogs(t)
