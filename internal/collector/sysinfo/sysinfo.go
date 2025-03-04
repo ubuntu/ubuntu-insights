@@ -70,7 +70,7 @@ func New(args ...Options) Collector {
 }
 
 // Collect gathers system information and returns it.
-// Will only return an error if both hardware and software collection fail.
+// Will only return an error if platform, hardware, and software collection fail.
 func (s Collector) Collect() (Info, error) {
 	s.log.Debug("collecting sysinfo")
 
@@ -93,7 +93,7 @@ func (s Collector) Collect() (Info, error) {
 	if swErr != nil {
 		s.log.Warn("failed to collect software information", "error", swErr)
 	}
-	if hwErr != nil && swErr != nil {
+	if hwErr != nil && swErr != nil && plErr != nil {
 		return Info{}, fmt.Errorf("failed to collect system information")
 	}
 
