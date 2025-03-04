@@ -164,7 +164,7 @@ func (h Collector) collectGPUs(pi platform.Info) (gpus []gpu, err error) {
 
 	if pi.WSL.WSL {
 		h.log.Debug("skipping GPU info collection on WSL")
-		return nil, nil
+		return []gpu{}, nil
 	}
 
 	// Using ReadDir instead of WalkDir since we don't want recursive directories.
@@ -371,7 +371,7 @@ func (h Collector) collectScreens(pi platform.Info) (info []screen, err error) {
 	if err != nil {
 		if pi.WSL.WSL {
 			h.log.Debug("skipping screen info collection on WSL")
-			return nil, nil
+			return []screen{}, nil
 		}
 
 		return nil, fmt.Errorf("failed to run xrandr: %v", err)
@@ -381,7 +381,7 @@ func (h Collector) collectScreens(pi platform.Info) (info []screen, err error) {
 	}
 
 	defer func() {
-		if err == nil && len(info) == 0 && !pi.WSL.WSL {
+		if err == nil && len(info) == 0 {
 			err = fmt.Errorf("no Screen information found")
 		}
 	}()
