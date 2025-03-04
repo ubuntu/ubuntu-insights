@@ -5,10 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/ubuntu/decorate"
@@ -32,8 +29,8 @@ type WSL struct {
 
 type platformOptions struct {
 	root          string
-	interopEnv    string
 	detectVirtCmd []string
+	wslStatusCmd  []string
 	wslVersionCmd []string
 	proStatusCmd  []string
 }
@@ -42,8 +39,8 @@ type platformOptions struct {
 func defaultPlatformOptions() platformOptions {
 	return platformOptions{
 		root:          "/",
-		interopEnv:    "WSL_INTEROP",
 		detectVirtCmd: []string{"systemd-detect-virt"},
+		wslStatusCmd:  []string{"wsl.exe", "--status"},
 		wslVersionCmd: []string{"wsl.exe", "-v"},
 		proStatusCmd:  []string{"pro", "api", "u.pro.status.is_attached.v1"},
 	}
@@ -79,33 +76,11 @@ func (p Collector) isWSL() bool {
 	return false
 }
 
-// interopEnabled returns true if WSL interop is enabled.
-// This is done by checking for the presence of the WSL_INTEROP environment variable,
-// and by checking if /proc/sys/fs/binfmt_misc/WSLInterop exists with enabled.
+// interopEnabled returns true if WSL interop is enabled and working.
 func (p Collector) interopEnabled() bool {
-	if os.Getenv(p.platform.interopEnv) == "" {
-		return false
-	}
+	_, _, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, p.platform.wslStatusCmd[0], p.platform.wslStatusCmd[1:]...)
 
-	if _, err := os.Stat(filepath.Join(p.platform.root, "proc/sys/fs/binfmt_misc/WSLInterop")); err != nil {
-		return false
-	}
-
-	// Read contents of "proc/sys/fs/binfmt_misc/WSLInterop", check if first line is "enabled"
-	contents, err := os.ReadFile(filepath.Join(p.platform.root, "proc/sys/fs/binfmt_misc/WSLInterop"))
-	if err != nil {
-		p.log.Warn("failed to read WSLInterop", "error", err)
-		return false
-	}
-
-	// Check if first line of file is "enabled"
-	lines := strings.Split(string(contents), "\n")
-	if !(len(lines) > 0 && lines[0] == "enabled") {
-		return false
-	}
-
-	p.log.Debug("WSL interop enabled")
-	return true
+	return err == nil
 }
 
 // collectWSL collects information about Windows Subsystem for Linux.
@@ -192,7 +167,6 @@ func (p Collector) isProAttached() bool {
 			}
 		}
 	}
-	println(stdout.String())
 	err = json.Unmarshal(stdout.Bytes(), &proStatus)
 	if err != nil {
 		p.log.Warn("failed to parse pro api return", "error", err)

@@ -7,17 +7,17 @@ func WithRoot(root string) Options {
 	}
 }
 
-// WithInteropEnv sets the interop environment variable for the platform collector.
-func WithInteropEnv(env string) Options {
-	return func(o *options) {
-		o.platform.interopEnv = env
-	}
-}
-
 // WithDetectVirtCmd sets the detect virtualization command for the platform collector.
 func WithDetectVirtCmd(cmd []string) Options {
 	return func(o *options) {
 		o.platform.detectVirtCmd = cmd
+	}
+}
+
+// WithWSLStatusCmd sets the WSL status command for the platform collector.
+func WithWSLStatusCmd(cmd []string) Options {
+	return func(o *options) {
+		o.platform.wslStatusCmd = cmd
 	}
 }
 
