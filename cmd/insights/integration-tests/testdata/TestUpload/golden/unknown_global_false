@@ -2,6 +2,7 @@ payloads:
     - '{"OptOut":true}'
     - '{"OptOut":true}'
     - '{"OptOut":true}'
+    - '{"OptOut":true}'
 reportscontents:
     False/local/1.json: |-
         {
@@ -56,8 +57,6 @@ reportscontents:
             "id": "1500 True uploaded",
             "only in uploaded": true
         }
-    Unknown-A/local/1000.json: "{   \n    \"id\": \"1000 Unknown-A local\",\n    \"duplicate\": true\n}"
-    Unknown-A/local/2000.json: ""
     Unknown-A/local/invalid.json: |-
         {
             "id": "invalid Unknown-A local",
@@ -65,6 +64,6 @@ reportscontents:
         }
     Unknown-A/uploaded/1.json: '{"OptOut":true}'
     Unknown-A/uploaded/500.json: '{"OptOut":true}'
-    Unknown-A/uploaded/1000.json: "{   \n    \"id\": \"1000 Unknown-A uploaded\",\n    \"duplicate\": true\n}"
+    Unknown-A/uploaded/1000.json: '{"OptOut":true}'
     Unknown-A/uploaded/1500.json: "{   \n    \"id\": \"1500 Unknown-A uploaded\",\n    \"only in uploaded\": true\n}"
     Unknown-A/uploaded/2501.json: '{"OptOut":true}'

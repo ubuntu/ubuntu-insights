@@ -4,7 +4,6 @@ payloads:
     - '{"OptOut":true}'
     - '{"OptOut":true}'
 reportscontents:
-    False/local/2000.json: ""
     False/local/invalid.json: |-
         {
             "id": "invalid False local"

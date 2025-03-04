@@ -48,6 +48,8 @@ func (um Uploader) Upload(force bool) error {
 		return fmt.Errorf("failed to get URL: %v", err)
 	}
 
+	mu := &sync.Mutex{}
+	var uploadError error
 	var wg sync.WaitGroup
 	for _, r := range reports {
 		wg.Add(1)
@@ -58,6 +60,9 @@ func (um Uploader) Upload(force bool) error {
 				slog.Debug("Skipped report upload, not mature enough", "file", r.Name, "source", um.source)
 			} else if err != nil {
 				slog.Warn("Failed to upload report", "file", r.Name, "source", um.source, "error", err)
+				mu.Lock()
+				uploadError = errors.Join(uploadError, fmt.Errorf("%s upload failed for report %s: %v", um.source, r.Name, err))
+				mu.Unlock()
 			}
 		}(r)
 	}
@@ -67,7 +72,7 @@ func (um Uploader) Upload(force bool) error {
 		return nil
 	}
 
-	return report.Cleanup(um.uploadedDir, um.maxReports)
+	return errors.Join(report.Cleanup(um.uploadedDir, um.maxReports), uploadError)
 }
 
 // upload uploads an individual report to the server. It returns an error if the report is not mature enough to be uploaded, or if the upload fails.

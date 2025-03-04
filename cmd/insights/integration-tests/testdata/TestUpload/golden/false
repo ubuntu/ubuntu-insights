@@ -2,20 +2,15 @@ payloads:
     - '{"OptOut":true}'
     - '{"OptOut":true}'
     - '{"OptOut":true}'
+    - '{"OptOut":true}'
 reportscontents:
-    False/local/1000.json: "{   \n    \"id\": \"1000 False local\",\n    \"duplicate\": true\n}"
-    False/local/2000.json: ""
     False/local/invalid.json: |-
         {
             "id": "invalid False local"
         }
     False/uploaded/1.json: '{"OptOut":true}'
     False/uploaded/500.json: '{"OptOut":true}'
-    False/uploaded/1000.json: |-
-        {
-            "id": "1000 False uploaded",
-            "duplicate": true
-        }
+    False/uploaded/1000.json: '{"OptOut":true}'
     False/uploaded/1500.json: |-
         {
             "id": "1500 False uploaded",

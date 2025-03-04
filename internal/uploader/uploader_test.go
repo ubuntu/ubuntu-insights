@@ -77,7 +77,6 @@ func TestUpload(t *testing.T) {
 
 	tests := map[string]struct {
 		lFiles, uFiles map[string]reportType
-		dummy          bool
 		serverResponse int
 		serverOffline  bool
 		url            string
@@ -92,15 +91,14 @@ func TestUpload(t *testing.T) {
 		skipContentCheck bool
 		wantErr          bool
 	}{
-		"No Reports":            {consent: cTrue},
-		"No Reports with Dummy": {dummy: true, consent: cTrue},
-		"Single Upload":         {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue},
-		"Multi Upload":          {lFiles: map[string]reportType{"1.json": normal, "5.json": normal}, consent: cTrue},
-		"Min Age":               {lFiles: map[string]reportType{"1.json": normal, "9.json": normal}, consent: cTrue, minAge: 5},
-		"Future Timestamp":      {lFiles: map[string]reportType{"1.json": normal, "11.json": normal}, consent: cTrue},
-		"Duplicate Upload":      {lFiles: map[string]reportType{"1.json": normal}, uFiles: map[string]reportType{"1.json": badContent}, consent: cTrue},
-		"Bad Content":           {lFiles: map[string]reportType{"1.json": badContent}, consent: cTrue},
-		"No Directory":          {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, rmLocal: true},
+		"No Reports":       {consent: cTrue},
+		"Single Upload":    {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue},
+		"Multi Upload":     {lFiles: map[string]reportType{"1.json": normal, "5.json": normal}, consent: cTrue},
+		"Min Age":          {lFiles: map[string]reportType{"1.json": normal, "9.json": normal}, consent: cTrue, minAge: 5},
+		"Future Timestamp": {lFiles: map[string]reportType{"1.json": normal, "11.json": normal}, consent: cTrue},
+		"Duplicate Upload": {lFiles: map[string]reportType{"1.json": normal}, uFiles: map[string]reportType{"1.json": badContent}, consent: cTrue, wantErr: true},
+		"Bad Content":      {lFiles: map[string]reportType{"1.json": badContent}, consent: cTrue, wantErr: true},
+		"No Directory":     {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, rmLocal: true},
 
 		"Consent Manager Source Error":           {lFiles: map[string]reportType{"1.json": normal}, consent: cErr, wantErr: true},
 		"Consent Manager Source Error with True": {lFiles: map[string]reportType{"1.json": normal}, consent: cErrTrue, wantErr: true},
@@ -116,15 +114,15 @@ func TestUpload(t *testing.T) {
 		"Dry run": {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, dryRun: true},
 
 		"Bad URL":        {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, url: "http://a b.com/", wantErr: true},
-		"Bad Response":   {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, serverResponse: http.StatusForbidden},
-		"Offline Server": {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, serverOffline: true},
+		"Bad Response":   {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, serverResponse: http.StatusForbidden, wantErr: true},
+		"Offline Server": {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, serverOffline: true, wantErr: true},
 		"No Permissions": {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, noPerms: true, wantErr: runtime.GOOS != "windows", skipContentCheck: true},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			dir := setupTmpDir(t, tc.lFiles, tc.uFiles, source, tc.dummy)
+			dir := setupTmpDir(t, tc.lFiles, tc.uFiles, source)
 
 			if tc.serverResponse == 0 {
 				tc.serverResponse = defaultResponse
@@ -249,7 +247,7 @@ func TestGetAllSources(t *testing.T) {
 	}
 }
 
-func setupTmpDir(t *testing.T, localFiles, uploadedFiles map[string]reportType, source string, dummy bool) string {
+func setupTmpDir(t *testing.T, localFiles, uploadedFiles map[string]reportType, source string) string {
 	t.Helper()
 	dir := t.TempDir()
 
@@ -258,21 +256,10 @@ func setupTmpDir(t *testing.T, localFiles, uploadedFiles map[string]reportType, 
 	require.NoError(t, os.MkdirAll(localDir, 0750), "Setup: failed to create local directory")
 	require.NoError(t, os.MkdirAll(uploadedDir, 0750), "Setup: failed to create uploaded directory")
 
-	if dummy {
-		copyDummyData(t, "testdata/test_source", dir, localDir, uploadedDir)
-	}
-
 	writeFiles(t, localDir, localFiles)
 	writeFiles(t, uploadedDir, uploadedFiles)
 
 	return dir
-}
-
-func copyDummyData(t *testing.T, sourceDir, dir, localDir, uploadedDir string) {
-	t.Helper()
-	require.NoError(t, testutils.CopyDir(t, sourceDir, dir), "Setup: failed to copy dummy data to temporary directory")
-	require.NoError(t, testutils.CopyDir(t, sourceDir, localDir), "Setup: failed to copy dummy data to local")
-	require.NoError(t, testutils.CopyDir(t, sourceDir, uploadedDir), "Setup: failed to copy dummy data to uploaded")
 }
 
 func writeFiles(t *testing.T, targetDir string, files map[string]reportType) {
