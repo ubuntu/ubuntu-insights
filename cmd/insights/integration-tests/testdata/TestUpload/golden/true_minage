@@ -5,6 +5,11 @@ payloads:
       }
     - |-
       {
+          "id": "1000 True local",
+          "duplicate": true
+      }
+    - |-
+      {
           "id": "500 True local"
       }
 reportscontents:
@@ -36,12 +41,6 @@ reportscontents:
             "id": "1500 False uploaded",
             "only in uploaded": true
         }
-    True/local/1000.json: |-
-        {
-            "id": "1000 True local",
-            "duplicate": true
-        }
-    True/local/2000.json: ""
     True/local/2501.json: |-
         {
             "id": "2501 True local"
@@ -55,7 +54,11 @@ reportscontents:
         {
             "id": "500 True local"
         }
-    True/uploaded/1000.json: "{   \n    \"id\": \"1000 True uploaded\",\n    \"duplicate\": true\n}"
+    True/uploaded/1000.json: |-
+        {
+            "id": "1000 True local",
+            "duplicate": true
+        }
     True/uploaded/1500.json: |-
         {
             "id": "1500 True uploaded",

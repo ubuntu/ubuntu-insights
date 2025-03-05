@@ -34,11 +34,17 @@ func TestUpload(t *testing.T) {
 		responseCode   int
 		noServer       bool
 
+		removeFiles []string
+
 		wantExitCode int
 	}{
 		// True
 		"True": {
 			sources: []string{"True"},
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+			},
 		},
 		"True DryRun": {
 			sources: []string{"True"},
@@ -56,25 +62,42 @@ func TestUpload(t *testing.T) {
 		"True Force": {
 			sources: []string{"True"},
 			config:  "force.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+			},
 		},
 		"True Force MinAge": {
 			sources: []string{"True"},
 			config:  "force-minAge.yaml",
 			time:    2501,
+			removeFiles: []string{
+				"True/local/2000.json",
+			},
 		},
 		"True MinAge": {
 			sources: []string{"True"},
 			config:  "minAge.yaml",
 			time:    2501,
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+			},
 		},
 		"True Global False": {
 			sources:        []string{"True"},
 			consentFixture: "false-global",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+			},
 		},
-
 		"True MaxReports": {
 			sources:    []string{"True"},
 			maxReports: 2,
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+			},
 		},
 		"True DryRun MaxReports": {
 			sources:    []string{"True"},
@@ -86,11 +109,38 @@ func TestUpload(t *testing.T) {
 			config:     "minAge.yaml",
 			maxReports: 2,
 			time:       2501,
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+			},
+		},
+		"True Duplicates": {
+			removeFiles: []string{
+				"True/local/2000.json",
+			},
+			wantExitCode: 1,
+		},
+		"True Bad Files": {
+			removeFiles: []string{
+				"True/uploaded/1000.json",
+			},
+			wantExitCode: 1,
+		},
+		"True Bad Files Force": {
+			removeFiles: []string{
+				"True/uploaded/1000.json",
+			},
+			config:       "force.yaml",
+			wantExitCode: 1,
 		},
 
 		// False
 		"False": {
 			sources: []string{"False"},
+			removeFiles: []string{
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+			},
 		},
 		"False DryRun": {
 			sources: []string{"False"},
@@ -99,16 +149,46 @@ func TestUpload(t *testing.T) {
 		"False Force": {
 			sources: []string{"False"},
 			config:  "force.yaml",
+			removeFiles: []string{
+				"False/local/2000.json",
+			},
 		},
 		"False MinAge": {
 			sources: []string{"False"},
 			config:  "minAge.yaml",
 			time:    2501,
+			removeFiles: []string{
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+			},
+		},
+		"False Duplicates": {
+			removeFiles: []string{
+				"False/local/2000.json",
+			},
+			wantExitCode: 1,
+		},
+		"False Bad Files": {
+			removeFiles: []string{
+				"False/uploaded/1000.json",
+			},
+			wantExitCode: 1,
+		},
+		"False Bad Files Force": {
+			removeFiles: []string{
+				"False/uploaded/1000.json",
+			},
+			config:       "force.yaml",
+			wantExitCode: 1,
 		},
 
 		// Unknown
 		"Unknown": {
 			sources: []string{"Unknown-A"},
+			removeFiles: []string{
+				"Unknown-A/local/2000.json",
+				"Unknown-A/uploaded/1000.json",
+			},
 		},
 		"Unknown DryRun": {
 			sources: []string{"Unknown-A"},
@@ -117,12 +197,20 @@ func TestUpload(t *testing.T) {
 		"Unknown Force": {
 			sources: []string{"Unknown-A"},
 			config:  "force.yaml",
+			removeFiles: []string{
+				"Unknown-A/local/2000.json",
+				"Unknown-A/uploaded/1000.json",
+			},
 		},
 
 		// Unknown Global False
 		"Unknown Global False": {
 			sources:        []string{"Unknown-A"},
 			consentFixture: "false-global",
+			removeFiles: []string{
+				"Unknown-A/local/2000.json",
+				"Unknown-A/uploaded/1000.json",
+			},
 		},
 		"Unknown DryRun Global False": {
 			sources:        []string{"Unknown-A"},
@@ -133,11 +221,20 @@ func TestUpload(t *testing.T) {
 			sources:        []string{"Unknown-A"},
 			config:         "force.yaml",
 			consentFixture: "false-global",
+			removeFiles: []string{
+				"Unknown-A/local/2000.json",
+			},
 		},
 
 		// Multi Sources
 		"Multi": {
 			sources: []string{"True", "False"},
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+			},
 		},
 		"Multi DryRun": {
 			sources: []string{"True", "False"},
@@ -146,37 +243,92 @@ func TestUpload(t *testing.T) {
 		"Multi Force": {
 			sources: []string{"True", "False"},
 			config:  "force.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"False/local/2000.json",
+			},
 		},
 
 		// All
-		"All": {},
+		"All": {
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+				"Unknown-A/local/2000.json",
+				"Unknown-A/uploaded/1000.json",
+			},
+		},
 		"All DryRun": {
 			config: "dry.yaml",
 		},
 		"All Force": {
 			config: "force.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"False/local/2000.json",
+				"Unknown-A/local/2000.json",
+			},
 		},
 		"All MinAge": {
 			config: "minAge.yaml",
 			time:   2501,
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+				"Unknown-A/local/2000.json",
+				"Unknown-A/uploaded/1000.json",
+			},
+		},
+		"All Duplicates": {
+			removeFiles: []string{
+				"True/uploaded/1000.json",
+				"False/uploaded/1000.json",
+				"Unknown-A/uploaded/1000.json",
+			},
+			wantExitCode: 1,
+		},
+		"All Bad Files": {
+			removeFiles: []string{
+				"True/uploaded/1000.json",
+				"False/uploaded/1000.json",
+				"Unknown-A/uploaded/1000.json",
+			},
+			wantExitCode: 1,
+		},
+		"All Bad Files Force": {
+			removeFiles: []string{
+				"True/uploaded/1000.json",
+				"False/uploaded/1000.json",
+				"Unknown-A/uploaded/1000.json",
+			},
+			config:       "force.yaml",
+			wantExitCode: 1,
 		},
 
 		// No Server
 		"True No Server": {
-			sources:  []string{"True"},
-			noServer: true,
+			sources:      []string{"True"},
+			noServer:     true,
+			wantExitCode: 1,
 		},
 		"All No Server": {
-			noServer: true,
+			noServer:     true,
+			wantExitCode: 1,
 		},
 
 		// Bad Response
 		"True Bad Response": {
 			sources:      []string{"True"},
 			responseCode: http.StatusInternalServerError,
+			wantExitCode: 1,
 		},
 		"All Bad Response": {
 			responseCode: http.StatusInternalServerError,
+			wantExitCode: 1,
 		},
 	}
 
@@ -200,6 +352,11 @@ func TestUpload(t *testing.T) {
 			}
 
 			paths := copyFixtures(t, tc.consentFixture)
+
+			// Remove files
+			for _, f := range tc.removeFiles {
+				require.NoError(t, os.Remove(filepath.Join(paths.reports, f)), "Setup: failed to remove file")
+			}
 
 			for _, f := range tc.readOnlyFile {
 				testutils.MakeReadOnly(t, filepath.Join(paths.reports, f))

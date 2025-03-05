@@ -5,6 +5,11 @@ payloads:
       }
     - |-
       {
+          "id": "1000 True local",
+          "duplicate": true
+      }
+    - |-
+      {
           "id": "2501 True local"
       }
     - |-
@@ -14,32 +19,21 @@ payloads:
     - '{"OptOut":true}'
     - '{"OptOut":true}'
     - '{"OptOut":true}'
+    - '{"OptOut":true}'
 reportscontents:
-    False/local/1000.json: "{   \n    \"id\": \"1000 False local\",\n    \"duplicate\": true\n}"
-    False/local/2000.json: ""
     False/local/invalid.json: |-
         {
             "id": "invalid False local"
         }
     False/uploaded/1.json: '{"OptOut":true}'
     False/uploaded/500.json: '{"OptOut":true}'
-    False/uploaded/1000.json: |-
-        {
-            "id": "1000 False uploaded",
-            "duplicate": true
-        }
+    False/uploaded/1000.json: '{"OptOut":true}'
     False/uploaded/1500.json: |-
         {
             "id": "1500 False uploaded",
             "only in uploaded": true
         }
     False/uploaded/2501.json: '{"OptOut":true}'
-    True/local/1000.json: |-
-        {
-            "id": "1000 True local",
-            "duplicate": true
-        }
-    True/local/2000.json: ""
     True/local/invalid.json: "{   \n    \"id\": \"invalid True local\"\n}"
     True/uploaded/1.json: |-
         {
@@ -49,7 +43,11 @@ reportscontents:
         {
             "id": "500 True local"
         }
-    True/uploaded/1000.json: "{   \n    \"id\": \"1000 True uploaded\",\n    \"duplicate\": true\n}"
+    True/uploaded/1000.json: |-
+        {
+            "id": "1000 True local",
+            "duplicate": true
+        }
     True/uploaded/1500.json: |-
         {
             "id": "1500 True uploaded",
