@@ -1,0 +1,6 @@
+wsl:
+    wsl: 2
+    wslinterop: enabled
+    wslversion: 2.4.11.0
+    wslkernelversion: 5.15.167.4-1
+proattached: true

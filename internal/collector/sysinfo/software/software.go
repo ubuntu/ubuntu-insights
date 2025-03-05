@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"runtime"
 	"time"
+
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/platform"
 )
 
 // Info is the software specific part.
@@ -67,7 +69,7 @@ func New(args ...Options) Collector {
 }
 
 // Collect aggregates the data from all the other software collect functions.
-func (s Collector) Collect() (info Info, err error) {
+func (s Collector) Collect(pi platform.Info) (info Info, err error) {
 	s.log.Debug("collecting software info")
 
 	info.Timezone = s.timezone()
@@ -85,7 +87,7 @@ func (s Collector) Collect() (info Info, err error) {
 		s.log.Warn("failed to collect language info", "error", err)
 	}
 
-	info.Bios, err = s.collectBios()
+	info.Bios, err = s.collectBios(pi)
 	if err != nil {
 		s.log.Warn("failed to collect BIOS info", "error", err)
 	}
