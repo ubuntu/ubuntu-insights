@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -84,15 +85,17 @@ func TestCollect(t *testing.T) {
 		p    platform.Info
 		pErr error
 
+		skip bool
 		logs map[slog.Level]uint
 	}{
-		"Hardware and Software error is error": {
+		"Hardware and Software error is error-Linux": {
 			hwErr: fmt.Errorf("fake hardware error"),
 			swErr: fmt.Errorf("fake software error"),
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 2,
 			},
+			skip: runtime.GOOS != "linux",
 		},
 		"Platform, Hardware and Software error is error": {
 			hwErr: fmt.Errorf("fake hardware error"),
@@ -103,6 +106,9 @@ func TestCollect(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+			if tc.skip {
+				t.Skip("Skipping test")
+			}
 
 			l := testutils.NewMockHandler(slog.LevelDebug)
 

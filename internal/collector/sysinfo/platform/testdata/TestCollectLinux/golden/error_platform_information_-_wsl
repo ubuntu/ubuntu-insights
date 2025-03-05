@@ -1,0 +1,6 @@
+wsl:
+    wsl: true
+    wslinterop: enabled
+    wslversion: ""
+    wslkernelversion: ""
+proattached: false
