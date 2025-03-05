@@ -91,32 +91,46 @@ func TestUpload(t *testing.T) {
 		skipContentCheck bool
 		wantErr          bool
 	}{
-		"No Reports":       {consent: cTrue},
-		"Single Upload":    {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue},
-		"Multi Upload":     {lFiles: map[string]reportType{"1.json": normal, "5.json": normal}, consent: cTrue},
-		"Min Age":          {lFiles: map[string]reportType{"1.json": normal, "9.json": normal}, consent: cTrue, minAge: 5},
-		"Future Timestamp": {lFiles: map[string]reportType{"1.json": normal, "11.json": normal}, consent: cTrue},
-		"Duplicate Upload": {lFiles: map[string]reportType{"1.json": normal}, uFiles: map[string]reportType{"1.json": badContent}, consent: cTrue, wantErr: true},
-		"Bad Content":      {lFiles: map[string]reportType{"1.json": badContent}, consent: cTrue, wantErr: true},
-		"No Directory":     {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, rmLocal: true},
+		// Basic Tests
+		"Does nothing when no reports to be uploaded":           {consent: cTrue},
+		"Does nothing when the locals files dir does not exist": {consent: cTrue, rmLocal: true},
+		"Finds and uploads single valid report":                 {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue},
+		"Finds and uploads multiple valid reports":              {lFiles: map[string]reportType{"1.json": normal, "5.json": normal}, consent: cTrue},
 
-		"Consent Manager Source Error":           {lFiles: map[string]reportType{"1.json": normal}, consent: cErr, wantErr: true},
-		"Consent Manager Source Error with True": {lFiles: map[string]reportType{"1.json": normal}, consent: cErrTrue, wantErr: true},
-		"Consent Manager False":                  {lFiles: map[string]reportType{"1.json": normal}, consent: cFalse},
+		// Timestamp related tests
+		"Ignores reports with future timestamps":               {lFiles: map[string]reportType{"1.json": normal, "11.json": normal}, consent: cTrue},
+		"Ignores immature reports, but uploads mature reports": {lFiles: map[string]reportType{"1.json": normal, "9.json": normal}, consent: cTrue, minAge: 5},
 
-		"Force CM False":  {lFiles: map[string]reportType{"1.json": normal}, consent: cFalse, force: true},
-		"Force Min Age":   {lFiles: map[string]reportType{"1.json": normal, "9.json": normal}, consent: cTrue, minAge: 5, force: true},
-		"Force Duplicate": {lFiles: map[string]reportType{"1.json": normal}, uFiles: map[string]reportType{"1.json": badContent}, consent: cTrue, force: true},
+		// Consent Tests
+		"Errors when consent errors":                  {lFiles: map[string]reportType{"1.json": normal}, consent: cErr, wantErr: true},
+		"Errors when consent errors and returns true": {lFiles: map[string]reportType{"1.json": normal}, consent: cErrTrue, wantErr: true},
+		"Sends OptOut when consent is false":          {lFiles: map[string]reportType{"1.json": normal}, consent: cFalse},
+		"Sends OptOut Payload when consent true":      {lFiles: map[string]reportType{"1.json": optOut}, consent: cTrue},
+		"Sends OptOut payload when consent false":     {lFiles: map[string]reportType{"1.json": optOut}, consent: cFalse},
 
-		"OptOut Payload CM True":  {lFiles: map[string]reportType{"1.json": optOut}, consent: cTrue},
-		"OptOut Payload CM False": {lFiles: map[string]reportType{"1.json": optOut}, consent: cFalse},
+		// Force Tests
+		"Force does not override consent false": {
+			lFiles: map[string]reportType{"1.json": normal}, consent: cFalse, force: true},
+		"Force overrides min age": {
+			lFiles: map[string]reportType{"1.json": normal, "9.json": normal}, consent: cTrue, minAge: 5, force: true},
+		"Force overrides duplicate reports": {
+			lFiles: map[string]reportType{"1.json": normal}, uFiles: map[string]reportType{"1.json": badContent}, consent: cTrue, force: true},
 
-		"Dry run": {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, dryRun: true},
+		// Dry Run Tests
+		"Upload does not send or cleanup when dry run": {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, dryRun: true},
 
-		"Bad URL":        {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, url: "http://a b.com/", wantErr: true},
-		"Bad Response":   {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, serverResponse: http.StatusForbidden, wantErr: true},
-		"Offline Server": {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, serverOffline: true, wantErr: true},
-		"No Permissions": {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, noPerms: true, wantErr: runtime.GOOS != "windows", skipContentCheck: true},
+		// Upload local report errors
+		"Errors when local report is invalid JSON": {
+			lFiles: map[string]reportType{"1.json": badContent}, consent: cTrue, wantErr: true},
+		"Errors when a report has already been uploaded": {
+			lFiles: map[string]reportType{"1.json": normal}, uFiles: map[string]reportType{"1.json": badContent}, consent: cTrue, wantErr: true},
+		"Errors when not on Windows with bad file permissions": {
+			lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, noPerms: true, wantErr: runtime.GOOS != "windows", skipContentCheck: true},
+
+		// Server errors
+		"Errors when given a bad URL":               {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, url: "http://a b.com/", wantErr: true},
+		"Errors when server returns a bad response": {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, serverResponse: http.StatusForbidden, wantErr: true},
+		"Errors when the server is unreachable":     {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, serverOffline: true, wantErr: true},
 	}
 
 	for name, tc := range tests {
