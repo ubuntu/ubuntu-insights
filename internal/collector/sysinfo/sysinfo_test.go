@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -85,19 +85,17 @@ func TestCollect(t *testing.T) {
 		p    platform.Info
 		pErr error
 
-		skip bool
 		logs map[slog.Level]uint
 	}{
-		"Hardware and Software error is error-Linux": {
+		"Hardware and Software error warns": {
 			hwErr: fmt.Errorf("fake hardware error"),
 			swErr: fmt.Errorf("fake software error"),
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 2,
 			},
-			skip: runtime.GOOS != "linux",
 		},
-		"Platform, Hardware and Software error is error": {
+		"Platform, Hardware and Software error errors": {
 			hwErr: fmt.Errorf("fake hardware error"),
 			swErr: fmt.Errorf("fake software error"),
 			pErr:  fmt.Errorf("fake platform error"),
@@ -106,9 +104,6 @@ func TestCollect(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			if tc.skip {
-				t.Skip("Skipping test")
-			}
 
 			l := testutils.NewMockHandler(slog.LevelDebug)
 
@@ -126,11 +121,11 @@ func TestCollect(t *testing.T) {
 				return
 			}
 			require.NoError(t, err, "Collect should not return an error and did")
-			sGot, err := json.Marshal(got)
-			require.NoError(t, err, "Collect should marshal sys information")
 
+			sGot, err := json.MarshalIndent(got, "", "  ")
+			require.NoError(t, err, "Collect should marshal sys information")
 			want := testutils.LoadWithUpdateFromGolden(t, string(sGot))
-			assert.Equal(t, want, string(sGot), "Collect should return expected sys information")
+			assert.Equal(t, strings.ReplaceAll(want, "\r\n", "\n"), string(sGot), "Collect should return expected sys information")
 
 			if !l.AssertLevels(t, tc.logs) {
 				l.OutputLogs(t)
