@@ -43,9 +43,9 @@ type Collector struct {
 
 // Info contains Software and Hardware information of the system.
 type Info struct {
-	Hardware hardware.Info  `json:"hardware"`
-	Software software.Info  `json:"software"`
-	Platform *platform.Info `json:"platform,omitempty"`
+	Hardware hardware.Info `json:"hardware"`
+	Software software.Info `json:"software"`
+	Platform platform.Info `json:"platform,omitzero"`
 }
 
 // New returns a new Collector.
@@ -98,7 +98,7 @@ func (s Collector) Collect() (Info, error) {
 	}
 
 	return Info{
-		Platform: &plInfo,
+		Platform: plInfo,
 		Hardware: hwInfo,
 		Software: swInfo,
 	}, nil
