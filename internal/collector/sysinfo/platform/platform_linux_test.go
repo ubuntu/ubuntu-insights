@@ -90,6 +90,26 @@ func TestCollectLinux(t *testing.T) {
 			wslStatusCmd:  "error",
 			proStatusCmd:  "attached",
 		},
+		"Regular platform information - WSL duplicate versions": {
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "duplicate versions",
+			wslStatusCmd:  "regular",
+			proStatusCmd:  "attached",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 2,
+			},
+		},
+		"Regular platform information - WSL empty versions": {
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "empty version",
+			wslStatusCmd:  "regular",
+			proStatusCmd:  "attached",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 2,
+			},
+		},
 		"Empty platform information - WSL": {
 			detectVirtCmd: "wsl",
 			wslVersionCmd: "",
@@ -128,6 +148,38 @@ func TestCollectLinux(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+			},
+		},
+		"Error platform information - WSL": {
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "error",
+			wslStatusCmd:  "regular",
+			proStatusCmd:  "error",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 2,
+			},
+		},
+		"Error no exit - WSL": {
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "error no exit",
+			wslStatusCmd:  "error no exit",
+			proStatusCmd:  "error no exit",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 3,
+				slog.LevelInfo: 2,
+			},
+		},
+		"Error no exit": {
+			detectVirtCmd: "error no exit",
+			wslVersionCmd: "error no exit",
+			wslStatusCmd:  "error no exit",
+			proStatusCmd:  "error no exit",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 	}
@@ -193,6 +245,8 @@ func TestFakeVirtInfo(_ *testing.T) {
 	case "error":
 		fmt.Fprintf(os.Stderr, "Error requested in fake systemd-detect-virt")
 		os.Exit(1)
+	case "error no exit":
+		fmt.Fprintf(os.Stderr, "Error requested in fake systemd-detect-virt")
 	case "regular":
 		fmt.Println("uml")
 	case "wsl":
@@ -220,6 +274,9 @@ func TestWSLVersionInfo(_ *testing.T) {
 		file = os.Stderr
 		str = "Error requested in fake wsl.exe --version"
 		defer os.Exit(1)
+	case "error no exit":
+		file = os.Stderr
+		str = "Error requested in fake wsl.exe --version"
 	case "regular":
 		str = `
 WSL version: 2.4.11.0
@@ -251,6 +308,26 @@ WSL version 🗑️: 2.4.11.0
 🗑️ version: 5.15.167.4-1
 WSLg version: 1.0.65
 MSRDC version: 1.2.5716🗑️`
+	case "duplicate versions":
+		str = `
+WSL version: 2.4.11.0
+Kernel version: 5.15.167.4-1
+WSL version: 2.4.11.0
+Kernel version: 5.15.167.4-1
+WSLg version: 1.0.65
+MSRDC version: 1.2.5716
+Direct3D version: 1.611.1-81528511
+DXCore version: 10.0.26100.1-240331-1435.ge-release
+Windows version: 10.0.26100.3194`
+	case "empty version":
+		str = `
+WSL version:
+Kernel version:
+WSLg version: 1.0.65
+MSRDC version: 1.2.5716
+Direct3D version: 1.611.1-81528511
+DXCore version: 10.0.26100.1-240331-1435.ge-release
+Windows version: 10.0.26100.3194`
 	case "":
 		fallthrough
 	case "missing":
@@ -285,6 +362,9 @@ func TestFakeWSLStatus(_ *testing.T) {
 		file = os.Stderr
 		str = "Error requested in fake wsl.exe --status"
 		defer os.Exit(1)
+	case "error no exit":
+		file = os.Stderr
+		str = "Error requested in fake wsl.exe --status"
 	case "regular":
 		str = `
 Default Distribution: Ubuntu
@@ -322,6 +402,8 @@ func TestFakeProStatus(_ *testing.T) {
 	case "error":
 		fmt.Fprintf(os.Stderr, "Error requested in fake pro api")
 		os.Exit(1)
+	case "error no exit":
+		fmt.Fprintf(os.Stderr, "Error requested in fake pro api")
 	case "attached":
 		fmt.Println(`
 {"_schema_version": "v1", "data": {"attributes": {"contract_remaining_days": 2912745, "contract_status": "active", "is_attached": true, "is_attached_and_contract_valid": true}, "meta": {"environment_vars": []}, "type": "IsAttached"}, "errors": [], "result": "success", "version": "34~24.04", "warnings": []}`)

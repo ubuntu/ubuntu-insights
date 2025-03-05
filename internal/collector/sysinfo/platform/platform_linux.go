@@ -125,15 +125,15 @@ func (p Collector) collectWSL() WSL {
 		"Kernel": &info.WSLKernelVersion}
 	for entry, value := range entries {
 		regex := getWSLRegex(entry)
-		matches := regex.FindStringSubmatch(data)
-		if len(matches) < 2 {
+		matches := regex.FindAllStringSubmatch(data, -1)
+		if len(matches) == 0 {
 			p.log.Warn("failed to parse WSL version", "entry", entry)
 			continue
 		}
-		*value = matches[1]
-		if len(matches) > 2 {
-			p.log.Warn(fmt.Sprintf("parsed multiple %s versions", entry), "matches", matches)
+		if len(matches) > 1 {
+			p.log.Warn(fmt.Sprintf("parsed multiple %s versions, using the first", entry), "matches", matches)
 		}
+		*value = matches[0][1]
 	}
 
 	return info
