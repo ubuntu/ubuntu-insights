@@ -44,7 +44,7 @@ func installConsentCmd(app *App) {
 		},
 	}
 
-	consentCmd.Flags().StringVarP(&app.config.Consent.State, "consent-state", "c", "", "the consent state to set (true or false), the current consent state is displayed if not set")
+	consentCmd.Flags().StringVarP(&app.config.Consent.State, "state", "s", "", "the consent state to set (true or false), the current consent state is displayed if not set")
 
 	app.cmd.AddCommand(consentCmd)
 }

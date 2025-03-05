@@ -120,7 +120,7 @@ func TestConsent(t *testing.T) {
 			cmd := exec.Command(cliPath, "consent", "--config", tc.config, "-vv")
 			cmd.Args = append(cmd.Args, "--consent-dir", paths.consent)
 			if tc.state != "" {
-				cmd.Args = append(cmd.Args, "-c", tc.state)
+				cmd.Args = append(cmd.Args, "-s", tc.state)
 			}
 			out, err := cmd.CombinedOutput()
 			if tc.wantExitCode == 0 {

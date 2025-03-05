@@ -1,4 +1,0 @@
-abc-consent.toml: |
-    consent_state = false
-consent.toml: |
-    consent_state = true
