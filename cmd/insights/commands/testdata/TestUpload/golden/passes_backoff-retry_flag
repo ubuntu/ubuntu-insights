@@ -2,5 +2,6 @@ sources:
     - "False"
     - "True"
     - Unknown-A
-minage: 1000000
+minage: 604800
 dryrun: false
+expretry: true

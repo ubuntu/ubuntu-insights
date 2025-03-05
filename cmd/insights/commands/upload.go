@@ -40,6 +40,7 @@ func installUploadCmd(app *App) {
 	uploadCmd.Flags().UintVar(&app.config.Upload.MinAge, "min-age", defaultMinAge, "the minimum age (in seconds) of a report before the uploader will attempt to upload it")
 	uploadCmd.Flags().BoolVarP(&app.config.Upload.Force, "force", "f", false, "force an upload, ignoring min age and clashes between the collected file and a file in the uploaded folder, replacing the clashing uploaded report if it exists")
 	uploadCmd.Flags().BoolVarP(&app.config.Upload.DryRun, "dry-run", "d", false, "go through the motions of doing an upload, but do not communicate with the server or send the payload")
+	uploadCmd.Flags().BoolVarP(&app.config.Upload.ExpRetry, "backoff-retry", "b", false, "enable exponential backoff retry for failed uploads")
 
 	app.cmd.AddCommand(uploadCmd)
 }
@@ -48,7 +49,7 @@ func (a App) uploadRun() error {
 	cm := consent.New(a.config.consentDir)
 
 	for _, source := range a.config.Upload.Sources {
-		u, err := a.newUploader(cm, a.config.insightsDir, source, a.config.Upload.MinAge, a.config.Upload.DryRun)
+		u, err := a.newUploader(cm, a.config.insightsDir, source, a.config.Upload.MinAge, a.config.Upload.DryRun, a.config.Upload.ExpRetry)
 		if err != nil {
 			return fmt.Errorf("failed to create uploader for source %s: %v", source, err)
 		}
