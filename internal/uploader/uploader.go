@@ -34,6 +34,7 @@ type Uploader struct {
 	uploadedDir   string
 	maxReports    uint
 	timeProvider  timeProvider
+	reportTimeout time.Duration
 }
 
 type options struct {
@@ -41,12 +42,14 @@ type options struct {
 	baseServerURL string
 	maxReports    uint
 	timeProvider  timeProvider
+	reportTimeout time.Duration
 }
 
 var defaultOptions = options{
 	baseServerURL: "https://metrics.ubuntu.com",
 	maxReports:    constants.MaxReports,
 	timeProvider:  realTimeProvider{},
+	reportTimeout: 30 * time.Minute,
 }
 
 // Options represents an optional function to override Upload Manager default values.
@@ -58,7 +61,7 @@ type Consent interface {
 }
 
 // New returns a new UploaderManager.
-func New(cm Consent, cachePath, source string, minAge uint, dryRun bool, args ...Options) (Uploader, error) {
+func New(cm Consent, cachePath, source string, minAge uint, dryRun, expRetry bool, args ...Options) (Uploader, error) {
 	slog.Debug("Creating new uploader manager", "source", source, "minAge", minAge, "dryRun", dryRun)
 
 	if source == "" {
@@ -85,6 +88,7 @@ func New(cm Consent, cachePath, source string, minAge uint, dryRun bool, args ..
 		collectedDir:  filepath.Join(cachePath, source, constants.LocalFolder),
 		uploadedDir:   filepath.Join(cachePath, source, constants.UploadedFolder),
 		maxReports:    opts.maxReports,
+		reportTimeout: opts.reportTimeout,
 	}, nil
 }
 

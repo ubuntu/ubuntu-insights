@@ -4,3 +4,4 @@ sources:
     - Unknown-A
 minage: 604800
 dryrun: false
+expretry: false

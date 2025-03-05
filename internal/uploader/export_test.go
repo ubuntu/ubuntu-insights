@@ -23,3 +23,10 @@ func WithTimeProvider(tp timeProvider) Options {
 		o.timeProvider = tp
 	}
 }
+
+// WithReportTimeout sets the report timeout for the uploader, for exponential backoff retries.
+func WithReportTimeout(d time.Duration) Options {
+	return func(o *options) {
+		o.reportTimeout = d
+	}
+}

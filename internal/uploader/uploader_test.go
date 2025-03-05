@@ -56,7 +56,7 @@ func TestNew(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := uploader.New(tc.consent, "", tc.source, tc.minAge, tc.dryRun)
+			_, err := uploader.New(tc.consent, "", tc.source, tc.minAge, tc.dryRun, false)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
@@ -83,10 +83,11 @@ func TestUpload(t *testing.T) {
 		rmLocal        bool
 		noPerms        bool
 
-		consent testConsentChecker
-		minAge  uint
-		dryRun  bool
-		force   bool
+		consent  testConsentChecker
+		minAge   uint
+		dryRun   bool
+		force    bool
+		expRetry bool
 
 		skipContentCheck bool
 		wantErr          bool
@@ -160,7 +161,7 @@ func TestUpload(t *testing.T) {
 				t.Cleanup(func() { require.NoError(t, os.Chmod(localDir, 0750), "Cleanup: failed to restore permissions") }) //nolint:gosec //0750 is fine for folders
 			}
 
-			mgr, err := uploader.New(tc.consent, dir, source, tc.minAge, tc.dryRun,
+			mgr, err := uploader.New(tc.consent, dir, source, tc.minAge, tc.dryRun, tc.expRetry,
 				uploader.WithBaseServerURL(tc.url), uploader.WithTimeProvider(uploader.MockTimeProvider{CurrentTime: mockTime}))
 			require.NoError(t, err, "Setup: failed to create new uploader manager")
 
