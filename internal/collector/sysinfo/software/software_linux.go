@@ -87,7 +87,7 @@ func (s Collector) collectLang() (string, error) {
 }
 
 func (s Collector) collectBios(pi platform.Info) (bios, error) {
-	if pi.WSL.WSL {
+	if pi.WSL.WSL != 0 {
 		s.log.Debug("skipping BIOS info collection on WSL")
 		return bios{}, nil
 	}

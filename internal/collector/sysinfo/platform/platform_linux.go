@@ -5,33 +5,36 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/ubuntu/decorate"
 	"github.com/ubuntu/ubuntu-insights/internal/cmdutils"
+	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
 )
 
 // Info contains platform information for Linux.
 type Info struct {
-	WSL         WSL  `json:"wsl,omitempty"`
+	WSL         WSL  `json:"wsl"`
 	ProAttached bool `json:"proAttached,omitempty"`
 }
 
 // WSL contains platform information specific to Windows Subsystem for Linux.
 type WSL struct {
-	WSL              bool   `json:"wsl,omitempty"`
-	WSLInterop       string `json:"wslInterop,omitempty"`
-	WSLVersion       string `json:"wslVersion,omitempty"`
-	WSLKernelVersion string `json:"wslKernelVersion,omitempty"`
+	WSL           uint8  `json:"wsl,omitzero"`
+	Interop       string `json:"wslInterop,omitempty"`
+	Version       string `json:"wslVersion,omitempty"`
+	KernelVersion string `json:"wslKernelVersion,omitempty"`
 }
 
 type platformOptions struct {
 	root          string
 	detectVirtCmd []string
-	wslStatusCmd  []string
 	wslVersionCmd []string
 	proStatusCmd  []string
 }
@@ -41,7 +44,6 @@ func defaultPlatformOptions() platformOptions {
 	return platformOptions{
 		root:          "/",
 		detectVirtCmd: []string{"systemd-detect-virt"},
-		wslStatusCmd:  []string{"wsl.exe", "--status"},
 		wslVersionCmd: []string{"wsl.exe", "-v"},
 		proStatusCmd:  []string{"pro", "api", "u.pro.status.is_attached.v1"},
 	}
@@ -77,11 +79,42 @@ func (p Collector) isWSL() bool {
 	return false
 }
 
-// interopEnabled returns true if WSL interop is enabled and working.
-func (p Collector) interopEnabled() bool {
-	_, _, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, p.platform.wslStatusCmd[0], p.platform.wslStatusCmd[1:]...)
+// interopEnabled returns true if WSL interop is enabled.
+// It does this by checking the WSLInterop or WSLInterop-late, depending on the detected WSL version.
+func (p Collector) interopEnabled() (enabled bool) {
+	var path string
+	switch p.getWSLVersion() {
+	case 1:
+		{
+			// Check for the presence of /proc/sys/fs/binfmt_misc/WSLInterop
+			path = filepath.Join(p.platform.root, "proc/sys/fs/binfmt_misc/WSLInterop")
+		}
+	case 2:
+		{
+			// Check for the presence of /proc/sys/fs/binfmt_misc/WSLInterop-late
+			path = filepath.Join(p.platform.root, "proc/sys/fs/binfmt_misc/WSLInterop-late")
+		}
+	default:
+		return false
+	}
+	// If case default, then WSL is not detected, and no log should be written.
+	defer func() {
+		if enabled {
+			p.log.Debug("WSL interop detected enabled")
+			return
+		}
+		p.log.Debug("WSL interop detected disabled")
+	}()
 
-	return err == nil
+	_, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+
+	// Check if the first line of the file is 'enabled'
+	data := fileutils.ReadFileLogError(path, p.log)
+	lines := strings.Split(data, "\n")
+	return (len(lines) > 0 && lines[0] == "enabled")
 }
 
 // collectWSL collects information about Windows Subsystem for Linux.
@@ -91,14 +124,14 @@ func (p Collector) collectWSL() WSL {
 	}
 
 	info := WSL{
-		WSL: true,
+		WSL: p.getWSLVersion(),
 	}
 
 	if !p.interopEnabled() {
-		info.WSLInterop = "disabled"
+		info.Interop = "disabled"
 		return info
 	}
-	info.WSLInterop = "enabled"
+	info.Interop = "enabled"
 
 	// Run `wsl.exe -v` and parse it
 	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, p.platform.wslVersionCmd[0], p.platform.wslVersionCmd[1:]...)
@@ -121,8 +154,8 @@ func (p Collector) collectWSL() WSL {
 	data := string(decodedData)
 
 	entries := map[string]*string{
-		"WSL":    &info.WSLVersion,
-		"Kernel": &info.WSLKernelVersion}
+		"WSL":    &info.Version,
+		"Kernel": &info.KernelVersion}
 	for entry, value := range entries {
 		regex := getWSLRegex(entry)
 		matches := regex.FindAllStringSubmatch(data, -1)
@@ -137,6 +170,25 @@ func (p Collector) collectWSL() WSL {
 	}
 
 	return info
+}
+
+// getWSLVersion returns the WSL version based on the kernel version naming convention.
+// If the kernel version has Microsoft with a capital M, it is WSL 1.
+// If the kernel version can't be read, or if the version doesn't match the pattern, it is assumed to be WSL 2.
+// If not in WSL, it returns 0.
+//
+// This could potentially be fooled by a custom kernel with `Microsoft“ in the name.
+func (p Collector) getWSLVersion() uint8 {
+	if !p.isWSL() {
+		return 0
+	}
+
+	kVersion := fileutils.ReadFileLogError(filepath.Join(p.platform.root, "proc/version"), p.log)
+	if !strings.Contains(kVersion, `-Microsoft (Microsoft@Microsoft.com)`) {
+		return 2
+	}
+
+	return 1
 }
 
 // getWSLRegex returns a regex for matching WSL version.

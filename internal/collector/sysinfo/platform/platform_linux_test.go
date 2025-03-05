@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"testing"
 	"unicode/utf16"
 
@@ -23,164 +24,243 @@ func TestCollectLinux(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
+		roots         []string
 		detectVirtCmd string
 		wslVersionCmd string
-		wslStatusCmd  string
 		proStatusCmd  string
+
+		missingFiles []string
 
 		logs    map[slog.Level]uint
 		wantErr bool
 	}{
-		"Regular platform information - pro attached": {
+		// Non-WSL
+		"Non-WSL Basic with Pro Attached": {
 			detectVirtCmd: "regular",
 			wslVersionCmd: "error",
 			proStatusCmd:  "attached",
 		},
-		"Regular platform information - pro detached": {
+		"Non-WSL Basic with Pro Detached": {
 			detectVirtCmd: "regular",
 			wslVersionCmd: "error",
-			wslStatusCmd:  "error",
 			proStatusCmd:  "detached",
 		},
-		"Garbage platform information": {
+		"Non-WSL Garbage Returns from Commands warns": {
 			detectVirtCmd: "garbage",
 			wslVersionCmd: "error",
-			wslStatusCmd:  "error",
 			proStatusCmd:  "garbage",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
 			},
 		},
-		"Empty platform information": {
+		"Non-WSL Empty Returns from Commands warns": {
 			detectVirtCmd: "",
 			wslVersionCmd: "",
-			wslStatusCmd:  "",
 			proStatusCmd:  "",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
 			},
 		},
-		"Error platform information": {
+		"Non-WSL Error Returns from Commands warns": {
 			detectVirtCmd: "error",
 			wslVersionCmd: "error",
-			wslStatusCmd:  "error",
 			proStatusCmd:  "error",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 2,
 			},
 		},
-		"Regular platform information - WSL": {
-			detectVirtCmd: "wsl",
-			wslVersionCmd: "regular",
-			wslStatusCmd:  "regular",
-			proStatusCmd:  "attached",
-		},
-		"Regular platform information - WSL pro detached": {
-			detectVirtCmd: "wsl",
-			wslVersionCmd: "regular",
-			wslStatusCmd:  "regular",
-			proStatusCmd:  "detached",
-		},
-		"Regular platform information - WSL no interop": {
-			detectVirtCmd: "wsl",
-			wslVersionCmd: "regular",
-			wslStatusCmd:  "error",
-			proStatusCmd:  "attached",
-		},
-		"Regular platform information - WSL duplicate versions": {
-			detectVirtCmd: "wsl",
-			wslVersionCmd: "duplicate versions",
-			wslStatusCmd:  "regular",
-			proStatusCmd:  "attached",
-
-			logs: map[slog.Level]uint{
-				slog.LevelWarn: 2,
-			},
-		},
-		"Regular platform information - WSL empty versions": {
-			detectVirtCmd: "wsl",
-			wslVersionCmd: "empty version",
-			wslStatusCmd:  "regular",
-			proStatusCmd:  "attached",
-
-			logs: map[slog.Level]uint{
-				slog.LevelWarn: 2,
-			},
-		},
-		"Empty platform information - WSL": {
-			detectVirtCmd: "wsl",
-			wslVersionCmd: "",
-			wslStatusCmd:  "",
-			proStatusCmd:  "",
-
-			logs: map[slog.Level]uint{
-				slog.LevelWarn: 3,
-			},
-		},
-		"Empty platform information - WSL no interop": {
-			detectVirtCmd: "wsl",
-			wslVersionCmd: "",
-			wslStatusCmd:  "error",
-			proStatusCmd:  "",
-
-			logs: map[slog.Level]uint{
-				slog.LevelWarn: 1,
-			},
-		},
-		"Garbage platform information - WSL": {
-			detectVirtCmd: "garbage",
-			wslVersionCmd: "garbage",
-			wslStatusCmd:  "garbage",
-			proStatusCmd:  "garbage",
-
-			logs: map[slog.Level]uint{
-				slog.LevelWarn: 1,
-			},
-		},
-		"Garbage platform information - WSL no interop": {
-			detectVirtCmd: "garbage",
-			wslVersionCmd: "garbage",
-			wslStatusCmd:  "error",
-			proStatusCmd:  "garbage",
-
-			logs: map[slog.Level]uint{
-				slog.LevelWarn: 1,
-			},
-		},
-		"Error platform information - WSL": {
-			detectVirtCmd: "wsl",
-			wslVersionCmd: "error",
-			wslStatusCmd:  "regular",
-			proStatusCmd:  "error",
-
-			logs: map[slog.Level]uint{
-				slog.LevelWarn: 2,
-			},
-		},
-		"Error no exit - WSL": {
-			detectVirtCmd: "wsl",
-			wslVersionCmd: "error no exit",
-			wslStatusCmd:  "error no exit",
-			proStatusCmd:  "error no exit",
-
-			logs: map[slog.Level]uint{
-				slog.LevelWarn: 3,
-				slog.LevelInfo: 2,
-			},
-		},
-		"Error no exit": {
+		"Non-WSL Print to StdOut without exitcode warns": {
 			detectVirtCmd: "error no exit",
 			wslVersionCmd: "error no exit",
-			wslStatusCmd:  "error no exit",
 			proStatusCmd:  "error no exit",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
 				slog.LevelInfo: 2,
 			},
+		},
+
+		// WSL 2
+		"WSL2 with interop and pro attached does not warn": {
+			roots:         []string{"enabled", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "regular",
+			proStatusCmd:  "attached",
+		},
+		"WSL2 with interop and pro detached does not warn": {
+			roots:         []string{"enabled", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "regular",
+			proStatusCmd:  "detached",
+		},
+		"WSL2 garbage version is WSL2": {
+			roots:         []string{"enabled", "version-garbage"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "regular",
+			proStatusCmd:  "attached",
+		},
+		"WSL2 empty version is WSL2": {
+			roots:         []string{"enabled", "version-empty"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "regular",
+			proStatusCmd:  "attached",
+		},
+		// WSL 2 interop testing
+		"WSL2 without interop file does not warn": {
+			roots:         []string{"enabled", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "error",
+			proStatusCmd:  "attached",
+
+			missingFiles: []string{"proc/sys/fs/binfmt_misc/WSLInterop-late"},
+		},
+		"WSL2 with disabled interop does not warn": {
+			roots:         []string{"disabled", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "error",
+			proStatusCmd:  "attached",
+		},
+		"WSL2 with late-disabled interop does not warn": {
+			roots:         []string{"late-disabled", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "error",
+			proStatusCmd:  "attached",
+		},
+		"WSL2 with garbage interop file does not warn": {
+			roots:         []string{"garbage", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "error",
+			proStatusCmd:  "attached",
+		},
+		"WSL2 with empty interop file does not warn": {
+			roots:         []string{"empty", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "error",
+			proStatusCmd:  "attached",
+		},
+		// WSL 2 Warning cases
+		"WSL2 duplicate parsed versions warns": {
+			roots:         []string{"enabled", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "duplicate versions",
+			proStatusCmd:  "attached",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 2,
+			},
+		},
+		"WSL2 empty version return warns": {
+			roots:         []string{"enabled", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "empty version",
+			proStatusCmd:  "attached",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 2,
+			},
+		},
+		"WSL2 all cmd empty return warns": {
+			roots:         []string{"enabled", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "",
+			proStatusCmd:  "",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 3,
+			},
+		},
+		"WSL2 garbage return from commands warns": {
+			roots:         []string{"enabled", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "garbage",
+			proStatusCmd:  "garbage",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 3,
+			},
+		},
+		"WSL2 cmd errors warns": {
+			roots:         []string{"enabled", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "error",
+			proStatusCmd:  "error",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 2,
+			},
+		},
+		"WSL2 cmd errors no exit warns": {
+			roots:         []string{"enabled", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "error no exit",
+			proStatusCmd:  "error no exit",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 3,
+				slog.LevelInfo: 2,
+			},
+		},
+		"WSL2 missing WSL version is WSL2 but warns": {
+			roots:         []string{"enabled"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "regular",
+			proStatusCmd:  "attached",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 2,
+			},
+		},
+
+		// WSL 1
+		"WSL1 with interop and pro attached does not warn": {
+			roots:         []string{"enabled", "version-wsl1"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "regular",
+			proStatusCmd:  "attached",
+
+			missingFiles: []string{"proc/sys/fs/binfmt_misc/WSLInterop-late"},
+		},
+		"WSL1 with interop and pro detached does not warn": {
+			roots:         []string{"enabled", "version-wsl1"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "regular",
+			proStatusCmd:  "detached",
+		},
+		// WSL 1 interop testing
+		"WSL1 without interop file does not warn": {
+			roots:         []string{"enabled", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "error",
+			proStatusCmd:  "attached",
+
+			missingFiles: []string{"proc/sys/fs/binfmt_misc/WSLInterop-late", "proc/sys/fs/binfmt_misc/WSLInterop"},
+		},
+		"WSL1 with disabled interop does not warn": {
+			roots:         []string{"disabled", "version-wsl1"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "error",
+			proStatusCmd:  "attached",
+		},
+		"WSL1 with late-disabled interop does not warn": {
+			roots:         []string{"late-disabled", "version-wsl1"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "regular",
+			proStatusCmd:  "attached",
+		},
+		"WSL1 with garbage interop file does not warn": {
+			roots:         []string{"garbage", "version-wsl1"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "error",
+			proStatusCmd:  "attached",
+		},
+		"WSL1 with empty interop file does not warn": {
+			roots:         []string{"empty", "version-wsl1"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "error",
+			proStatusCmd:  "attached",
 		},
 	}
 
@@ -188,9 +268,20 @@ func TestCollectLinux(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			tmp := t.TempDir()
+			for _, r := range tc.roots {
+				err := testutils.CopyDir(t, filepath.Join("testdata/linuxfs", r), tmp)
+				require.NoError(t, err, "setup: failed to copy test data directory: ")
+			}
+
+			for _, f := range tc.missingFiles {
+				err := os.Remove(filepath.Join(tmp, f))
+				require.NoError(t, err, "setup: failed to remove file %s: ", f)
+			}
+
 			l := testutils.NewMockHandler(slog.LevelDebug)
 			options := []platform.Options{
-				platform.WithRoot(t.TempDir()),
+				platform.WithRoot(tmp),
 				platform.WithLogger(&l),
 			}
 
@@ -202,11 +293,6 @@ func TestCollectLinux(t *testing.T) {
 			if tc.wslVersionCmd != "-" {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestWSLVersionInfo", tc.wslVersionCmd)
 				options = append(options, platform.WithWSLVersionCmd(cmdArgs))
-			}
-
-			if tc.wslStatusCmd != "-" {
-				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeWSLStatus", tc.wslStatusCmd)
-				options = append(options, platform.WithWSLStatusCmd(cmdArgs))
 			}
 
 			if tc.proStatusCmd != "-" {
@@ -328,49 +414,6 @@ MSRDC version: 1.2.5716
 Direct3D version: 1.611.1-81528511
 DXCore version: 10.0.26100.1-240331-1435.ge-release
 Windows version: 10.0.26100.3194`
-	case "":
-		fallthrough
-	case "missing":
-		os.Exit(0)
-	}
-
-	// Convert the string to UTF-16
-	encoded := utf16.Encode([]rune(str))
-
-	// Convert the UTF-16 encoded data to bytes
-	var utf16Bytes []byte
-	for _, r := range encoded {
-		utf16Bytes = append(utf16Bytes, byte(r), byte(r>>8))
-	}
-
-	if _, err = file.Write(utf16Bytes); err != nil {
-		panic(fmt.Errorf("failed to write to file: %w", err))
-	}
-}
-
-func TestFakeWSLStatus(_ *testing.T) {
-	args, err := testutils.GetFakeCmdArgs()
-	if err != nil {
-		return
-	}
-	defer os.Exit(0)
-
-	file := os.Stdout
-	var str string
-	switch args[0] {
-	case "error":
-		file = os.Stderr
-		str = "Error requested in fake wsl.exe --status"
-		defer os.Exit(1)
-	case "error no exit":
-		file = os.Stderr
-		str = "Error requested in fake wsl.exe --status"
-	case "regular":
-		str = `
-Default Distribution: Ubuntu
-Default Version: 2`
-	case "garbage":
-		str = `🗑️🗑️🗑️`
 	case "":
 		fallthrough
 	case "missing":
