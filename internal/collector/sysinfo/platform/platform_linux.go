@@ -20,7 +20,7 @@ import (
 
 // Info contains platform information for Linux.
 type Info struct {
-	WSL         WSL  `json:"wsl"`
+	WSL         WSL  `json:"wsl,omitzero"`
 	ProAttached bool `json:"proAttached,omitempty"`
 }
 
@@ -87,15 +87,9 @@ func (p Collector) interopEnabled() (enabled bool) {
 	var path string
 	switch p.getWSLVersion() {
 	case 1:
-		{
-			// Check for the presence of /proc/sys/fs/binfmt_misc/WSLInterop
-			path = filepath.Join(p.platform.root, "proc/sys/fs/binfmt_misc/WSLInterop")
-		}
+		path = filepath.Join(p.platform.root, "proc/sys/fs/binfmt_misc/WSLInterop")
 	case 2:
-		{
-			// Check for the presence of /proc/sys/fs/binfmt_misc/WSLInterop-late
-			path = filepath.Join(p.platform.root, "proc/sys/fs/binfmt_misc/WSLInterop-late")
-		}
+		path = filepath.Join(p.platform.root, "proc/sys/fs/binfmt_misc/WSLInterop-late")
 	default:
 		return false
 	}
@@ -121,12 +115,9 @@ func (p Collector) interopEnabled() (enabled bool) {
 
 // collectWSL collects information about Windows Subsystem for Linux.
 func (p Collector) collectWSL() WSL {
-	if !p.isWSL() {
-		return WSL{}
-	}
-
-	info := WSL{
-		WSL: p.getWSLVersion(),
+	info := WSL{WSL: p.getWSLVersion()}
+	if info.WSL == 0 {
+		return info
 	}
 
 	if !p.interopEnabled() {
@@ -162,7 +153,7 @@ func (p Collector) collectWSL() WSL {
 		regex := getWSLRegex(entry)
 		matches := regex.FindAllStringSubmatch(data, -1)
 		if len(matches) == 0 {
-			p.log.Warn("failed to parse WSL version", "entry", entry)
+			p.log.Warn("failed to parse wsl --version", "entry", entry)
 			continue
 		}
 		if len(matches) > 1 {
