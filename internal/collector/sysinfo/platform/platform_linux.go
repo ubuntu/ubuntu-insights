@@ -60,7 +60,7 @@ func (p Collector) collectPlatform() (info Info, err error) {
 }
 
 // isWSL returns true if the system is running under Windows Subsystem for Linux.
-// This is done by checking for the presence of `/proc/sys/fs/binfmt_misc/WSLInterop`.
+// This is done by checking the output of systemd-detect-virt.
 func (p Collector) isWSL() bool {
 	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, p.platform.detectVirtCmd[0], p.platform.detectVirtCmd[1:]...)
 	if err != nil {
@@ -81,6 +81,8 @@ func (p Collector) isWSL() bool {
 
 // interopEnabled returns true if WSL interop is enabled.
 // It does this by checking the WSLInterop or WSLInterop-late, depending on the detected WSL version.
+//
+// Note that this does not detect broken interop, such as if in WSL2, $WSL_INTEROP points to a broken location.
 func (p Collector) interopEnabled() (enabled bool) {
 	var path string
 	switch p.getWSLVersion() {
@@ -173,11 +175,11 @@ func (p Collector) collectWSL() WSL {
 }
 
 // getWSLVersion returns the WSL version based on the kernel version naming convention.
-// If the kernel version has Microsoft with a capital M, it is WSL 1.
+// If the kernel version has '-Microsoft \(Microsoft@Microsoft\.com\)' with a capital M, it is WSL 1.
 // If the kernel version can't be read, or if the version doesn't match the pattern, it is assumed to be WSL 2.
 // If not in WSL, it returns 0.
 //
-// This could potentially be fooled by a custom kernel with `Microsoft“ in the name.
+// This could potentially be fooled by a custom kernel with '-Microsoft \(Microsoft@Microsoft\.com\)' in the name.
 func (p Collector) getWSLVersion() uint8 {
 	if !p.isWSL() {
 		return 0
