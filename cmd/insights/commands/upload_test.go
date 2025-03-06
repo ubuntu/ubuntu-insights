@@ -75,17 +75,17 @@ func TestUpload(t *testing.T) {
 
 			gotSources := make([]string, 0)
 			var (
-				gotMinAge   uint
-				dRun        bool
-				gotExpRetry bool
+				gotMinAge       uint
+				dRun            bool
+				gotBackoffRetry bool
 			)
-			newUploader := func(cm uploader.Consent, cachePath, source string, minAge uint, dryRun, expRetry bool, args ...uploader.Options) (uploader.Uploader, error) {
+			newUploader := func(cm uploader.Consent, cachePath, source string, minAge uint, dryRun, backoffRetry bool, args ...uploader.Options) (uploader.Uploader, error) {
 				gotSources = append(gotSources, source)
 				gotMinAge = minAge
 				dRun = dryRun
-				gotExpRetry = expRetry
+				gotBackoffRetry = backoffRetry
 
-				return uploader.New(cm, cachePath, source, minAge, true, expRetry, args...)
+				return uploader.New(cm, cachePath, source, minAge, true, backoffRetry, args...)
 			}
 			a, _, _ := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewUploader(newUploader))
 			err := a.Run()
@@ -111,7 +111,7 @@ func TestUpload(t *testing.T) {
 			got := results{
 				Sources:  gotSources,
 				MinAge:   gotMinAge,
-				ExpRetry: gotExpRetry,
+				ExpRetry: gotBackoffRetry,
 				DryRun:   dRun,
 			}
 

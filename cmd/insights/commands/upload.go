@@ -1,8 +1,10 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/spf13/cobra"
 	"github.com/ubuntu/ubuntu-insights/internal/consent"
@@ -40,7 +42,7 @@ func installUploadCmd(app *App) {
 	uploadCmd.Flags().UintVar(&app.config.Upload.MinAge, "min-age", defaultMinAge, "the minimum age (in seconds) of a report before the uploader will attempt to upload it")
 	uploadCmd.Flags().BoolVarP(&app.config.Upload.Force, "force", "f", false, "force an upload, ignoring min age and clashes between the collected file and a file in the uploaded folder, replacing the clashing uploaded report if it exists")
 	uploadCmd.Flags().BoolVarP(&app.config.Upload.DryRun, "dry-run", "d", false, "go through the motions of doing an upload, but do not communicate with the server or send the payload")
-	uploadCmd.Flags().BoolVarP(&app.config.Upload.ExpRetry, "backoff-retry", "b", false, "enable exponential backoff retry for failed uploads")
+	uploadCmd.Flags().BoolVarP(&app.config.Upload.BackoffRetry, "backoff-retry", "b", false, "enable exponential backoff retry for failed uploads")
 
 	app.cmd.AddCommand(uploadCmd)
 }
@@ -48,16 +50,37 @@ func installUploadCmd(app *App) {
 func (a App) uploadRun() error {
 	cm := consent.New(a.config.consentDir)
 
+	uploaders := make(map[string]uploader.Uploader)
 	for _, source := range a.config.Upload.Sources {
-		u, err := a.newUploader(cm, a.config.insightsDir, source, a.config.Upload.MinAge, a.config.Upload.DryRun, a.config.Upload.ExpRetry)
+		u, err := a.newUploader(cm, a.config.insightsDir, source, a.config.Upload.MinAge, a.config.Upload.DryRun, a.config.Upload.BackoffRetry)
 		if err != nil {
 			return fmt.Errorf("failed to create uploader for source %s: %v", source, err)
 		}
-
-		if err := u.Upload(a.config.Upload.Force); err != nil {
-			return fmt.Errorf("failed to upload reports for source %s: %v", source, err)
-		}
+		uploaders[source] = u
 	}
 
-	return nil
+	var uploadError error
+	mu := &sync.Mutex{}
+	var wg sync.WaitGroup
+	for s, u := range uploaders {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			var err error
+			if a.config.Upload.BackoffRetry {
+				err = u.BackoffUpload(a.config.Upload.Force)
+			} else {
+				err = u.Upload(a.config.Upload.Force)
+			}
+
+			if err != nil {
+				errMsg := fmt.Errorf("failed to upload reports for source %s: %v", s, err)
+				mu.Lock()
+				defer mu.Unlock()
+				uploadError = errors.Join(uploadError, errMsg)
+			}
+		}()
+	}
+	wg.Wait()
+	return uploadError
 }

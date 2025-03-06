@@ -115,18 +115,21 @@ func TestUpload(t *testing.T) {
 			},
 		},
 		"True Duplicates": {
+			sources: []string{"True"},
 			removeFiles: []string{
 				"True/local/2000.json",
 			},
 			wantExitCode: 1,
 		},
 		"True Bad Files": {
+			sources: []string{"True"},
 			removeFiles: []string{
 				"True/uploaded/1000.json",
 			},
 			wantExitCode: 1,
 		},
 		"True Bad Files Force": {
+			sources: []string{"True"},
 			removeFiles: []string{
 				"True/uploaded/1000.json",
 			},
@@ -163,18 +166,21 @@ func TestUpload(t *testing.T) {
 			},
 		},
 		"False Duplicates": {
+			sources: []string{"False"},
 			removeFiles: []string{
 				"False/local/2000.json",
 			},
 			wantExitCode: 1,
 		},
 		"False Bad Files": {
+			sources: []string{"False"},
 			removeFiles: []string{
 				"False/uploaded/1000.json",
 			},
 			wantExitCode: 1,
 		},
 		"False Bad Files Force": {
+			sources: []string{"False"},
 			removeFiles: []string{
 				"False/uploaded/1000.json",
 			},
