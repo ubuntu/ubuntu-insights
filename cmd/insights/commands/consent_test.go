@@ -22,36 +22,41 @@ func TestConsent(t *testing.T) {
 		wantErr      bool
 		wantUsageErr bool
 	}{
-		"Get Global True":                      {args: []string{"consent"}},
-		"Get Global False":                     {args: []string{"consent"}, consentDir: "false-global"},
-		"Get Source True":                      {args: []string{"consent", "True"}},
-		"Get Source False":                     {args: []string{"consent", "False"}},
-		"Get Multiple Sources":                 {args: []string{"consent", "True", "False"}},
-		"Get Multiple Sources Partial Missing": {args: []string{"consent", "True", "Unknown"}, wantErr: true},
-		"Get Multiple Sources Partial Bad":     {args: []string{"consent", "True", "Bad-File", "False"}, wantErr: true},
-		"Get Global Empty":                     {args: []string{"consent"}, consentDir: "empty-global"},
-
-		"Get Global Missing":   {args: []string{"consent"}, removeFiles: []string{"consent.toml"}, wantErr: true},
-		"Get Global Bad File":  {args: []string{"consent"}, consentDir: "bad-file-global", wantErr: true},
-		"Get Global Bad Ext":   {args: []string{"consent"}, consentDir: "bad-ext-global", wantErr: true},
+		// Get
+		"Get Global True":      {args: []string{"consent"}},
+		"Get Global False":     {args: []string{"consent"}, consentDir: "false-global"},
+		"Get Source True":      {args: []string{"consent", "True"}},
+		"Get Source False":     {args: []string{"consent", "False"}},
+		"Get Multiple Sources": {args: []string{"consent", "True", "False"}},
+		"Get Global Empty":     {args: []string{"consent"}, consentDir: "empty-global"},
 		"Get Global Bad Key":   {args: []string{"consent"}, consentDir: "bad-key-global"},
-		"Get Global Bad Value": {args: []string{"consent"}, consentDir: "bad-value-global", wantErr: true},
 
-		"Get Source Missing": {args: []string{"consent", "unknown"}, wantErr: true},
+		// Get Errors
+		"Get Multiple Sources errors when source is missing ": {args: []string{"consent", "True", "Unknown"}, wantErr: true},
+		"Get Multiple Sources errors when source file bad":    {args: []string{"consent", "True", "Bad-File", "False"}, wantErr: true},
 
-		"Set Global":                          {args: []string{"consent", "--consent-state=false"}},
-		"Set Global Same":                     {args: []string{"consent", "--consent-state=true"}},
-		"Set Source":                          {args: []string{"consent", "False", "--consent-state=true"}},
-		"Set Source Same":                     {args: []string{"consent", "True", "--consent-state=true"}},
-		"Set Source Multiple:":                {args: []string{"consent", "True", "False", "-c=false"}},
-		"Set Source Missing":                  {args: []string{"consent", "Unknown", "--consent-state=true"}},
-		"Set Source Multiple Partial Missing": {args: []string{"consent", "True", "Unknown", "-c=true"}},
-		"Set Source Multiple Partial Bad":     {args: []string{"consent", "True", "Bad-File", "False", "-c=true"}},
+		"Get errors when Global missing":   {args: []string{"consent"}, removeFiles: []string{"consent.toml"}, wantErr: true},
+		"Get errors when Global bad file":  {args: []string{"consent"}, consentDir: "bad-file-global", wantErr: true},
+		"Get errors when Global bad ext":   {args: []string{"consent"}, consentDir: "bad-ext-global", wantErr: true},
+		"Get errors when Global bad value": {args: []string{"consent"}, consentDir: "bad-value-global", wantErr: true},
 
-		"Set Shorthand True": {args: []string{"consent", "-c=true"}},
+		"Get errors when source missing": {args: []string{"consent", "unknown"}, wantErr: true},
 
-		"Bad Command": {args: []string{"consent", "-unknown"}, wantUsageErr: true, wantErr: true},
-		"Bad State":   {args: []string{"consent", "-c=bad"}, wantUsageErr: true, wantErr: true},
+		// Set
+		"Set global to new value":     {args: []string{"consent", "--state=false"}},
+		"Set global to same value":    {args: []string{"consent", "--state=true"}},
+		"Set source to new value":     {args: []string{"consent", "False", "--state=true"}},
+		"Set source to same value":    {args: []string{"consent", "True", "--state=true"}},
+		"Set multiple sources:":       {args: []string{"consent", "True", "False", "-s=false"}},
+		"Set new source":              {args: []string{"consent", "Unknown", "--state=true"}},
+		"Set existing and new source": {args: []string{"consent", "True", "Unknown", "-s=true"}},
+		"Set existing and bad source": {args: []string{"consent", "True", "Bad-File", "False", "-s=true"}},
+
+		"Set shorthand True": {args: []string{"consent", "-s=true"}},
+
+		// Usage Errors
+		"Usage errors when passing bad flag":           {args: []string{"consent", "-unknown"}, wantUsageErr: true, wantErr: true},
+		"Usage errors when unparsable state is passed": {args: []string{"consent", "-s=bad"}, wantUsageErr: true, wantErr: true},
 	}
 
 	for name, tc := range tests {
