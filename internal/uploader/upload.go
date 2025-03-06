@@ -83,7 +83,7 @@ func (um Uploader) Upload(force bool) error {
 func (um Uploader) BackoffUpload(force bool) (err error) {
 	slog.Debug("Uploading reports with backoff")
 
-	wait := time.Duration(30)
+	wait := um.initialRetryPeriod
 	for {
 		err = um.Upload(force)
 		if !errors.Is(err, ErrSendFailure) {
@@ -94,7 +94,7 @@ func (um Uploader) BackoffUpload(force bool) (err error) {
 			slog.Warn("Report timeout reached, stopping upload")
 			break
 		}
-		slog.Warn("Retrying upload after backoff period", "seconds", wait/(1000*1000*1000))
+		slog.Warn("Failed to send report, retrying upload after backoff period", "seconds", wait.Seconds(), "error", err)
 		time.Sleep(wait)
 	}
 
@@ -142,11 +142,11 @@ func (um Uploader) upload(r report.Report, url string, consent, force bool) erro
 	if err != nil {
 		return fmt.Errorf("failed to mark report as processed: %v", err)
 	}
-	if err := send(url, data); err != nil {
+	if err := um.send(url, data); err != nil {
 		if _, err := r.UndoProcessed(); err != nil {
 			return fmt.Errorf("failed to send data: %v, and failed to restore the original report: %v", err, err)
 		}
-		return fmt.Errorf("failed to send data: %v", err)
+		return fmt.Errorf("failed to send data: %w", err)
 	}
 
 	return nil
@@ -161,7 +161,7 @@ func (um Uploader) getURL() (string, error) {
 	return u.String(), nil
 }
 
-func send(url string, data []byte) error {
+func (um Uploader) send(url string, data []byte) error {
 	slog.Debug("Sending data to server", "url", url, "data", data)
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(data))
 	if err != nil {
@@ -169,7 +169,7 @@ func send(url string, data []byte) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: time.Second * 10}
+	client := &http.Client{Timeout: um.responseTimeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		return errors.Join(ErrSendFailure, fmt.Errorf("failed to send HTTP request: %v", err))

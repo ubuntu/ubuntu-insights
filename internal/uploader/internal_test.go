@@ -127,8 +127,10 @@ func TestSend(t *testing.T) {
 			if tc.noServer {
 				ts.Close()
 			}
-
-			err := send(tc.url, []byte("payload"))
+			um := &Uploader{
+				responseTimeout: 0,
+			}
+			err := um.send(tc.url, []byte("payload"))
 			if tc.wantErr {
 				require.Error(t, err)
 				return

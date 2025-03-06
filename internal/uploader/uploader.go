@@ -29,27 +29,33 @@ type Uploader struct {
 	minAge  time.Duration
 	dryRun  bool
 
-	baseServerURL string
-	collectedDir  string
-	uploadedDir   string
-	maxReports    uint
-	timeProvider  timeProvider
-	reportTimeout time.Duration
+	baseServerURL      string
+	collectedDir       string
+	uploadedDir        string
+	maxReports         uint
+	timeProvider       timeProvider
+	initialRetryPeriod time.Duration
+	reportTimeout      time.Duration
+	responseTimeout    time.Duration
 }
 
 type options struct {
 	// Private members exported for tests.
-	baseServerURL string
-	maxReports    uint
-	timeProvider  timeProvider
-	reportTimeout time.Duration
+	baseServerURL      string
+	maxReports         uint
+	timeProvider       timeProvider
+	initialRetryPeriod time.Duration
+	reportTimeout      time.Duration
+	responseTimeout    time.Duration
 }
 
 var defaultOptions = options{
-	baseServerURL: "https://metrics.ubuntu.com",
-	maxReports:    constants.MaxReports,
-	timeProvider:  realTimeProvider{},
-	reportTimeout: 30 * time.Minute,
+	baseServerURL:      "https://metrics.ubuntu.com",
+	maxReports:         constants.MaxReports,
+	timeProvider:       realTimeProvider{},
+	initialRetryPeriod: 30 * time.Second,
+	reportTimeout:      30 * time.Minute,
+	responseTimeout:    10 * time.Second,
 }
 
 // Options represents an optional function to override Upload Manager default values.
@@ -84,11 +90,13 @@ func New(cm Consent, cachePath, source string, minAge uint, dryRun, expRetry boo
 		dryRun:       dryRun,
 		timeProvider: opts.timeProvider,
 
-		baseServerURL: opts.baseServerURL,
-		collectedDir:  filepath.Join(cachePath, source, constants.LocalFolder),
-		uploadedDir:   filepath.Join(cachePath, source, constants.UploadedFolder),
-		maxReports:    opts.maxReports,
-		reportTimeout: opts.reportTimeout,
+		baseServerURL:      opts.baseServerURL,
+		collectedDir:       filepath.Join(cachePath, source, constants.LocalFolder),
+		uploadedDir:        filepath.Join(cachePath, source, constants.UploadedFolder),
+		maxReports:         opts.maxReports,
+		initialRetryPeriod: opts.initialRetryPeriod,
+		reportTimeout:      opts.reportTimeout,
+		responseTimeout:    opts.responseTimeout,
 	}, nil
 }
 
