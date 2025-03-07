@@ -34,9 +34,9 @@ type Uploader struct {
 	uploadedDir        string
 	maxReports         uint
 	timeProvider       timeProvider
-	initialRetryPeriod time.Duration
-	maxRetryPeriod     time.Duration
-	responseTimeout    time.Duration
+	initialRetryPeriod time.Duration // initialRetryPeriod is the initial wait period between retries.
+	maxRetryPeriod     time.Duration // maxRetryPeriod is the maximum wait period between retries.
+	responseTimeout    time.Duration // responseTimeout is the timeout for the HTTP request.
 }
 
 type options struct {
