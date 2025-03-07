@@ -1,5 +1,5 @@
 wsl:
-    wsl: 0
+    arch: 0
     interop: ""
     version: ""
     kernelversion: ""

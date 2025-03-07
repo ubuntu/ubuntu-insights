@@ -1,5 +1,5 @@
 wsl:
-    wsl: 2
+    arch: 2
     interop: enabled
     version: 2.4.11.0
     kernelversion: 5.15.167.4-1

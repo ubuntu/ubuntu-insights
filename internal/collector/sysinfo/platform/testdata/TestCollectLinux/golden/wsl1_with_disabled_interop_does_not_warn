@@ -1,5 +1,5 @@
 wsl:
-    wsl: 1
+    arch: 1
     interop: disabled
     version: ""
     kernelversion: ""

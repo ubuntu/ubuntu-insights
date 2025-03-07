@@ -304,7 +304,7 @@ func TestCollectLinux(t *testing.T) {
 			},
 			pinfo: platform.Info{
 				WSL: platform.WSL{
-					WSL: 2,
+					Arch: 2,
 				},
 			},
 		},
@@ -327,7 +327,7 @@ func TestCollectLinux(t *testing.T) {
 			},
 			pinfo: platform.Info{
 				WSL: platform.WSL{
-					WSL: 2,
+					Arch: 2,
 				},
 			},
 		},
@@ -350,7 +350,7 @@ func TestCollectLinux(t *testing.T) {
 			},
 			pinfo: platform.Info{
 				WSL: platform.WSL{
-					WSL: 2,
+					Arch: 2,
 				},
 			},
 			logs: map[slog.Level]uint{
@@ -376,7 +376,7 @@ func TestCollectLinux(t *testing.T) {
 			},
 			pinfo: platform.Info{
 				WSL: platform.WSL{
-					WSL: 2,
+					Arch: 2,
 				},
 			},
 			logs: map[slog.Level]uint{

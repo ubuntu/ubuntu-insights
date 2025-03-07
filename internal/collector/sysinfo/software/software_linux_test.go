@@ -144,7 +144,7 @@ func TestCollectLinux(t *testing.T) {
 			root: "empty",
 			pInfo: platform.Info{
 				WSL: platform.WSL{
-					WSL: 2},
+					Arch: 2},
 			},
 			osInfo:   "regular",
 			timezone: "JST",

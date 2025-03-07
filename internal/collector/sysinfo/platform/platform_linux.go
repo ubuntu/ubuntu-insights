@@ -26,10 +26,10 @@ type Info struct {
 
 // WSL contains platform information specific to Windows Subsystem for Linux.
 type WSL struct {
-	WSL           uint8  `json:"wsl,omitzero"`
-	Interop       string `json:"wslInterop,omitempty"`
-	Version       string `json:"wslVersion,omitempty"`
-	KernelVersion string `json:"wslKernelVersion,omitempty"`
+	Arch          uint8  `json:"architecture,omitzero"`
+	Interop       string `json:"interop,omitempty"`
+	Version       string `json:"version,omitempty"`
+	KernelVersion string `json:"kernelVersion,omitempty"`
 }
 
 type platformOptions struct {
@@ -115,8 +115,8 @@ func (p Collector) interopEnabled() (enabled bool) {
 
 // collectWSL collects information about Windows Subsystem for Linux.
 func (p Collector) collectWSL() WSL {
-	info := WSL{WSL: p.getWSLVersion()}
-	if info.WSL == 0 {
+	info := WSL{Arch: p.getWSLVersion()}
+	if info.Arch == 0 {
 		return info
 	}
 
