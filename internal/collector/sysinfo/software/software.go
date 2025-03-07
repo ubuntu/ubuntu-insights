@@ -11,10 +11,10 @@ import (
 
 // Info is the software specific part.
 type Info struct {
-	OS       osInfo `json:"os"`
-	Timezone string `json:"timezone"`
-	Lang     string `json:"language"`
-	Bios     bios   `json:"bios"`
+	OS       osInfo `json:"os,omitzero"`
+	Timezone string `json:"timezone,omitempty"`
+	Lang     string `json:"language,omitempty"`
+	Bios     bios   `json:"bios,omitzero"`
 }
 
 type osInfo struct {

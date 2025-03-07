@@ -72,4 +72,4 @@ Unknown-A/local/invalid.json: |-
     }
 Unknown-A/uploaded/1000.json: "{   \n    \"id\": \"1000 Unknown-A uploaded\",\n    \"duplicate\": true\n}"
 Unknown-A/uploaded/1500.json: "{   \n    \"id\": \"1500 Unknown-A uploaded\",\n    \"only in uploaded\": true\n}"
-linux/local/50000.json: '{"insightsVersion":"Dev","systemInfo":{"hardware":{"product":{"family":"","name":"","vendor":""},"cpu":{"name":"","vendor":"","architecture":"","cpus":0,"sockets":0,"coresPerSocket":0,"threadsPerCore":0},"gpus":null,"memory":{"size":0},"disks":null,"screens":null},"software":{"os":{"family":"","distribution":"","version":""},"timezone":"","language":"","bios":{"vendor":"","version":""}}},"sourceMetrics":null}'
+linux/local/50000.json: '{"insightsVersion":"Dev","systemInfo":{"hardware":{},"software":{}}}'
