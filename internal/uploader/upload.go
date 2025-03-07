@@ -90,7 +90,7 @@ func (um Uploader) BackoffUpload(force bool) (err error) {
 			break
 		}
 		wait *= 2
-		if wait > um.reportTimeout {
+		if wait > um.maxRetryPeriod {
 			slog.Warn("Report timeout reached, stopping upload")
 			break
 		}

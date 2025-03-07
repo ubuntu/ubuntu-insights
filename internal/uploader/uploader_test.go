@@ -250,9 +250,12 @@ func TestBackoffUpload(t *testing.T) {
 			ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if tc.badCount > 0 {
 					tc.badCount--
-					if tc.initialResponse > 0 {
-						w.WriteHeader(tc.initialResponse)
+					// Unresponsive server if initialResponseCode < 0
+					if tc.initialResponse < 0 {
+						time.Sleep(4 * time.Second)
+						return
 					}
+					w.WriteHeader(tc.initialResponse)
 					return
 				}
 				w.WriteHeader(http.StatusOK)
@@ -276,7 +279,7 @@ func TestBackoffUpload(t *testing.T) {
 				uploader.WithBaseServerURL(url),
 				uploader.WithTimeProvider(uploader.MockTimeProvider{CurrentTime: mockTime}),
 				uploader.WithInitialRetryPeriod(1*time.Second),
-				uploader.WithReportTimeout(4*time.Second),
+				uploader.WithMaxRetryPeriod(4*time.Second),
 				uploader.WithResponseTimeout(2*time.Second))
 			require.NoError(t, err, "Setup: failed to create new uploader manager")
 
