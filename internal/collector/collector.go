@@ -25,7 +25,7 @@ var ErrDuplicateReport = fmt.Errorf("report already exists for this period")
 type Insights struct {
 	InsightsVersion string         `json:"insightsVersion"`
 	SysInfo         sysinfo.Info   `json:"systemInfo"`
-	SourceMetrics   map[string]any `json:"sourceMetrics"`
+	SourceMetrics   map[string]any `json:"sourceMetrics,omitempty"`
 }
 
 type timeProvider interface {

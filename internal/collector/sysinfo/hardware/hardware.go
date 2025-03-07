@@ -10,12 +10,12 @@ import (
 
 // Info aggregates hardware info.
 type Info struct {
-	Product product  `json:"product"`
-	CPU     cpu      `json:"cpu"`
-	GPUs    []gpu    `json:"gpus"`
-	Mem     memory   `json:"memory"`
-	Blks    []disk   `json:"disks"`
-	Screens []screen `json:"screens"`
+	Product product  `json:"product,omitzero"`
+	CPU     cpu      `json:"cpu,omitzero"`
+	GPUs    []gpu    `json:"gpus,omitempty"`
+	Mem     memory   `json:"memory,omitzero"`
+	Blks    []disk   `json:"disks,omitempty"`
+	Screens []screen `json:"screens,omitempty"`
 }
 
 // product contains information for a system's product.
