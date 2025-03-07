@@ -1,4 +1,7 @@
 sources:
     - "False"
+    - "True"
+    - Unknown-A
 minage: 604800
 dryrun: false
+expretry: false

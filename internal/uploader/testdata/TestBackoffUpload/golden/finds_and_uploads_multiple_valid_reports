@@ -1,0 +1,3 @@
+source/uploaded/1.json: '{"Content":"normal content"}'
+source/uploaded/2.json: '{"OptOut":true}'
+source/uploaded/5.json: '{"Content":"normal content"}'

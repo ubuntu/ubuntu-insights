@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -56,7 +57,7 @@ func TestNew(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := uploader.New(tc.consent, "", tc.source, tc.minAge, tc.dryRun)
+			_, err := uploader.New(tc.consent, "", tc.source, tc.minAge, tc.dryRun, false)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
@@ -83,10 +84,11 @@ func TestUpload(t *testing.T) {
 		rmLocal        bool
 		noPerms        bool
 
-		consent testConsentChecker
-		minAge  uint
-		dryRun  bool
-		force   bool
+		consent  testConsentChecker
+		minAge   uint
+		dryRun   bool
+		force    bool
+		expRetry bool
 
 		skipContentCheck bool
 		wantErr          bool
@@ -160,7 +162,7 @@ func TestUpload(t *testing.T) {
 				t.Cleanup(func() { require.NoError(t, os.Chmod(localDir, 0750), "Cleanup: failed to restore permissions") }) //nolint:gosec //0750 is fine for folders
 			}
 
-			mgr, err := uploader.New(tc.consent, dir, source, tc.minAge, tc.dryRun,
+			mgr, err := uploader.New(tc.consent, dir, source, tc.minAge, tc.dryRun, tc.expRetry,
 				uploader.WithBaseServerURL(tc.url), uploader.WithTimeProvider(uploader.MockTimeProvider{CurrentTime: mockTime}))
 			require.NoError(t, err, "Setup: failed to create new uploader manager")
 
@@ -178,6 +180,114 @@ func TestUpload(t *testing.T) {
 
 			if tc.skipContentCheck {
 				return
+			}
+
+			got, err := testutils.GetDirContents(t, dir, 3)
+			require.NoError(t, err)
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			require.EqualValues(t, want, got)
+		})
+	}
+}
+
+func TestBackoffUpload(t *testing.T) {
+	t.Parallel()
+
+	const (
+		mockTime        = 10
+		defaultResponse = http.StatusOK
+		source          = "source"
+	)
+
+	tests := map[string]struct {
+		lFiles, uFiles  map[string]reportType
+		initialResponse int // If initial response is 0 or lower, the server will not respond
+		badCount        int // Number of initialResponses the server will send before an OK response
+		serverOffline   bool
+
+		rmLocal       bool // Remove the local directory
+		readOnlyFiles []string
+
+		consent testConsentChecker // Default cTrue
+		minAge  uint
+		dryRun  bool
+		force   bool
+
+		skipContentCheck bool
+		wantErr          bool
+	}{
+		// Basic Tests
+		"Does nothing when no reports to be uploaded":           {consent: cTrue},
+		"Does nothing when the locals files dir does not exist": {consent: cTrue, rmLocal: true},
+		"Finds and uploads single valid report":                 {consent: cTrue, lFiles: map[string]reportType{"1.json": normal}},
+		"Finds and uploads multiple valid reports":              {consent: cTrue, lFiles: map[string]reportType{"1.json": normal, "2.json": optOut, "5.json": normal}},
+		"Respects consent and sends OptOut":                     {consent: cFalse, lFiles: map[string]reportType{"1.json": normal, "2.json": optOut}},
+
+		"Dry run does not send": {consent: cTrue, lFiles: map[string]reportType{"1.json": normal}, dryRun: true, serverOffline: true},
+
+		// Timeout Tests
+		"Retries when no response": {
+			consent: cTrue, lFiles: map[string]reportType{"1.json": normal}, initialResponse: -1, badCount: 2},
+		"Retries when server returns a bad response": {
+			consent: cTrue, lFiles: map[string]reportType{"1.json": normal}, initialResponse: http.StatusForbidden, badCount: 2},
+
+		// Timeout Error Tests
+		"Gives up after too many no responses retries": {
+			consent: cTrue, lFiles: map[string]reportType{"1.json": normal}, serverOffline: true, wantErr: true},
+		"Gives up after too many bad responses": {
+			consent: cTrue, lFiles: map[string]reportType{"1.json": normal}, initialResponse: http.StatusForbidden, badCount: 500, wantErr: true},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			dir := setupTmpDir(t, tc.lFiles, tc.uFiles, source)
+
+			if tc.initialResponse == 0 {
+				tc.initialResponse = defaultResponse
+			}
+
+			ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if tc.badCount > 0 {
+					tc.badCount--
+					// Unresponsive server if initialResponseCode < 0
+					if tc.initialResponse < 0 {
+						time.Sleep(4 * time.Second)
+						return
+					}
+					w.WriteHeader(tc.initialResponse)
+					return
+				}
+				w.WriteHeader(http.StatusOK)
+			}))
+			if !tc.serverOffline {
+				t.Cleanup(func() { ts.Close() })
+				ts.Start()
+			}
+			url := ts.URL
+
+			localDir := filepath.Join(dir, source, constants.LocalFolder)
+			if tc.rmLocal {
+				require.NoError(t, os.RemoveAll(localDir), "Setup: failed to remove local directory")
+			}
+
+			for _, file := range tc.readOnlyFiles {
+				testutils.MakeReadOnly(t, filepath.Join(dir, source, file))
+			}
+
+			mgr, err := uploader.New(tc.consent, dir, source, tc.minAge, tc.dryRun, true,
+				uploader.WithBaseServerURL(url),
+				uploader.WithTimeProvider(uploader.MockTimeProvider{CurrentTime: mockTime}),
+				uploader.WithInitialRetryPeriod(1*time.Second),
+				uploader.WithMaxRetryPeriod(4*time.Second),
+				uploader.WithResponseTimeout(2*time.Second))
+			require.NoError(t, err, "Setup: failed to create new uploader manager")
+
+			err = mgr.BackoffUpload(tc.force)
+			if tc.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
 
 			got, err := testutils.GetDirContents(t, dir, 3)
