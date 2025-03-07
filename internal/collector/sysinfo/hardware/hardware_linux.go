@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ubuntu/ubuntu-insights/internal/cmdutils"
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/platform"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
@@ -32,7 +33,12 @@ func defaultPlatformOptions() platformOptions {
 }
 
 // collectProduct reads sysfs to find information about the system.
-func (h Collector) collectProduct() (product, error) {
+func (h Collector) collectProduct(pi platform.Info) (product, error) {
+	if pi.WSL.Arch != 0 {
+		h.log.Debug("skipping product info collection on WSL")
+		return product{}, nil
+	}
+
 	info := product{
 		Vendor: fileutils.ReadFileLogError(filepath.Join(h.platform.root, "sys/class/dmi/id/sys_vendor"), h.log),
 		Name:   fileutils.ReadFileLogError(filepath.Join(h.platform.root, "sys/class/dmi/id/product_name"), h.log),
@@ -149,12 +155,17 @@ func (h Collector) populateCPUInfo(entries []lscpuEntry, info map[string]string)
 var gpuSymlinkRegex = regexp.MustCompile("^card[0-9]+$")
 
 // collectGPUs uses sysfs to collect information about the GPUs.
-func (h Collector) collectGPUs() (gpus []gpu, err error) {
+func (h Collector) collectGPUs(pi platform.Info) (gpus []gpu, err error) {
 	defer func() {
-		if err == nil && len(gpus) == 0 {
+		if err == nil && len(gpus) == 0 && pi.WSL.Arch == 0 {
 			err = fmt.Errorf("no GPU information found")
 		}
 	}()
+
+	if pi.WSL.Arch != 0 {
+		h.log.Debug("skipping GPU info collection on WSL")
+		return []gpu{}, nil
+	}
 
 	// Using ReadDir instead of WalkDir since we don't want recursive directories.
 	ds, err := os.ReadDir(filepath.Join(h.platform.root, "sys/class/drm"))
@@ -355,20 +366,25 @@ var screenHeaderRegex = regexp.MustCompile(`(?m)^(\S+)\s+connected\s+(?:(primary
 var screenConfigRegex = regexp.MustCompile(`(?m)^\s*([0-9]+x[0-9]+)\s.*?([0-9]+\.[0-9]+)\+?\*\+?.*$`)
 
 // collectScreens uses xrandr to collect information about screens.
-func (h Collector) collectScreens() (info []screen, err error) {
-	defer func() {
-		if err == nil && len(info) == 0 {
-			err = fmt.Errorf("no Screen information found")
-		}
-	}()
-
+func (h Collector) collectScreens(pi platform.Info) (info []screen, err error) {
 	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, h.platform.screenCmd[0], h.platform.screenCmd[1:]...)
 	if err != nil {
+		if pi.WSL.Arch != 0 {
+			h.log.Debug("skipping screen info collection on WSL")
+			return []screen{}, nil
+		}
+
 		return nil, fmt.Errorf("failed to run xrandr: %v", err)
 	}
 	if stderr.Len() > 0 {
 		h.log.Info("xrandr output to stderr", "stderr", stderr)
 	}
+
+	defer func() {
+		if err == nil && len(info) == 0 {
+			err = fmt.Errorf("no Screen information found")
+		}
+	}()
 
 	data := stdout.String()
 	screens := screenHeaderRegex.Split(data, -1)

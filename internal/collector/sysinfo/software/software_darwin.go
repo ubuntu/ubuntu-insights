@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ubuntu/ubuntu-insights/internal/cmdutils"
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/platform"
 )
 
 type platformOptions struct {
@@ -63,7 +64,7 @@ func (s Collector) collectLang() (string, error) {
 
 var biosRegex = regexp.MustCompile(`(?m)^\s*Boot ROM Version\s*:\s*(.+?)\s*$`)
 
-func (s Collector) collectBios() (bios, error) {
+func (s Collector) collectBios(platform.Info) (bios, error) {
 	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, s.platform.biosCmd[0], s.platform.biosCmd[1:]...)
 	if err != nil {
 		return bios{}, err

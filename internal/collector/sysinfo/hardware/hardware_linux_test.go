@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/hardware"
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/platform"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
@@ -52,6 +53,7 @@ func TestCollectLinux(t *testing.T) {
 		blkInfo      string
 		screenInfo   string
 		missingFiles []string
+		pinfo        platform.Info
 
 		logs    map[slog.Level]uint
 		wantErr bool
@@ -283,6 +285,104 @@ func TestCollectLinux(t *testing.T) {
 				slog.LevelWarn: 18,
 			},
 		},
+		"WSL hardware information": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "error",
+			missingFiles: []string{
+				// Product
+				"sys/class/dmi/id/product_family",
+				"sys/class/dmi/id/product_name",
+				"sys/class/dmi/id/sys_vendor",
+				// GPU
+				"sys/class/drm/c0",
+				"sys/class/drm/c1",
+				"sys/class/drm/card0-DP-1",
+				"sys/class/drm/card0-DP-2",
+				"sys/class/drm/card1",
+			},
+			pinfo: platform.Info{
+				WSL: platform.WSL{
+					Arch: 2,
+				},
+			},
+		},
+		"WSL hardware information with xrandr": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "regular",
+			missingFiles: []string{
+				// Product
+				"sys/class/dmi/id/product_family",
+				"sys/class/dmi/id/product_name",
+				"sys/class/dmi/id/sys_vendor",
+				// GPU
+				"sys/class/drm/c0",
+				"sys/class/drm/c1",
+				"sys/class/drm/card0-DP-1",
+				"sys/class/drm/card0-DP-2",
+				"sys/class/drm/card1",
+			},
+			pinfo: platform.Info{
+				WSL: platform.WSL{
+					Arch: 2,
+				},
+			},
+		},
+		"Missing WSL hardware information is empty": {
+			root:       "withoutinfo",
+			cpuInfo:    "",
+			blkInfo:    "",
+			screenInfo: "error",
+			missingFiles: []string{
+				// Product
+				"sys/class/dmi/id/product_family",
+				"sys/class/dmi/id/product_name",
+				"sys/class/dmi/id/sys_vendor",
+				// GPU
+				"sys/class/drm/c0",
+				"sys/class/drm/c1",
+				"sys/class/drm/card0-DP-1",
+				"sys/class/drm/card0-DP-2",
+				"sys/class/drm/card1",
+			},
+			pinfo: platform.Info{
+				WSL: platform.WSL{
+					Arch: 2,
+				},
+			},
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 3,
+			},
+		},
+		"Missing WSL hardware information warns when xrandr is installed but returns empty": {
+			root:       "withoutinfo",
+			cpuInfo:    "",
+			blkInfo:    "",
+			screenInfo: "",
+			missingFiles: []string{
+				// Product
+				"sys/class/dmi/id/product_family",
+				"sys/class/dmi/id/product_name",
+				"sys/class/dmi/id/sys_vendor",
+				// GPU
+				"sys/class/drm/c0",
+				"sys/class/drm/c1",
+				"sys/class/drm/card0-DP-1",
+				"sys/class/drm/card0-DP-2",
+				"sys/class/drm/card1",
+			},
+			pinfo: platform.Info{
+				WSL: platform.WSL{
+					Arch: 2,
+				},
+			},
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 4,
+			},
+		},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -294,7 +394,8 @@ func TestCollectLinux(t *testing.T) {
 
 			root := filepath.Join(tmp, tc.root)
 			for _, f := range tc.missingFiles {
-				err := os.Remove(filepath.Join(root, f))
+				// allow removal of non-empty directories
+				err := os.RemoveAll(filepath.Join(root, f))
 				require.NoError(t, err, "setup: failed to remove file %s: ", f)
 			}
 
@@ -323,7 +424,7 @@ func TestCollectLinux(t *testing.T) {
 
 			s := hardware.New(options...)
 
-			got, err := s.Collect()
+			got, err := s.Collect(tc.pinfo)
 			if tc.wantErr {
 				require.Error(t, err, "Collect should return an error and didn't")
 				return

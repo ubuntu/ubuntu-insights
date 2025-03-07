@@ -1,0 +1,6 @@
+wsl:
+    arch: 2
+    interop: enabled
+    version: ""
+    kernelversion: ""
+proattached: true
