@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,6 +25,12 @@ const defaultConsentFixture = "true-global"
 func TestUpload(t *testing.T) {
 	t.Parallel()
 
+	const (
+		initialRetryPeriod = 1 * time.Second
+		maxRetryPeriod      = 4 * time.Second
+		responseTimeout    = 2 * time.Second
+	)
+
 	tests := map[string]struct {
 		sources        []string
 		config         string
@@ -31,8 +38,12 @@ func TestUpload(t *testing.T) {
 		readOnlyFile   []string
 		maxReports     uint
 		time           int
-		responseCode   int
-		noServer       bool
+
+		// Server options
+		badCount            int
+		initialResponseCode int // If < 0, the server will not respond
+		responseCode        int
+		noServer            bool
 
 		removeFiles []string
 
@@ -336,6 +347,83 @@ func TestUpload(t *testing.T) {
 			responseCode: http.StatusInternalServerError,
 			wantExitCode: 1,
 		},
+
+		// Exponential Backoff Tests
+		"Exponential backoff retries when bad response code": {
+			sources: []string{"True", "False"},
+			config:  "backoff.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+			},
+
+			initialResponseCode: http.StatusInternalServerError,
+			badCount:            3,
+			wantExitCode:        0,
+		},
+		"Exponential backoff retries when no response": {
+			sources: []string{"True", "False"},
+			config:  "backoff.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+			},
+
+			initialResponseCode: -1,
+			badCount:            3,
+			wantExitCode:        0,
+		},
+		"Exponential backoff does nothing when dry-run": {
+			sources: []string{"True", "False"},
+			config:  "dry-backoff.yaml",
+
+			initialResponseCode: http.StatusInternalServerError,
+			badCount:            500,
+			wantExitCode:        0,
+		},
+		"Exponential backoff overwrites duplicate reports with force": {
+			sources: []string{"True", "False"},
+			config:  "force-backoff.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"False/local/2000.json",
+			},
+
+			initialResponseCode: http.StatusInternalServerError,
+			badCount:            3,
+			wantExitCode:        0,
+		},
+		// Exponential backoff erroring tests
+		"Exponential backoff gives up after too many bad response codes": {
+			sources: []string{"True", "False"},
+			config:  "backoff.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+			},
+			initialResponseCode: http.StatusInternalServerError,
+			badCount:            500,
+			wantExitCode:        1,
+		},
+		"Exponential backoff gives up after too many no requests": {
+			sources: []string{"True", "False"},
+			config:  "backoff.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+			},
+			initialResponseCode: -1,
+			badCount:            500,
+			wantExitCode:        1,
+		},
 	}
 
 	for name, tc := range tests {
@@ -348,10 +436,15 @@ func TestUpload(t *testing.T) {
 
 			var mu sync.Mutex
 			gotPayloads := make([]string, 0)
-			server := newTestServer(t, echoPayloadHandler(tc.responseCode, &mu, &gotPayloads)).URL
-			if tc.noServer {
-				server = ""
+			s := httptest.NewUnstartedServer(echoPayloadHandler(tc.responseCode, &mu, &gotPayloads))
+			if tc.initialResponseCode != 0 {
+				s = httptest.NewUnstartedServer(echoBackoffPayloadHandler(tc.initialResponseCode, tc.responseCode, &tc.badCount, responseTimeout*2, &mu, &gotPayloads))
 			}
+			if !tc.noServer {
+				t.Cleanup(s.Close)
+				s.Start()
+			}
+			server := s.URL
 
 			if tc.consentFixture == "" {
 				tc.consentFixture = defaultConsentFixture
@@ -386,6 +479,9 @@ func TestUpload(t *testing.T) {
 			cmd.Args = append(cmd.Args, "--insights-dir", paths.reports)
 			cmd.Env = append(cmd.Env, os.Environ()...)
 			cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_SERVER_URL="+server)
+			cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_INITIAL_RETRY_PERIOD="+initialRetryPeriod.String())
+			cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_MAX_RETRY_PERIOD="+maxRetryPeriod.String())
+			cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_RESPONSE_TIMEOUT="+responseTimeout.String())
 			if tc.maxReports != 0 {
 				cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_MAX_REPORTS="+fmt.Sprint(tc.maxReports))
 			}
@@ -430,13 +526,6 @@ func TestUpload(t *testing.T) {
 	}
 }
 
-func newTestServer(t *testing.T, handler http.Handler) *httptest.Server {
-	t.Helper()
-	server := httptest.NewServer(handler)
-	t.Cleanup(server.Close)
-	return server
-}
-
 // echoPayloadHandler is a handler that echoes the request body to a channel.
 func echoPayloadHandler(responseCode int, mu *sync.Mutex, payloads *[]string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -461,6 +550,33 @@ func echoPayloadHandler(responseCode int, mu *sync.Mutex, payloads *[]string) ht
 			return
 		}
 
+		w.WriteHeader(responseCode)
+	})
+}
+
+// echoBackoffPayloadHandler is like echoPayloadHandler, but for the first badCount requests, it returns an initial bad response code.
+func echoBackoffPayloadHandler(initialResponseCode, responseCode int, badCount *int, sleepTime time.Duration, mu *sync.Mutex, payloads *[]string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		if *badCount > 0 {
+			*badCount--
+			mu.Unlock()
+			// Unresponsive server if initialResponseCode < 0
+			if initialResponseCode < 0 {
+				time.Sleep(sleepTime)
+				return
+			}
+			w.WriteHeader(initialResponseCode)
+			return
+		}
+		defer mu.Unlock()
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "failed to read request body", http.StatusInternalServerError)
+			return
+		}
+
+		*payloads = append(*payloads, string(body))
 		w.WriteHeader(responseCode)
 	})
 }

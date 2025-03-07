@@ -24,10 +24,10 @@ func WithTimeProvider(tp timeProvider) Options {
 	}
 }
 
-// WithReportTimeout sets the report timeout for the uploader, for exponential backoff retries.
-func WithReportTimeout(d time.Duration) Options {
+// WithMaxRetryPeriod sets the report timeout for the uploader, for exponential backoff retries.
+func WithMaxRetryPeriod(d time.Duration) Options {
 	return func(o *options) {
-		o.reportTimeout = d
+		o.maxRetryPeriod = d
 	}
 }
 

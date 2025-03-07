@@ -35,7 +35,7 @@ type Uploader struct {
 	maxReports         uint
 	timeProvider       timeProvider
 	initialRetryPeriod time.Duration
-	reportTimeout      time.Duration
+	maxRetryPeriod     time.Duration
 	responseTimeout    time.Duration
 }
 
@@ -45,7 +45,7 @@ type options struct {
 	maxReports         uint
 	timeProvider       timeProvider
 	initialRetryPeriod time.Duration
-	reportTimeout      time.Duration
+	maxRetryPeriod     time.Duration
 	responseTimeout    time.Duration
 }
 
@@ -54,7 +54,7 @@ var defaultOptions = options{
 	maxReports:         constants.MaxReports,
 	timeProvider:       realTimeProvider{},
 	initialRetryPeriod: 30 * time.Second,
-	reportTimeout:      30 * time.Minute,
+	maxRetryPeriod:     30 * time.Minute,
 	responseTimeout:    10 * time.Second,
 }
 
@@ -95,7 +95,7 @@ func New(cm Consent, cachePath, source string, minAge uint, dryRun, expRetry boo
 		uploadedDir:        filepath.Join(cachePath, source, constants.UploadedFolder),
 		maxReports:         opts.maxReports,
 		initialRetryPeriod: opts.initialRetryPeriod,
-		reportTimeout:      opts.reportTimeout,
+		maxRetryPeriod:     opts.maxRetryPeriod,
 		responseTimeout:    opts.responseTimeout,
 	}, nil
 }
