@@ -199,13 +199,13 @@ func (s Collector) collectDisks() (out []disk, err error) {
 
 	disksAndPartsI := jsonified["AllDisksAndPartitions"]
 
-	disksAndParts, ok := disksAndPartsI.([]interface{})
+	disksAndParts, ok := disksAndPartsI.([]any)
 	if !ok {
 		return out, errors.New("diskutil did not contain AllDisksAndPartitions")
 	}
 
 	for _, diskI := range disksAndParts {
-		disk, ok := diskI.(map[string]interface{})
+		disk, ok := diskI.(map[string]any)
 		if !ok {
 			s.log.Warn("AllDisksAndPartitions contained non-dict data")
 			continue
@@ -222,7 +222,7 @@ func (s Collector) collectDisks() (out []disk, err error) {
 	return out, nil
 }
 
-func parseDiskDict(data map[string]interface{}, partition bool, log *slog.Logger) (out disk, err error) {
+func parseDiskDict(data map[string]any, partition bool, log *slog.Logger) (out disk, err error) {
 	out.Partitions = []disk{}
 	if _, ok := data["APFSPhysicalStores"]; ok {
 		return out, errors.New("disk is a virtual APFS disk")
@@ -255,27 +255,31 @@ func parseDiskDict(data map[string]interface{}, partition bool, log *slog.Logger
 		}
 	}
 
-	if !partition {
-		if partsI, ok := data["Partitions"]; !ok {
-			log.Warn("disk missing partitions")
-		} else {
-			if parts, ok := partsI.([]interface{}); !ok {
-				log.Warn("disk partitions aren't an array")
-			} else {
-				for _, partI := range parts {
-					part, ok := partI.(map[string]interface{})
-					if !ok {
-						log.Warn("partitions contained non-dict data")
-						continue
-					}
+	// partition is true if we are currently parsing a partition.
+	if partition {
+		return out, err
+	}
 
-					d, err := parseDiskDict(part, true, log)
-					if err != nil {
-						log.Warn("partitions contained a fake partition", "error", err)
-						continue
-					}
-					out.Partitions = append(out.Partitions, d)
+	// otherwise, we want to get the current disk's partitions.
+	if partsI, ok := data["Partitions"]; !ok {
+		log.Warn("disk missing partitions")
+	} else {
+		if parts, ok := partsI.([]any); !ok {
+			log.Warn("disk partitions aren't an array")
+		} else {
+			for _, partI := range parts {
+				part, ok := partI.(map[string]any)
+				if !ok {
+					log.Warn("partitions contained non-dict data")
+					continue
 				}
+
+				d, err := parseDiskDict(part, true, log)
+				if err != nil {
+					log.Warn("partitions contained a fake partition", "error", err)
+					continue
+				}
+				out.Partitions = append(out.Partitions, d)
 			}
 		}
 	}
@@ -307,6 +311,7 @@ func getXMLStartElement(tok xml.Token) (xml.StartElement, error) {
 	return xml.StartElement{}, errors.New("token was not a StartElement Token")
 }
 
+// tokenSkipWhitespace returns the next Token from `dec` that is not whitespace.
 func tokenSkipWhitespace(dec *xml.Decoder) (xml.Token, error) {
 	for {
 		tok, err := dec.Token()
@@ -321,60 +326,65 @@ func tokenSkipWhitespace(dec *xml.Decoder) (xml.Token, error) {
 			if strings.TrimSpace(string(str)) != "" {
 				return tok, nil
 			}
-		} else {
-			return tok, nil
+			continue
 		}
+		return tok, nil
 	}
 }
 
-// parseDiskXML parses Apples PList XML format into a more sane JSON-esque format.
-func parseDiskXML(data *bytes.Buffer) (map[string]interface{}, error) {
+// parseDiskXML parses Apple's PList XML format into a more sane JSON-esque format.
+func parseDiskXML(data *bytes.Buffer) (map[string]any, error) {
 	decoder := xml.NewDecoder(data)
 	decoder.Strict = false
 
+	// check for initial <?xml ... ?> tag.
 	xmlVer, err := tokenSkipWhitespace(decoder)
 	if err != nil {
-		return map[string]interface{}{}, err
+		return map[string]any{}, err
 	}
 	if err = isXMLProcInst(xmlVer, "xml"); err != nil {
-		return map[string]interface{}{}, err
+		return map[string]any{}, err
 	}
 
+	// check for initial <!DOCTYPE ... > tag.
 	doctype, err := tokenSkipWhitespace(decoder)
 	if err != nil {
-		return map[string]interface{}{}, err
+		return map[string]any{}, err
 	}
 	if err = isXMLDirective(doctype); err != nil {
-		return map[string]interface{}{}, err
+		return map[string]any{}, err
 	}
 
+	// check for initial <plist ...> tag.
 	plistTok, err := tokenSkipWhitespace(decoder)
 	if err != nil {
-		return map[string]interface{}{}, err
+		return map[string]any{}, err
 	}
 	plist, err := getXMLStartElement(plistTok)
 	if err != nil {
-		return map[string]interface{}{}, err
+		return map[string]any{}, err
 	}
 	if plist.Name.Local != "plist" {
-		return map[string]interface{}{}, fmt.Errorf("XML had \"%s\" instead of \"plist\"", plist.Name.Local)
+		return map[string]any{}, fmt.Errorf("XML had \"%s\" instead of \"plist\"", plist.Name.Local)
 	}
 
+	// check that the first value is a <dict>.
 	dTok, err := tokenSkipWhitespace(decoder)
 	if err != nil {
-		return map[string]interface{}{}, err
+		return map[string]any{}, err
 	}
 	d, err := getXMLStartElement(dTok)
 	if err != nil {
-		return map[string]interface{}{}, err
+		return map[string]any{}, err
 	}
 	if d.Name.Local != "dict" {
-		return map[string]interface{}{}, fmt.Errorf("XML had \"%s\" instead of initial \"dict\"", d.Name.Local)
+		return map[string]any{}, fmt.Errorf("XML had \"%s\" instead of initial \"dict\"", d.Name.Local)
 	}
 
 	return parsePListDict(d, decoder)
 }
 
+// parsePListString converts a PList <string> to a string.
 func parsePListString(start xml.StartElement, dec *xml.Decoder) (string, error) {
 	v := struct {
 		Val string `xml:",chardata"`
@@ -383,6 +393,7 @@ func parsePListString(start xml.StartElement, dec *xml.Decoder) (string, error) 
 	return v.Val, err
 }
 
+// parsePListString converts a PList <integer> to a int64.
 func parsePListInt(start xml.StartElement, dec *xml.Decoder) (int64, error) {
 	v := struct {
 		Val int64 `xml:",chardata"`
@@ -391,9 +402,10 @@ func parsePListInt(start xml.StartElement, dec *xml.Decoder) (int64, error) {
 	return v.Val, err
 }
 
-func parsePListArray(start xml.StartElement, dec *xml.Decoder) (out []interface{}, err error) {
+// parsePListArray converts a PList <array> to an array of values.
+func parsePListArray(start xml.StartElement, dec *xml.Decoder) (out []any, err error) {
 	end := start.End()
-	out = []interface{}{}
+	out = []any{}
 	for {
 		curTok, err := tokenSkipWhitespace(dec)
 		if err != nil {
@@ -421,10 +433,12 @@ func parsePListArray(start xml.StartElement, dec *xml.Decoder) (out []interface{
 	return out, nil
 }
 
-func parsePListDict(start xml.StartElement, dec *xml.Decoder) (out map[string]interface{}, err error) {
+// parsePListDict converts a PList <dict> to a map of string to values.
+func parsePListDict(start xml.StartElement, dec *xml.Decoder) (out map[string]any, err error) {
 	end := start.End()
-	out = map[string]interface{}{}
+	out = map[string]any{}
 	for {
+		// get the <key> tag.
 		curTok, err := tokenSkipWhitespace(dec)
 		if err != nil {
 			return out, err
@@ -448,6 +462,7 @@ func parsePListDict(start xml.StartElement, dec *xml.Decoder) (out map[string]in
 			return out, err
 		}
 
+		// get the value tag.
 		curTok, err = tokenSkipWhitespace(dec)
 		if err != nil {
 			return out, err
@@ -477,7 +492,8 @@ func parsePListDict(start xml.StartElement, dec *xml.Decoder) (out map[string]in
 	return out, nil
 }
 
-func parsePListValue(start xml.StartElement, dec *xml.Decoder) (interface{}, error) {
+// parsePListValue converts a PList value to a value.
+func parsePListValue(start xml.StartElement, dec *xml.Decoder) (any, error) {
 	switch start.Name.Local {
 	case "integer":
 		return parsePListInt(start, dec)

@@ -1,6 +1,7 @@
 package hardware_test
 
 import (
+	"flag"
 	"fmt"
 	"log/slog"
 	"os"
@@ -12,6 +13,17 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/platform"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	dir, ok := testutils.SetupHelperCoverdir()
+
+	r := m.Run()
+	if ok {
+		os.Remove(dir)
+	}
+	os.Exit(r)
+}
 
 func TestCollectDarwin(t *testing.T) {
 	t.Parallel()
@@ -172,6 +184,78 @@ func TestCollectDarwin(t *testing.T) {
 			gpuInfo:    "regular",
 			memInfo:    "regular",
 			diskInfo:   "",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Disk info missing xml version warns": {
+			cpuInfo:    "regular",
+			gpuInfo:    "regular",
+			memInfo:    "regular",
+			diskInfo:   "missing xml",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Disk info missing doctype warns": {
+			cpuInfo:    "regular",
+			gpuInfo:    "regular",
+			memInfo:    "regular",
+			diskInfo:   "missing doctype",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Disk info missing plist warns": {
+			cpuInfo:    "regular",
+			gpuInfo:    "regular",
+			memInfo:    "regular",
+			diskInfo:   "missing plist",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Disk info missing dict keys warns": {
+			cpuInfo:    "regular",
+			gpuInfo:    "regular",
+			memInfo:    "regular",
+			diskInfo:   "no dict key",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Disk info with bad sizes warns": {
+			cpuInfo:    "regular",
+			gpuInfo:    "regular",
+			memInfo:    "regular",
+			diskInfo:   "bad sizes",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Disk info with bad value type warns": {
+			cpuInfo:    "regular",
+			gpuInfo:    "regular",
+			memInfo:    "regular",
+			diskInfo:   "bad value type",
 			screenInfo: "regular",
 
 			logs: map[slog.Level]uint{
@@ -521,6 +605,109 @@ func TestFakeDiskInfo(_ *testing.T) {
 		<string>disk0</string>
 		<string>disk1</string>
 	</array>
+</dict>
+</plist>`)
+	case "missing xml":
+		fmt.Println(`
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AllDisksAndPartitions</key>
+	<array>
+		<dict>
+			<key>DeviceIdentifier</key>
+			<string>disk0</string>
+			<key>Size</key>
+			<integer>500107862016</integer>
+		</dict>
+	</array>
+</dict>
+</plist>`)
+	case "missing doctype":
+		fmt.Println(`
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+	<key>AllDisksAndPartitions</key>
+	<array>
+		<dict>
+			<key>DeviceIdentifier</key>
+			<string>disk0</string>
+			<key>Size</key>
+			<integer>500107862016</integer>
+		</dict>
+	</array>
+</dict>
+</plist>`)
+	case "missing plist":
+		fmt.Println(`
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<dict>
+	<key>AllDisksAndPartitions</key>
+	<array>
+		<dict>
+			<key>DeviceIdentifier</key>
+			<string>disk0</string>
+			<key>Size</key>
+			<integer>500107862016</integer>
+		</dict>
+	</array>
+</dict>`)
+	case "dict no key":
+		fmt.Println(`
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist>
+<dict>
+<array>
+	<dict>
+		<string>disk0</string>
+		<integer>500107862016</integer>
+	</dict>
+</array>
+</dict>
+</plist>`)
+	case "bad sizes":
+		fmt.Println(`
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AllDisksAndPartitions</key>
+	<array>
+		<dict>
+			<key>Content</key>
+			<string>GUID_partition_scheme</string>
+			<key>DeviceIdentifier</key>
+			<string>disk0</string>
+			<key>Partitions</key>
+			<array>
+				<dict>
+					<key>Content</key>
+					<string>EFI</string>
+					<key>DeviceIdentifier</key>
+					<string>disk0s1</string>
+					<key>Size</key>
+					<integer>half a football field</integer>
+					<key>VolumeName</key>
+					<string>EFI</string>
+				</dict>
+			</array>
+			<key>Size</key>
+			<integer>one million bytes</integer>
+		</dict>
+	</array>
+</dict>
+</plist>`)
+	case "bad value type":
+		fmt.Println(`
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+<key>AllDisksAndPartitions</key>
+<alistorsomething/>
 </dict>
 </plist>`)
 	case "bad":
