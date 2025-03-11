@@ -1,0 +1,10 @@
+[Unit]
+Description="Run Ubuntu-Insights 5 mins after boot and every month relative to the activation time"
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1month
+Unit=ubuntu-insights.target
+
+[Install]
+WantedBy=ubuntu-insights.target
