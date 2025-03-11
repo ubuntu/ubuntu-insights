@@ -1,3 +1,3 @@
 upload:
   dryRun: true
-  backoffRetry: true
+  retry: true

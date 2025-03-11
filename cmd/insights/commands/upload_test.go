@@ -44,8 +44,8 @@ func TestUpload(t *testing.T) {
 		"Passes dry-run flag": {
 			args: []string{"upload", "--dry-run"},
 		},
-		"Passes backoff-retry flag": {
-			args: []string{"upload", "--backoff-retry"},
+		"Passes retry flag": {
+			args: []string{"upload", "--retry"},
 		},
 
 		// Error cases
@@ -75,17 +75,17 @@ func TestUpload(t *testing.T) {
 
 			gotSources := make([]string, 0)
 			var (
-				gotMinAge       uint
-				dRun            bool
-				gotBackoffRetry bool
+				gotMinAge uint
+				dRun      bool
+				gotRetry  bool
 			)
-			newUploader := func(cm uploader.Consent, cachePath, source string, minAge uint, dryRun, backoffRetry bool, args ...uploader.Options) (uploader.Uploader, error) {
+			newUploader := func(cm uploader.Consent, cachePath, source string, minAge uint, dryRun, retry bool, args ...uploader.Options) (uploader.Uploader, error) {
 				gotSources = append(gotSources, source)
 				gotMinAge = minAge
 				dRun = dryRun
-				gotBackoffRetry = backoffRetry
+				gotRetry = retry
 
-				return uploader.New(cm, cachePath, source, minAge, true, backoffRetry, args...)
+				return uploader.New(cm, cachePath, source, minAge, true, retry, args...)
 			}
 			a, _, _ := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewUploader(newUploader))
 			err := a.Run()
@@ -111,7 +111,7 @@ func TestUpload(t *testing.T) {
 			got := results{
 				Sources:  gotSources,
 				MinAge:   gotMinAge,
-				ExpRetry: gotBackoffRetry,
+				ExpRetry: gotRetry,
 				DryRun:   dRun,
 			}
 

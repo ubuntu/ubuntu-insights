@@ -347,10 +347,10 @@ func TestUpload(t *testing.T) {
 			wantExitCode: 1,
 		},
 
-		// Exponential Backoff Tests
+		// Exponential Backoff (Retry) Tests
 		"Exponential backoff retries when bad response code": {
 			sources: []string{"True", "False"},
-			config:  "backoff.yaml",
+			config:  "retry.yaml",
 			removeFiles: []string{
 				"True/local/2000.json",
 				"True/uploaded/1000.json",
@@ -364,7 +364,7 @@ func TestUpload(t *testing.T) {
 		},
 		"Exponential backoff retries when no response": {
 			sources: []string{"True", "False"},
-			config:  "backoff.yaml",
+			config:  "retry.yaml",
 			removeFiles: []string{
 				"True/local/2000.json",
 				"True/uploaded/1000.json",
@@ -378,7 +378,7 @@ func TestUpload(t *testing.T) {
 		},
 		"Exponential backoff does nothing when dry-run": {
 			sources: []string{"True", "False"},
-			config:  "dry-backoff.yaml",
+			config:  "dry-retry.yaml",
 
 			initialResponseCode: http.StatusInternalServerError,
 			badCount:            500,
@@ -386,7 +386,7 @@ func TestUpload(t *testing.T) {
 		},
 		"Exponential backoff overwrites duplicate reports with force": {
 			sources: []string{"True", "False"},
-			config:  "force-backoff.yaml",
+			config:  "force-retry.yaml",
 			removeFiles: []string{
 				"True/local/2000.json",
 				"False/local/2000.json",
@@ -396,10 +396,10 @@ func TestUpload(t *testing.T) {
 			badCount:            3,
 			wantExitCode:        0,
 		},
-		// Exponential backoff erroring tests
+		// Exponential backoff (Retry) erroring tests
 		"Exponential backoff gives up after too many bad response codes": {
 			sources: []string{"True", "False"},
-			config:  "backoff.yaml",
+			config:  "retry.yaml",
 			removeFiles: []string{
 				"True/local/2000.json",
 				"True/uploaded/1000.json",
@@ -412,7 +412,7 @@ func TestUpload(t *testing.T) {
 		},
 		"Exponential backoff gives up after too many response timeouts": {
 			sources: []string{"True", "False"},
-			config:  "backoff.yaml",
+			config:  "retry.yaml",
 			removeFiles: []string{
 				"True/local/2000.json",
 				"True/uploaded/1000.json",
