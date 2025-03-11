@@ -44,7 +44,7 @@ func TestUpload(t *testing.T) {
 		"Passes dry-run flag": {
 			args: []string{"upload", "--dry-run"},
 		},
-		"Passes retry flag": {
+		"Retry flag does not error": {
 			args: []string{"upload", "--retry"},
 		},
 
@@ -77,15 +77,13 @@ func TestUpload(t *testing.T) {
 			var (
 				gotMinAge uint
 				dRun      bool
-				gotRetry  bool
 			)
-			newUploader := func(cm uploader.Consent, cachePath, source string, minAge uint, dryRun, retry bool, args ...uploader.Options) (uploader.Uploader, error) {
+			newUploader := func(cm uploader.Consent, cachePath, source string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error) {
 				gotSources = append(gotSources, source)
 				gotMinAge = minAge
 				dRun = dryRun
-				gotRetry = retry
 
-				return uploader.New(cm, cachePath, source, minAge, true, retry, args...)
+				return uploader.New(cm, cachePath, source, minAge, true, args...)
 			}
 			a, _, _ := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewUploader(newUploader))
 			err := a.Run()
@@ -102,17 +100,15 @@ func TestUpload(t *testing.T) {
 			}
 
 			type results struct {
-				Sources  []string
-				MinAge   uint
-				DryRun   bool
-				ExpRetry bool
+				Sources []string
+				MinAge  uint
+				DryRun  bool
 			}
 
 			got := results{
-				Sources:  gotSources,
-				MinAge:   gotMinAge,
-				ExpRetry: gotRetry,
-				DryRun:   dRun,
+				Sources: gotSources,
+				MinAge:  gotMinAge,
+				DryRun:  dRun,
 			}
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)

@@ -52,7 +52,7 @@ func (a App) uploadRun() error {
 
 	uploaders := make(map[string]uploader.Uploader)
 	for _, source := range a.config.Upload.Sources {
-		u, err := a.newUploader(cm, a.config.insightsDir, source, a.config.Upload.MinAge, a.config.Upload.DryRun, a.config.Upload.Retry)
+		u, err := a.newUploader(cm, a.config.insightsDir, source, a.config.Upload.MinAge, a.config.Upload.DryRun)
 		if err != nil {
 			return fmt.Errorf("failed to create uploader for source %s: %v", source, err)
 		}

@@ -67,7 +67,7 @@ type Consent interface {
 }
 
 // New returns a new UploaderManager.
-func New(cm Consent, cachePath, source string, minAge uint, dryRun, expRetry bool, args ...Options) (Uploader, error) {
+func New(cm Consent, cachePath, source string, minAge uint, dryRun bool, args ...Options) (Uploader, error) {
 	slog.Debug("Creating new uploader manager", "source", source, "minAge", minAge, "dryRun", dryRun)
 
 	if source == "" {
