@@ -1,5 +1,6 @@
 wsl:
     subsystemversion: 2
+    systemd: running
     interop: enabled
     version: ""
     kernelversion: ""

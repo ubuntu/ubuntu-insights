@@ -26,6 +26,7 @@ func TestCollectLinux(t *testing.T) {
 	tests := map[string]struct {
 		roots         []string
 		detectVirtCmd string
+		systemctlCmd  string
 		wslVersionCmd string
 		proStatusCmd  string
 
@@ -37,16 +38,19 @@ func TestCollectLinux(t *testing.T) {
 		// Non-WSL
 		"Non-WSL Basic with Pro Attached": {
 			detectVirtCmd: "regular",
+			systemctlCmd:  "running",
 			wslVersionCmd: "error",
 			proStatusCmd:  "attached",
 		},
 		"Non-WSL Basic with Pro Detached": {
 			detectVirtCmd: "regular",
+			systemctlCmd:  "running",
 			wslVersionCmd: "error",
 			proStatusCmd:  "detached",
 		},
 		"Non-WSL Garbage Returns from Commands warns": {
 			detectVirtCmd: "garbage",
+			systemctlCmd:  "garbage",
 			wslVersionCmd: "garbage",
 			proStatusCmd:  "garbage",
 
@@ -56,6 +60,7 @@ func TestCollectLinux(t *testing.T) {
 		},
 		"Non-WSL Empty Returns from Commands warns": {
 			detectVirtCmd: "",
+			systemctlCmd:  "",
 			wslVersionCmd: "",
 			proStatusCmd:  "",
 
@@ -65,6 +70,7 @@ func TestCollectLinux(t *testing.T) {
 		},
 		"Non-WSL Error Returns from Commands warns": {
 			detectVirtCmd: "error",
+			systemctlCmd:  "error",
 			wslVersionCmd: "error",
 			proStatusCmd:  "error",
 
@@ -74,6 +80,7 @@ func TestCollectLinux(t *testing.T) {
 		},
 		"Non-WSL Print to StdOut without exitcode warns": {
 			detectVirtCmd: "error no exit",
+			systemctlCmd:  "error no exit",
 			wslVersionCmd: "error no exit",
 			proStatusCmd:  "error no exit",
 
@@ -87,42 +94,56 @@ func TestCollectLinux(t *testing.T) {
 		"WSL2 with interop and pro attached does not warn": {
 			roots:         []string{"enabled", "version-wsl2"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "running",
 			wslVersionCmd: "regular-en",
 			proStatusCmd:  "attached",
 		},
 		"WSL2 with interop and pro detached does not warn": {
 			roots:         []string{"enabled", "version-wsl2"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "running",
 			wslVersionCmd: "regular-en",
 			proStatusCmd:  "detached",
 		},
 		"WSL2 with interop parses version in pr correctly": {
 			roots:         []string{"enabled", "version-wsl2"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "running",
 			wslVersionCmd: "regular-pr",
 			proStatusCmd:  "attached",
 		},
 		"WSL2 with interop parses version in zh-cn correctly": {
 			roots:         []string{"enabled", "version-wsl2"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "running",
 			wslVersionCmd: "regular-zh-cn",
 			proStatusCmd:  "attached",
 		},
 		"WSL2 with interop parses version in zh-tw correctly": {
 			roots:         []string{"enabled", "version-wsl2"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "running",
 			wslVersionCmd: "regular-zh-tw",
 			proStatusCmd:  "attached",
 		},
 		"WSL2 garbage version is WSL2": {
 			roots:         []string{"enabled", "version-garbage"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "running",
 			wslVersionCmd: "regular-en",
 			proStatusCmd:  "attached",
 		},
 		"WSL2 empty version is WSL2": {
 			roots:         []string{"enabled", "version-empty"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "running",
+			wslVersionCmd: "regular-en",
+			proStatusCmd:  "attached",
+		},
+		"WSL2 with offline systemd parses correctly": {
+			roots:         []string{"enabled", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			systemctlCmd:  "offline",
 			wslVersionCmd: "regular-en",
 			proStatusCmd:  "attached",
 		},
@@ -130,6 +151,7 @@ func TestCollectLinux(t *testing.T) {
 		"WSL2 without interop file does not warn": {
 			roots:         []string{"enabled", "version-wsl2"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "running",
 			wslVersionCmd: "error",
 			proStatusCmd:  "attached",
 
@@ -138,30 +160,35 @@ func TestCollectLinux(t *testing.T) {
 		"WSL2 with disabled interop does not warn": {
 			roots:         []string{"disabled", "version-wsl2"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "running",
 			wslVersionCmd: "error",
 			proStatusCmd:  "attached",
 		},
 		"WSL2 with late-disabled interop does not warn": {
 			roots:         []string{"late-disabled", "version-wsl2"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "running",
 			wslVersionCmd: "error",
 			proStatusCmd:  "attached",
 		},
 		"WSL2 with garbage interop file does not warn": {
 			roots:         []string{"garbage", "version-wsl2"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "running",
 			wslVersionCmd: "error",
 			proStatusCmd:  "attached",
 		},
 		"WSL2 with empty interop file does not warn": {
 			roots:         []string{"empty", "version-wsl2"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "running",
 			wslVersionCmd: "error",
 			proStatusCmd:  "attached",
 		},
 		"WSL2 empty version return warns": {
 			roots:         []string{"enabled", "version-wsl2"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "running",
 			wslVersionCmd: "empty version",
 			proStatusCmd:  "attached",
 
@@ -172,6 +199,7 @@ func TestCollectLinux(t *testing.T) {
 		"WSL2 all cmd empty return warns": {
 			roots:         []string{"enabled", "version-wsl2"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "",
 			wslVersionCmd: "",
 			proStatusCmd:  "",
 
@@ -182,6 +210,7 @@ func TestCollectLinux(t *testing.T) {
 		"WSL2 garbage return from commands warns": {
 			roots:         []string{"enabled", "version-wsl2"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "garbage",
 			wslVersionCmd: "garbage",
 			proStatusCmd:  "garbage",
 
@@ -192,16 +221,18 @@ func TestCollectLinux(t *testing.T) {
 		"WSL2 cmd errors warns": {
 			roots:         []string{"enabled", "version-wsl2"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "error",
 			wslVersionCmd: "error",
 			proStatusCmd:  "error",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 2,
+				slog.LevelWarn: 3,
 			},
 		},
 		"WSL2 cmd errors no exit warns": {
 			roots:         []string{"enabled", "version-wsl2"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "error no exit",
 			wslVersionCmd: "error no exit",
 			proStatusCmd:  "error no exit",
 
@@ -213,6 +244,7 @@ func TestCollectLinux(t *testing.T) {
 		"WSL2 missing WSL version is WSL2 but warns": {
 			roots:         []string{"enabled"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "running",
 			wslVersionCmd: "regular-en",
 			proStatusCmd:  "attached",
 
@@ -225,6 +257,7 @@ func TestCollectLinux(t *testing.T) {
 		"WSL1 with interop and pro attached does not warn": {
 			roots:         []string{"enabled", "version-wsl1"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "offline",
 			wslVersionCmd: "regular-en",
 			proStatusCmd:  "attached",
 
@@ -233,6 +266,7 @@ func TestCollectLinux(t *testing.T) {
 		"WSL1 with interop and pro detached does not warn": {
 			roots:         []string{"enabled", "version-wsl1"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "offline",
 			wslVersionCmd: "regular-en",
 			proStatusCmd:  "detached",
 		},
@@ -240,6 +274,7 @@ func TestCollectLinux(t *testing.T) {
 		"WSL1 without interop file does not warn": {
 			roots:         []string{"enabled", "version-wsl2"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "offline",
 			wslVersionCmd: "error",
 			proStatusCmd:  "attached",
 
@@ -248,24 +283,28 @@ func TestCollectLinux(t *testing.T) {
 		"WSL1 with disabled interop does not warn": {
 			roots:         []string{"disabled", "version-wsl1"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "offline",
 			wslVersionCmd: "error",
 			proStatusCmd:  "attached",
 		},
 		"WSL1 with late-disabled interop does not warn": {
 			roots:         []string{"late-disabled", "version-wsl1"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "offline",
 			wslVersionCmd: "regular-en",
 			proStatusCmd:  "attached",
 		},
 		"WSL1 with garbage interop file does not warn": {
 			roots:         []string{"garbage", "version-wsl1"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "offline",
 			wslVersionCmd: "error",
 			proStatusCmd:  "attached",
 		},
 		"WSL1 with empty interop file does not warn": {
 			roots:         []string{"empty", "version-wsl1"},
 			detectVirtCmd: "wsl",
+			systemctlCmd:  "offline",
 			wslVersionCmd: "error",
 			proStatusCmd:  "attached",
 		},
@@ -297,6 +336,11 @@ func TestCollectLinux(t *testing.T) {
 				options = append(options, platform.WithDetectVirtCmd(cmdArgs))
 			}
 
+			if tc.systemctlCmd != "-" {
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeSystemdDetectVirt", tc.systemctlCmd)
+				options = append(options, platform.WithSystemctlCmd(cmdArgs))
+			}
+
 			if tc.wslVersionCmd != "-" {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestWSLVersionInfo", tc.wslVersionCmd)
 				options = append(options, platform.WithWSLVersionCmd(cmdArgs))
@@ -324,6 +368,30 @@ func TestCollectLinux(t *testing.T) {
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			require.Equal(t, want, got, "Collect should return expected platform information")
 		})
+	}
+}
+
+func TestFakeSystemdDetectVirt(*testing.T) {
+	args, err := testutils.GetFakeCmdArgs()
+	if err != nil {
+		return
+	}
+	defer os.Exit(0)
+
+	switch args[0] {
+	case "error":
+		fmt.Fprintf(os.Stderr, "Error requested in fake systemd-detect-virt")
+		os.Exit(1)
+	case "running":
+		fmt.Println("running")
+	case "offline":
+		fmt.Println("offline")
+	case "garbage":
+		fmt.Println("garbage 🗑️")
+	case "":
+		fallthrough
+	case "missing":
+		os.Exit(0)
 	}
 }
 

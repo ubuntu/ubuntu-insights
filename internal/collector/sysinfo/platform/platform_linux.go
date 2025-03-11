@@ -27,6 +27,7 @@ type Info struct {
 // WSL contains platform information specific to Windows Subsystem for Linux.
 type WSL struct {
 	SubsystemVersion uint8  `json:"subsystemVersion,omitzero"`
+	Systemd          string `json:"systemd,omitempty"`
 	Interop          string `json:"interop,omitempty"`
 	Version          string `json:"version,omitempty"`
 	KernelVersion    string `json:"kernelVersion,omitempty"`
@@ -35,6 +36,7 @@ type WSL struct {
 type platformOptions struct {
 	root          string
 	detectVirtCmd []string
+	systemctlCmd  []string
 	wslVersionCmd []string
 	proStatusCmd  []string
 }
@@ -44,6 +46,7 @@ func defaultPlatformOptions() platformOptions {
 	return platformOptions{
 		root:          "/",
 		detectVirtCmd: []string{"systemd-detect-virt"},
+		systemctlCmd:  []string{"systemctl", "is-system-running"},
 		wslVersionCmd: []string{"wsl.exe", "-v"},
 		proStatusCmd:  []string{"pro", "api", "u.pro.status.is_attached.v1"},
 	}
@@ -120,6 +123,12 @@ func (p Collector) collectWSL() WSL {
 		return info
 	}
 
+	// Check if systemd is running
+	info.Systemd = "not running"
+	if p.isSystemdRunning() {
+		info.Systemd = "running"
+	}
+
 	if !p.interopEnabled() {
 		info.Interop = "disabled"
 		return info
@@ -192,6 +201,20 @@ func (p Collector) getWSLSubsystemVersion() uint8 {
 // Take care that if there are any special characters in the entry, they are properly escaped.
 func getWSLRegex(entry string) *regexp.Regexp {
 	return regexp.MustCompile(fmt.Sprintf(`(?m)^\s*.*%s\s*.*[:|：]\s+([\S.]+)\s*$`, entry))
+}
+
+// isSystemdRunning returns true if systemd is running.
+func (p Collector) isSystemdRunning() bool {
+	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, p.platform.systemctlCmd[0], p.platform.systemctlCmd[1:]...)
+	if err != nil {
+		p.log.Warn("failed to run systemctl is-system-running", "error", err)
+		return false
+	}
+	if stderr.Len() > 0 {
+		p.log.Info("systemctl output to stderr", "stderr", stderr)
+	}
+
+	return strings.Contains(stdout.String(), "running")
 }
 
 // isProAttached returns the attach state of Ubuntu Pro.
