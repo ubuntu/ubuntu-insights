@@ -144,11 +144,11 @@ func (p Collector) collectWSL() WSL {
 		return info
 	}
 
-	data := string(decodedData)
+	data := strings.TrimSpace(string(decodedData))
 
 	entries := map[string]*string{
-		"WSL":    &info.Version,
-		"Kernel": &info.KernelVersion}
+		`WSL`:                     &info.Version,
+		"(?:Kernel|kernel|核心|内核)": &info.KernelVersion}
 	for entry, value := range entries {
 		regex := getWSLRegex(entry)
 		matches := regex.FindAllStringSubmatch(data, -1)
@@ -157,7 +157,7 @@ func (p Collector) collectWSL() WSL {
 			continue
 		}
 		if len(matches) > 1 {
-			p.log.Warn(fmt.Sprintf("parsed multiple %s versions, using the first", entry), "matches", matches)
+			p.log.Debug(fmt.Sprintf("parsed multiple %s versions, using the first", entry), "matches", matches)
 		}
 		*value = matches[0][1]
 	}
@@ -191,7 +191,7 @@ func (p Collector) getWSLVersion() uint8 {
 //
 // Take care that if there are any special characters in the entry, they are properly escaped.
 func getWSLRegex(entry string) *regexp.Regexp {
-	return regexp.MustCompile(fmt.Sprintf(`(?m)^\s*%s\s+version:\s+([\S.]+)\s*$`, entry))
+	return regexp.MustCompile(fmt.Sprintf(`(?m)^\s*.*%s\s*.*[:|：]\s+([\S.]+)\s*$`, entry))
 }
 
 // isProAttached returns the attach state of Ubuntu Pro.

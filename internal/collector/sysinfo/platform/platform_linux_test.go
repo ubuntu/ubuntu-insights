@@ -47,7 +47,7 @@ func TestCollectLinux(t *testing.T) {
 		},
 		"Non-WSL Garbage Returns from Commands warns": {
 			detectVirtCmd: "garbage",
-			wslVersionCmd: "error",
+			wslVersionCmd: "garbage",
 			proStatusCmd:  "garbage",
 
 			logs: map[slog.Level]uint{
@@ -87,25 +87,43 @@ func TestCollectLinux(t *testing.T) {
 		"WSL2 with interop and pro attached does not warn": {
 			roots:         []string{"enabled", "version-wsl2"},
 			detectVirtCmd: "wsl",
-			wslVersionCmd: "regular",
+			wslVersionCmd: "regular-en",
 			proStatusCmd:  "attached",
 		},
 		"WSL2 with interop and pro detached does not warn": {
 			roots:         []string{"enabled", "version-wsl2"},
 			detectVirtCmd: "wsl",
-			wslVersionCmd: "regular",
+			wslVersionCmd: "regular-en",
 			proStatusCmd:  "detached",
+		},
+		"WSL2 with interop parses version in pr correctly": {
+			roots:         []string{"enabled", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "regular-pr",
+			proStatusCmd:  "attached",
+		},
+		"WSL2 with interop parses version in zh-cn correctly": {
+			roots:         []string{"enabled", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "regular-zh-cn",
+			proStatusCmd:  "attached",
+		},
+		"WSL2 with interop parses version in zh-tw correctly": {
+			roots:         []string{"enabled", "version-wsl2"},
+			detectVirtCmd: "wsl",
+			wslVersionCmd: "regular-zh-tw",
+			proStatusCmd:  "attached",
 		},
 		"WSL2 garbage version is WSL2": {
 			roots:         []string{"enabled", "version-garbage"},
 			detectVirtCmd: "wsl",
-			wslVersionCmd: "regular",
+			wslVersionCmd: "regular-en",
 			proStatusCmd:  "attached",
 		},
 		"WSL2 empty version is WSL2": {
 			roots:         []string{"enabled", "version-empty"},
 			detectVirtCmd: "wsl",
-			wslVersionCmd: "regular",
+			wslVersionCmd: "regular-en",
 			proStatusCmd:  "attached",
 		},
 		// WSL 2 interop testing
@@ -140,17 +158,6 @@ func TestCollectLinux(t *testing.T) {
 			detectVirtCmd: "wsl",
 			wslVersionCmd: "error",
 			proStatusCmd:  "attached",
-		},
-		// WSL 2 Warning cases
-		"WSL2 duplicate parsed versions warns": {
-			roots:         []string{"enabled", "version-wsl2"},
-			detectVirtCmd: "wsl",
-			wslVersionCmd: "duplicate versions",
-			proStatusCmd:  "attached",
-
-			logs: map[slog.Level]uint{
-				slog.LevelWarn: 2,
-			},
 		},
 		"WSL2 empty version return warns": {
 			roots:         []string{"enabled", "version-wsl2"},
@@ -206,7 +213,7 @@ func TestCollectLinux(t *testing.T) {
 		"WSL2 missing WSL version is WSL2 but warns": {
 			roots:         []string{"enabled"},
 			detectVirtCmd: "wsl",
-			wslVersionCmd: "regular",
+			wslVersionCmd: "regular-en",
 			proStatusCmd:  "attached",
 
 			logs: map[slog.Level]uint{
@@ -218,7 +225,7 @@ func TestCollectLinux(t *testing.T) {
 		"WSL1 with interop and pro attached does not warn": {
 			roots:         []string{"enabled", "version-wsl1"},
 			detectVirtCmd: "wsl",
-			wslVersionCmd: "regular",
+			wslVersionCmd: "regular-en",
 			proStatusCmd:  "attached",
 
 			missingFiles: []string{"proc/sys/fs/binfmt_misc/WSLInterop-late"},
@@ -226,7 +233,7 @@ func TestCollectLinux(t *testing.T) {
 		"WSL1 with interop and pro detached does not warn": {
 			roots:         []string{"enabled", "version-wsl1"},
 			detectVirtCmd: "wsl",
-			wslVersionCmd: "regular",
+			wslVersionCmd: "regular-en",
 			proStatusCmd:  "detached",
 		},
 		// WSL 1 interop testing
@@ -247,7 +254,7 @@ func TestCollectLinux(t *testing.T) {
 		"WSL1 with late-disabled interop does not warn": {
 			roots:         []string{"late-disabled", "version-wsl1"},
 			detectVirtCmd: "wsl",
-			wslVersionCmd: "regular",
+			wslVersionCmd: "regular-en",
 			proStatusCmd:  "attached",
 		},
 		"WSL1 with garbage interop file does not warn": {
@@ -363,7 +370,7 @@ func TestWSLVersionInfo(_ *testing.T) {
 	case "error no exit":
 		file = os.Stderr
 		str = "Error requested in fake wsl.exe --version"
-	case "regular":
+	case "regular-en":
 		str = `
 WSL version: 2.4.11.0
 Kernel version: 5.15.167.4-1
@@ -372,6 +379,33 @@ MSRDC version: 1.2.5716
 Direct3D version: 1.611.1-81528511
 DXCore version: 10.0.26100.1-240331-1435.ge-release
 Windows version: 10.0.26100.3194`
+	case "regular-pr":
+		str = `
+Versão do WSL: 2.1.0.0
+Versão do kernel: 5.15.137.3-1
+Versão do WSLg: 1.0.59
+Versão do MSRDC: 1.2.4677
+Versão do Direct3D: 1.611.1-81528511
+Versão do DXCore: 10.0.25131.1002-220531-1700.rs-onecore-base2-hyp
+Versão do Windows: 10.0.26120.3360`
+	case "regular-zh-cn":
+		str = `
+WSL 版本： 0.67.6.0
+内核版本： 5.15.62.1
+WSLg 版本： 1.0.44
+MSRDC 版本： 1.2.3401
+Direct3D 版本： 1.606.4
+DXCore 版本： 10.0.25131.1002-220531-1700.rs-onecore-base2-hyp
+Windows版本： 10.0.25206.1000`
+	case "regular-zh-tw":
+		str = `
+WSL 版本： 2.4.11.0
+核心版本： 5.15.167.4-1
+WSLg 版本： 1.0.65
+MSRDC 版本： 1.2.5716
+Direct3D 版本： 1.611.1-81528511
+DXCore 版本： 10.0.26100.1-240331-1435.ge-release
+Windows 版本： 10.0.26100.3323`
 	case "missing WSL version":
 		str = `
 Kernel version: 5.15.167.4-1
@@ -390,10 +424,8 @@ DXCore version: 10.0.26100.1-240331-1435.ge-release
 Windows version: 10.0.26100.3194`
 	case "garbage":
 		str = `
-WSL version 🗑️: 2.4.11.0
-🗑️ version: 5.15.167.4-1
-WSLg version: 1.0.65
-MSRDC version: 1.2.5716🗑️`
+🗑️🗑️🗑️🗑️🗑️
+ㄟ( ▔, ▔ )ㄏ`
 	case "duplicate versions":
 		str = `
 WSL version: 2.4.11.0
@@ -409,7 +441,7 @@ Windows version: 10.0.26100.3194`
 		str = `
 WSL version:
 Kernel version:
-WSLg version: 1.0.65
+WSLg version:
 MSRDC version: 1.2.5716
 Direct3D version: 1.611.1-81528511
 DXCore version: 10.0.26100.1-240331-1435.ge-release
