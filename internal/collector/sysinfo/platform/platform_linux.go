@@ -26,10 +26,10 @@ type Info struct {
 
 // WSL contains platform information specific to Windows Subsystem for Linux.
 type WSL struct {
-	Arch          uint8  `json:"architecture,omitzero"`
-	Interop       string `json:"interop,omitempty"`
-	Version       string `json:"version,omitempty"`
-	KernelVersion string `json:"kernelVersion,omitempty"`
+	SubsystemVersion uint8  `json:"subsystemVersion,omitzero"`
+	Interop          string `json:"interop,omitempty"`
+	Version          string `json:"version,omitempty"`
+	KernelVersion    string `json:"kernelVersion,omitempty"`
 }
 
 type platformOptions struct {
@@ -85,7 +85,7 @@ func (p Collector) isWSL() bool {
 // Note that this does not detect broken interop, such as if in WSL2, $WSL_INTEROP points to a broken location.
 func (p Collector) interopEnabled() (enabled bool) {
 	var path string
-	switch p.getWSLVersion() {
+	switch p.getWSLSubsystemVersion() {
 	case 1:
 		path = filepath.Join(p.platform.root, "proc/sys/fs/binfmt_misc/WSLInterop")
 	case 2:
@@ -115,8 +115,8 @@ func (p Collector) interopEnabled() (enabled bool) {
 
 // collectWSL collects information about Windows Subsystem for Linux.
 func (p Collector) collectWSL() WSL {
-	info := WSL{Arch: p.getWSLVersion()}
-	if info.Arch == 0 {
+	info := WSL{SubsystemVersion: p.getWSLSubsystemVersion()}
+	if info.SubsystemVersion == 0 {
 		return info
 	}
 
@@ -165,13 +165,13 @@ func (p Collector) collectWSL() WSL {
 	return info
 }
 
-// getWSLVersion returns the WSL version based on the kernel version naming convention.
+// getWSLSubsystemVersion returns the WSL subsystem version based on the kernel version naming convention.
 // If the kernel version has '-Microsoft \(Microsoft@Microsoft\.com\)' with a capital M, it is WSL 1.
 // If the kernel version can't be read, or if the version doesn't match the pattern, it is assumed to be WSL 2.
 // If not in WSL, it returns 0.
 //
 // This could potentially be fooled by a custom kernel with '-Microsoft \(Microsoft@Microsoft\.com\)' in the name.
-func (p Collector) getWSLVersion() uint8 {
+func (p Collector) getWSLSubsystemVersion() uint8 {
 	if !p.isWSL() {
 		return 0
 	}
