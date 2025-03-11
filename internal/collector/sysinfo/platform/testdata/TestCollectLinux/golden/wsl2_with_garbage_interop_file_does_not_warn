@@ -3,5 +3,5 @@ wsl:
     systemd: running
     interop: disabled
     version: ""
-    kernelversion: ""
+    kernelversion: 5.15.167.4-microsoft-standard-WSL2
 proattached: true

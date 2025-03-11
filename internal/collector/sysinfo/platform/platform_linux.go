@@ -123,6 +123,9 @@ func (p Collector) collectWSL() WSL {
 		return info
 	}
 
+	// Get the kernel version
+	info.KernelVersion = p.getKernelVersion()
+
 	// Check if systemd is running
 	info.Systemd = "not running"
 	if p.isSystemdRunning() {
@@ -156,8 +159,7 @@ func (p Collector) collectWSL() WSL {
 	data := strings.TrimSpace(string(decodedData))
 
 	entries := map[string]*string{
-		`WSL`:                     &info.Version,
-		"(?:Kernel|kernel|核心|内核)": &info.KernelVersion}
+		`WSL`: &info.Version}
 	for entry, value := range entries {
 		regex := getWSLRegex(entry)
 		matches := regex.FindAllStringSubmatch(data, -1)
@@ -191,6 +193,18 @@ func (p Collector) getWSLSubsystemVersion() uint8 {
 	}
 
 	return 1
+}
+
+// getKernelVersion returns the kernel version of the system.
+func (p Collector) getKernelVersion() string {
+	k := fileutils.ReadFileLogError(filepath.Join(p.platform.root, "proc/version"), p.log)
+	// The kernel version is the third word in the file.
+	s := strings.Fields(k)
+	if len(s) < 3 {
+		p.log.Warn("failed to parse kernel version", "version", k)
+		return ""
+	}
+	return s[2]
 }
 
 // getWSLRegex returns a regex for matching WSL version.

@@ -126,12 +126,23 @@ func TestCollectLinux(t *testing.T) {
 			wslVersionCmd: "regular-zh-tw",
 			proStatusCmd:  "attached",
 		},
+		"WSL 2 custom kernel version is WSL2": {
+			roots:         []string{"enabled", "version-custom"},
+			detectVirtCmd: "wsl",
+			systemctlCmd:  "running",
+			wslVersionCmd: "regular-en",
+			proStatusCmd:  "attached",
+		},
 		"WSL2 garbage version is WSL2": {
 			roots:         []string{"enabled", "version-garbage"},
 			detectVirtCmd: "wsl",
 			systemctlCmd:  "running",
 			wslVersionCmd: "regular-en",
 			proStatusCmd:  "attached",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
 		},
 		"WSL2 empty version is WSL2": {
 			roots:         []string{"enabled", "version-empty"},
@@ -139,6 +150,10 @@ func TestCollectLinux(t *testing.T) {
 			systemctlCmd:  "running",
 			wslVersionCmd: "regular-en",
 			proStatusCmd:  "attached",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
 		},
 		"WSL2 with offline systemd parses correctly": {
 			roots:         []string{"enabled", "version-wsl2"},
@@ -193,7 +208,7 @@ func TestCollectLinux(t *testing.T) {
 			proStatusCmd:  "attached",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 2,
+				slog.LevelWarn: 1,
 			},
 		},
 		"WSL2 all cmd empty return warns": {
@@ -204,7 +219,7 @@ func TestCollectLinux(t *testing.T) {
 			proStatusCmd:  "",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 3,
+				slog.LevelWarn: 2,
 			},
 		},
 		"WSL2 garbage return from commands warns": {
@@ -215,7 +230,7 @@ func TestCollectLinux(t *testing.T) {
 			proStatusCmd:  "garbage",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 3,
+				slog.LevelWarn: 2,
 			},
 		},
 		"WSL2 cmd errors warns": {
@@ -237,7 +252,7 @@ func TestCollectLinux(t *testing.T) {
 			proStatusCmd:  "error no exit",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 3,
+				slog.LevelWarn: 2,
 				slog.LevelInfo: 2,
 			},
 		},
@@ -249,7 +264,7 @@ func TestCollectLinux(t *testing.T) {
 			proStatusCmd:  "attached",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 2,
+				slog.LevelWarn: 4,
 			},
 		},
 

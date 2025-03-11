@@ -3,5 +3,5 @@ wsl:
     systemd: not running
     interop: enabled
     version: 2.4.11.0
-    kernelversion: 5.15.167.4-1
+    kernelversion: 4.4.0-26100-Microsoft
 proattached: false
