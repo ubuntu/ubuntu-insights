@@ -154,7 +154,7 @@ func (c Collector) Compile(force bool) (insights []byte, err error) {
 
 	consent, err := c.consent.HasConsent(c.source)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get consent state: %v", err)
+		return nil, fmt.Errorf("failed to get consent state: %w", err)
 	}
 
 	insights, err = json.Marshal(constants.OptOutJSON)

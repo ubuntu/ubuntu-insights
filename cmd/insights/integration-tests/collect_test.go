@@ -29,7 +29,8 @@ func TestCollect(t *testing.T) {
 		sysinfoErr     bool
 		platformOnly   string
 
-		useSysinfo bool
+		useSysinfo          bool
+		removeGlobalConsent bool
 
 		skipReportCheck bool
 		wantExitCode    int
@@ -188,6 +189,13 @@ func TestCollect(t *testing.T) {
 			sourceMetrics: "normal.json",
 			useSysinfo:    true,
 		},
+
+		"Exit 0 no metrics if unable to read source consent and no global consent file": {
+			source:              "Unknown-B",
+			sourceMetrics:       "normal.json",
+			useSysinfo:          true,
+			removeGlobalConsent: true,
+		},
 	}
 
 	for name, tc := range tests {
@@ -207,6 +215,9 @@ func TestCollect(t *testing.T) {
 			}
 			paths := copyFixtures(t, tc.consentFixture)
 
+			if tc.removeGlobalConsent {
+				require.NoError(t, os.Remove(filepath.Join(paths.consent, "consent.toml")))
+			}
 			for _, f := range tc.readOnlyFile {
 				testutils.MakeReadOnly(t, filepath.Join(paths.consent, f))
 			}
