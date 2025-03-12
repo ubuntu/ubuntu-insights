@@ -1,6 +1,0 @@
-sources:
-    - "False"
-    - "True"
-    - Unknown-A
-minage: 604800
-dryrun: true

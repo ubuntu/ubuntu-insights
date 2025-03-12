@@ -14,49 +14,64 @@ func TestUpload(t *testing.T) {
 	tests := map[string]struct {
 		args []string
 
-		consentDir  string
-		removeFiles []string
+		consentDir        string
+		useReportsFixture bool
 
 		wantErr      bool
 		wantUsageErr bool
 	}{
-		"Upload All Sources": {
+		"Not specifying a source gets all sources": {
 			args: []string{"upload"},
 		},
-		"Upload Source True": {
+		"Sets source to True": {
 			args: []string{"upload", "True"},
 		},
-		"Upload Source False": {
+		"Sets source to False": {
 			args: []string{"upload", "False"},
 		},
-		"Upload Source Unknown Consent": {
+		"Sets source to Consent": {
 			args: []string{"upload", "Unknown"},
 		},
-		"Upload Source True, Bad-Key": {
+		"Sets sources to True and Bad-Key": {
 			args: []string{"upload", "True", "Bad-Key"},
 		},
-		"Upload All High Min Age": {
+		"Passes min-age flag": {
 			args: []string{"upload", "--min-age=1000000"},
 		},
-		"Upload All Sources, Force": {
+		"Passes force flag": {
 			args: []string{"upload", "--force"},
 		},
-		"Upload All Sources, Dry Run": {
+		"Passes dry-run flag": {
 			args: []string{"upload", "--dry-run"},
 		},
-		"Upload All Sources, Bad Flag": {
+		"Retry flag does not error": {
+			args: []string{"upload", "--retry"},
+		},
+
+		// Error cases
+		"Usage error when passing an unknown flag": {
 			args:         []string{"upload", "--unknown"},
 			wantUsageErr: true,
 			wantErr:      true,
 		},
-		"Upload All Sources, Bad Min Age": {
+		"Usage error when non-uint passed through the min-age flag": {
 			args:         []string{"upload", "--min-age=bad"},
 			wantUsageErr: true,
 			wantErr:      true,
 		},
-		"Min-Age Overflow": {
+		"Errors when min-age is set to a value that would overflow": {
 			args:    []string{"upload", "--min-age=18446744073709551615"},
 			wantErr: true,
+		},
+		"Errors with invalid reports": {
+			args:              []string{"upload"},
+			useReportsFixture: true,
+			wantErr:           true,
+		},
+		"Errors with invalid reports and retry flag": {
+			args:              []string{"upload", "--retry"},
+			useReportsFixture: true,
+			wantErr:           true,
 		},
 	}
 
@@ -68,17 +83,22 @@ func TestUpload(t *testing.T) {
 				tc.consentDir = "true-global"
 			}
 
+			dir := t.TempDir()
+			if tc.useReportsFixture {
+				require.NoError(t, testutils.CopyDir(t, "testdata/reports", dir), "Setup: could not copy reports dir")
+			}
+
 			gotSources := make([]string, 0)
 			var (
 				gotMinAge uint
 				dRun      bool
 			)
-			newUploader := func(cm uploader.Consent, cachePath, source string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error) {
+			newUploader := func(cm uploader.Consent, _, source string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error) {
 				gotSources = append(gotSources, source)
 				gotMinAge = minAge
 				dRun = dryRun
 
-				return uploader.New(cm, cachePath, source, minAge, true, args...)
+				return uploader.New(cm, dir, source, minAge, true, args...)
 			}
 			a, _, _ := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewUploader(newUploader))
 			err := a.Run()
@@ -90,9 +110,9 @@ func TestUpload(t *testing.T) {
 
 			if tc.wantUsageErr {
 				require.True(t, a.UsageError())
-			} else {
-				require.False(t, a.UsageError())
+				return
 			}
+			require.False(t, a.UsageError())
 
 			type results struct {
 				Sources []string

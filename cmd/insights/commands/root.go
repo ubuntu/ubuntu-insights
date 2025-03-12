@@ -29,6 +29,7 @@ type App struct {
 			MinAge  uint `mapstructure:"minAge"`
 			Force   bool
 			DryRun  bool `mapstructure:"dryRun"`
+			Retry   bool `mapstructure:"retry"`
 		}
 		Collect struct {
 			Source        string

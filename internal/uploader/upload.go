@@ -21,6 +21,8 @@ import (
 var (
 	// ErrReportNotMature is returned when a report is not mature enough to be uploaded.
 	ErrReportNotMature = errors.New("report is not mature enough to be uploaded")
+	// ErrSendFailure is returned when a report fails to be sent to the server, either due to a network error or a non-200 status code.
+	ErrSendFailure = errors.New("report send failed")
 )
 
 // Upload uploads the reports corresponding to the source to the configured server.
@@ -61,18 +63,42 @@ func (um Uploader) Upload(force bool) error {
 			} else if err != nil {
 				slog.Warn("Failed to upload report", "file", r.Name, "source", um.source, "error", err)
 				mu.Lock()
-				uploadError = errors.Join(uploadError, fmt.Errorf("%s upload failed for report %s: %v", um.source, r.Name, err))
-				mu.Unlock()
+				defer mu.Unlock()
+				uploadError = errors.Join(uploadError, fmt.Errorf("%s upload failed for report %s: %w", um.source, r.Name, err))
 			}
 		}(r)
 	}
 	wg.Wait()
 
 	if um.dryRun {
-		return nil
+		return uploadError
 	}
 
 	return errors.Join(report.Cleanup(um.uploadedDir, um.maxReports), uploadError)
+}
+
+// BackoffUpload behaves like Upload, but if there are any send errors, it will retry the upload after a backoff period.
+// The backoff period starts at 30 seconds, and doubles with each retry, up to the configured report timeout (default 30 minutes).
+// If the report timeout is surpassed, the upload will stop.
+func (um Uploader) BackoffUpload(force bool) (err error) {
+	slog.Debug("Uploading reports with backoff")
+
+	wait := um.initialRetryPeriod
+	for {
+		err = um.Upload(force)
+		if !errors.Is(err, ErrSendFailure) {
+			break
+		}
+		wait *= 2
+		if wait > um.maxRetryPeriod {
+			slog.Warn("Report timeout reached, stopping upload")
+			break
+		}
+		slog.Warn("Failed to send report, retrying upload after backoff period", "seconds", wait.Seconds(), "error", err)
+		time.Sleep(wait)
+	}
+
+	return err
 }
 
 // upload uploads an individual report to the server. It returns an error if the report is not mature enough to be uploaded, or if the upload fails.
@@ -116,11 +142,11 @@ func (um Uploader) upload(r report.Report, url string, consent, force bool) erro
 	if err != nil {
 		return fmt.Errorf("failed to mark report as processed: %v", err)
 	}
-	if err := send(url, data); err != nil {
+	if err := um.send(url, data); err != nil {
 		if _, err := r.UndoProcessed(); err != nil {
 			return fmt.Errorf("failed to send data: %v, and failed to restore the original report: %v", err, err)
 		}
-		return fmt.Errorf("failed to send data: %v", err)
+		return fmt.Errorf("failed to send data: %w", err)
 	}
 
 	return nil
@@ -135,7 +161,7 @@ func (um Uploader) getURL() (string, error) {
 	return u.String(), nil
 }
 
-func send(url string, data []byte) error {
+func (um Uploader) send(url string, data []byte) error {
 	slog.Debug("Sending data to server", "url", url, "data", data)
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(data))
 	if err != nil {
@@ -143,15 +169,15 @@ func send(url string, data []byte) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: time.Second * 10}
+	client := &http.Client{Timeout: um.responseTimeout}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to send HTTP request: %v", err)
+		return errors.Join(ErrSendFailure, fmt.Errorf("failed to send HTTP request: %v", err))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("server returned status code %d", resp.StatusCode)
+		return errors.Join(ErrSendFailure, fmt.Errorf("unexpected status code: %d", resp.StatusCode))
 	}
 
 	return nil

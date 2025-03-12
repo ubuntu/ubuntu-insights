@@ -29,24 +29,33 @@ type Uploader struct {
 	minAge  time.Duration
 	dryRun  bool
 
-	baseServerURL string
-	collectedDir  string
-	uploadedDir   string
-	maxReports    uint
-	timeProvider  timeProvider
+	baseServerURL      string
+	collectedDir       string
+	uploadedDir        string
+	maxReports         uint
+	timeProvider       timeProvider
+	initialRetryPeriod time.Duration // initialRetryPeriod is the initial wait period between retries.
+	maxRetryPeriod     time.Duration // maxRetryPeriod is the maximum wait period between retries.
+	responseTimeout    time.Duration // responseTimeout is the timeout for the HTTP request.
 }
 
 type options struct {
 	// Private members exported for tests.
-	baseServerURL string
-	maxReports    uint
-	timeProvider  timeProvider
+	baseServerURL      string
+	maxReports         uint
+	timeProvider       timeProvider
+	initialRetryPeriod time.Duration
+	maxRetryPeriod     time.Duration
+	responseTimeout    time.Duration
 }
 
 var defaultOptions = options{
-	baseServerURL: "https://metrics.ubuntu.com",
-	maxReports:    constants.MaxReports,
-	timeProvider:  realTimeProvider{},
+	baseServerURL:      "https://metrics.ubuntu.com",
+	maxReports:         constants.MaxReports,
+	timeProvider:       realTimeProvider{},
+	initialRetryPeriod: 30 * time.Second,
+	maxRetryPeriod:     30 * time.Minute,
+	responseTimeout:    10 * time.Second,
 }
 
 // Options represents an optional function to override Upload Manager default values.
@@ -81,10 +90,13 @@ func New(cm Consent, cachePath, source string, minAge uint, dryRun bool, args ..
 		dryRun:       dryRun,
 		timeProvider: opts.timeProvider,
 
-		baseServerURL: opts.baseServerURL,
-		collectedDir:  filepath.Join(cachePath, source, constants.LocalFolder),
-		uploadedDir:   filepath.Join(cachePath, source, constants.UploadedFolder),
-		maxReports:    opts.maxReports,
+		baseServerURL:      opts.baseServerURL,
+		collectedDir:       filepath.Join(cachePath, source, constants.LocalFolder),
+		uploadedDir:        filepath.Join(cachePath, source, constants.UploadedFolder),
+		maxReports:         opts.maxReports,
+		initialRetryPeriod: opts.initialRetryPeriod,
+		maxRetryPeriod:     opts.maxRetryPeriod,
+		responseTimeout:    opts.responseTimeout,
 	}, nil
 }
 

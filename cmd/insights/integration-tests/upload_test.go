@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,6 +25,12 @@ const defaultConsentFixture = "true-global"
 func TestUpload(t *testing.T) {
 	t.Parallel()
 
+	const (
+		initialRetryPeriod = 1 * time.Second
+		maxRetryPeriod     = 4 * time.Second
+		responseTimeout    = 2 * time.Second
+	)
+
 	tests := map[string]struct {
 		sources        []string
 		config         string
@@ -31,42 +38,58 @@ func TestUpload(t *testing.T) {
 		readOnlyFile   []string
 		maxReports     uint
 		time           int
-		responseCode   int
-		noServer       bool
+
+		// Server options
+		badCount            int
+		initialResponseCode int // If < 0, the server will not respond
+		responseCode        int
+		noServer            bool
 
 		removeFiles []string
 
 		wantExitCode int
 	}{
 		// True
-		"True": {
+		"True-Uploads reports from the specified source": {
 			sources: []string{"True"},
 			removeFiles: []string{
 				"True/local/2000.json",
 				"True/uploaded/1000.json",
 			},
 		},
-		"True DryRun": {
+		"True-Causes nothing to happen with DryRun": {
 			sources: []string{"True"},
 			config:  "dry.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+			},
 		},
-		"True DryRun Force": {
+		"True-DryRun causes nothing to happen with Force": {
 			sources: []string{"True"},
 			config:  "dry-force.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+			},
 		},
-		"True DryRun Force MinAge": {
+		"True-DryRun causes nothing to happen with Force MinAge": {
 			sources: []string{"True"},
 			config:  "dry-force-minAge.yaml",
 			time:    2501,
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+			},
 		},
-		"True Force": {
+		"True-Force uploads duplicate files": {
 			sources: []string{"True"},
 			config:  "force.yaml",
 			removeFiles: []string{
 				"True/local/2000.json",
 			},
 		},
-		"True Force MinAge": {
+		"True-Force overrides MinAge": {
 			sources: []string{"True"},
 			config:  "force-minAge.yaml",
 			time:    2501,
@@ -74,7 +97,7 @@ func TestUpload(t *testing.T) {
 				"True/local/2000.json",
 			},
 		},
-		"True MinAge": {
+		"True-MinAge skips immature reports": {
 			sources: []string{"True"},
 			config:  "minAge.yaml",
 			time:    2501,
@@ -83,7 +106,7 @@ func TestUpload(t *testing.T) {
 				"True/uploaded/1000.json",
 			},
 		},
-		"True Global False": {
+		"True-Prioritizes local consent over Global False": {
 			sources:        []string{"True"},
 			consentFixture: "false-global",
 			removeFiles: []string{
@@ -91,7 +114,7 @@ func TestUpload(t *testing.T) {
 				"True/uploaded/1000.json",
 			},
 		},
-		"True MaxReports": {
+		"True-Removes old reports when over MaxReports limit": {
 			sources:    []string{"True"},
 			maxReports: 2,
 			removeFiles: []string{
@@ -99,12 +122,16 @@ func TestUpload(t *testing.T) {
 				"True/uploaded/1000.json",
 			},
 		},
-		"True DryRun MaxReports": {
+		"True-DryRun does not trigger cleanup with MaxReports": {
 			sources:    []string{"True"},
 			config:     "dry.yaml",
 			maxReports: 2,
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+			},
 		},
-		"True MaxReports MinAge": {
+		"True-MaxReports and MinAge are respected": {
 			sources:    []string{"True"},
 			config:     "minAge.yaml",
 			maxReports: 2,
@@ -114,46 +141,69 @@ func TestUpload(t *testing.T) {
 				"True/uploaded/1000.json",
 			},
 		},
-		"True Duplicates": {
+		"True-Errors when encountering duplicates": {
+			sources: []string{"True"},
 			removeFiles: []string{
 				"True/local/2000.json",
 			},
 			wantExitCode: 1,
 		},
-		"True Bad Files": {
+		"True-Errors when encountering bad files": {
+			sources: []string{"True"},
 			removeFiles: []string{
 				"True/uploaded/1000.json",
 			},
 			wantExitCode: 1,
 		},
-		"True Bad Files Force": {
+		"True-Force errors when encountering bad files": {
+			sources: []string{"True"},
 			removeFiles: []string{
 				"True/uploaded/1000.json",
 			},
 			config:       "force.yaml",
 			wantExitCode: 1,
 		},
+		"True-DryRun errors when encountering bad files": {
+			sources: []string{"True"},
+			removeFiles: []string{
+				"True/uploaded/1000.json",
+			},
+			config:       "dry.yaml",
+			wantExitCode: 1,
+		},
+		"True-DryRun errors when encountering duplicate files": {
+			sources: []string{"True"},
+			removeFiles: []string{
+				"True/local/2000.json",
+			},
+			config:       "dry.yaml",
+			wantExitCode: 1,
+		},
 
 		// False
-		"False": {
+		"False-Respects consent": {
 			sources: []string{"False"},
 			removeFiles: []string{
 				"False/local/2000.json",
 				"False/uploaded/1000.json",
 			},
 		},
-		"False DryRun": {
+		"False-DryRun causes nothing to happen": {
 			sources: []string{"False"},
 			config:  "dry.yaml",
+			removeFiles: []string{
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+			},
 		},
-		"False Force": {
+		"False-Force respects consent and uploads duplicate files": {
 			sources: []string{"False"},
 			config:  "force.yaml",
 			removeFiles: []string{
 				"False/local/2000.json",
 			},
 		},
-		"False MinAge": {
+		"False-MinAge skips immature reports": {
 			sources: []string{"False"},
 			config:  "minAge.yaml",
 			time:    2501,
@@ -163,18 +213,21 @@ func TestUpload(t *testing.T) {
 			},
 		},
 		"False Duplicates": {
+			sources: []string{"False"},
 			removeFiles: []string{
 				"False/local/2000.json",
 			},
 			wantExitCode: 1,
 		},
 		"False Bad Files": {
+			sources: []string{"False"},
 			removeFiles: []string{
 				"False/uploaded/1000.json",
 			},
 			wantExitCode: 1,
 		},
 		"False Bad Files Force": {
+			sources: []string{"False"},
 			removeFiles: []string{
 				"False/uploaded/1000.json",
 			},
@@ -183,28 +236,31 @@ func TestUpload(t *testing.T) {
 		},
 
 		// Unknown
-		"Unknown": {
+		"Unknown-Consent falls back to global when not set": {
 			sources: []string{"Unknown-A"},
 			removeFiles: []string{
 				"Unknown-A/local/2000.json",
 				"Unknown-A/uploaded/1000.json",
 			},
 		},
-		"Unknown DryRun": {
+		"Unknown-DryRun causes nothing to happen": {
 			sources: []string{"Unknown-A"},
 			config:  "dry.yaml",
+			removeFiles: []string{
+				"Unknown-A/local/2000.json",
+				"Unknown-A/uploaded/1000.json",
+			},
 		},
-		"Unknown Force": {
+		"Unknown-Force uploads duplicate files": {
 			sources: []string{"Unknown-A"},
 			config:  "force.yaml",
 			removeFiles: []string{
 				"Unknown-A/local/2000.json",
-				"Unknown-A/uploaded/1000.json",
 			},
 		},
 
 		// Unknown Global False
-		"Unknown Global False": {
+		"Unknown-Consent falls back to global when not set and respects no consent": {
 			sources:        []string{"Unknown-A"},
 			consentFixture: "false-global",
 			removeFiles: []string{
@@ -212,12 +268,16 @@ func TestUpload(t *testing.T) {
 				"Unknown-A/uploaded/1000.json",
 			},
 		},
-		"Unknown DryRun Global False": {
+		"Unknown-DryRun causes nothing to happen with false consent": {
 			sources:        []string{"Unknown-A"},
 			config:         "dry.yaml",
 			consentFixture: "false-global",
+			removeFiles: []string{
+				"Unknown-A/local/2000.json",
+				"Unknown-A/uploaded/1000.json",
+			},
 		},
-		"Unknown Force Global False": {
+		"Unknown-Force respects consent and uploads duplicate files": {
 			sources:        []string{"Unknown-A"},
 			config:         "force.yaml",
 			consentFixture: "false-global",
@@ -227,7 +287,7 @@ func TestUpload(t *testing.T) {
 		},
 
 		// Multi Sources
-		"Multi": {
+		"Multi-Uploads all reports from all specified sources": {
 			sources: []string{"True", "False"},
 			removeFiles: []string{
 				"True/local/2000.json",
@@ -236,11 +296,17 @@ func TestUpload(t *testing.T) {
 				"False/uploaded/1000.json",
 			},
 		},
-		"Multi DryRun": {
+		"Multi-DryRun causes nothing to happen": {
 			sources: []string{"True", "False"},
 			config:  "dry.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+			},
 		},
-		"Multi Force": {
+		"Multi-Force uploads duplicate files": {
 			sources: []string{"True", "False"},
 			config:  "force.yaml",
 			removeFiles: []string{
@@ -250,7 +316,7 @@ func TestUpload(t *testing.T) {
 		},
 
 		// All
-		"All": {
+		"All-Uploads all reports for all sources detected": {
 			removeFiles: []string{
 				"True/local/2000.json",
 				"True/uploaded/1000.json",
@@ -260,10 +326,18 @@ func TestUpload(t *testing.T) {
 				"Unknown-A/uploaded/1000.json",
 			},
 		},
-		"All DryRun": {
+		"All-DryRun causes nothing to happen": {
 			config: "dry.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+				"Unknown-A/local/2000.json",
+				"Unknown-A/uploaded/1000.json",
+			},
 		},
-		"All Force": {
+		"All-Force uploads duplicate files": {
 			config: "force.yaml",
 			removeFiles: []string{
 				"True/local/2000.json",
@@ -271,7 +345,7 @@ func TestUpload(t *testing.T) {
 				"Unknown-A/local/2000.json",
 			},
 		},
-		"All MinAge": {
+		"All-Immature reports are skipped": {
 			config: "minAge.yaml",
 			time:   2501,
 			removeFiles: []string{
@@ -283,7 +357,7 @@ func TestUpload(t *testing.T) {
 				"Unknown-A/uploaded/1000.json",
 			},
 		},
-		"All Duplicates": {
+		"All-Errors when encountering duplicate files": {
 			removeFiles: []string{
 				"True/uploaded/1000.json",
 				"False/uploaded/1000.json",
@@ -291,7 +365,7 @@ func TestUpload(t *testing.T) {
 			},
 			wantExitCode: 1,
 		},
-		"All Bad Files": {
+		"All-Errors when encountering bad files": {
 			removeFiles: []string{
 				"True/uploaded/1000.json",
 				"False/uploaded/1000.json",
@@ -299,7 +373,7 @@ func TestUpload(t *testing.T) {
 			},
 			wantExitCode: 1,
 		},
-		"All Bad Files Force": {
+		"All-Force errors when encountering bad files": {
 			removeFiles: []string{
 				"True/uploaded/1000.json",
 				"False/uploaded/1000.json",
@@ -309,26 +383,109 @@ func TestUpload(t *testing.T) {
 			wantExitCode: 1,
 		},
 
-		// No Server
-		"True No Server": {
+		// No Server Response
+		"True-No response from server errors": {
 			sources:      []string{"True"},
 			noServer:     true,
 			wantExitCode: 1,
 		},
-		"All No Server": {
+		"All-No response from server errors": {
 			noServer:     true,
 			wantExitCode: 1,
 		},
 
 		// Bad Response
-		"True Bad Response": {
+		"True-Bad response from server errors": {
 			sources:      []string{"True"},
 			responseCode: http.StatusInternalServerError,
 			wantExitCode: 1,
 		},
-		"All Bad Response": {
+		"All-Bad response from server errors": {
 			responseCode: http.StatusInternalServerError,
 			wantExitCode: 1,
+		},
+
+		// Exponential Backoff (Retry) Tests
+		"Exponential backoff retries when bad response code": {
+			sources: []string{"True", "False"},
+			config:  "retry.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+			},
+
+			initialResponseCode: http.StatusInternalServerError,
+			badCount:            3,
+			wantExitCode:        0,
+		},
+		"Exponential backoff retries when no response": {
+			sources: []string{"True", "False"},
+			config:  "retry.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+			},
+
+			initialResponseCode: -1,
+			badCount:            3,
+			wantExitCode:        0,
+		},
+		"Exponential backoff does nothing when dry-run": {
+			sources: []string{"True", "False"},
+			config:  "dry-retry.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+			},
+
+			initialResponseCode: http.StatusInternalServerError,
+			badCount:            500,
+			wantExitCode:        0,
+		},
+		"Exponential backoff overwrites duplicate reports with force": {
+			sources: []string{"True", "False"},
+			config:  "force-retry.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"False/local/2000.json",
+			},
+
+			initialResponseCode: http.StatusInternalServerError,
+			badCount:            3,
+			wantExitCode:        0,
+		},
+		// Exponential backoff (Retry) erroring tests
+		"Exponential backoff gives up after too many bad response codes": {
+			sources: []string{"True", "False"},
+			config:  "retry.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+			},
+			initialResponseCode: http.StatusInternalServerError,
+			badCount:            500,
+			wantExitCode:        1,
+		},
+		"Exponential backoff gives up after too many response timeouts": {
+			sources: []string{"True", "False"},
+			config:  "retry.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+			},
+			initialResponseCode: -1,
+			badCount:            500,
+			wantExitCode:        1,
 		},
 	}
 
@@ -342,10 +499,15 @@ func TestUpload(t *testing.T) {
 
 			var mu sync.Mutex
 			gotPayloads := make([]string, 0)
-			server := newTestServer(t, echoPayloadHandler(tc.responseCode, &mu, &gotPayloads)).URL
-			if tc.noServer {
-				server = ""
+			s := httptest.NewUnstartedServer(echoPayloadHandler(tc.responseCode, &mu, &gotPayloads))
+			if tc.initialResponseCode != 0 {
+				s = httptest.NewUnstartedServer(echoBackoffPayloadHandler(tc.initialResponseCode, tc.responseCode, &tc.badCount, responseTimeout*2, &mu, &gotPayloads))
 			}
+			if !tc.noServer {
+				t.Cleanup(s.Close)
+				s.Start()
+			}
+			server := s.URL
 
 			if tc.consentFixture == "" {
 				tc.consentFixture = defaultConsentFixture
@@ -380,6 +542,9 @@ func TestUpload(t *testing.T) {
 			cmd.Args = append(cmd.Args, "--insights-dir", paths.reports)
 			cmd.Env = append(cmd.Env, os.Environ()...)
 			cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_SERVER_URL="+server)
+			cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_INITIAL_RETRY_PERIOD="+initialRetryPeriod.String())
+			cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_MAX_RETRY_PERIOD="+maxRetryPeriod.String())
+			cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_RESPONSE_TIMEOUT="+responseTimeout.String())
 			if tc.maxReports != 0 {
 				cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_MAX_REPORTS="+fmt.Sprint(tc.maxReports))
 			}
@@ -424,13 +589,6 @@ func TestUpload(t *testing.T) {
 	}
 }
 
-func newTestServer(t *testing.T, handler http.Handler) *httptest.Server {
-	t.Helper()
-	server := httptest.NewServer(handler)
-	t.Cleanup(server.Close)
-	return server
-}
-
 // echoPayloadHandler is a handler that echoes the request body to a channel.
 func echoPayloadHandler(responseCode int, mu *sync.Mutex, payloads *[]string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -455,6 +613,33 @@ func echoPayloadHandler(responseCode int, mu *sync.Mutex, payloads *[]string) ht
 			return
 		}
 
+		w.WriteHeader(responseCode)
+	})
+}
+
+// echoBackoffPayloadHandler is like echoPayloadHandler, but for the first badCount requests, it returns an initial bad response code.
+func echoBackoffPayloadHandler(initialResponseCode, responseCode int, badCount *int, sleepTime time.Duration, mu *sync.Mutex, payloads *[]string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		if *badCount > 0 {
+			*badCount--
+			mu.Unlock()
+			// Unresponsive server if initialResponseCode < 0
+			if initialResponseCode < 0 {
+				time.Sleep(sleepTime)
+				return
+			}
+			w.WriteHeader(initialResponseCode)
+			return
+		}
+		defer mu.Unlock()
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "failed to read request body", http.StatusInternalServerError)
+			return
+		}
+
+		*payloads = append(*payloads, string(body))
 		w.WriteHeader(responseCode)
 	})
 }
