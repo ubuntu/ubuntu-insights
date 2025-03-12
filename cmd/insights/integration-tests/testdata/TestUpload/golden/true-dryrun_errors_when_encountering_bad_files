@@ -9,6 +9,7 @@ reportscontents:
             "id": "500 False local"
         }
     False/local/1000.json: "{   \n    \"id\": \"1000 False local\",\n    \"duplicate\": true\n}"
+    False/local/2000.json: ""
     False/local/2501.json: |-
         {
             "id": "2501 False local"
@@ -16,6 +17,11 @@ reportscontents:
     False/local/invalid.json: |-
         {
             "id": "invalid False local"
+        }
+    False/uploaded/1000.json: |-
+        {
+            "id": "1000 False uploaded",
+            "duplicate": true
         }
     False/uploaded/1500.json: |-
         {
@@ -35,6 +41,7 @@ reportscontents:
             "id": "1000 True local",
             "duplicate": true
         }
+    True/local/2000.json: ""
     True/local/2501.json: |-
         {
             "id": "2501 True local"

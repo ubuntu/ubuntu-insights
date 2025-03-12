@@ -60,15 +60,27 @@ func TestUpload(t *testing.T) {
 		"True-Causes nothing to happen with DryRun": {
 			sources: []string{"True"},
 			config:  "dry.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+			},
 		},
 		"True-DryRun causes nothing to happen with Force": {
 			sources: []string{"True"},
 			config:  "dry-force.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+			},
 		},
 		"True-DryRun causes nothing to happen with Force MinAge": {
 			sources: []string{"True"},
 			config:  "dry-force-minAge.yaml",
 			time:    2501,
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+			},
 		},
 		"True-Force uploads duplicate files": {
 			sources: []string{"True"},
@@ -114,6 +126,10 @@ func TestUpload(t *testing.T) {
 			sources:    []string{"True"},
 			config:     "dry.yaml",
 			maxReports: 2,
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+			},
 		},
 		"True-MaxReports and MinAge are respected": {
 			sources:    []string{"True"},
@@ -147,6 +163,22 @@ func TestUpload(t *testing.T) {
 			config:       "force.yaml",
 			wantExitCode: 1,
 		},
+		"True-DryRun errors when encountering bad files": {
+			sources: []string{"True"},
+			removeFiles: []string{
+				"True/uploaded/1000.json",
+			},
+			config:       "dry.yaml",
+			wantExitCode: 1,
+		},
+		"True-DryRun errors when encountering duplicate files": {
+			sources: []string{"True"},
+			removeFiles: []string{
+				"True/local/2000.json",
+			},
+			config:       "dry.yaml",
+			wantExitCode: 1,
+		},
 
 		// False
 		"False-Respects consent": {
@@ -159,6 +191,10 @@ func TestUpload(t *testing.T) {
 		"False-DryRun causes nothing to happen": {
 			sources: []string{"False"},
 			config:  "dry.yaml",
+			removeFiles: []string{
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+			},
 		},
 		"False-Force respects consent and uploads duplicate files": {
 			sources: []string{"False"},
@@ -210,6 +246,10 @@ func TestUpload(t *testing.T) {
 		"Unknown-DryRun causes nothing to happen": {
 			sources: []string{"Unknown-A"},
 			config:  "dry.yaml",
+			removeFiles: []string{
+				"Unknown-A/local/2000.json",
+				"Unknown-A/uploaded/1000.json",
+			},
 		},
 		"Unknown-Force uploads duplicate files": {
 			sources: []string{"Unknown-A"},
@@ -232,6 +272,10 @@ func TestUpload(t *testing.T) {
 			sources:        []string{"Unknown-A"},
 			config:         "dry.yaml",
 			consentFixture: "false-global",
+			removeFiles: []string{
+				"Unknown-A/local/2000.json",
+				"Unknown-A/uploaded/1000.json",
+			},
 		},
 		"Unknown-Force respects consent and uploads duplicate files": {
 			sources:        []string{"Unknown-A"},
@@ -255,6 +299,12 @@ func TestUpload(t *testing.T) {
 		"Multi-DryRun causes nothing to happen": {
 			sources: []string{"True", "False"},
 			config:  "dry.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+			},
 		},
 		"Multi-Force uploads duplicate files": {
 			sources: []string{"True", "False"},
@@ -278,6 +328,14 @@ func TestUpload(t *testing.T) {
 		},
 		"All-DryRun causes nothing to happen": {
 			config: "dry.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+				"Unknown-A/local/2000.json",
+				"Unknown-A/uploaded/1000.json",
+			},
 		},
 		"All-Force uploads duplicate files": {
 			config: "force.yaml",
@@ -379,6 +437,12 @@ func TestUpload(t *testing.T) {
 		"Exponential backoff does nothing when dry-run": {
 			sources: []string{"True", "False"},
 			config:  "dry-retry.yaml",
+			removeFiles: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+				"False/local/2000.json",
+				"False/uploaded/1000.json",
+			},
 
 			initialResponseCode: http.StatusInternalServerError,
 			badCount:            500,

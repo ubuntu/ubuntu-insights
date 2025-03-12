@@ -71,7 +71,7 @@ func (um Uploader) Upload(force bool) error {
 	wg.Wait()
 
 	if um.dryRun {
-		return nil
+		return uploadError
 	}
 
 	return errors.Join(report.Cleanup(um.uploadedDir, um.maxReports), uploadError)

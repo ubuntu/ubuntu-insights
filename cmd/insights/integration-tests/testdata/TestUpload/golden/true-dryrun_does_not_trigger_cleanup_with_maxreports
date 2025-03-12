@@ -41,13 +41,11 @@ reportscontents:
             "id": "1000 True local",
             "duplicate": true
         }
-    True/local/2000.json: ""
     True/local/2501.json: |-
         {
             "id": "2501 True local"
         }
     True/local/invalid.json: "{   \n    \"id\": \"invalid True local\"\n}"
-    True/uploaded/1000.json: "{   \n    \"id\": \"1000 True uploaded\",\n    \"duplicate\": true\n}"
     True/uploaded/1500.json: |-
         {
             "id": "1500 True uploaded",

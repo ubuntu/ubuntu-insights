@@ -9,7 +9,6 @@ reportscontents:
             "id": "500 False local"
         }
     False/local/1000.json: "{   \n    \"id\": \"1000 False local\",\n    \"duplicate\": true\n}"
-    False/local/2000.json: ""
     False/local/2501.json: |-
         {
             "id": "2501 False local"
@@ -17,11 +16,6 @@ reportscontents:
     False/local/invalid.json: |-
         {
             "id": "invalid False local"
-        }
-    False/uploaded/1000.json: |-
-        {
-            "id": "1000 False uploaded",
-            "duplicate": true
         }
     False/uploaded/1500.json: |-
         {
@@ -41,13 +35,11 @@ reportscontents:
             "id": "1000 True local",
             "duplicate": true
         }
-    True/local/2000.json: ""
     True/local/2501.json: |-
         {
             "id": "2501 True local"
         }
     True/local/invalid.json: "{   \n    \"id\": \"invalid True local\"\n}"
-    True/uploaded/1000.json: "{   \n    \"id\": \"1000 True uploaded\",\n    \"duplicate\": true\n}"
     True/uploaded/1500.json: |-
         {
             "id": "1500 True uploaded",
@@ -62,7 +54,6 @@ reportscontents:
             "id": "500 Unknown-A local"
         }
     Unknown-A/local/1000.json: "{   \n    \"id\": \"1000 Unknown-A local\",\n    \"duplicate\": true\n}"
-    Unknown-A/local/2000.json: ""
     Unknown-A/local/2501.json: |-
         {
             "id": "2501 Unknown-A local"
@@ -72,5 +63,4 @@ reportscontents:
             "id": "invalid Unknown-A local",
             "test": "500"
         }
-    Unknown-A/uploaded/1000.json: "{   \n    \"id\": \"1000 Unknown-A uploaded\",\n    \"duplicate\": true\n}"
     Unknown-A/uploaded/1500.json: "{   \n    \"id\": \"1500 Unknown-A uploaded\",\n    \"only in uploaded\": true\n}"

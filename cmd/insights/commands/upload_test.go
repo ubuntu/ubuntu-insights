@@ -14,8 +14,8 @@ func TestUpload(t *testing.T) {
 	tests := map[string]struct {
 		args []string
 
-		consentDir  string
-		removeFiles []string
+		consentDir        string
+		useReportsFixture bool
 
 		wantErr      bool
 		wantUsageErr bool
@@ -63,6 +63,16 @@ func TestUpload(t *testing.T) {
 			args:    []string{"upload", "--min-age=18446744073709551615"},
 			wantErr: true,
 		},
+		"Errors with invalid reports": {
+			args:              []string{"upload"},
+			useReportsFixture: true,
+			wantErr:           true,
+		},
+		"Errors with invalid reports and retry flag": {
+			args:              []string{"upload", "--retry"},
+			useReportsFixture: true,
+			wantErr:           true,
+		},
 	}
 
 	for name, tc := range tests {
@@ -73,17 +83,22 @@ func TestUpload(t *testing.T) {
 				tc.consentDir = "true-global"
 			}
 
+			dir := t.TempDir()
+			if tc.useReportsFixture {
+				require.NoError(t, testutils.CopyDir(t, "testdata/reports", dir), "Setup: could not copy reports dir")
+			}
+
 			gotSources := make([]string, 0)
 			var (
 				gotMinAge uint
 				dRun      bool
 			)
-			newUploader := func(cm uploader.Consent, cachePath, source string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error) {
+			newUploader := func(cm uploader.Consent, _, source string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error) {
 				gotSources = append(gotSources, source)
 				gotMinAge = minAge
 				dRun = dryRun
 
-				return uploader.New(cm, cachePath, source, minAge, true, args...)
+				return uploader.New(cm, dir, source, minAge, true, args...)
 			}
 			a, _, _ := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewUploader(newUploader))
 			err := a.Run()
