@@ -253,7 +253,7 @@ func TestCollectLinux(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 2,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 		"WSL2 missing WSL version is WSL2 but warns": {
@@ -397,6 +397,8 @@ func TestFakeSystemdDetectVirt(*testing.T) {
 	case "error":
 		fmt.Fprintf(os.Stderr, "Error requested in fake systemd-detect-virt")
 		os.Exit(1)
+	case "error no exit":
+		fmt.Fprintf(os.Stderr, "Error requested in fake systemd-detect-virt")
 	case "running":
 		fmt.Println("running")
 	case "offline":
