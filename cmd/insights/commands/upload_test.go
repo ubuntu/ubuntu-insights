@@ -95,9 +95,9 @@ func TestUpload(t *testing.T) {
 
 			if tc.wantUsageErr {
 				require.True(t, a.UsageError())
-			} else {
-				require.False(t, a.UsageError())
+				return
 			}
+			require.False(t, a.UsageError())
 
 			type results struct {
 				Sources []string
