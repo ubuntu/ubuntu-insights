@@ -34,7 +34,7 @@ func defaultPlatformOptions() platformOptions {
 
 // collectProduct reads sysfs to find information about the system.
 func (h Collector) collectProduct(pi platform.Info) (product, error) {
-	if pi.WSL.Arch != 0 {
+	if pi.WSL.SubsystemVersion != 0 {
 		h.log.Debug("skipping product info collection on WSL")
 		return product{}, nil
 	}
@@ -157,12 +157,12 @@ var gpuSymlinkRegex = regexp.MustCompile("^card[0-9]+$")
 // collectGPUs uses sysfs to collect information about the GPUs.
 func (h Collector) collectGPUs(pi platform.Info) (gpus []gpu, err error) {
 	defer func() {
-		if err == nil && len(gpus) == 0 && pi.WSL.Arch == 0 {
+		if err == nil && len(gpus) == 0 && pi.WSL.SubsystemVersion == 0 {
 			err = fmt.Errorf("no GPU information found")
 		}
 	}()
 
-	if pi.WSL.Arch != 0 {
+	if pi.WSL.SubsystemVersion != 0 {
 		h.log.Debug("skipping GPU info collection on WSL")
 		return []gpu{}, nil
 	}
@@ -369,7 +369,7 @@ var screenConfigRegex = regexp.MustCompile(`(?m)^\s*([0-9]+x[0-9]+)\s.*?([0-9]+\
 func (h Collector) collectScreens(pi platform.Info) (info []screen, err error) {
 	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, h.platform.screenCmd[0], h.platform.screenCmd[1:]...)
 	if err != nil {
-		if pi.WSL.Arch != 0 {
+		if pi.WSL.SubsystemVersion != 0 {
 			h.log.Debug("skipping screen info collection on WSL")
 			return []screen{}, nil
 		}

@@ -1,6 +1,7 @@
 wsl:
-    arch: 1
+    subsystemversion: 1
+    systemd: not running
     interop: disabled
     version: ""
-    kernelversion: ""
+    kernelversion: 4.4.0-26100-Microsoft
 proattached: true

@@ -1,5 +1,6 @@
 wsl:
-    arch: 0
+    subsystemversion: 0
+    systemd: ""
     interop: ""
     version: ""
     kernelversion: ""

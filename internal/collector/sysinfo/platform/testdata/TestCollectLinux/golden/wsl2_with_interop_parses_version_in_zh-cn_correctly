@@ -2,6 +2,6 @@ wsl:
     subsystemversion: 2
     systemd: running
     interop: enabled
-    version: 2.4.11.0
+    version: 0.67.6.0
     kernelversion: 5.15.167.4-microsoft-standard-WSL2
-proattached: false
+proattached: true

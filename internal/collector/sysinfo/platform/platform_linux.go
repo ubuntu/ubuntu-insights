@@ -26,15 +26,17 @@ type Info struct {
 
 // WSL contains platform information specific to Windows Subsystem for Linux.
 type WSL struct {
-	Arch          uint8  `json:"architecture,omitzero"`
-	Interop       string `json:"interop,omitempty"`
-	Version       string `json:"version,omitempty"`
-	KernelVersion string `json:"kernelVersion,omitempty"`
+	SubsystemVersion uint8  `json:"subsystemVersion,omitzero"`
+	Systemd          string `json:"systemd,omitempty"`
+	Interop          string `json:"interop,omitempty"`
+	Version          string `json:"version,omitempty"`
+	KernelVersion    string `json:"kernelVersion,omitempty"`
 }
 
 type platformOptions struct {
 	root          string
 	detectVirtCmd []string
+	systemctlCmd  []string
 	wslVersionCmd []string
 	proStatusCmd  []string
 }
@@ -44,6 +46,7 @@ func defaultPlatformOptions() platformOptions {
 	return platformOptions{
 		root:          "/",
 		detectVirtCmd: []string{"systemd-detect-virt"},
+		systemctlCmd:  []string{"systemctl", "is-system-running"},
 		wslVersionCmd: []string{"wsl.exe", "-v"},
 		proStatusCmd:  []string{"pro", "api", "u.pro.status.is_attached.v1"},
 	}
@@ -85,7 +88,7 @@ func (p Collector) isWSL() bool {
 // Note that this does not detect broken interop, such as if in WSL2, $WSL_INTEROP points to a broken location.
 func (p Collector) interopEnabled() (enabled bool) {
 	var path string
-	switch p.getWSLVersion() {
+	switch p.getWSLSubsystemVersion() {
 	case 1:
 		path = filepath.Join(p.platform.root, "proc/sys/fs/binfmt_misc/WSLInterop")
 	case 2:
@@ -115,9 +118,22 @@ func (p Collector) interopEnabled() (enabled bool) {
 
 // collectWSL collects information about Windows Subsystem for Linux.
 func (p Collector) collectWSL() WSL {
-	info := WSL{Arch: p.getWSLVersion()}
-	if info.Arch == 0 {
+	info := WSL{SubsystemVersion: p.getWSLSubsystemVersion()}
+	if info.SubsystemVersion == 0 {
 		return info
+	}
+
+	// Get the kernel version
+	info.KernelVersion = p.getKernelVersion()
+
+	// Check if systemd is running
+	info.Systemd = "not running"
+	sd, err := p.isSystemdRunning()
+	if err != nil {
+		p.log.Warn("failed to check if systemd is running", "error", err)
+	}
+	if sd {
+		info.Systemd = "running"
 	}
 
 	if !p.interopEnabled() {
@@ -144,11 +160,10 @@ func (p Collector) collectWSL() WSL {
 		return info
 	}
 
-	data := string(decodedData)
+	data := strings.TrimSpace(string(decodedData))
 
 	entries := map[string]*string{
-		"WSL":    &info.Version,
-		"Kernel": &info.KernelVersion}
+		`WSL`: &info.Version}
 	for entry, value := range entries {
 		regex := getWSLRegex(entry)
 		matches := regex.FindAllStringSubmatch(data, -1)
@@ -157,7 +172,7 @@ func (p Collector) collectWSL() WSL {
 			continue
 		}
 		if len(matches) > 1 {
-			p.log.Warn(fmt.Sprintf("parsed multiple %s versions, using the first", entry), "matches", matches)
+			p.log.Debug(fmt.Sprintf("parsed multiple %s versions, using the first", entry), "matches", matches)
 		}
 		*value = matches[0][1]
 	}
@@ -165,13 +180,13 @@ func (p Collector) collectWSL() WSL {
 	return info
 }
 
-// getWSLVersion returns the WSL version based on the kernel version naming convention.
+// getWSLSubsystemVersion returns the WSL subsystem version based on the kernel version naming convention.
 // If the kernel version has '-Microsoft \(Microsoft@Microsoft\.com\)' with a capital M, it is WSL 1.
 // If the kernel version can't be read, or if the version doesn't match the pattern, it is assumed to be WSL 2.
 // If not in WSL, it returns 0.
 //
 // This could potentially be fooled by a custom kernel with '-Microsoft \(Microsoft@Microsoft\.com\)' in the name.
-func (p Collector) getWSLVersion() uint8 {
+func (p Collector) getWSLSubsystemVersion() uint8 {
 	if !p.isWSL() {
 		return 0
 	}
@@ -184,6 +199,18 @@ func (p Collector) getWSLVersion() uint8 {
 	return 1
 }
 
+// getKernelVersion returns the kernel version of the system.
+func (p Collector) getKernelVersion() string {
+	k := fileutils.ReadFileLogError(filepath.Join(p.platform.root, "proc/version"), p.log)
+	// The kernel version is the third word in the file.
+	s := strings.Fields(k)
+	if len(s) < 3 {
+		p.log.Warn("failed to parse kernel version", "version", k)
+		return ""
+	}
+	return s[2]
+}
+
 // getWSLRegex returns a regex for matching WSL version.
 //
 // The regex will look for lines matching '[entry] version: ' followed by non-whitespace characters.
@@ -191,7 +218,32 @@ func (p Collector) getWSLVersion() uint8 {
 //
 // Take care that if there are any special characters in the entry, they are properly escaped.
 func getWSLRegex(entry string) *regexp.Regexp {
-	return regexp.MustCompile(fmt.Sprintf(`(?m)^\s*%s\s+version:\s+([\S.]+)\s*$`, entry))
+	return regexp.MustCompile(fmt.Sprintf(`(?m)^\s*.*%s\s*.*[:|：]\s+([\S.]+)\s*$`, entry))
+}
+
+// isSystemdRunning checks if the systemd service manager is running on the system.
+// It executes the systemctl command with a timeout of 15 seconds to determine the status of systemd.
+// If the command fails to execute, or if the status is "unknown" it returns an error.
+// If the command outputs to stderr, it logs the output.
+// It returns true if systemd is running and not in "offline" status, otherwise it returns false.
+func (p Collector) isSystemdRunning() (bool, error) {
+	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, p.platform.systemctlCmd[0], p.platform.systemctlCmd[1:]...)
+	if err != nil {
+		return false, fmt.Errorf("failed to run systemctl is-system-running: %v", err)
+	}
+	if stderr.Len() > 0 {
+		p.log.Info("systemctl output to stderr", "stderr", stderr)
+	}
+
+	if stdout.Len() == 0 {
+		return false, fmt.Errorf("systemd status empty")
+	}
+
+	if strings.Contains(stdout.String(), "unknown") {
+		return false, fmt.Errorf("systemd status unknown")
+	}
+
+	return !strings.Contains(stdout.String(), "offline"), nil
 }
 
 // isProAttached returns the attach state of Ubuntu Pro.
