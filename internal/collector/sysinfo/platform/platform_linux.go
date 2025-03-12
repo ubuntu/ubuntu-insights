@@ -128,7 +128,11 @@ func (p Collector) collectWSL() WSL {
 
 	// Check if systemd is running
 	info.Systemd = "not running"
-	if p.isSystemdRunning() {
+	sd, err := p.isSystemdRunning()
+	if err != nil {
+		p.log.Warn("failed to check if systemd is running", "error", err)
+	}
+	if sd {
 		info.Systemd = "running"
 	}
 
@@ -217,18 +221,29 @@ func getWSLRegex(entry string) *regexp.Regexp {
 	return regexp.MustCompile(fmt.Sprintf(`(?m)^\s*.*%s\s*.*[:|：]\s+([\S.]+)\s*$`, entry))
 }
 
-// isSystemdRunning returns true if systemd is running.
-func (p Collector) isSystemdRunning() bool {
+// isSystemdRunning checks if the systemd service manager is running on the system.
+// It executes the systemctl command with a timeout of 15 seconds to determine the status of systemd.
+// If the command fails to execute, or if the status is "unknown" it returns an error.
+// If the command outputs to stderr, it logs the output.
+// It returns true if systemd is running and not in "offline" status, otherwise it returns false.
+func (p Collector) isSystemdRunning() (bool, error) {
 	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, p.platform.systemctlCmd[0], p.platform.systemctlCmd[1:]...)
 	if err != nil {
-		p.log.Warn("failed to run systemctl is-system-running", "error", err)
-		return false
+		return false, fmt.Errorf("failed to run systemctl is-system-running: %v", err)
 	}
 	if stderr.Len() > 0 {
 		p.log.Info("systemctl output to stderr", "stderr", stderr)
 	}
 
-	return strings.Contains(stdout.String(), "running")
+	if stdout.Len() == 0 {
+		return false, fmt.Errorf("systemd status empty")
+	}
+
+	if strings.Contains(stdout.String(), "unknown") {
+		return false, fmt.Errorf("systemd status unknown")
+	}
+
+	return !strings.Contains(stdout.String(), "offline"), nil
 }
 
 // isProAttached returns the attach state of Ubuntu Pro.

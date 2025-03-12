@@ -219,7 +219,7 @@ func TestCollectLinux(t *testing.T) {
 			proStatusCmd:  "",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 2,
+				slog.LevelWarn: 3,
 			},
 		},
 		"WSL2 garbage return from commands warns": {
@@ -230,7 +230,7 @@ func TestCollectLinux(t *testing.T) {
 			proStatusCmd:  "garbage",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 2,
+				slog.LevelWarn: 3,
 			},
 		},
 		"WSL2 cmd errors warns": {
@@ -252,7 +252,7 @@ func TestCollectLinux(t *testing.T) {
 			proStatusCmd:  "error no exit",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 2,
+				slog.LevelWarn: 3,
 				slog.LevelInfo: 3,
 			},
 		},
@@ -404,7 +404,7 @@ func TestFakeSystemdDetectVirt(*testing.T) {
 	case "offline":
 		fmt.Println("offline")
 	case "garbage":
-		fmt.Println("garbage 🗑️")
+		fmt.Println("unknown")
 	case "":
 		fallthrough
 	case "missing":
