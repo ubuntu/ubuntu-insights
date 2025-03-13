@@ -13,6 +13,7 @@ import (
 
 	"github.com/ubuntu/decorate"
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo"
+	"github.com/ubuntu/ubuntu-insights/internal/consent"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 	"github.com/ubuntu/ubuntu-insights/internal/report"
@@ -79,6 +80,40 @@ var defaultOptions = options{
 
 // Options represents an optional function to override Collector default values.
 type Options func(*options)
+
+type Config struct {
+	Source        string
+	Period        uint
+	Force         bool
+	DryRun        bool
+	SourceMetrics string
+}
+
+// Run creates a collector then collects using it based off the given config and arguments.
+func (c Config) Run(consentDir, cacheDir string, writer func(Collector, Insights) error) error {
+	if c.SourceMetrics == "" && c.Source != "" {
+		return fmt.Errorf("no metricsPath for %s", c.Source)
+	}
+	if c.Source == "" { // ignore SourceMetrics for platform source
+		c.SourceMetrics = ""
+	}
+	if c.Source == "" { // Default source to platform
+		c.Source = constants.DefaultCollectSource
+	}
+
+	cm := consent.New(consentDir)
+	col, err := New(cm, cacheDir, c.Source, c.Period, c.DryRun, WithSourceMetricsPath(c.SourceMetrics))
+	if err != nil {
+		return err
+	}
+
+	insights, err := col.Compile(c.Force)
+	if err != nil {
+		return err
+	}
+
+	return writer(col, insights)
+}
 
 // WithSourceMetricsPath sets the path to an optional pre-made JSON file containing source specific metrics.
 func WithSourceMetricsPath(path string) Options {
