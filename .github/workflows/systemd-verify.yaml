@@ -1,0 +1,22 @@
+name: Verify systemd files
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "*"
+  pull_request:
+
+jobs:
+  verify-systemd:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Build Ubuntu-Insights
+        run: |
+          cd cmd/insights
+          sudo go build -o /usr/bin/ubuntu-insights
+      - name: Verify systemd files
+        run: systemd-analyze --user verify autostart/systemd/*
