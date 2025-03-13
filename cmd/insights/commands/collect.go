@@ -75,6 +75,8 @@ func (a App) collectRun() (err error) {
 		fmt.Println(string(ib))
 
 		return c.Write(insights)
+	}, func(f *collector.Factory) {
+		*f = a.newCollector
 	})
 
 	if errors.Is(err, consent.ErrConsentFileNotFound) {

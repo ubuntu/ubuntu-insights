@@ -12,9 +12,6 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/uploader"
 )
 
-type newUploader func(cm uploader.Consent, cachePath, source string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error)
-type newCollector func(cm collector.Consent, cachePath, source string, period uint, dryRun bool, args ...collector.Options) (collector.Collector, error)
-
 // App represents the application.
 type App struct {
 	cmd   *cobra.Command
@@ -24,27 +21,23 @@ type App struct {
 		Verbose     int
 		consentDir  string
 		insightsDir string
-		Upload      struct {
-			Sources []string
-			MinAge  uint `mapstructure:"minAge"`
-			Force   bool
-			DryRun  bool `mapstructure:"dryRun"`
-			Retry   bool `mapstructure:"retry"`
-		}
+
+		Upload  uploader.Config
 		Collect collector.Config
+
 		Consent struct {
 			Sources []string
 			State   string
 		}
 	}
 
-	newUploader  newUploader
-	newCollector newCollector
+	newUploader  uploader.Factory
+	newCollector collector.Factory
 }
 
 type options struct {
-	newUploader  newUploader
-	newCollector newCollector
+	newUploader  uploader.Factory
+	newCollector collector.Factory
 }
 
 // Options represents an optional function to override App default values.
