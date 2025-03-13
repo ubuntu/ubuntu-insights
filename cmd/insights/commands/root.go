@@ -31,13 +31,7 @@ type App struct {
 			DryRun  bool `mapstructure:"dryRun"`
 			Retry   bool `mapstructure:"retry"`
 		}
-		Collect struct {
-			Source        string
-			Period        uint
-			Force         bool
-			DryRun        bool
-			SourceMetrics string
-		}
+		Collect collector.Config
 		Consent struct {
 			Sources []string
 			State   string
