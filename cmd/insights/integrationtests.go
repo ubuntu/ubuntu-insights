@@ -21,7 +21,7 @@ func (m MockTimeProvider) Now() time.Time {
 	return time.Unix(m.CurrentTime, 0)
 }
 
-// load any behaviour modifiers from env variable.
+// load any behavior modifiers from env variable.
 func init() {
 	if server_url := os.Getenv("UBUNTU_INSIGHTS_INTEGRATIONTESTS_SERVER_URL"); server_url != "" {
 		uploadertestutils.SetServerURL(server_url)
@@ -72,7 +72,7 @@ func init() {
 	if os.Getenv("UBUNTU_INSIGHTS_INTEGRATIONTESTS_SYSINFO") != "" {
 		si := testSysInfo{}
 		if sysinfoErr := os.Getenv("UBUNTU_INSIGHTS_INTEGRATIONTESTS_SYSINFO_ERR"); sysinfoErr != "" {
-			si.err = fmt.Errorf(sysinfoErr)
+			si.err = fmt.Errorf("%s", sysinfoErr)
 		}
 		collectortestutils.SetSysInfo(si)
 	}
