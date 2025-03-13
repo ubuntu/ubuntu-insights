@@ -5,12 +5,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/ubuntu-insights/internal/collector"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
+	"github.com/ubuntu/ubuntu-insights/internal/uploader"
 )
 
 type (
-	NewUploader  = newUploader
-	NewCollector = newCollector
+	NewUploader  = uploader.Factory
+	NewCollector = collector.Factory
 )
 
 // SetArgs sets the arguments for the command.
@@ -19,14 +21,14 @@ func (a *App) SetArgs(args []string) {
 }
 
 // WithNewUploader sets the new uploader function for the app.
-func WithNewUploader(nu newUploader) Options {
+func WithNewUploader(nu NewUploader) Options {
 	return func(o *options) {
 		o.newUploader = nu
 	}
 }
 
 // WithNewCollector sets the new collector function for the app.
-func WithNewCollector(nc newCollector) Options {
+func WithNewCollector(nc NewCollector) Options {
 	return func(o *options) {
 		o.newCollector = nc
 	}
