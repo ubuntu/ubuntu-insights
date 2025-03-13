@@ -76,9 +76,7 @@ func (a App) collectRun() (err error) {
 		fmt.Println(string(ib))
 
 		return c.Write(insights)
-	}, func(f *collector.Factory) {
-		*f = a.newCollector
-	})
+	}, a.newCollector)
 
 	if errors.Is(err, consent.ErrConsentFileNotFound) {
 		slog.Warn("Consent file not found, aborting collection")
