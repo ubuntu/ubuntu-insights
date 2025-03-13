@@ -3,12 +3,15 @@
 package uploader
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
+	"github.com/ubuntu/ubuntu-insights/internal/consent"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
@@ -56,6 +59,79 @@ var defaultOptions = options{
 	initialRetryPeriod: 30 * time.Second,
 	maxRetryPeriod:     30 * time.Minute,
 	responseTimeout:    10 * time.Second,
+}
+
+// Config represents the uploader specific data needed to upload.
+type Config struct {
+	Sources []string
+	MinAge  uint `mapstructure:"minAge"`
+	Force   bool
+	DryRun  bool `mapstructure:"dryRun"`
+	Retry   bool `mapstructure:"retry"`
+}
+
+// Factory represents a function that creates a new Uploader.
+type Factory = func (cm Consent, cachePath string, source string, minAge uint, dryRun bool, args ...Options) (Uploader, error)
+
+// Run creates an uploader then uploads using it based off the given config and arguments.
+func (c Config) Run(consentDir, cacheDir string, factoryOverride ...func(*Factory)) error {
+	if cacheDir == "" {
+		cacheDir = constants.DefaultCachePath
+	}
+
+	factory := New;
+	for _, override := range factoryOverride {
+		override(&factory)
+	}
+
+	if len(c.Sources) == 0 {
+		slog.Info("No sources provided, uploading all sources")
+		var err error
+		c.Sources, err = GetAllSources(cacheDir)
+		if err != nil {
+			return fmt.Errorf("failed to get all sources: %v", err)
+		}
+	}
+
+	cm := consent.New(consentDir)
+
+	uploaders := make(map[string]Uploader)
+	for _, source := range c.Sources {
+		u, err := factory(cm, cacheDir, source, c.MinAge, c.DryRun)
+		if err != nil {
+			return fmt.Errorf("failed to create uploader for source %s: %v", source, err)
+		}
+		uploaders[source] = u
+	}
+
+	var uploadError error
+	mu := &sync.Mutex{}
+	var wg sync.WaitGroup
+	for s, u := range uploaders {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			var err error
+			if c.Retry {
+				err = u.BackoffUpload(c.Force)
+			} else {
+				err = u.Upload(c.Force)
+			}
+			if errors.Is(err, consent.ErrConsentFileNotFound) {
+				slog.Warn("Consent file not found, skipping upload", "source", s)
+				return
+			}
+
+			if err != nil {
+				errMsg := fmt.Errorf("failed to upload reports for source %s: %v", s, err)
+				mu.Lock()
+				defer mu.Unlock()
+				uploadError = errors.Join(uploadError, errMsg)
+			}
+		}()
+	}
+	wg.Wait()
+	return uploadError
 }
 
 // Options represents an optional function to override Upload Manager default values.

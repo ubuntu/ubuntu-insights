@@ -81,6 +81,7 @@ var defaultOptions = options{
 // Options represents an optional function to override Collector default values.
 type Options func(*options)
 
+// Config represents the collector specific data needed to collect.
 type Config struct {
 	Source        string
 	Period        uint
@@ -89,20 +90,38 @@ type Config struct {
 	SourceMetrics string
 }
 
+// Factory represents a function that creates a new Collector.
+type Factory = func(cm Consent, cachePath, source string, period uint, dryRun bool, args ...Options) (Collector, error)
+
 // Run creates a collector then collects using it based off the given config and arguments.
-func (c Config) Run(consentDir, cacheDir string, writer func(Collector, Insights) error) error {
+func (c Config) Run(consentDir, cacheDir string, writer func(Collector, Insights) error, factoryOverride ...func(*Factory)) error {
+	// Handle global source and source metrics.
 	if c.SourceMetrics == "" && c.Source != "" {
 		return fmt.Errorf("no metricsPath for %s", c.Source)
 	}
 	if c.Source == "" { // ignore SourceMetrics for platform source
+		slog.Warn("Source Metrics were provided but is ignored for the global source")
 		c.SourceMetrics = ""
 	}
 	if c.Source == "" { // Default source to platform
 		c.Source = constants.DefaultCollectSource
 	}
 
+	// Setup defaults.
+	if cacheDir == "" {
+		cacheDir = constants.DefaultCachePath
+	}
+	if c.Period == 0 {
+		c.Period = 1
+	}
+
+	factory := New
+	for _, override := range factoryOverride {
+		override(&factory)
+	}
+
 	cm := consent.New(consentDir)
-	col, err := New(cm, cacheDir, c.Source, c.Period, c.DryRun, WithSourceMetricsPath(c.SourceMetrics))
+	col, err := factory(cm, cacheDir, c.Source, c.Period, c.DryRun, WithSourceMetricsPath(c.SourceMetrics))
 	if err != nil {
 		return err
 	}

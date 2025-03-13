@@ -4,7 +4,6 @@ package insights
 import (
 	"github.com/ubuntu/ubuntu-insights/internal/collector"
 	"github.com/ubuntu/ubuntu-insights/internal/consent"
-	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/uploader"
 )
 
@@ -12,11 +11,17 @@ import (
 type ConsentState int
 
 const (
+	// ConsentUnknown is used when GetState returns an error.
 	ConsentUnknown = iota - 1
+
+	// ConsentFalse is used when GetState returns false.
 	ConsentFalse
+
+	// ConsentTrue is used when GetState returns an true.
 	ConsentTrue
 )
 
+// Config represents the parameters needed for any call.
 type Config struct {
 	Source      string
 	ConsentDir  string
@@ -24,12 +29,14 @@ type Config struct {
 	Verbose     bool
 }
 
+// CollectFlags represents optional parameters for Collect.
 type CollectFlags struct {
 	Period uint
 	Force  bool
 	DryRun bool
 }
 
+// UploadFlags represents optional parameters for Upload.
 type UploadFlags struct {
 	MinAge uint
 	Force  bool
@@ -59,16 +66,15 @@ func (c Config) Collect(metricsPath string, flags CollectFlags) error {
 // if Config.Source is "", all reports are uploaded.
 // returns an error if uploading fails.
 func (c Config) Upload(flags UploadFlags) error {
-	c.setDefaults()
-	flags.setDefaults()
-	cm := c.newConsentManager()
-
-	u, err := uploader.New(cm, c.InsightsDir, c.Source, flags.MinAge, flags.DryRun)
-	if err != nil {
-		return err
+	uConf := uploader.Config{
+		Sources: []string{c.Source},
+		MinAge:  flags.MinAge,
+		Force:   flags.Force,
+		DryRun:  flags.DryRun,
+		Retry:   false,
 	}
 
-	return u.Upload(flags.Force)
+	return uConf.Run(c.ConsentDir, c.InsightsDir)
 }
 
 // GetConsentState gets the state for Config.Source.
@@ -76,9 +82,7 @@ func (c Config) Upload(flags UploadFlags) error {
 // returns ConsentUnknown if it could not be retrieved.
 // returns ConsentTrue or ConsentFalse otherwise.
 func (c Config) GetConsentState() ConsentState {
-	c.setDefaults()
-	cm := c.newConsentManager()
-
+	cm := consent.New(c.ConsentDir)
 	s, err := cm.GetState(c.Source)
 	if err != nil {
 		return ConsentUnknown
@@ -93,33 +97,7 @@ func (c Config) GetConsentState() ConsentState {
 // SetConsentState sets the state for Config.Source to consent.
 // if Config.Source is "", the global source is effected.
 // returns an error if the state could not be set.
-func (c Config) SetConsentState(consent bool) error {
-	c.setDefaults()
-	cm := c.newConsentManager()
-	return cm.SetState(c.Source, consent)
-}
-
-func (c Config) newConsentManager() *consent.Manager {
-	return consent.New(c.ConsentDir)
-}
-
-func (c *Config) setDefaults() {
-	if c.ConsentDir == "" {
-		c.ConsentDir = constants.DefaultConfigPath
-	}
-	if c.InsightsDir == "" {
-		c.InsightsDir = constants.DefaultCachePath
-	}
-}
-
-func (f *CollectFlags) setDefaults() {
-	if f.Period == 0 {
-		f.Period = constants.DefaultPeriod
-	}
-}
-
-func (f *UploadFlags) setDefaults() {
-	if f.MinAge == 0 {
-		f.MinAge = constants.DefaultMinAge
-	}
+func (c Config) SetConsentState(consentState bool) error {
+	cm := consent.New(c.ConsentDir)
+	return cm.SetState(c.Source, consentState)
 }
