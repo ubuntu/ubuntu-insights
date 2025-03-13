@@ -5,7 +5,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
-	"github.com/ubuntu/ubuntu-insights/internal/uploader"
 )
 
 func installUploadCmd(app *App) {
@@ -22,9 +21,7 @@ func installUploadCmd(app *App) {
 			app.config.Upload.Sources = args
 
 			slog.Info("Running upload command")
-			return app.config.Upload.Run(app.config.consentDir, app.config.insightsDir, func(f *uploader.Factory) {
-				*f = app.newUploader
-			})
+			return app.config.Upload.Run(app.config.consentDir, app.config.insightsDir, app.newUploader)
 		},
 	}
 
