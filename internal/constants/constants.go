@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 var (
@@ -44,6 +45,15 @@ const (
 
 	// MaxReports is the maximum number of report files that can exist in a folder.
 	MaxReports = 150
+
+	// DefaultSource is the default source when none are provided.
+	DefaultCollectSource = runtime.GOOS
+
+	// DefaultPeriod is the default value for the collector's period.
+	DefaultPeriod = 1
+
+	// DefaultMinAge is the default value for the uploader's min-age.
+	DefaultMinAge = 604800
 )
 
 var (
