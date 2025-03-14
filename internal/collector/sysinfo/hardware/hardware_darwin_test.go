@@ -241,6 +241,18 @@ func TestCollectDarwin(t *testing.T) {
 			},
 		},
 
+		"Disk info missing AllDisksAndPartitions warns": {
+			cpuInfo:    "regular",
+			gpuInfo:    "regular",
+			memInfo:    "regular",
+			diskInfo:   "missing AllDisksAndPartitions",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
 		"Disk info with bad sizes warns": {
 			cpuInfo:    "regular",
 			gpuInfo:    "regular",
@@ -265,11 +277,35 @@ func TestCollectDarwin(t *testing.T) {
 			},
 		},
 
+		"Disk info with negative values warns": {
+			cpuInfo:    "regular",
+			gpuInfo:    "regular",
+			memInfo:    "regular",
+			diskInfo:   "negative",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
 		"Bad Disk warns": {
 			cpuInfo:    "regular",
 			gpuInfo:    "regular",
 			memInfo:    "regular",
 			diskInfo:   "bad",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Error Disk warns": {
+			cpuInfo:    "regular",
+			gpuInfo:    "regular",
+			memInfo:    "regular",
+			diskInfo:   "error",
 			screenInfo: "regular",
 
 			logs: map[slog.Level]uint{
@@ -656,6 +692,23 @@ func TestFakeDiskInfo(_ *testing.T) {
 		</dict>
 	</array>
 </dict>`)
+	case "missing AllDisksAndPartitions":
+		fmt.Println(`
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cool document type>
+<plist version="1.0">
+<dict>
+	<key>SomeInfo</key>
+	<array>
+		<dict>
+			<key>DeviceIdentifier</key>
+			<string>disk0</string>
+			<key>Size</key>
+			<integer>500107862016</integer>
+		</dict>
+	</array>
+</dict>
+</plist>`)
 	case "bad sizes":
 		fmt.Println(`
 <?xml version="1.0" encoding="UTF-8"?>
@@ -684,6 +737,38 @@ func TestFakeDiskInfo(_ *testing.T) {
 			</array>
 			<key>Size</key>
 			<integer>one million bytes</integer>
+		</dict>
+	</array>
+</dict>
+</plist>`)
+	case "negative":
+		fmt.Println(`
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AllDisksAndPartitions</key>
+	<array>
+		<dict>
+			<key>Content</key>
+			<string>GUID_partition_scheme</string>
+			<key>DeviceIdentifier</key>
+			<string>disk0</string>
+			<key>Partitions</key>
+			<array>
+				<dict>
+					<key>Content</key>
+					<string>EFI</string>
+					<key>DeviceIdentifier</key>
+					<string>disk0s1</string>
+					<key>Size</key>
+					<integer>-1000000</integer>
+					<key>VolumeName</key>
+					<string>EFI</string>
+				</dict>
+			</array>
+			<key>Size</key>
+			<integer>-20000000</integer>
 		</dict>
 	</array>
 </dict>
