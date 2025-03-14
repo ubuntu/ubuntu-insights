@@ -1,6 +1,6 @@
 wsl:
     subsystemversion: 2
-    systemd: not running
+    systemd: not used
     interop: enabled
     version: ""
     kernelversion: 5.15.167.4-microsoft-standard-WSL2
