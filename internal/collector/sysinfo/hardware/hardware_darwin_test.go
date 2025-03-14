@@ -1,10 +1,12 @@
 package hardware_test
 
 import (
+	"encoding/xml"
 	"flag"
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -654,20 +656,6 @@ func TestFakeDiskInfo(_ *testing.T) {
 		</dict>
 	</array>
 </dict>`)
-	case "dict no key":
-		fmt.Println(`
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist>
-<dict>
-<array>
-	<dict>
-		<string>disk0</string>
-		<integer>500107862016</integer>
-	</dict>
-</array>
-</dict>
-</plist>`)
 	case "bad sizes":
 		fmt.Println(`
 <?xml version="1.0" encoding="UTF-8"?>
@@ -698,16 +686,6 @@ func TestFakeDiskInfo(_ *testing.T) {
 			<integer>one million bytes</integer>
 		</dict>
 	</array>
-</dict>
-</plist>`)
-	case "bad value type":
-		fmt.Println(`
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-<key>AllDisksAndPartitions</key>
-<alistorsomething/>
 </dict>
 </plist>`)
 	case "bad":
@@ -826,5 +804,149 @@ func TestFakeGpuScreenInfo(_ *testing.T) {
 		fallthrough
 	case "missing":
 		os.Exit(0)
+	}
+}
+
+func TestParsePListDictDarwin(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		input   string
+		wantErr bool
+	}{
+		// Positive test cases
+		"Simple string gets parsed": {
+			input: "<key>100 + 200</key> <string>300</string>",
+		},
+
+		"Simple empty string gets parsed": {
+			input: "<key>nothing</key><string/>",
+		},
+
+		"Simple integer gets parsed": {
+			input: "<key>100 + 200</key> <integer>300</integer>",
+		},
+
+		"Simple multiple keys get parsed": {
+			input: "<key>1 + 2</key><string>three</string>\n<key>vv+vv</key><string>ww</string>",
+		},
+
+		"Simple empty array is empty": {
+			input: "<key>nothing</key><array/>",
+		},
+
+		"Simple nested array is nested": {
+			input: "<key>nothing nested</key><array><array/></array>",
+		},
+
+		"Simple array contains values": {
+			input: "<key>arr</key><array><string>I am string</string><integer>3000</integer></array>",
+		},
+
+		"Simple empty dict is empty": {
+			input: "",
+		},
+
+		"Simple empty nested dict is empty": {
+			input: "<key>nothing</key><dict/>",
+		},
+
+		"Nested data is parsed correctly": {
+			input: `<key>red</key><array><dict><key>color</key><integer>43210</integer></dict><string>0xff0000</string></array>
+					<key>green</key><array><array><integer>01234</integer></array><string>0x00ff00</string></array>
+					<key>blue</key><dict><key>color</key><string>0x0000ff</string></dict>
+					`,
+		},
+
+		// Negative test cases
+		"Invalid integer errors": {
+			input:   "<key>100 + 200</key> <integer>three hundred</integer>",
+			wantErr: true,
+		},
+
+		"Invalid value type errors": {
+			input:   "<key>1 + 4</key> <str>five</str>",
+			wantErr: true,
+		},
+
+		"Invalid value type end errors": {
+			input:   "<key>1 + 4</key> <string>five</str>",
+			wantErr: true,
+		},
+
+		"Array containing key errors": {
+			input:   "</key><array><key>key</key></array>",
+			wantErr: true,
+		},
+
+		"Array containing unexpected token errors": {
+			input:   "</key><array>[\"You, have, been, misinformed\"]</array>",
+			wantErr: true,
+		},
+
+		"Array containing unexpected token type errors": {
+			input:   "</key><array></called></array>",
+			wantErr: true,
+		},
+
+		// Negative key related test cases
+		"Invalid key start token errors": {
+			input:   "<kingdom>blade</key> <string>X</string>",
+			wantErr: true,
+		},
+
+		"Invalid key end token errors": {
+			input:   "<key>kingdom</blade> <string>X</string>",
+			wantErr: true,
+		},
+
+		"Duplicate key errors": {
+			input:   "<key>key</key><string>a</string>\n<key>key</key><string>b</string>",
+			wantErr: true,
+		},
+
+		"Unexpected key after key errors": {
+			input:   "<key>b</key>\n<key>a</key><string>:(</string>",
+			wantErr: true,
+		},
+
+		"Unexpected token before key errors": {
+			input:   "I am an unexpected token<string>:(</string>",
+			wantErr: true,
+		},
+
+		"Unexpected token after key errors": {
+			input:   "<key>:(</key>I am an unexpected token",
+			wantErr: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			tc.input = "<dict>" + tc.input + "</dict>"
+			r := strings.NewReader(tc.input)
+
+			dec := xml.NewDecoder(r)
+
+			startT, err := dec.Token()
+			require.NoError(t, err, "setup: failed to start parsing: %v", err)
+			require.NotNil(t, startT, "setup: unexpected EOF")
+
+			start, ok := startT.(xml.StartElement)
+			require.True(t, ok, "setup: first xml token was not a start token")
+
+			got, err := hardware.ParsePListDict(start, dec)
+
+			if tc.wantErr {
+				require.Error(t, err, "ParsePListDict should return an error and didn’t")
+				return
+			}
+			require.NoError(t, err, "ParsePListDict should not return an error")
+
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			assert.Equal(t, want, got, "ParsePListDict should return expected information")
+		})
 	}
 }

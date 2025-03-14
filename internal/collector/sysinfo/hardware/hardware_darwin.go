@@ -241,7 +241,7 @@ func parseDiskDict(data map[string]any, partition bool, log *slog.Logger) (out d
 	if sizeI, ok := data["Size"]; !ok {
 		log.Warn("disk missing Size")
 	} else {
-		if size, ok := sizeI.(int64); !ok {
+		if size, ok := sizeI.(int); !ok {
 			log.Warn("disk Size was not an integer")
 		} else {
 			v, err := fileutils.ConvertUnitToStandard("b", size)
@@ -393,10 +393,10 @@ func parsePListString(start xml.StartElement, dec *xml.Decoder) (string, error) 
 	return v.Val, err
 }
 
-// parsePListString converts a PList <integer> to a int64.
-func parsePListInt(start xml.StartElement, dec *xml.Decoder) (int64, error) {
+// parsePListString converts a PList <integer> to a int.
+func parsePListInt(start xml.StartElement, dec *xml.Decoder) (int, error) {
 	v := struct {
-		Val int64 `xml:",chardata"`
+		Val int `xml:",chardata"`
 	}{}
 	err := dec.DecodeElement(&v, &start)
 	return v.Val, err

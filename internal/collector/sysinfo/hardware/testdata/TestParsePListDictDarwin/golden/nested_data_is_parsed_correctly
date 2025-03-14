@@ -1,0 +1,8 @@
+blue:
+    color: "0x0000ff"
+green:
+    - - 1234
+    - "0x00ff00"
+red:
+    - color: 43210
+    - "0xff0000"

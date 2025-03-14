@@ -1,5 +1,7 @@
 package hardware
 
+import "encoding/xml"
+
 // WithCpuInfo overrides default CPU info.
 func WithCPUInfo(cmd []string) Options {
 	return func(o *options) {
@@ -33,4 +35,9 @@ func WithScreenInfo(cmd []string) Options {
 	return func(o *options) {
 		o.platform.screenCmd = cmd
 	}
+}
+
+// ParsePListDict exports parsePListDict.
+func ParsePListDict(start xml.StartElement, dec *xml.Decoder) (map[string]any, error) {
+	return parsePListDict(start, dec)
 }
