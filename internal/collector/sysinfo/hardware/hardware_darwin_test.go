@@ -142,6 +142,19 @@ func TestCollectDarwin(t *testing.T) {
 			},
 		},
 
+		"Error GPU warns": {
+			cpuInfo:    "regular",
+			gpuInfo:    "error",
+			memInfo:    "regular",
+			diskInfo:   "regular",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelInfo: 1,
+				slog.LevelWarn: 1,
+			},
+		},
+
 		"Missing Memory is missing": {
 			cpuInfo:    "regular",
 			gpuInfo:    "regular",
@@ -285,7 +298,7 @@ func TestCollectDarwin(t *testing.T) {
 			screenInfo: "regular",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 1,
+				slog.LevelWarn: 2,
 			},
 		},
 
@@ -1032,6 +1045,226 @@ func TestParsePListDictDarwin(t *testing.T) {
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			assert.Equal(t, want, got, "ParsePListDict should return expected information")
+		})
+	}
+}
+
+func TestParseDiskDictDarwin(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		input   map[string]any
+		wantErr bool
+
+		logs map[slog.Level]uint
+	}{
+		// Positive test cases
+		"Disk and partitions gets parsed": {
+			input: map[string]any{
+				"DeviceIdentifier": "disk0",
+
+				"Size": 40960000,
+				"Partitions": []any{
+					map[string]any{
+						"DeviceIdentifier": "disk0s0",
+						"Size":             10240000,
+					},
+					map[string]any{
+						"DeviceIdentifier": "disk0s1",
+						"Size":             30720000,
+					},
+				},
+			},
+		},
+
+		"Disk no partitions gets parsed and warns no partitions": {
+			input: map[string]any{
+				"DeviceIdentifier": "disk0",
+				"Size":             40960000,
+			},
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Disk negative size warns": {
+			input: map[string]any{
+				"DeviceIdentifier": "disk0",
+
+				"Size": -4096,
+				"Partitions": []any{
+					map[string]any{
+						"DeviceIdentifier": "disk0s0",
+						"Size":             40960000,
+					},
+				},
+			},
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Partitions negative size warns": {
+			input: map[string]any{
+				"DeviceIdentifier": "disk0",
+
+				"Size": 40960000,
+				"Partitions": []any{
+					map[string]any{
+						"DeviceIdentifier": "disk0s0",
+						"Size":             -1024,
+					},
+					map[string]any{
+						"DeviceIdentifier": "disk0s0",
+						"Size":             -30720000,
+					},
+				},
+			},
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 2,
+			},
+		},
+
+		"Partitions size arent integral warns": {
+			input: map[string]any{
+				"DeviceIdentifier": "disk0",
+
+				"Size": 40960000,
+				"Partitions": []any{
+					map[string]any{
+						"DeviceIdentifier": "disk0s0",
+						"Size":             "one",
+					},
+					map[string]any{
+						"DeviceIdentifier": "disk0s0",
+						"Size":             "three",
+					},
+				},
+			},
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 2,
+			},
+		},
+
+		"Partitions isnt array warns": {
+			input: map[string]any{
+				"DeviceIdentifier": "disk0",
+
+				"Size": 40960000,
+				"Partitions": map[string]any{
+					"DeviceIdentifier": "disk0s0",
+					"Size":             "one",
+				},
+			},
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Partitions arent dicts warns": {
+			input: map[string]any{
+				"DeviceIdentifier": "disk0",
+
+				"Size": 40960000,
+				"Partitions": []any{
+					"disk0s0",
+					"disk0s0",
+				},
+			},
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 2,
+			},
+		},
+
+		"Disk name isnt string warns": {
+			input: map[string]any{
+				"DeviceIdentifier": 1000,
+
+				"Size": 40960000,
+				"Partitions": []any{
+					map[string]any{
+						"DeviceIdentifier": "disk0s0",
+						"Size":             40960000,
+					},
+				},
+			},
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Disk name missing warns": {
+			input: map[string]any{
+				"Size": 40960000,
+				"Partitions": []any{
+					map[string]any{
+						"DeviceIdentifier": "disk0s0",
+						"Size":             40960000,
+					},
+				},
+			},
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Disk size missing warns": {
+			input: map[string]any{
+				"DeviceIdentifier": "disk0",
+
+				"Partitions": []any{
+					map[string]any{
+						"DeviceIdentifier": "disk0s0",
+						"Size":             4096,
+					},
+				},
+			},
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		// Lone error case
+		"Virtual disk errors": {
+			input: map[string]any{
+				"DeviceIdentifier": "disk0",
+
+				"Size":               4096,
+				"APFSPhysicalStores": []any{},
+				"Partitions":         []any{},
+			},
+			wantErr: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			l := testutils.NewMockHandler(slog.LevelDebug)
+			got, err := hardware.ParseDiskDict(tc.input, false, slog.New(&l))
+
+			if tc.wantErr {
+				require.Error(t, err, "ParsePListDict should return an error and didn’t")
+				return
+			}
+			require.NoError(t, err, "ParsePListDict should not return an error")
+
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			assert.Equal(t, want, got, "ParsePListDict should return expected information")
+
+			if !l.AssertLevels(t, tc.logs) {
+				l.OutputLogs(t)
+			}
 		})
 	}
 }

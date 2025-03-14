@@ -1,6 +1,9 @@
 package hardware
 
-import "encoding/xml"
+import (
+	"encoding/xml"
+	"log/slog"
+)
 
 // WithCpuInfo overrides default CPU info.
 func WithCPUInfo(cmd []string) Options {
@@ -40,4 +43,12 @@ func WithScreenInfo(cmd []string) Options {
 // ParsePListDict exports parsePListDict.
 func ParsePListDict(start xml.StartElement, dec *xml.Decoder) (map[string]any, error) {
 	return parsePListDict(start, dec)
+}
+
+// Disk appeases the linter.
+type Disk = disk
+
+// ParseDiskDict exports parseDiskDict.
+func ParseDiskDict(data map[string]any, partition bool, log *slog.Logger) (Disk, error) {
+	return parseDiskDict(data, partition, log)
 }

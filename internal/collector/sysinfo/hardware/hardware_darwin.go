@@ -238,22 +238,33 @@ func parseDiskDict(data map[string]any, partition bool, log *slog.Logger) (out d
 		}
 	}
 
-	if sizeI, ok := data["Size"]; !ok {
-		log.Warn("disk missing Size")
-	} else {
-		if size, ok := sizeI.(int); !ok {
-			log.Warn("disk Size was not an integer")
-		} else {
-			v, err := fileutils.ConvertUnitToStandard("b", size)
-			if err != nil {
-				log.Warn("could not convert bytes to standard", "error", err)
-			} else if v < 0 {
-				log.Warn("disk Size is negative", "value", v)
-			} else {
-				out.Size = uint64(v)
-			}
+	// use lambda to reduce nesting.
+	out.Size = func() uint64 {
+		sizeI, ok := data["Size"]
+		if !ok {
+			log.Warn("disk missing Size")
+			return 0
 		}
-	}
+		size, ok := sizeI.(int)
+		if !ok {
+			log.Warn("disk Size was not an integer")
+			return 0
+		}
+
+		if size < 0 {
+			log.Warn("disk Size is negative", "value", size)
+			return 0
+		}
+		v, err := fileutils.ConvertUnitToStandard("b", size)
+		if err != nil {
+			log.Warn("could not convert bytes to standard", "error", err)
+			return 0
+		}
+		if v < 0 {
+			panic("Disk size became negative when coverting units!")
+		}
+		return uint64(v)
+	}()
 
 	// partition is true if we are currently parsing a partition.
 	if partition {
