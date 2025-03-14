@@ -3,4 +3,3 @@ sources:
     - Bad-Key
 minage: 604800
 dryrun: false
-expretry: false

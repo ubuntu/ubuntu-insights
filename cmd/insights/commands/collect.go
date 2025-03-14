@@ -3,6 +3,7 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -83,6 +84,10 @@ func (a App) collectRun() (err error) {
 	}
 
 	insights, err := c.Compile(cConfig.Force)
+	if errors.Is(err, consent.ErrConsentFileNotFound) {
+		slog.Warn("Consent file not found, aborting collection")
+		return nil
+	}
 	if err != nil {
 		return err
 	}

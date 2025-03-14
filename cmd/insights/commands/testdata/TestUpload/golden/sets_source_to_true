@@ -2,4 +2,3 @@ sources:
     - "True"
 minage: 604800
 dryrun: false
-expretry: false

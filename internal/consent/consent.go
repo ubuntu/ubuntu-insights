@@ -3,6 +3,7 @@
 package consent
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -12,6 +13,11 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/ubuntu/decorate"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
+)
+
+var (
+	// ErrConsentFileNotFound is returned when a consent file is not found.
+	ErrConsentFileNotFound = fmt.Errorf("consent file not found")
 )
 
 // Manager is a struct that manages consent files.
@@ -34,7 +40,15 @@ func New(path string) *Manager {
 // If the source do not have a consent file, it will be considered as a false state.
 // If the source is an empty string, then the global consent state will be returned.
 // If the target consent file does not exist, it will not be created.
-func (cm Manager) GetState(source string) (bool, error) {
+// If the target consent file does not exist, then ErrConsentFileNotFound will be returned.
+func (cm Manager) GetState(source string) (state bool, err error) {
+	defer func() {
+		// If the err is a path error and the error is not found, return proper error
+		var pe *os.PathError
+		if errors.As(err, &pe) && errors.Is(pe.Err, os.ErrNotExist) {
+			err = errors.Join(ErrConsentFileNotFound, err)
+		}
+	}()
 	sourceConsent, err := readFile(cm.getFile(source))
 	if err != nil {
 		return false, err
@@ -58,6 +72,8 @@ func (cm Manager) SetState(source string, state bool) (err error) {
 // HasConsent returns true if there is consent for the given source, based on the hierarchy rules.
 // If the source has a consent file, its value is returned.
 // Otherwise, the global consent state is returned.
+//
+// If the source state can't be gotten, and the global consent file does not exist, then ErrConsentFileNotFound will be returned.
 func (cm Manager) HasConsent(source string) (bool, error) {
 	consent, err := cm.GetState(source)
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -24,9 +25,9 @@ func TestCollect(t *testing.T) {
 	tests := map[string]struct {
 		args []string
 
-		consentDir     string
-		removeFiles    []string
-		platformSource bool
+		consentDir      string
+		noGlobalConsent bool
+		platformSource  bool
 
 		wantErr      bool
 		wantUsageErr bool
@@ -94,6 +95,11 @@ func TestCollect(t *testing.T) {
 			wantErr:      true,
 			wantUsageErr: true,
 		},
+
+		"Exit 0 when no consent files": {
+			args:            []string{"collect", "Unknown", filepath.Join("testdata", "source_metrics", "normal.json")},
+			noGlobalConsent: true,
+		},
 	}
 
 	for name, tc := range tests {
@@ -119,7 +125,11 @@ func TestCollect(t *testing.T) {
 				return collector.New(cm, cachePath, source, period, true, args...)
 			}
 
-			a, _, cachePath := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewCollector(newCollector))
+			a, consentPath, cachePath := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewCollector(newCollector))
+			if tc.noGlobalConsent {
+				require.NoError(t, os.Remove(filepath.Join(consentPath, "consent.toml")), "Setup: could not remove global consent file")
+			}
+
 			err := a.Run()
 			if tc.wantErr {
 				require.Error(t, err)

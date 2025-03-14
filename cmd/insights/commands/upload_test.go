@@ -1,6 +1,8 @@
 package commands_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,6 +17,7 @@ func TestUpload(t *testing.T) {
 		args []string
 
 		consentDir        string
+		noGlobalConsent   bool
 		useReportsFixture bool
 
 		wantErr      bool
@@ -46,6 +49,14 @@ func TestUpload(t *testing.T) {
 		},
 		"Retry flag does not error": {
 			args: []string{"upload", "--retry"},
+		},
+		"Does not error when no consent files": {
+			args:            []string{"upload", "Unknown"},
+			noGlobalConsent: true,
+		},
+		"Does not error when no consent files and retry": {
+			args:            []string{"upload", "Unknown", "--retry"},
+			noGlobalConsent: true,
 		},
 
 		// Error cases
@@ -100,7 +111,12 @@ func TestUpload(t *testing.T) {
 
 				return uploader.New(cm, dir, source, minAge, true, args...)
 			}
-			a, _, _ := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewUploader(newUploader))
+			a, cDir, _ := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewUploader(newUploader))
+
+			if tc.noGlobalConsent {
+				require.NoError(t, os.Remove(filepath.Join(cDir, "consent.toml")), "Setup: could not remove global consent file")
+			}
+
 			err := a.Run()
 			if tc.wantErr {
 				require.Error(t, err)

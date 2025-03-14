@@ -72,7 +72,10 @@ func (a App) uploadRun() error {
 			} else {
 				err = u.Upload(a.config.Upload.Force)
 			}
-
+			if errors.Is(err, consent.ErrConsentFileNotFound) {
+				slog.Warn("Consent file not found, skipping upload", "source", s)
+				return
+			}
 			if err != nil {
 				errMsg := fmt.Errorf("failed to upload reports for source %s: %v", s, err)
 				mu.Lock()
