@@ -1,6 +1,6 @@
 wsl:
     subsystemversion: 1
-    systemd: not running
+    systemd: not used
     interop: disabled
     version: ""
     kernelversion: 4.4.0-26100-Microsoft

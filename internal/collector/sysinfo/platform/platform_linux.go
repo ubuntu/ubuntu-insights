@@ -34,21 +34,21 @@ type WSL struct {
 }
 
 type platformOptions struct {
-	root          string
-	detectVirtCmd []string
-	systemctlCmd  []string
-	wslVersionCmd []string
-	proStatusCmd  []string
+	root              string
+	detectVirtCmd     []string
+	systemdAnalyzeCmd []string
+	wslVersionCmd     []string
+	proStatusCmd      []string
 }
 
 // defaultOptions returns options for when running under a normal environment.
 func defaultPlatformOptions() platformOptions {
 	return platformOptions{
-		root:          "/",
-		detectVirtCmd: []string{"systemd-detect-virt"},
-		systemctlCmd:  []string{"systemctl", "is-system-running"},
-		wslVersionCmd: []string{"wsl.exe", "-v"},
-		proStatusCmd:  []string{"pro", "api", "u.pro.status.is_attached.v1"},
+		root:              "/",
+		detectVirtCmd:     []string{"systemd-detect-virt"},
+		systemdAnalyzeCmd: []string{"systemd-analyze", "time", "--system"},
+		wslVersionCmd:     []string{"wsl.exe", "-v"},
+		proStatusCmd:      []string{"pro", "api", "u.pro.status.is_attached.v1"},
 	}
 }
 
@@ -126,14 +126,10 @@ func (p Collector) collectWSL() WSL {
 	// Get the kernel version
 	info.KernelVersion = p.getKernelVersion()
 
-	// Check if systemd is running
-	info.Systemd = "not running"
-	sd, err := p.isSystemdRunning()
-	if err != nil {
-		p.log.Warn("failed to check if systemd is running", "error", err)
-	}
-	if sd {
-		info.Systemd = "running"
+	// Check if systemd was used during boot
+	info.Systemd = "not used"
+	if p.wasSystemdUsed() {
+		info.Systemd = "used"
 	}
 
 	if !p.interopEnabled() {
@@ -221,29 +217,35 @@ func getWSLRegex(entry string) *regexp.Regexp {
 	return regexp.MustCompile(fmt.Sprintf(`(?m)^\s*.*%s\s*.*[:|：]\s+([\S.]+)\s*$`, entry))
 }
 
-// isSystemdRunning checks if the systemd service manager is running on the system.
-// It executes the systemctl command with a timeout of 15 seconds to determine the status of systemd.
-// If the command fails to execute, or if the status is "unknown" it returns an error.
-// If the command outputs to stderr, it logs the output.
-// It returns true if systemd is running and not in "offline" status, otherwise it returns false.
-func (p Collector) isSystemdRunning() (bool, error) {
-	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, p.platform.systemctlCmd[0], p.platform.systemctlCmd[1:]...)
+// wasSystemdUsed checks if systemd was used during boot.
+// It executes the systemd-analyze command with a timeout of 15 seconds to determine if systemd was used.
+//
+// If the command outputs "System has not been booted with systemd as init system" to stderr, it returns false.
+// If the command outputs anything else to stderr, it logs the output.
+// If the command fails to execute, it logs the error and returns false.
+// It returns true if systemd was used during boot, otherwise it returns false.
+func (p Collector) wasSystemdUsed() bool {
+	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, p.platform.systemdAnalyzeCmd[0], p.platform.systemdAnalyzeCmd[1:]...)
+	if strings.Contains(stderr.String(), "System has not been booted with systemd as init system") {
+		return false
+	}
 	if err != nil {
-		return false, fmt.Errorf("failed to run systemctl is-system-running: %v", err)
+		p.log.Warn("failed to run systemd-analyze", "error", err)
+		return false
 	}
 	if stderr.Len() > 0 {
-		p.log.Info("systemctl output to stderr", "stderr", stderr)
+		p.log.Info("systemd-analyze output to stderr", "stderr", stderr)
 	}
 
 	if stdout.Len() == 0 {
-		return false, fmt.Errorf("systemd status empty")
+		p.log.Warn("systemd-analyze stdout is empty")
+		return false
 	}
 
-	if strings.Contains(stdout.String(), "unknown") {
-		return false, fmt.Errorf("systemd status unknown")
+	if !strings.Contains(stdout.String(), "Startup finished in") {
+		return false
 	}
-
-	return !strings.Contains(stdout.String(), "offline"), nil
+	return true
 }
 
 // isProAttached returns the attach state of Ubuntu Pro.
