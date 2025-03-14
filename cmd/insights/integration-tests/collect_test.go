@@ -130,6 +130,7 @@ func TestCollect(t *testing.T) {
 		"False Invalid": {
 			source:        "False",
 			sourceMetrics: "invalid.json",
+			wantExitCode:  1,
 		},
 		"False Normal MaxReports": {
 			source:        "False",
@@ -160,6 +161,7 @@ func TestCollect(t *testing.T) {
 			source:         "Unknown-A",
 			sourceMetrics:  "invalid.json",
 			consentFixture: "false-global",
+			wantExitCode:   1,
 		},
 		"Unknown-A Normal Global Bad-file": {
 			source:         "Unknown-A",

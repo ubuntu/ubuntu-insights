@@ -134,40 +134,32 @@ func New(cm Consent, cachePath, source string, period uint, dryRun bool, args ..
 }
 
 // Compile checks if appropriate to make a new report, and if so, collects and compiles the data into a report.
-func (c Collector) Compile(force bool) (insights []byte, err error) {
+//
+// Checks if a report already exists for the current period, and returns an error if it does.
+// Does not check consent, as this should be done at write time.
+func (c Collector) Compile(force bool) (insights Insights, err error) {
 	slog.Debug("Collecting data", "force", force)
 	defer decorate.OnError(&err, "insights compile failed")
 
 	if err := c.makeDirs(); err != nil {
-		return nil, err
+		return Insights{}, err
 	}
 
 	if !force {
 		duplicate, err := c.duplicateExists()
 		if err != nil {
-			return nil, err
+			return Insights{}, err
 		}
 		if duplicate {
-			return nil, ErrDuplicateReport
+			return Insights{}, ErrDuplicateReport
 		}
 	}
 
-	consent, err := c.consent.HasConsent(c.source)
+	insights, err = c.compile()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get consent state: %w", err)
+		return Insights{}, fmt.Errorf("failed to compile insights: %v", err)
 	}
-
-	insights, err = json.Marshal(constants.OptOutJSON)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal opt-out JSON: %v", err)
-	}
-	if consent {
-		insights, err = c.compile()
-		if err != nil {
-			return nil, fmt.Errorf("failed to compile insights: %v", err)
-		}
-		slog.Info("Insights report compiled", "report", insights)
-	}
+	slog.Info("Insights report compiled", "report", insights)
 
 	return insights, nil
 }
@@ -175,10 +167,29 @@ func (c Collector) Compile(force bool) (insights []byte, err error) {
 // Write writes the insights report to disk, and cleans up old reports.
 // Does not check for duplicates, as this should be done in Compile.
 //
-// If the dryRun is true, then Write does nothing.
-func (c Collector) Write(insights []byte) (err error) {
+// If the dryRun is true, then Write does nothing, other than checking consent.
+func (c Collector) Write(insights Insights) (err error) {
 	slog.Debug("Writing data", "dryRun", c.dryRun)
 	defer decorate.OnError(&err, "insights write failed")
+
+	data, err := json.Marshal(insights)
+	if err != nil {
+		return fmt.Errorf("failed to marshal insights: %v", err)
+	}
+
+	consent, err := c.consent.HasConsent(c.source)
+	if err != nil {
+		return fmt.Errorf("failed to get consent state: %w", err)
+	}
+	if consent {
+		slog.Info("Consent granted, writing insights report")
+	} else {
+		slog.Warn("Insights data will not be written to disk, as consent was not provided.")
+		data, err = json.Marshal(constants.OptOutJSON)
+		if err != nil {
+			return fmt.Errorf("failed to marshal opt-out JSON: %v", err)
+		}
+	}
 
 	if c.dryRun {
 		slog.Info("Dry run, not writing insights report")
@@ -189,7 +200,7 @@ func (c Collector) Write(insights []byte) (err error) {
 		return fmt.Errorf("failed to create directories: %v", err)
 	}
 
-	if err := c.write(insights); err != nil {
+	if err := c.write(data); err != nil {
 		return fmt.Errorf("failed to write insights report: %v", err)
 	}
 
@@ -227,7 +238,7 @@ func (c Collector) duplicateExists() (bool, error) {
 }
 
 // compile collects data from sources, and returns an Insights object.
-func (c Collector) compile() ([]byte, error) {
+func (c Collector) compile() (Insights, error) {
 	insights := Insights{
 		InsightsVersion: constants.Version,
 	}
@@ -235,18 +246,18 @@ func (c Collector) compile() ([]byte, error) {
 	// Collect system information.
 	info, err := c.sysInfo.Collect()
 	if err != nil {
-		return nil, fmt.Errorf("failed to collect system information: %v", err)
+		return Insights{}, fmt.Errorf("failed to collect system information: %v", err)
 	}
 	insights.SysInfo = info
 
 	// Load source specific metrics.
 	metrics, err := c.getSourceMetrics()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load source metrics: %v", err)
+		return Insights{}, fmt.Errorf("failed to load source metrics: %v", err)
 	}
 	insights.SourceMetrics = metrics
 
-	return json.Marshal(insights)
+	return insights, nil
 }
 
 // getSourceMetrics loads source specific metrics from a JSON file.

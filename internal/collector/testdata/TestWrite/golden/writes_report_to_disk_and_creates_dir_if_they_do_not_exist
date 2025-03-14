@@ -1,0 +1,1 @@
+local/10.json: '{"insightsVersion":"","systemInfo":{"hardware":{},"software":{}},"sourceMetrics":{"Test Name":"Writes report to disk and creates dir if they do not exist"}}'

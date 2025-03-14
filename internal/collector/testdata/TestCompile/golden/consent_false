@@ -1,1 +1,7 @@
-OptOut: true
+{
+  "insightsVersion": "Dev",
+  "systemInfo": {
+    "hardware": {},
+    "software": {}
+  }
+}
