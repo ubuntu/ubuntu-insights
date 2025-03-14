@@ -6,7 +6,11 @@ on:
       - main
     tags:
       - "*"
+    paths:
+      - "autostart/systemd/*"
   pull_request:
+    paths:
+      - "autostart/systemd/*"
 
 jobs:
   verify-systemd:
