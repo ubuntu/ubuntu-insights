@@ -12,7 +12,6 @@ False/local/2501.json: |-
     {
         "id": "2501 False local"
     }
-False/local/50000.json: '{"OptOut":true}'
 False/local/invalid.json: |-
     {
         "id": "invalid False local"

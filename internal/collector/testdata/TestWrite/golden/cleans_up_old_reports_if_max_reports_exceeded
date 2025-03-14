@@ -1,0 +1,5 @@
+local/5.txt: ""
+local/10.json: '{"insightsVersion":"","systemInfo":{"hardware":{},"software":{}},"sourceMetrics":{"Test Name":"Cleans up old reports if max reports exceeded"}}'
+local/20.json: ""
+uploaded/5.json: ""
+uploaded/30.json: ""

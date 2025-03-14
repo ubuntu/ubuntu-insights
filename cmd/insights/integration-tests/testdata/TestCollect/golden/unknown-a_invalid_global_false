@@ -65,7 +65,6 @@ Unknown-A/local/2501.json: |-
     {
         "id": "2501 Unknown-A local"
     }
-Unknown-A/local/50000.json: '{"OptOut":true}'
 Unknown-A/local/invalid.json: |-
     {
         "id": "invalid Unknown-A local",

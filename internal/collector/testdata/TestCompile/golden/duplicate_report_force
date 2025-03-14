@@ -1,4 +1,7 @@
-insightsVersion: Dev
-systemInfo:
-    hardware: {}
-    software: {}
+{
+  "insightsVersion": "Dev",
+  "systemInfo": {
+    "hardware": {},
+    "software": {}
+  }
+}

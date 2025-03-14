@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -84,22 +83,21 @@ func (a App) collectRun() (err error) {
 	}
 
 	insights, err := c.Compile(cConfig.Force)
-	if errors.Is(err, consent.ErrConsentFileNotFound) {
-		slog.Warn("Consent file not found, aborting collection")
-		return nil
-	}
 	if err != nil {
 		return err
 	}
 
-	// Pretty print insights
-	var prettyJSON bytes.Buffer
-	if err := json.Indent(&prettyJSON, insights, "", "    "); err != nil {
-		return err
+	ib, err := json.MarshalIndent(insights, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal insights report for console printing: %v", err)
 	}
-	fmt.Println(prettyJSON.String())
+	fmt.Println(string(ib))
 
 	err = c.Write(insights)
+	if errors.Is(err, consent.ErrConsentFileNotFound) {
+		slog.Warn("Consent file not found, will not write insights report to disk or upload.")
+		return nil
+	}
 
 	return err
 }

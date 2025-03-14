@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/collector"
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
-	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -167,18 +167,6 @@ func TestCompile(t *testing.T) {
 			source:   "source",
 			force:    true,
 		},
-		"Consent Error": {
-			period:   1,
-			consentM: cErr,
-			source:   "source",
-			wantErr:  true,
-		},
-		"Consent Error True": {
-			period:   1,
-			consentM: cErrTrue,
-			source:   "source",
-			wantErr:  true,
-		},
 		"Period 0": {
 			period:   0,
 			consentM: cTrue,
@@ -257,17 +245,16 @@ func TestCompile(t *testing.T) {
 			results, err := c.Compile(tc.force)
 			if tc.wantErr {
 				require.Error(t, err)
-				require.Nil(t, results)
+				require.Empty(t, results)
 				return
 			}
 			require.NoError(t, err)
 			assert.NotNil(t, results)
 
-			var got map[string]any
-			err = yaml.Unmarshal(results, &got)
+			got, err := json.MarshalIndent(results, "", "  ")
 			require.NoError(t, err)
-			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-			require.EqualValues(t, want, got)
+			want := testutils.LoadWithUpdateFromGolden(t, string(got))
+			assert.Equal(t, strings.ReplaceAll(want, "\r\n", "\n"), string(got), "Collect should return expected sys information")
 		})
 	}
 }
@@ -281,42 +268,57 @@ func TestWrite(t *testing.T) {
 	)
 
 	tests := map[string]struct {
+		consentM   collector.Consent
 		period     uint
 		dryRun     bool
 		maxReports uint
-		insights   any
+		insights   collector.Insights
 
 		noDir bool
 
 		wantErr bool
 	}{
-		"Basic": {
+		"Writes report to disk": {
 			period:     1,
 			maxReports: 5,
-			insights:   collector.Insights{},
 		},
-		"Dry Run": {
+		"Does not write or cleanup if dryRun": {
 			period:     1,
 			dryRun:     true,
 			maxReports: 5,
-			insights:   collector.Insights{},
 		},
-		"Max Reports": {
+		"Cleans up old reports if max reports exceeded": {
 			period:     5,
 			maxReports: 2,
-			insights:   collector.Insights{},
 		},
-		"Max Reports dryRun": {
+		"Does not write or cleanup if dryRun even if max reports exceeded": {
 			period:     5,
 			dryRun:     true,
 			maxReports: 2,
-			insights:   collector.Insights{},
 		},
-		"No Dir": {
+		"Writes report to disk and creates dir if they do not exist": {
 			period:     1,
 			maxReports: 5,
-			insights:   collector.Insights{},
 			noDir:      true,
+		},
+
+		// Consent Testing
+		"No consent writes opt-out": {
+			period:     1,
+			consentM:   cFalse,
+			maxReports: 5,
+		},
+		"Errors if consent errors": {
+			period:     1,
+			consentM:   cErr,
+			maxReports: 5,
+			wantErr:    true,
+		},
+		"Errors if consent true but errors": {
+			period:     1,
+			consentM:   cErrTrue,
+			maxReports: 5,
+			wantErr:    true,
 		},
 	}
 
@@ -325,6 +327,13 @@ func TestWrite(t *testing.T) {
 			t.Parallel()
 
 			dir := t.TempDir()
+			if tc.consentM == nil {
+				tc.consentM = cTrue
+			}
+			if tc.insights.SourceMetrics == nil {
+				tc.insights.SourceMetrics = make(map[string]any)
+			}
+			tc.insights.SourceMetrics["Test Name"] = name
 
 			sdir := filepath.Join(dir, source)
 			require.NoError(t, testutils.CopyDir(t, filepath.Join("testdata", "reports_cache"), sdir), "Setup: failed to copy reports cache")
@@ -337,12 +346,10 @@ func TestWrite(t *testing.T) {
 				collector.WithMaxReports(tc.maxReports),
 			}
 
-			c, err := collector.New(cTrue, dir, source, tc.period, tc.dryRun, opts...)
+			c, err := collector.New(tc.consentM, dir, source, tc.period, tc.dryRun, opts...)
 			require.NoError(t, err, "Setup: failed to create collector")
 
-			data, err := json.Marshal(tc.insights)
-			require.NoError(t, err)
-			err = c.Write(data)
+			err = c.Write(tc.insights)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
