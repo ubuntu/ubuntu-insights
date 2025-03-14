@@ -1,7 +1,0 @@
-[Unit]
-Description="Ubuntu Insights target unit, grouping collect and upload."
-Wants=ubuntu-insights-collect.service ubuntu-insights-upload.service
-After=ubuntu-insights-collect.service ubuntu-insights-upload.service
-
-[Install]
-Also=ubuntu-insights.timer

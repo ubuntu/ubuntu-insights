@@ -8,4 +8,4 @@ Restart=no
 Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/mnt/c/WINDOWS/system32"
 
 [Install]
-Also=ubuntu-insights.timer
+Also=ubuntu-insights-collect.timer

@@ -7,4 +7,4 @@ ExecStart=/usr/bin/ubuntu-insights upload -r
 Restart=no
 
 [Install]
-Also=ubuntu-insights.timer
+Also=ubuntu-insights-upload.timer
