@@ -230,12 +230,10 @@ func parseDiskDict(data map[string]any, partition bool, log *slog.Logger) (out d
 
 	if idI, ok := data["DeviceIdentifier"]; !ok {
 		log.Warn("disk missing DeviceIdentifier")
+	} else if id, ok := idI.(string); !ok {
+		log.Warn("disk DeviceIdentifier was not a string")
 	} else {
-		if id, ok := idI.(string); !ok {
-			log.Warn("disk DeviceIdentifier was not a string")
-		} else {
-			out.Name = id
-		}
+		out.Name = id
 	}
 
 	// use lambda to reduce nesting.
@@ -255,15 +253,12 @@ func parseDiskDict(data map[string]any, partition bool, log *slog.Logger) (out d
 			log.Warn("disk Size is negative", "value", size)
 			return 0
 		}
-		v, err := fileutils.ConvertUnitToStandard("b", size)
+		v, err := fileutils.ConvertUnitToStandard("b", uint64(size))
 		if err != nil {
 			log.Warn("could not convert bytes to standard", "error", err)
 			return 0
 		}
-		if v < 0 {
-			panic("Disk size became negative when coverting units!")
-		}
-		return uint64(v)
+		return v
 	}()
 
 	// partition is true if we are currently parsing a partition.
@@ -272,27 +267,30 @@ func parseDiskDict(data map[string]any, partition bool, log *slog.Logger) (out d
 	}
 
 	// otherwise, we want to get the current disk's partitions.
-	if partsI, ok := data["Partitions"]; !ok {
+	partsI, ok := data["Partitions"]
+	if !ok {
 		log.Warn("disk missing partitions")
-	} else {
-		if parts, ok := partsI.([]any); !ok {
-			log.Warn("disk partitions aren't an array")
-		} else {
-			for _, partI := range parts {
-				part, ok := partI.(map[string]any)
-				if !ok {
-					log.Warn("partitions contained non-dict data")
-					continue
-				}
+		return out, err
+	}
+	parts, ok := partsI.([]any)
+	if !ok {
+		log.Warn("disk partitions aren't an array")
+		return out, err
+	}
 
-				d, err := parseDiskDict(part, true, log)
-				if err != nil {
-					log.Warn("partitions contained a fake partition", "error", err)
-					continue
-				}
-				out.Partitions = append(out.Partitions, d)
-			}
+	for _, partI := range parts {
+		part, ok := partI.(map[string]any)
+		if !ok {
+			log.Warn("partitions contained non-dict data")
+			continue
 		}
+
+		d, err := parseDiskDict(part, true, log)
+		if err != nil {
+			log.Warn("partitions contained a fake partition", "error", err)
+			continue
+		}
+		out.Partitions = append(out.Partitions, d)
 	}
 
 	return out, err
