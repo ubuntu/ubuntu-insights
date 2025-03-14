@@ -267,6 +267,9 @@ func TestWrite(t *testing.T) {
 		source   = "source"
 	)
 
+	invalidInsights := collector.Insights{SourceMetrics: make(map[string]any)}
+	invalidInsights.SourceMetrics["Invalid"] = func() {}
+
 	tests := map[string]struct {
 		consentM   collector.Consent
 		period     uint
@@ -318,6 +321,14 @@ func TestWrite(t *testing.T) {
 			period:     1,
 			consentM:   cErrTrue,
 			maxReports: 5,
+			wantErr:    true,
+		},
+
+		// Other error cases
+		"Errors if Insights cannot be marshaled": {
+			period:     1,
+			maxReports: 5,
+			insights:   invalidInsights,
 			wantErr:    true,
 		},
 	}
