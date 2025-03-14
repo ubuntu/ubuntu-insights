@@ -1,0 +1,9 @@
+name: disk0
+size: 39
+partitions:
+    - name: disk0s0
+      size: 9
+      partitions: []
+    - name: disk0s1
+      size: 29
+      partitions: []

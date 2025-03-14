@@ -1,0 +1,6 @@
+name: disk0
+size: 0
+partitions:
+    - name: disk0s0
+      size: 0
+      partitions: []
