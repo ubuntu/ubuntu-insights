@@ -326,14 +326,18 @@ func (h Collector) populateBlkInfo(entries []lsblkEntry) []disk {
 }
 
 // collectBlocks uses lsblk to collect information about Blocks.
-func (h Collector) collectDisks() (info []disk, err error) {
+func (h Collector) collectDisks(pi platform.Info) (info []disk, err error) {
+	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, h.platform.lsblkCmd[0], h.platform.lsblkCmd[1:]...)
+	if err != nil && pi.WSL.SubsystemVersion == 1 {
+		h.log.Debug("skipping block info collection on WSL1")
+		return []disk{}, nil
+	}
+	// Late defer to avoid WSL 1 case.
 	defer func() {
 		if err == nil && len(info) == 0 {
 			err = fmt.Errorf("no Block information found")
 		}
 	}()
-
-	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, h.platform.lsblkCmd[0], h.platform.lsblkCmd[1:]...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run lsblk: %v", err)
 	}

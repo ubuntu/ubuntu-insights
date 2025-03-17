@@ -1,0 +1,17 @@
+product:
+    family: ""
+    name: ""
+    vendor: ""
+cpu:
+    name: Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz
+    vendor: GenuineIntel
+    arch: x86_64
+    cpus: 12
+    sockets: 1
+    cores: 6
+    threads: 2
+gpus: []
+mem:
+    total: 31941
+blks: []
+screens: []

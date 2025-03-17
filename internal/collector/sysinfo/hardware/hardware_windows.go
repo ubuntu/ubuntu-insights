@@ -168,7 +168,7 @@ func (s Collector) collectMemory() (mem memory, err error) {
 }
 
 // collectDisks uses Win32_DiskDrive and Win32_DiskPartition to collect information about disks.
-func (s Collector) collectDisks() (blks []disk, err error) {
+func (s Collector) collectDisks(platform.Info) (blks []disk, err error) {
 	var usedDiskFields = map[string]struct{}{
 		"Name":       {},
 		"Size":       {},

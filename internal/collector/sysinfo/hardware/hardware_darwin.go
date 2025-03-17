@@ -25,7 +25,7 @@ func (s Collector) collectMemory() (memory, error) {
 	return memory{}, nil
 }
 
-func (s Collector) collectDisks() ([]disk, error) {
+func (s Collector) collectDisks(platform.Info) ([]disk, error) {
 	return []disk{}, nil
 }
 

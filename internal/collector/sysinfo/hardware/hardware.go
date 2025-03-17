@@ -134,7 +134,7 @@ func (h Collector) Collect(pi platform.Info) (info Info, err error) {
 		info.Mem = memory{}
 	}
 
-	info.Blks, err = h.collectDisks()
+	info.Blks, err = h.collectDisks(pi)
 	if err != nil {
 		h.log.Warn("failed to collect disk info", "error", err)
 		info.Blks = []disk{}
