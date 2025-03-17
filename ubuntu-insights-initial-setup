@@ -19,5 +19,11 @@ function askQuestion() {
 	fi
 }
 
-echo "INSERT EXPLAINATION HERE" # TODO: Add explanation for why we would like to collect data
+echo "Help improve Ubuntu!
+
+You can share anonymous data with the Ubuntu development team so we can improve your experience.
+If you agree, we will collect and report metrics from current hardware, partition and session information.
+This information can't be used to identify a single machine and is presented before being sent to the server.
+For legal details, please visit: https://ubuntu.com/legal/systems-information-notice
+"
 askQuestion
