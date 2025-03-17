@@ -1,0 +1,28 @@
+product:
+    family: Apple Motherboard
+    name: ""
+    vendor: Apple
+cpu:
+    name: Intel(R) Core(TM) i7-3615QM CPU @ 2.30GHz
+    vendor: GenuineIntel
+    arch: arm64
+    cpus: 16
+    sockets: 1
+    cores: 8
+    threads: 2
+gpus:
+    - name: Intel UHD Graphics
+      vendor: Intel
+      driver: "0x0002"
+    - name: Intel UHD Graphics 2
+      vendor: Intel
+      driver: "0xf000"
+mem:
+    total: 16384
+blks: []
+screens:
+    - name: Color LCD
+      physicalresolution: 3072x1920
+      size: ""
+      resolution: 1920x1080
+      refreshrate: "59.90"

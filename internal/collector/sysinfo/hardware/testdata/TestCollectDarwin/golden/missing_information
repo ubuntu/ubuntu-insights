@@ -1,0 +1,17 @@
+product:
+    family: Apple Motherboard
+    name: ""
+    vendor: Apple
+cpu:
+    name: ""
+    vendor: ""
+    arch: arm64
+    cpus: 0
+    sockets: 0
+    cores: 0
+    threads: 0
+gpus: []
+mem:
+    total: 0
+blks: []
+screens: []

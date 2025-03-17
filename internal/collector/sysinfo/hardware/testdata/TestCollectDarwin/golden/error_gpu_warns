@@ -1,0 +1,31 @@
+product:
+    family: Apple Motherboard
+    name: ""
+    vendor: Apple
+cpu:
+    name: Intel(R) Core(TM) i7-3615QM CPU @ 2.30GHz
+    vendor: GenuineIntel
+    arch: arm64
+    cpus: 16
+    sockets: 1
+    cores: 8
+    threads: 2
+gpus: []
+mem:
+    total: 16384
+blks:
+    - name: disk0
+      size: 476940
+      partitions:
+        - name: disk0s1
+          size: 200
+          partitions: []
+        - name: disk0s2
+          size: 476611
+          partitions: []
+screens:
+    - name: Color LCD
+      physicalresolution: 3072x1920
+      size: ""
+      resolution: 1920x1080
+      refreshrate: "59.90"
