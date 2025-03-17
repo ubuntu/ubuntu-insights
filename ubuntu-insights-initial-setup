@@ -3,7 +3,7 @@ set -euo pipefail
 
 function askQuestion() {
 	echo "Would you like to opt-in to platform metrics collection (Y/n)? To see an example of the data collected, enter 'e'."
-	read -r view_choice
+	read -e -p "[Y/n/e]: " -i "y" view_choice
 	if [[ $view_choice =~ ^[Ee]$ ]]; then
 		ubuntu-insights collect -df
 		askQuestion
