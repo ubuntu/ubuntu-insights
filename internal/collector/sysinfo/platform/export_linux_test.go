@@ -14,11 +14,10 @@ func WithDetectVirtCmd(cmd []string) Options {
 	}
 }
 
-// WithSystemctlCmd sets the systemctl command for the platform collector.
-// This command is used to check if systemd is running.
-func WithSystemctlCmd(cmd []string) Options {
+// WithSystemdAnalyzeCmd sets the systemd-analyze command for the platform collector.
+func WithSystemdAnalyzeCmd(cmd []string) Options {
 	return func(o *options) {
-		o.platform.systemctlCmd = cmd
+		o.platform.systemdAnalyzeCmd = cmd
 	}
 }
 
