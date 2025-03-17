@@ -5,7 +5,7 @@ product:
 cpu:
     name: Intel(R) Core(TM) i7-3615QM CPU @ 2.30GHz
     vendor: GenuineIntel
-    arch: i386
+    arch: arm64
     cpus: 16
     sockets: 1
     cores: 8

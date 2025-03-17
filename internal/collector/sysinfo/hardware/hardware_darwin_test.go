@@ -361,7 +361,7 @@ func TestCollectDarwin(t *testing.T) {
 
 			options := []hardware.Options{
 				hardware.WithLogger(&l),
-				hardware.WithArch("amd64"),
+				hardware.WithArch("arm64"),
 			}
 
 			if tc.cpuInfo != "-" {

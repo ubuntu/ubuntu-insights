@@ -80,12 +80,6 @@ func (s Collector) collectCPU() (cpu, error) {
 
 	c := cpus[0]
 
-	// assume arch is ARM64 unless specififed otherwise.
-	arch := "arm64"
-	if c["machdep.cpu.vendor"] == "GenuineIntel" {
-		arch = "i386"
-	}
-
 	sockets, err := strconv.ParseUint(c["hw.packages"], 10, 64)
 	if err != nil {
 		s.log.Warn("CPU info contained invalid sockets", "value", c["hw.packages"])
@@ -110,7 +104,7 @@ func (s Collector) collectCPU() (cpu, error) {
 	return cpu{
 		Name:    c["machdep.cpu.brand_string"],
 		Vendor:  c["machdep.cpu.vendor"],
-		Arch:    arch,
+		Arch:    s.arch,
 		Cpus:    threads * sockets,
 		Sockets: sockets,
 		Cores:   cores * sockets,
