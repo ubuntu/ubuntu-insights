@@ -1,0 +1,23 @@
+#!/bin/bash
+set -euo pipefail
+
+function askQuestion() {
+	echo "Would you like to opt-in to platform metrics collection (Y/n)? To see an example of the data collected, enter 'e'."
+	read -r view_choice
+	if [[ $view_choice =~ ^[Ee]$ ]]; then
+		ubuntu-insights collect -df
+		askQuestion
+	elif [[ $view_choice =~ ^[Yy]$ ]]; then
+		ubuntu-insights consent -s=true
+		ubuntu-insights consent ubuntu -s=true
+	elif [[ $view_choice =~ ^[Nn]$ ]]; then
+		ubuntu-insights consent -s=false
+		ubuntu-insights consent ubuntu -s=false
+	else
+		echo "Invalid input (Y/n/e)."
+		askQuestion
+	fi
+}
+
+echo "INSERT EXPLAINATION HERE" # TODO: Add explanation for why we would like to collect data
+askQuestion
