@@ -339,6 +339,19 @@ func TestCollectDarwin(t *testing.T) {
 			},
 		},
 
+		"Error Screen warns": {
+			cpuInfo:    "regular",
+			gpuInfo:    "regular",
+			memInfo:    "regular",
+			diskInfo:   "regular",
+			screenInfo: "error",
+
+			logs: map[slog.Level]uint{
+				slog.LevelInfo: 1,
+				slog.LevelWarn: 1,
+			},
+		},
+
 		"Bad Screen info warns": {
 			cpuInfo:    "regular",
 			gpuInfo:    "regular",
@@ -349,6 +362,19 @@ func TestCollectDarwin(t *testing.T) {
 			logs: map[slog.Level]uint{
 				slog.LevelInfo: 1,
 				slog.LevelWarn: 1,
+			},
+		},
+
+		"Bad Screen values warns": {
+			cpuInfo:    "regular",
+			gpuInfo:    "regular",
+			memInfo:    "regular",
+			diskInfo:   "regular",
+			screenInfo: "bad values",
+
+			logs: map[slog.Level]uint{
+				slog.LevelInfo: 1,
+				slog.LevelWarn: 2,
 			},
 		},
 	}
@@ -857,6 +883,29 @@ func TestFakeGpuScreenInfo(_ *testing.T) {
           "spdisplays_mirror" : "spdisplays_off",
           "spdisplays_online" : "spdisplays_yes",
           "spdisplays_pixelresolution" : "spdisplays_3072x1920Retina"
+        },
+		{
+          "_IODisplayEDID" : "{length = 1, bytes = 0xffffffff }",
+          "_name" : "Color OLED",
+          "_spdisplays_display-product-id" : "dcba",
+          "_spdisplays_display-serial-number2" : "0",
+          "_spdisplays_display-vendor-id" : "678",
+          "_spdisplays_display-week" : "42",
+          "_spdisplays_display-year" : "2042",
+          "_spdisplays_displayID" : "a73beef4",
+          "_spdisplays_displayPath" : "IOService:/AppleACPIPlatformExpert/PCI0@0/AppleACPIPCI/IGPU@2/AppleIntelFramebuffer@0/AppleMCCSControlModule",
+          "_spdisplays_displayRegID" : "4231",
+          "_spdisplays_edid" : "0xffffffff",
+          "_spdisplays_pixels" : "800 x 600",
+          "_spdisplays_resolution" : "800 x 600 @ 60Hz",
+          "spdisplays_ambient_brightness" : "spdisplays_no",
+          "spdisplays_connection_type" : "spdisplays_internal",
+          "spdisplays_depth" : "CGSSixtyfourBitColor",
+          "spdisplays_display_type" : "spdisplays_built-in_retinaOLED",
+          "spdisplays_main" : "spdisplays_no",
+          "spdisplays_mirror" : "spdisplays_on",
+          "spdisplays_online" : "spdisplays_no",
+          "spdisplays_pixelresolution" : "spdisplays_1920x1080Retina"
         }
       ],
       "spdisplays_revision-id" : "0x0002",
@@ -898,6 +947,53 @@ func TestFakeGpuScreenInfo(_ *testing.T) {
       sppc|i_bus" : "spdislays_builtin",
       "pci_ice_tray"
   ]`)
+	case "bad values":
+		fmt.Println(`
+{
+  "SPDisplaysDataType" : [
+    {
+      "_name" : "IntelUHDGraphics",
+      "_spdisplays_vram" : "1234 GB",
+      "spdisplays_automatic_graphics_switching" : "spdisplays_supported",
+      "spdisplays_device-id" : "0xbeef",
+      "spdisplays_gmux-version" : "1.0",
+      "spdisplays_metalfamily" : "spdisplays_mtlgpufamily",
+      "spdisplays_ndrvs" : [
+        {
+          "_name": "eman_",
+          "_spdisplays_pixels" : 2073600,
+          "_spdisplays_resolution" : "one by one 1HZ",
+          "spdisplays_online" : "spdisplays_yes",
+          "spdisplays_pixelresolution" : "1 by 1"
+        }
+      ],
+      "spdisplays_revision-id" : "0x0002",
+      "spdisplays_vendor" : "Intel",
+      "spdisplays_vram_shared" : "1234 GB",
+      "sppci_bus" : "spdisplays_builtin",
+      "sppci_device_type" : "spdisplays_gpu",
+      "sppci_model" : "Intel UHD Graphics"
+    },
+    {
+      "_name" : "IntelUHDGraphics2",
+      "spdisplays_automatic_graphics_switching" : "spdisplays_supported",
+      "spdisplays_device-id" : "0x5432",
+      "spdisplays_efi-version" : "11.11.111",
+      "spdisplays_gmux-version" : "1.0.0",
+      "spdisplays_metalfamily" : "spdisplays_mtlgpufamilymac2",
+      "spdisplays_optionrom-version" : "113-D32206U1-019",
+      "spdisplays_pcie_width" : "x32",
+      "spdisplays_revision-id" : "0xf000",
+      "spdisplays_rom-revision" : "111-11111-111",
+      "spdisplays_vbios-version" : "010-1111111-010",
+      "spdisplays_vendor" : "Intel",
+      "spdisplays_vram" : "48 GB",
+      "sppci_bus" : "spdisplays_pcie_device",
+      "sppci_device_type" : "spdisplays_gpu",
+      "sppci_model" : "Intel UHD Graphics 2"
+    }
+  ]
+}`)
 	case "":
 		fallthrough
 	case "missing":
