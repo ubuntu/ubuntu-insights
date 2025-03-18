@@ -1,0 +1,29 @@
+#!/bin/bash
+set -euo pipefail
+
+function askQuestion() {
+	echo "Would you like to opt-in to platform metrics collection (Y/n)? To see an example of the data collected, enter 'e'."
+	read -e -p "[Y/n/e]: " -i "y" view_choice
+	if [[ $view_choice =~ ^[Ee]$ ]]; then
+		ubuntu-insights collect -df
+		askQuestion
+	elif [[ $view_choice =~ ^[Yy]$ ]]; then
+		ubuntu-insights consent -s=true
+		ubuntu-insights consent ubuntu -s=true
+	elif [[ $view_choice =~ ^[Nn]$ ]]; then
+		ubuntu-insights consent -s=false
+		ubuntu-insights consent ubuntu -s=false
+	else
+		echo "Invalid input (Y/n/e)."
+		askQuestion
+	fi
+}
+
+echo "Help improve Ubuntu!
+
+You can share anonymous data with the Ubuntu development team so we can improve your experience.
+If you agree, we will collect and report metrics from current hardware, partition and session information.
+This information can't be used to identify a single machine and is presented before being sent to the server.
+For legal details, please visit: https://ubuntu.com/legal/systems-information-notice
+"
+askQuestion
