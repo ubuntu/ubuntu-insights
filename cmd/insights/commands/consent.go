@@ -46,6 +46,13 @@ If no sources are provided, the global consent state is managed.`,
 		},
 	}
 
+	consentCmd.SetHelpFunc(func(command *cobra.Command, strings []string) {
+		if err := command.Flags().MarkHidden("insights-dir"); err != nil {
+			slog.Error("Failed to hide insights-dir flag", "error", err)
+		}
+		command.Parent().HelpFunc()(command, strings)
+	})
+
 	consentCmd.Flags().StringVarP(&app.config.Consent.State, "state", "s", "", "the consent state to set (true or false)")
 
 	app.cmd.AddCommand(consentCmd)
