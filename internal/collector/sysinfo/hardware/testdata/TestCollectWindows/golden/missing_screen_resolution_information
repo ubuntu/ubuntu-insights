@@ -20,19 +20,14 @@ gpus:
 mem:
     total: 65237
 blks:
-    - name: \\.\PHYSICALDRIVE0
-      size: 1907726
+    - size: 1907726
       partitions:
-        - name: 'Disk #0, Partition #0'
-          size: 300
+        - size: 300
           partitions: []
-        - name: 'Disk #0, Partition #1'
-          size: 900
+        - size: 900
           partitions: []
-        - name: 'Disk #0, Partition #2'
-          size: 21127
+        - size: 21127
           partitions: []
-        - name: 'Disk #0, Partition #3'
-          size: 1885272
+        - size: 1885272
           partitions: []
 screens: []

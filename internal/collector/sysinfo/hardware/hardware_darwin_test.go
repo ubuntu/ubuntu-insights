@@ -1278,40 +1278,6 @@ func TestParseDiskDictDarwin(t *testing.T) {
 			},
 		},
 
-		"Disk name isnt string warns": {
-			input: map[string]any{
-				"DeviceIdentifier": 1000,
-
-				"Size": 40960000,
-				"Partitions": []any{
-					map[string]any{
-						"DeviceIdentifier": "disk0s0",
-						"Size":             40960000,
-					},
-				},
-			},
-
-			logs: map[slog.Level]uint{
-				slog.LevelWarn: 1,
-			},
-		},
-
-		"Disk name missing warns": {
-			input: map[string]any{
-				"Size": 40960000,
-				"Partitions": []any{
-					map[string]any{
-						"DeviceIdentifier": "disk0s0",
-						"Size":             40960000,
-					},
-				},
-			},
-
-			logs: map[slog.Level]uint{
-				slog.LevelWarn: 1,
-			},
-		},
-
 		"Disk size missing warns": {
 			input: map[string]any{
 				"DeviceIdentifier": "disk0",

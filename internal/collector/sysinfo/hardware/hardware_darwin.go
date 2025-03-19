@@ -222,14 +222,6 @@ func parseDiskDict(data map[string]any, partition bool, log *slog.Logger) (out d
 		return out, errors.New("disk is a virtual APFS disk")
 	}
 
-	if idI, ok := data["DeviceIdentifier"]; !ok {
-		log.Warn("disk missing DeviceIdentifier")
-	} else if id, ok := idI.(string); !ok {
-		log.Warn("disk DeviceIdentifier was not a string")
-	} else {
-		out.Name = id
-	}
-
 	// use lambda to reduce nesting.
 	out.Size = func() uint64 {
 		sizeI, ok := data["Size"]

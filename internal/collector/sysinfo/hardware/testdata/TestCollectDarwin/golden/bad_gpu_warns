@@ -14,14 +14,11 @@ gpus: []
 mem:
     total: 16384
 blks:
-    - name: disk0
-      size: 476940
+    - size: 476940
       partitions:
-        - name: disk0s1
-          size: 200
+        - size: 200
           partitions: []
-        - name: disk0s2
-          size: 476611
+        - size: 476611
           partitions: []
 screens:
     - name: Color LCD

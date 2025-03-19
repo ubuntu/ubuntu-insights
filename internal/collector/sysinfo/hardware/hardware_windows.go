@@ -170,7 +170,6 @@ func (s Collector) collectMemory() (mem memory, err error) {
 // collectDisks uses Win32_DiskDrive and Win32_DiskPartition to collect information about disks.
 func (s Collector) collectDisks() (blks []disk, err error) {
 	var usedDiskFields = map[string]struct{}{
-		"Name":       {},
 		"Size":       {},
 		"Partitions": {},
 	}
@@ -178,7 +177,6 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 	var usedPartitionFields = map[string]struct{}{
 		"DiskIndex": {},
 		"Index":     {},
-		"Name":      {},
 		"Size":      {},
 	}
 
@@ -216,7 +214,6 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 		}
 
 		c := disk{
-			Name:       d["Name"],
 			Size:       getSize(d["Size"]),
 			Partitions: make([]disk, parts),
 		}
@@ -262,7 +259,6 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 		}
 
 		blks[d].Partitions[idx] = disk{
-			Name:       p["Name"],
 			Size:       getSize(p["Size"]),
 			Partitions: []disk{},
 		}
