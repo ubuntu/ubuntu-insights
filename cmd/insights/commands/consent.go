@@ -13,10 +13,12 @@ import (
 
 func installConsentCmd(app *App) {
 	consentCmd := &cobra.Command{
-		Use:   "consent [SOURCES](optional arguments)",
+		Use:   "consent [sources](optional arguments)",
 		Short: "Manage or get user consent state",
-		Long:  "Manage or get user consent state for data collection and upload",
-		Args:  cobra.ArbitraryArgs,
+		Long: `Manage or get user consent state for data collection and upload.
+		
+If no sources are provided, the global consent state is managed.`,
+		Args: cobra.ArbitraryArgs,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if _, err := strconv.ParseBool(app.config.Consent.State); app.config.Consent.State != "" && err != nil {
 				app.cmd.SilenceUsage = false
@@ -44,7 +46,14 @@ func installConsentCmd(app *App) {
 		},
 	}
 
-	consentCmd.Flags().StringVarP(&app.config.Consent.State, "state", "s", "", "the consent state to set (true or false), the current consent state is displayed if not set")
+	consentCmd.SetHelpFunc(func(command *cobra.Command, strings []string) {
+		if err := command.Flags().MarkHidden("insights-dir"); err != nil {
+			slog.Error("Failed to hide insights-dir flag", "error", err)
+		}
+		command.Parent().HelpFunc()(command, strings)
+	})
+
+	consentCmd.Flags().StringVarP(&app.config.Consent.State, "state", "s", "", "the consent state to set (true or false)")
 
 	app.cmd.AddCommand(consentCmd)
 }
