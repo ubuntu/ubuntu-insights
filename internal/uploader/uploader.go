@@ -74,14 +74,9 @@ type Config struct {
 type Factory = func (cm Consent, cachePath string, source string, minAge uint, dryRun bool, args ...Options) (Uploader, error)
 
 // Run creates an uploader then uploads using it based off the given config and arguments.
-func (c Config) Run(consentDir, cacheDir string, factoryOverride ...Factory) error {
+func (c Config) Run(consentDir, cacheDir string, factory Factory) error {
 	if cacheDir == "" {
 		cacheDir = constants.DefaultCachePath
-	}
-
-	factory := New;
-	for _, override := range factoryOverride {
-		factory = override
 	}
 
 	if len(c.Sources) == 0 {

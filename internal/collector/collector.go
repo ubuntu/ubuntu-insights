@@ -94,7 +94,7 @@ type Config struct {
 type Factory = func(cm Consent, cachePath, source string, period uint, dryRun bool, args ...Options) (Collector, error)
 
 // Run creates a collector then collects using it based off the given config and arguments.
-func (c Config) Run(consentDir, cacheDir string, writer func(Collector, Insights) error, factoryOverride ...Factory) error {
+func (c Config) Run(consentDir, cacheDir string, writer func(Collector, Insights) error, factory Factory) error {
 	// Handle global source and source metrics.
 	if c.SourceMetrics == "" && c.Source != "" {
 		return fmt.Errorf("no metricsPath for %s", c.Source)
@@ -113,11 +113,6 @@ func (c Config) Run(consentDir, cacheDir string, writer func(Collector, Insights
 	}
 	if c.Period == 0 {
 		c.Period = 1
-	}
-
-	factory := New
-	for _, override := range factoryOverride {
-		factory = override
 	}
 
 	cm := consent.New(consentDir)

@@ -6,8 +6,8 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/uploader"
 )
 
-// WithCollectorFactory overrides the default collection writer.
-func WithCollectorWriter(writer func (collector.Collector, []byte) error) collectOption {
+// WithCollectorWriter overrides the default collection writer.
+func WithCollectorWriter(writer func (collector.Collector, collector.Insights) error) collectOption {
 	return func(opts *collectOptions) {
 		opts.writer = writer
 	}
