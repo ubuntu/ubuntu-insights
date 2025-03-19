@@ -149,7 +149,58 @@ Global Flags:
 ### WSL
 
 ```json
-
+{
+  "insightsVersion": "Dev",
+  "systemInfo": {
+    "hardware": {
+      "cpu": {
+        "name": "AM Cirus 1200XK Processor",
+        "vendor": "Authentic",
+        "architecture": "x86_64",
+        "cpus": 256,
+        "sockets": 1,
+        "coresPerSocket": 128,
+        "threadsPerCore": 2
+      },
+      "memory": {
+        "size": 15904
+      },
+      "disks": [
+        {
+          "size": 388
+        },
+        {
+          "size": 4096
+        },
+        {
+          "size": 1048576
+        },
+        {
+          "size": 1048576
+        }
+      ]
+    },
+    "software": {
+      "os": {
+        "family": "linux",
+        "distribution": "Ubuntu",
+        "version": "24.04"
+      },
+      "timezone": "EDT",
+      "language": "C"
+    },
+    "platform": {
+      "wsl": {
+        "subsystemVersion": 2,
+        "systemd": "used",
+        "interop": "enabled",
+        "version": "2.4.11.0",
+        "kernelVersion": "5.15.167.4-microsoft-standard-WSL2"
+      },
+      "proAttached": true
+    }
+  }
+}
 ```
 
 ### Data being sent if consent is false
