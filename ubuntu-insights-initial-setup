@@ -9,10 +9,10 @@ function askQuestion() {
 		askQuestion
 	elif [[ $view_choice =~ ^[Yy]$ ]]; then
 		ubuntu-insights consent -s=true
-		ubuntu-insights consent ubuntu -s=true
+		ubuntu-insights consent linux -s=true
 	elif [[ $view_choice =~ ^[Nn]$ ]]; then
 		ubuntu-insights consent -s=false
-		ubuntu-insights consent ubuntu -s=false
+		ubuntu-insights consent linux -s=false
 	else
 		echo "Invalid input (Y/n/e)."
 		askQuestion
