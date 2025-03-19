@@ -134,13 +134,13 @@ Global Flags:
 
 ## Get involved
 
-This is an [open source](LICENSE) project and we warmly welcome community contributions, suggestions, and constructive feedback. If you're interested in contributing, please take a look at our [Contribution guidelines](CONTRIBUTING.md) first.
+This is an [open source](LICENSE) project, and we warmly welcome community contributions, suggestions, and constructive feedback. If you're interested in contributing, please take a look at our [Contribution guidelines](CONTRIBUTING.md) first.
 
-- to report an issue, please file a bug report against our repository, using a bug template.
-- for suggestions and constructive feedback, report a feature request bug report, using the proposed template.
+- To report an issue, please file a bug report against our repository, using a bug template.
+- For suggestions and constructive feedback, report a feature request bug report, using the proposed template.
 
 ## Get in touch
 
 We're friendly! We have a community forum at [https://discourse.ubuntu.com](https://discourse.ubuntu.com) where we discuss feature plans, development news, issues, updates and troubleshooting.
 
-For news and updates, follow the [Ubuntu twitter account](https://twitter.com/ubuntu) and on [Facebook](https://www.facebook.com/ubuntu).
+For news and updates, follow the [Ubuntu Twitter account](https://twitter.com/ubuntu) and on [Facebook](https://www.facebook.com/ubuntu).
