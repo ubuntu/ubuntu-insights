@@ -132,6 +132,25 @@ Global Flags:
   -v, --verbose count         issue INFO (-v), DEBUG (-vv)
 ```
 
+## Example Insights Reports
+
+### Ubuntu Desktop
+```json
+```
+
+### WSL
+
+```json
+```
+
+### Data being sent if consent is false
+
+```json
+{
+    "OptOut": true
+}
+```
+
 ## Get involved
 
 This is an [open source](LICENSE) project, and we warmly welcome community contributions, suggestions, and constructive feedback. If you're interested in contributing, please take a look at our [Contribution guidelines](CONTRIBUTING.md) first.
