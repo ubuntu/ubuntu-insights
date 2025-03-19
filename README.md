@@ -15,13 +15,19 @@
 
 This is the code repository for **Ubuntu Insights**, a user transparent, open, platform-agnostic and cross application solution for reporting hardware information and other collected metrics.
 
-Ubuntu Insight is designed to show you exactly what is being sent, and allow you to acknowledge and control your own data. The code in this repository is designed to mainly be invoked by a controlling application, but a command line tool is also provided.
+Ubuntu Insight is designed to show you exactly what is being sent, and allow you to acknowledge and control your own data. The code in this repository is designed to mainly be invoked by a controlling application, but a command-line tool is also provided.
 
 This is designed to be a full replacement for Ubuntu Report.
 
 ## About
 
-## Command Line Usage
+Ubuntu Insights caches all collected data locally, and will only attempt to upload insights reports following a minimum period (1 week by default). It checks for consent both at the time of collection and at the time of upload. If consent was not given at either of those two points, then the information is not sent to the server. Once a report has been uploaded, it is removed from the `local` cache folder, and the data that was sent is written to the `uploaded` folder.
+
+By default, Ubuntu Insights will only collect once per collection period.
+
+To execute the interactive command-line interface manually, use `ubuntu-insights`.
+
+## Command-Line Interface Usage
 
 ### ubuntu-insights
 
@@ -135,19 +141,22 @@ Global Flags:
 ## Example Insights Reports
 
 ### Ubuntu Desktop
+
 ```json
+
 ```
 
 ### WSL
 
 ```json
+
 ```
 
 ### Data being sent if consent is false
 
 ```json
 {
-    "OptOut": true
+  "OptOut": true
 }
 ```
 
