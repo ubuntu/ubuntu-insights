@@ -37,7 +37,7 @@ type CollectFlags struct {
 }
 
 type collectOptions struct {
-	writer  func(collector.Collector, []byte) error
+	writer  func(collector.Collector, collector.Insights) error
 	factory collector.Factory
 }
 
@@ -72,7 +72,7 @@ func (c Config) Collect(metricsPath string, flags CollectFlags, opts ...collectO
 
 	o := collectOptions{
 		factory: collector.New,
-		writer: func(c collector.Collector, b []byte) error {
+		writer: func(c collector.Collector, b collector.Insights) error {
 			return c.Write(b)
 		},
 	}
