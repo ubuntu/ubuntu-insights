@@ -70,8 +70,12 @@ func New(args ...Options) (*App, error) {
 		newCollector: opts.newCollector,
 	}
 	a.cmd = &cobra.Command{
-		Use:           constants.CmdName + " [COMMAND]",
-		Long:          "",
+		Use:   constants.CmdName,
+		Short: "A transparent tool to collect and share anonymous insights about your system",
+		Long: `A transparent tool to collect and share anonymous insights about your system.
+		
+If consent is given, this tool collects non-personally identifying hardware, software, and platform information, and shares it with the Ubuntu Development team.
+The information collected can't be used to identify a single machine. All reports are cached on the local machine and can be reviewed before and after uploading.`,
 		SilenceErrors: true,
 		Version:       constants.Version,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {

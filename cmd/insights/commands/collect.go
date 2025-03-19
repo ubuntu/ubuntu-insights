@@ -16,11 +16,12 @@ import (
 
 func installCollectCmd(app *App) {
 	collectCmd := &cobra.Command{
-		Use:   "collect [SOURCE] [SOURCE-METRICS-PATH](required if source provided)",
+		Use:   "collect [source] [source-metrics-path](required if source provided)",
 		Short: "Collect system information",
 		Long: `Collect system information and metrics and store it locally.
-		If SOURCE is not provided, then it is the source is assumed to be the currently detected platform. Additionally, there should be no SOURCE-METRICS-PATH provided.
-		If SOURCE is provided, then the SOURCE-METRICS-PATH should be provided as well.`,
+
+If source is not provided, then the source is assumed to be the currently detected platform. Additionally, there should be no source-metrics-path provided.
+If source is provided, then the source-metrics-path should be provided as well.`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if err := cobra.MaximumNArgs(2)(cmd, args); err != nil {
 				return err
