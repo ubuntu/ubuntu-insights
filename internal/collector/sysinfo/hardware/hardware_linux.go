@@ -3,6 +3,7 @@ package hardware
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -205,7 +206,7 @@ func (h Collector) collectGPU(card string) (info gpu, err error) {
 	}
 
 	info.Vendor = fileutils.ReadFileLogError(filepath.Join(devDir, "vendor"), h.log)
-	info.Name = fileutils.ReadFileLogError(filepath.Join(devDir, "label"), h.log)
+	info.Name = fileutils.ReadFileLog(filepath.Join(devDir, "label"), h.log, slog.LevelInfo) // label is not always present
 	info.Device = fileutils.ReadFileLogError(filepath.Join(devDir, "device"), h.log)
 
 	if strings.ContainsRune(info.Vendor, '\n') {
