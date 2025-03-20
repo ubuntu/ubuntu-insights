@@ -37,13 +37,13 @@ func TestCollectLinux(t *testing.T) {
 	}{
 		// Non-WSL
 		"Non-WSL Basic with Pro Attached": {
-			detectVirtCmd:     "regular",
+			detectVirtCmd:     "none",
 			systemdAnalyzeCmd: "regular",
 			wslVersionCmd:     "error",
 			proStatusCmd:      "attached",
 		},
 		"Non-WSL Basic with Pro Detached": {
-			detectVirtCmd:     "regular",
+			detectVirtCmd:     "none",
 			systemdAnalyzeCmd: "regular",
 			wslVersionCmd:     "error",
 			proStatusCmd:      "detached",
@@ -88,6 +88,13 @@ func TestCollectLinux(t *testing.T) {
 				slog.LevelWarn: 1,
 				slog.LevelInfo: 2,
 			},
+		},
+		// Other virt types
+		"Other virt type (uml) with Pro Attached": {
+			detectVirtCmd:     "uml",
+			systemdAnalyzeCmd: "regular",
+			wslVersionCmd:     "error",
+			proStatusCmd:      "attached",
 		},
 
 		// WSL 2
@@ -432,6 +439,9 @@ func TestFakeVirtInfo(_ *testing.T) {
 		os.Exit(1)
 	case "error no exit":
 		fmt.Fprintf(os.Stderr, "Error requested in fake systemd-detect-virt")
+	case "none":
+		fmt.Println("none")
+		os.Exit(1)
 	case "regular":
 		fmt.Println("uml")
 	case "wsl":
