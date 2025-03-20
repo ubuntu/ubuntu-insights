@@ -20,17 +20,13 @@ gpus:
 mem:
     total: 0
 blks:
-    - name: sda
-      size: 953856
+    - size: 953856
       partitions:
-        - name: sda1
-          size: 1024
+        - size: 1024
           partitions: []
-        - name: sda2
-          size: 2048
+        - size: 2048
           partitions: []
-        - name: sda3
-          size: 950784
+        - size: 950784
           partitions: []
 screens:
     - name: HDMI-0

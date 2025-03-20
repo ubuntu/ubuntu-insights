@@ -20,20 +20,15 @@ gpus:
 mem:
     total: 65237
 blks:
-    - name: \\.\PHYSICALDRIVE0
-      size: 1907726
+    - size: 1907726
       partitions:
-        - name: ""
-          size: 0
+        - size: 0
           partitions: []
-        - name: ""
-          size: 0
+        - size: 0
           partitions: []
-        - name: ""
-          size: 0
+        - size: 0
           partitions: []
-        - name: ""
-          size: 0
+        - size: 0
           partitions: []
 screens:
     - name: Default Monitor

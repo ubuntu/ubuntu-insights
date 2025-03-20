@@ -273,7 +273,6 @@ func (h Collector) collectMemory() (memory, error) {
 }
 
 type lsblkEntry struct {
-	Name     string       `json:"name"`
 	Size     string       `json:"size"`
 	Type     string       `json:"type"`
 	Children []lsblkEntry `json:"children,omitempty"`
@@ -309,13 +308,11 @@ func (h Collector) populateBlkInfo(entries []lsblkEntry) []disk {
 		switch strings.ToLower(e.Type) {
 		case "disk":
 			info = append(info, disk{
-				Name:       e.Name,
 				Size:       getSize(e.Size),
 				Partitions: h.populateBlkInfo(e.Children),
 			})
 		case "part":
 			info = append(info, disk{
-				Name:       e.Name,
 				Size:       getSize(e.Size),
 				Partitions: []disk{},
 			})
