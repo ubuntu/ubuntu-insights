@@ -307,7 +307,7 @@ func TestCollectWindows(t *testing.T) {
 			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 12,
+				slog.LevelWarn: 13,
 			},
 		},
 
@@ -1234,6 +1234,21 @@ TotalTracks                 : 62016255
 TracksPerCylinder           : 255
 Caption                     : Generic Drive
 Description                 : Disk drive
+Name                        : \\.\PHYSICALDRIVE111
+Model                       : Generic Drive
+
+Partitions                  : 1
+BytesPerSector              : 512
+Index                       : 0
+SectorsPerTrack             : 63
+Size                        : 2000396321280
+TotalCylinders              : 243201
+TotalHeads                  : 255
+TotalSectors                : 3907024065
+TotalTracks                 : 62016255
+TracksPerCylinder           : 255
+Caption                     : Generic Drive
+Description                 : Duplicate disk
 Name                        : \\.\PHYSICALDRIVE111
 Model                       : Generic Drive`)
 	case "":

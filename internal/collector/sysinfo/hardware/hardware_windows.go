@@ -228,6 +228,10 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 			s.log.Warn("disk index was larger than disks", "value", idx)
 			continue
 		}
+		if blks[idx].Size != 0 {
+			s.log.Warn("duplicate disk index", "value", idx)
+			continue
+		}
 		blks[idx] = c
 	}
 

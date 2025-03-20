@@ -290,6 +290,8 @@ blks:
       partitions: []
     - size: 0
       partitions: []
+    - size: 0
+      partitions: []
 screens:
     - name: Default Monitor
       physicalresolution: ""
