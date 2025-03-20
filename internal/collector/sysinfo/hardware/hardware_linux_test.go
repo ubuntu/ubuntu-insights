@@ -282,7 +282,7 @@ func TestCollectLinux(t *testing.T) {
 			blkInfo:    "garbage",
 			screenInfo: "garbage",
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 18,
+				slog.LevelWarn: 19,
 			},
 		},
 		"WSL hardware information": {
