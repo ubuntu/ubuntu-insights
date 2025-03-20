@@ -67,7 +67,9 @@ func (p Collector) collectPlatform() (info Info, err error) {
 func (p Collector) isWSL() bool {
 	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, p.platform.detectVirtCmd[0], p.platform.detectVirtCmd[1:]...)
 	if err != nil {
-		p.log.Warn("failed to run systemd-detect-virt", "error", err)
+		if !strings.Contains(stdout.String(), "none") {
+			p.log.Warn("failed to run systemd-detect-virt", "error", err)
+		}
 		return false
 	}
 	if stderr.Len() > 0 {
