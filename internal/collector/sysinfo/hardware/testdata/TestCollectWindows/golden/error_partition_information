@@ -20,7 +20,21 @@ gpus:
 mem:
     total: 65237
 blks:
-    - size: 1907726
+    - size: 9537534
+      partitions:
+        - size: 0
+          partitions: []
+    - size: 953867
+      partitions:
+        - size: 0
+          partitions: []
+    - size: 976756
+      partitions:
+        - size: 0
+          partitions: []
+        - size: 0
+          partitions: []
+    - size: 0
       partitions:
         - size: 0
           partitions: []
@@ -28,6 +42,8 @@ blks:
           partitions: []
         - size: 0
           partitions: []
+    - size: 511993
+      partitions:
         - size: 0
           partitions: []
 screens:

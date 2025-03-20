@@ -171,6 +171,7 @@ func (s Collector) collectMemory() (mem memory, err error) {
 func (s Collector) collectDisks() (blks []disk, err error) {
 	var usedDiskFields = map[string]struct{}{
 		"Size":       {},
+		"Index":      {},
 		"Partitions": {},
 	}
 
@@ -197,7 +198,7 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 
 	const maxPartitions = 128
 
-	blks = make([]disk, 0, len(disks))
+	blks = make([]disk, len(disks))
 	for _, d := range disks {
 		parts, err := strconv.Atoi(d["Partitions"])
 		if err != nil {
@@ -217,10 +218,17 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 			Size:       getSize(d["Size"]),
 			Partitions: make([]disk, parts),
 		}
-		for i := range c.Partitions {
-			c.Partitions[i].Partitions = []disk{}
+
+		idx, err := strconv.ParseUint(d["Index"], 10, 64)
+		if err != nil {
+			s.log.Warn("disk index was not an unsigned integer", "error", err)
+			continue
 		}
-		blks = append(blks, c)
+		if idx >= uint64(len(blks)) {
+			s.log.Warn("disk index was larger than disks", "value", idx)
+			continue
+		}
+		blks[idx] = c
 	}
 
 	parts, err := cmdutils.RunListFmt(s.platform.partitionCmd, usedPartitionFields, s.log)

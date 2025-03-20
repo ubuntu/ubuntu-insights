@@ -22,13 +22,13 @@ mem:
 blks:
     - size: 1907726
       partitions:
-        - size: 300
+        - size: 9537534
           partitions: []
-        - size: 900
+        - size: 0
           partitions: []
-        - size: 21127
+        - size: 0
           partitions: []
-        - size: 1885272
+        - size: 0
           partitions: []
         - size: 0
           partitions: []
@@ -281,6 +281,14 @@ blks:
     - size: 1907726
       partitions: []
     - size: 1907726
+      partitions: []
+    - size: 0
+      partitions:
+        - size: 100
+          partitions: []
+    - size: 0
+      partitions: []
+    - size: 0
       partitions: []
 screens:
     - name: Default Monitor

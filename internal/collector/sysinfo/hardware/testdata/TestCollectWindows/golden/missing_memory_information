@@ -20,15 +20,31 @@ gpus:
 mem:
     total: 0
 blks:
-    - size: 1907726
+    - size: 9537534
       partitions:
-        - size: 300
+        - size: 9537534
           partitions: []
-        - size: 900
+    - size: 953867
+      partitions:
+        - size: 953852
           partitions: []
-        - size: 21127
+    - size: 976756
+      partitions:
+        - size: 1075
           partitions: []
-        - size: 1885272
+        - size: 975686
+          partitions: []
+    - size: 0
+      partitions:
+        - size: 100
+          partitions: []
+        - size: 952983
+          partitions: []
+        - size: 768
+          partitions: []
+    - size: 511993
+      partitions:
+        - size: 511983
           partitions: []
 screens:
     - name: Default Monitor
