@@ -58,10 +58,10 @@ type disk struct {
 
 // screen contains information for a screen.
 type screen struct {
-	PhysicalResolution string `json:"physicalResolution"`
-	Size               string `json:"size"`
-	Resolution         string `json:"resolution"`
-	RefreshRate        string `json:"refreshRate"`
+	PhysicalResolution string `json:"physicalResolution,omitempty"`
+	Size               string `json:"size,omitempty"`
+	Resolution         string `json:"resolution,omitempty"`
+	RefreshRate        string `json:"refreshRate,omitempty"`
 }
 
 // Collector handles dependencies for collecting hardware information.
