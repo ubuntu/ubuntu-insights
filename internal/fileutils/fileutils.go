@@ -2,6 +2,7 @@
 package fileutils
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -39,14 +40,20 @@ func AtomicWrite(path string, data []byte) error {
 }
 
 // ReadFileLogError returns the data in the file path, trimming whitespace, or "" on error.
+// If an error occurs, it logs the error at the Warn level.
 func ReadFileLogError(path string, log *slog.Logger) string {
+	return ReadFileLog(path, log, slog.LevelWarn)
+}
+
+// ReadFileLog returns the data in the file path, trimming whitespace, or "" on error.
+// If an error occurs, it logs the error at the specified level.
+func ReadFileLog(path string, log *slog.Logger, level slog.Level) string {
 	log.Debug("reading file", "file", path)
 	f, err := os.ReadFile(path)
 	if err != nil {
-		log.Warn("failed to read file", "file", path, "error", err)
+		log.Log(context.Background(), level, "failed to read file", "file", path, "error", err)
 		return ""
 	}
-
 	return strings.TrimSpace(string(f))
 }
 

@@ -12,9 +12,11 @@ cpu:
     threads: 0
 gpus:
     - name: ""
+      device: ""
       vendor: ""
       driver: .
     - name: ""
+      device: ""
       vendor: ""
       driver: .
 mem:

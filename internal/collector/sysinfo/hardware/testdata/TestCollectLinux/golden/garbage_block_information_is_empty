@@ -12,9 +12,11 @@ cpu:
     threads: 2
 gpus:
     - name: Onboard - Video
+      device: 0xdevice0
       vendor: "0x8086"
       driver: i915
     - name: NVIDIA GeForce GTX 1050 Ti
+      device: 0xdevice1
       vendor: "0x10de"
       driver: nvidia
 mem:

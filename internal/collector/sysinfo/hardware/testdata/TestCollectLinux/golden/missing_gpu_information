@@ -12,9 +12,11 @@ cpu:
     threads: 2
 gpus:
     - name: ""
+      device: 0xdevice0
       vendor: ""
       driver: ""
     - name: NVIDIA GeForce GTX 1050 Ti
+      device: 0xdevice1
       vendor: "0x10de"
       driver: nvidia
 mem:

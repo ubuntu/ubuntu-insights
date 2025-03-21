@@ -38,7 +38,8 @@ type cpu struct {
 
 // gpu contains information for a gpu.
 type gpu struct {
-	Name   string `json:"name"`
+	Name   string `json:"name,omitempty"`
+	Device string `json:"device,omitempty"`
 	Vendor string `json:"vendor"`
 	Driver string `json:"driver"`
 }
