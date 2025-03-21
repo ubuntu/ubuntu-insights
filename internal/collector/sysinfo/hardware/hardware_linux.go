@@ -409,7 +409,6 @@ func (h Collector) collectScreens(pi platform.Info) (info []screen, err error) {
 		}
 
 		info = append(info, screen{
-			Name:               header[1],
 			PhysicalResolution: header[3],
 			Size:               header[4],
 

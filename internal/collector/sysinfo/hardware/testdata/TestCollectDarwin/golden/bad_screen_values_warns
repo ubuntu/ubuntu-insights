@@ -27,8 +27,7 @@ blks:
         - size: 476611
           partitions: []
 screens:
-    - name: eman_
-      physicalresolution: ""
+    - physicalresolution: ""
       size: ""
       resolution: ""
       refreshrate: ""

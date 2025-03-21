@@ -12,9 +12,11 @@ cpu:
     threads: 2
 gpus:
     - name: NVIDIA GeForce RTX 3050 Ti Laptop GPU
+      device: ""
       vendor: NVIDIA
       driver: nvldumdx.dll
     - name: Intel(R) UHD Graphics
+      device: ""
       vendor: Intel Corporation
       driver: igdumdim0.dll
 mem:
@@ -47,13 +49,11 @@ blks:
         - size: 511983
           partitions: []
 screens:
-    - name: Default Monitor
-      physicalresolution: ""
+    - physicalresolution: ""
       size: ""
       resolution: 1920x1080
       refreshrate: ""
-    - name: Generic PnP Monitor
-      physicalresolution: ""
+    - physicalresolution: ""
       size: ""
       resolution: 1920x1080
       refreshrate: ""

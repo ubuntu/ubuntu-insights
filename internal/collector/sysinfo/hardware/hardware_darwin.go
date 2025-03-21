@@ -530,9 +530,7 @@ func (s Collector) collectScreens(platform.Info) ([]screen, error) {
 				continue
 			}
 
-			scr := screen{
-				Name: display.Name,
-			}
+			scr := screen{}
 
 			m := screenResolutionRegex.FindStringSubmatch(display.ResolutionRefresh)
 			if len(m) != 4 {
