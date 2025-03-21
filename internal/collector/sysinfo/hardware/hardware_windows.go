@@ -20,8 +20,8 @@ type platformOptions struct {
 	diskCmd      []string
 	partitionCmd []string
 
-	screenResCmd  []string
-	screenSizeCmd []string
+	screenResCmd   []string
+	displaySizeCmd []string
 }
 
 // defaultOptions returns options for when running under a normal environment.
@@ -35,8 +35,8 @@ func defaultPlatformOptions() platformOptions {
 		diskCmd:      []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_DiskDrive", "|", "Format-List", "-Property", "*"},
 		partitionCmd: []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_DiskPartition", "|", "Format-List", "-Property", "*"},
 
-		screenResCmd:  []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_DesktopMonitor", "|", "Format-List", "-Property", "*"},
-		screenSizeCmd: []string{"powershell.exe", "-Command", "Get-CIMInstance", "-Namespace", "root\\wmi", "WmiMonitorBasicDisplayParams", "|", "Format-List", "-Property", "*"},
+		screenResCmd:   []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_DesktopMonitor", "|", "Format-List", "-Property", "*"},
+		displaySizeCmd: []string{"powershell.exe", "-Command", "Get-CIMInstance", "-Namespace", "root\\wmi", "WmiMonitorBasicDisplayParams", "|", "Format-List", "-Property", "*"},
 	}
 }
 
@@ -286,37 +286,48 @@ func (s Collector) collectScreens(_ platform.Info) (screens []screen, err error)
 		"ScreenHeight": {},
 	}
 
-	var usedScreenSizeFields = map[string]struct{}{
+	var usedDisplaySizeFields = map[string]struct{}{
 		"MaxHorizontalImageSize": {},
 		"MaxVerticalImageSize":   {},
 	}
 
-	monitors, err := cmdutils.RunListFmt(s.platform.screenResCmd, usedScreenResFields, s.log)
+	displays, err := cmdutils.RunListFmt(s.platform.screenResCmd, usedScreenResFields, s.log)
 	if err != nil {
 		return nil, err
 	}
 
-	screens = make([]screen, 0, len(monitors))
+	screens = make([]screen, 0, len(displays))
+	for _, m := range displays {
+		if m["ScreenWidth"] == "" && m["ScreenHeight"] == "" {
+			s.log.Warn("screen resolution was empty")
+			continue
+		}
 
-	for _, s := range monitors {
 		screens = append(screens, screen{
-			Resolution: fmt.Sprintf("%sx%s", s["ScreenWidth"], s["ScreenHeight"]),
+			Resolution: fmt.Sprintf("%sx%s", m["ScreenWidth"], m["ScreenHeight"]),
 		})
 	}
 
-	monitors, err = cmdutils.RunListFmt(s.platform.screenSizeCmd, usedScreenSizeFields, s.log)
+	displays, err = cmdutils.RunListFmt(s.platform.displaySizeCmd, usedDisplaySizeFields, s.log)
 	if err != nil {
 		s.log.Warn("physical screen size could not be determined", "error", err)
 		return screens, nil
 	}
-	if len(monitors) != len(screens) {
-		s.log.Warn("different number of screens than physical size returned", "value", len(monitors))
-		return screens, nil
+	if len(displays) != len(screens) {
+		s.log.Warn("different number of monitors than display physical size returned", "monitors", len(screens), "physicalSizes", len(displays))
+
+		if len(screens) != 0 {
+			return screens, nil
+		}
+
+		// Make do with what we have.
+		s.log.Info("No screen resolution available, using physical size only")
+		screens = make([]screen, len(displays))
 	}
 
 	// assuming that the order of the monitors returned is the same.
-	for i, s := range monitors {
-		str := fmt.Sprintf("%s0mm x %s0mm", s["MaxHorizontalImageSize"], s["MaxVerticalImageSize"])
+	for i, d := range displays {
+		str := fmt.Sprintf("%s0mm x %s0mm", d["MaxHorizontalImageSize"], d["MaxVerticalImageSize"])
 		screens[i].Size = str
 	}
 

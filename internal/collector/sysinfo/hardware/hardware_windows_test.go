@@ -375,6 +375,23 @@ func TestCollectWindows(t *testing.T) {
 			},
 		},
 
+		"Partial missing screen resolution information": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
+			partitionInfo: "regular",
+
+			screenResInfo:  "no resolution",
+			screenSizeInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelInfo: 1,
+				slog.LevelWarn: 2,
+			},
+		},
+
 		"Error screen resolution information": {
 			productInfo:   "regular",
 			cpuInfo:       "regular",
@@ -401,6 +418,22 @@ func TestCollectWindows(t *testing.T) {
 
 			screenResInfo:  "regular",
 			screenSizeInfo: "missing",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Non-zero screen display count mismatch": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
+			partitionInfo: "regular",
+
+			screenResInfo:  "single",
+			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -1708,6 +1741,47 @@ Bandwidth                   :
 DisplayType                 :
 MonitorManufacturer         : (Standard monitor types)
 MonitorType                 : Generic PnP Monitor`)
+	case "single":
+		fmt.Println(`
+
+ScreenHeight                : 1080
+ScreenWidth                 : 1920`)
+
+	case "no resolution":
+		fmt.Println(`
+
+DeviceID                    : DesktopMonitor1
+Name                        : Generic PnP Monitor
+PixelsPerXLogicalInch       : 96
+PixelsPerYLogicalInch       : 96
+ScreenHeight                : 
+ScreenWidth                 : 
+IsLocked                    : 
+LastErrorCode               : 
+Status                      : OK
+StatusInfo                  : 
+Caption                     : Generic PnP Monitor
+Description                 : Generic PnP Monitor
+InstallDate                 : 
+Availability                : 8
+ConfigManagerErrorCode      : 0
+ConfigManagerUserConfig     : False
+CreationClassName           : Win32_DesktopMonitor
+ErrorCleared                : 
+ErrorDescription            : 
+PNPDeviceID                 : DISPLAY\ACI24AA\5&2974733&0&UID4354
+PowerManagementCapabilities : 
+PowerManagementSupported    : 
+SystemCreationClassName     : Win32_ComputerSystem
+SystemName                  : DL-WORKSTATION
+Bandwidth                   : 
+DisplayType                 : 
+MonitorManufacturer         : (Standard monitor types)
+MonitorType                 : Generic PnP Monitor
+PSComputerName              : 
+CimClass                    : root/cimv2:Win32_DesktopMonitor
+CimInstanceProperties       : {Caption, Description, InstallDate, Name...}
+CimSystemProperties         : Microsoft.Management.Infrastructure.CimSystemProperties`)
 	case "":
 		fallthrough
 	case "missing":

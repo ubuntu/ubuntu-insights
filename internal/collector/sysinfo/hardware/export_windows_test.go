@@ -52,6 +52,6 @@ func WithScreenResInfo(cmd []string) Options {
 // WithScreenResInfo overrides default screen size info.
 func WithScreenSizeInfo(cmd []string) Options {
 	return func(o *options) {
-		o.platform.screenSizeCmd = cmd
+		o.platform.displaySizeCmd = cmd
 	}
 }
