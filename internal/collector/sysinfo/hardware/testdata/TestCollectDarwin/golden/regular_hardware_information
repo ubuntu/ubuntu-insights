@@ -27,8 +27,7 @@ blks:
         - size: 476611
           partitions: []
 screens:
-    - name: Color LCD
-      physicalresolution: 3072x1920
+    - physicalresolution: 3072x1920
       size: ""
       resolution: 1920x1080
       refreshrate: "59.90"

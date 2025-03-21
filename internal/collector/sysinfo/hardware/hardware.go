@@ -58,7 +58,6 @@ type disk struct {
 
 // screen contains information for a screen.
 type screen struct {
-	Name               string `json:"name"`
 	PhysicalResolution string `json:"physicalResolution"`
 	Size               string `json:"size"`
 	Resolution         string `json:"resolution"`

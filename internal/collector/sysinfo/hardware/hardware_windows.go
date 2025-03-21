@@ -282,7 +282,6 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 // collectScreens uses Win32_DesktopMonitor to collect information about screens.
 func (s Collector) collectScreens(_ platform.Info) (screens []screen, err error) {
 	var usedScreenResFields = map[string]struct{}{
-		"Name":         {},
 		"ScreenWidth":  {},
 		"ScreenHeight": {},
 	}
@@ -301,7 +300,6 @@ func (s Collector) collectScreens(_ platform.Info) (screens []screen, err error)
 
 	for _, s := range monitors {
 		screens = append(screens, screen{
-			Name:       s["Name"],
 			Resolution: fmt.Sprintf("%sx%s", s["ScreenWidth"], s["ScreenHeight"]),
 		})
 	}

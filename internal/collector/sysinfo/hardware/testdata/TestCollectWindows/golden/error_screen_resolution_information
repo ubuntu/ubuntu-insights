@@ -12,9 +12,11 @@ cpu:
     threads: 2
 gpus:
     - name: NVIDIA GeForce RTX 3050 Ti Laptop GPU
+      device: ""
       vendor: NVIDIA
       driver: nvldumdx.dll
     - name: Intel(R) UHD Graphics
+      device: ""
       vendor: Intel Corporation
       driver: igdumdim0.dll
 mem:
