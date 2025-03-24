@@ -28,7 +28,7 @@ func defaultPlatformOptions() platformOptions {
 	return platformOptions{
 		root:       "/",
 		cpuInfoCmd: []string{"lscpu", "-J"},
-		lsblkCmd:   []string{"lsblk", "-o", "NAME,SIZE,TYPE", "--tree", "-J"},
+		lsblkCmd:   []string{"lsblk", "-o", "NAME,SIZE,TYPE,RM", "--tree", "-J"},
 		screenCmd:  []string{"xrandr"},
 	}
 }
@@ -282,6 +282,7 @@ func (h Collector) collectMemory() (memory, error) {
 type lsblkEntry struct {
 	Size     string       `json:"size"`
 	Type     string       `json:"type"`
+	Rm       bool         `json:"rm"`
 	Children []lsblkEntry `json:"children,omitempty"`
 }
 
@@ -319,6 +320,11 @@ func (h Collector) populateBlkInfo(entries []lsblkEntry, depth int) []disk {
 
 	info := []disk{}
 	for _, e := range entries {
+		if e.Rm {
+			h.log.Debug("Skipping removable disk", "type", e.Type)
+			continue
+		}
+
 		switch strings.ToLower(e.Type) {
 		case "disk", "crypt", "lvm", "part":
 			info = append(info, disk{
