@@ -1,3 +1,4 @@
+// main is the package for the C API.
 package main
 
 // Make sure cgo is enabled `$env:CGO_ENABLED="1"`.

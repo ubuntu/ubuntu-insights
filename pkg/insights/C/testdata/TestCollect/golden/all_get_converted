@@ -1,0 +1,10 @@
+conf:
+    source: wsl
+    consentdir: home/etc/wsl/dir
+    insightsdir: insights/wsl/dir
+    verbose: false
+metrics: metrics
+flags:
+    period: 2000
+    force: false
+    dryrun: false

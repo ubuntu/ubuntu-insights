@@ -99,7 +99,7 @@ func (c Config) Run(consentDir, cacheDir string, writer func(Collector, Insights
 	if c.SourceMetrics == "" && c.Source != "" {
 		return fmt.Errorf("no metricsPath for %s", c.Source)
 	}
-	if c.Source == "" { // ignore SourceMetrics for platform source
+	if c.Source == "" && c.SourceMetrics != "" { // ignore SourceMetrics for platform source
 		slog.Warn("Source Metrics were provided but is ignored for the global source")
 		c.SourceMetrics = ""
 	}

@@ -1,3 +1,4 @@
+// main is the package for the C API.
 package main
 
 // generate shared library and header.

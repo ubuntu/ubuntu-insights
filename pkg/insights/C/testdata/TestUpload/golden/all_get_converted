@@ -1,0 +1,9 @@
+conf:
+    source: wsl
+    consentdir: home/etc/wsl/dir
+    insightsdir: insights/wsl/dir
+    verbose: false
+flags:
+    minage: 2000
+    force: false
+    dryrun: false
