@@ -1,3 +1,4 @@
 name: disk0
 size: 39
-partitions: []
+type: disk
+children: []

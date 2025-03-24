@@ -21,11 +21,14 @@ mem:
     total: 16384
 blks:
     - size: 476940
-      partitions:
+      type: "disk"
+      children:
         - size: 200
-          partitions: []
+          type: "part"
+          children: []
         - size: 476611
-          partitions: []
+          type: "part"
+          children: []
 screens:
     - physicalresolution: ""
       size: ""

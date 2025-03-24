@@ -215,8 +215,9 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 		}
 
 		c := disk{
-			Size:       getSize(d["Size"]),
-			Partitions: make([]disk, parts),
+			Size:     getSize(d["Size"]),
+			Type:     "disk",
+			Children: make([]disk, parts),
 		}
 
 		idx, err := strconv.ParseUint(d["Index"], 10, 64)
@@ -265,14 +266,15 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 			s.log.Warn("partition index was negative", "value", idx, "disk", d)
 			continue
 		}
-		if idx >= len(blks[d].Partitions) {
-			s.log.Warn("partition index was larger than partitions", "value", idx, "disk", d)
+		if idx >= len(blks[d].Children) {
+			s.log.Warn("Partition index was larger than the number of partitions", "value", idx, "disk", d)
 			continue
 		}
 
-		blks[d].Partitions[idx] = disk{
-			Size:       getSize(p["Size"]),
-			Partitions: []disk{},
+		blks[d].Children[idx] = disk{
+			Size:     getSize(p["Size"]),
+			Type:     "part",
+			Children: []disk{},
 		}
 	}
 

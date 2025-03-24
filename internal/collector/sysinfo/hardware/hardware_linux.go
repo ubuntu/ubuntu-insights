@@ -320,18 +320,11 @@ func (h Collector) populateBlkInfo(entries []lsblkEntry, depth int) []disk {
 	info := []disk{}
 	for _, e := range entries {
 		switch strings.ToLower(e.Type) {
-		case "disk":
+		case "disk", "crypt", "lvm", "part":
 			info = append(info, disk{
-				Size:       getSize(e.Size),
-				Type:       e.Type,
-				Partitions: h.populateBlkInfo(e.Children, depth-1),
-			})
-		// Handle partition-related types: "crypt", "lvm", and "part".
-		case "crypt", "lvm", "part":
-			info = append(info, disk{
-				Size:       getSize(e.Size),
-				Type:       e.Type,
-				Partitions: h.populateBlkInfo(e.Children, depth-1),
+				Size:     getSize(e.Size),
+				Type:     e.Type,
+				Children: h.populateBlkInfo(e.Children, depth-1),
 			})
 		}
 	}

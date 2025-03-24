@@ -54,7 +54,7 @@ type disk struct {
 	Size uint64 `json:"size"`
 	Type string `json:"type,omitempty"`
 
-	Partitions []disk `json:"partitions,omitempty"`
+	Children []disk `json:"children,omitempty"`
 }
 
 // screen contains information for a screen.
