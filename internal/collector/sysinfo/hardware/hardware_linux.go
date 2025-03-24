@@ -290,7 +290,14 @@ type lsblkEntry struct {
 var blockSizeRegex = regexp.MustCompile(`^\s*([0-9]+(?:\.[0-9]*)?)\s*([^\s]*)\s*$`)
 
 // populateBlkInfo parses lsblkEntries to diskInfo structs.
-func (h Collector) populateBlkInfo(entries []lsblkEntry) []disk {
+// It recursively populates the Partitions field.
+// If depth is a negative number, then it returns an empty slice.
+func (h Collector) populateBlkInfo(entries []lsblkEntry, depth int) []disk {
+	if depth < 0 {
+		h.log.Warn("Reached max recursion depth for block info")
+		return []disk{}
+	}
+
 	getSize := func(s string) uint64 {
 		m := blockSizeRegex.FindStringSubmatch(s)
 		if len(m) != 3 {
@@ -316,12 +323,15 @@ func (h Collector) populateBlkInfo(entries []lsblkEntry) []disk {
 		case "disk":
 			info = append(info, disk{
 				Size:       getSize(e.Size),
-				Partitions: h.populateBlkInfo(e.Children),
+				Type:       e.Type,
+				Partitions: h.populateBlkInfo(e.Children, depth-1),
 			})
-		case "part":
+		// Handle partition-related types: "crypt", "lvm", and "part".
+		case "crypt", "lvm", "part":
 			info = append(info, disk{
 				Size:       getSize(e.Size),
-				Partitions: []disk{},
+				Type:       e.Type,
+				Partitions: h.populateBlkInfo(e.Children, depth-1),
 			})
 		}
 	}
@@ -354,7 +364,7 @@ func (h Collector) collectDisks() (info []disk, err error) {
 		return nil, fmt.Errorf("failed to convert json to a valid lsblk struct: %v", err)
 	}
 
-	return h.populateBlkInfo(result.Lsblk), nil
+	return h.populateBlkInfo(result.Lsblk, 10), nil
 }
 
 // This regex matches the name, primary status, real resolution, and physical size from xrandr.

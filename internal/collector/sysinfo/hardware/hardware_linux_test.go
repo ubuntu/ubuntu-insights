@@ -680,7 +680,28 @@ func TestFakeBlkList(_ *testing.T) {
                      ]
                   }
                ]
-            }
+            },{
+				"name": "sdb4",
+				"size": "350G",
+				"type": "part",
+				"children": [
+					{
+					"name": "sdb6",
+					"size": "175G",
+					"type": "part"
+					},
+					{
+					"name": "sdb7",
+					"size": "100G",
+					"type": "part"
+					},
+					{
+					"name": "sdb8",
+					"size": "75G",
+					"type": "part"
+					}
+				]
+			}
          ]
       }
    ]
