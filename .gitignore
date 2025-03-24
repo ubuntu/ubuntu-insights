@@ -16,3 +16,10 @@
 
 # Built CLI-executable binary
 cmd/insights/insights
+
+# Generated files
+build/
+_build/
+generated
+
+vendor

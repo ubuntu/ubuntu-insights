@@ -151,3 +151,8 @@ func (a *App) Run() error {
 func (a App) UsageError() bool {
 	return !a.cmd.SilenceUsage
 }
+
+// RootCmd returns the root command.
+func (a App) RootCmd() cobra.Command {
+	return *a.cmd
+}
