@@ -36,13 +36,6 @@ type CollectFlags struct {
 	DryRun bool
 }
 
-type collectOptions struct {
-	writer  func(collector.Collector, collector.Insights) error
-	factory collector.Factory
-}
-
-type collectOption = func(*collectOptions)
-
 // UploadFlags represents optional parameters for Upload.
 type UploadFlags struct {
 	MinAge uint
@@ -50,18 +43,12 @@ type UploadFlags struct {
 	DryRun bool
 }
 
-type uploadOptions struct {
-	factory uploader.Factory
-}
-
-type uploadOption = func(*uploadOptions)
-
 // Collect creates a report for Config.Source.
 // metricsPath is a filepath to a JSON file containing extra metrics.
 // If Config.Source is "",  the source is the platform and metricsPath is ignored.
 // returns an error if metricsPath is "" and not ignored.
 // returns an error if collection fails.
-func (c Config) Collect(metricsPath string, flags CollectFlags, opts ...collectOption) error {
+func (c Config) Collect(metricsPath string, flags CollectFlags) error {
 	cConf := collector.Config{
 		Source:        c.Source,
 		Period:        flags.Period,
@@ -70,24 +57,15 @@ func (c Config) Collect(metricsPath string, flags CollectFlags, opts ...collectO
 		SourceMetrics: metricsPath,
 	}
 
-	o := collectOptions{
-		factory: collector.New,
-		writer: func(c collector.Collector, b collector.Insights) error {
-			return c.Write(b)
-		},
-	}
-
-	for _, option := range opts {
-		option(&o)
-	}
-
-	return cConf.Run(c.ConsentDir, c.InsightsDir, o.writer, o.factory)
+	return cConf.Run(c.ConsentDir, c.InsightsDir, func(c collector.Collector, b collector.Insights) error {
+		return c.Write(b)
+	}, collector.New)
 }
 
 // Upload uploads reports for Config.Source.
 // if Config.Source is "", all reports are uploaded.
 // returns an error if uploading fails.
-func (c Config) Upload(flags UploadFlags, opts ...uploadOption) error {
+func (c Config) Upload(flags UploadFlags) error {
 	uConf := uploader.Config{
 		Sources: []string{c.Source},
 		MinAge:  flags.MinAge,
@@ -96,15 +74,7 @@ func (c Config) Upload(flags UploadFlags, opts ...uploadOption) error {
 		Retry:   false,
 	}
 
-	o := uploadOptions{
-		factory: uploader.New,
-	}
-
-	for _, option := range opts {
-		option(&o)
-	}
-
-	return uConf.Run(c.ConsentDir, c.InsightsDir, o.factory)
+	return uConf.Run(c.ConsentDir, c.InsightsDir, uploader.New)
 }
 
 // GetConsentState gets the state for Config.Source.

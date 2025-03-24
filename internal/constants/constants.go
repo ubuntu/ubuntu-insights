@@ -46,7 +46,7 @@ const (
 	// MaxReports is the maximum number of report files that can exist in a folder.
 	MaxReports = 150
 
-	// DefaultSource is the default source when none are provided.
+	// DefaultCollectSource is the default source when none are provided.
 	DefaultCollectSource = runtime.GOOS
 
 	// DefaultPeriod is the default value for the collector's period.

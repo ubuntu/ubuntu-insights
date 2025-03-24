@@ -1,0 +1,10 @@
+conf:
+    source: ""
+    consentdir: ""
+    insightsdir: ""
+    verbose: false
+metrics: ""
+flags:
+    period: 0
+    force: false
+    dryrun: false
