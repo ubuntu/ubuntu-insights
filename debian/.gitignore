@@ -1,0 +1,8 @@
+*.debhelper
+*.log
+*.substvars
+/.debhelper/
+/debhelper-build-stamp
+/files
+/ubuntu-insights/
+tmp
