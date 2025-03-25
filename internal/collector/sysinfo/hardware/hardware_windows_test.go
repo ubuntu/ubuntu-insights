@@ -53,6 +53,10 @@ func TestCollectWindows(t *testing.T) {
 
 			screenResInfo:  "regular",
 			screenSizeInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelInfo: 2,
+			},
 		},
 
 		"Missing product information": {
@@ -68,6 +72,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -84,6 +89,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -100,6 +106,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -116,6 +123,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 2,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -132,6 +140,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -148,6 +157,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -164,6 +174,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -180,6 +191,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -196,6 +208,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -212,6 +225,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -228,6 +242,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -244,6 +259,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -260,6 +276,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -275,7 +292,7 @@ func TestCollectWindows(t *testing.T) {
 			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 1,
+				slog.LevelWarn: 2,
 			},
 		},
 
@@ -291,7 +308,7 @@ func TestCollectWindows(t *testing.T) {
 			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 1,
+				slog.LevelWarn: 2,
 			},
 		},
 
@@ -307,7 +324,7 @@ func TestCollectWindows(t *testing.T) {
 			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 13,
+				slog.LevelWarn: 2,
 			},
 		},
 
@@ -323,7 +340,8 @@ func TestCollectWindows(t *testing.T) {
 			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 1,
+				slog.LevelWarn: 2,
+				slog.LevelInfo: 1,
 			},
 		},
 
@@ -339,7 +357,8 @@ func TestCollectWindows(t *testing.T) {
 			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 1,
+				slog.LevelWarn: 2,
+				slog.LevelInfo: 1,
 			},
 		},
 
@@ -355,7 +374,59 @@ func TestCollectWindows(t *testing.T) {
 			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 9,
+				slog.LevelWarn: 2,
+				slog.LevelInfo: 1,
+			},
+		},
+
+		"Improper disks index and partition information": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "improper disks",
+			partitionInfo: "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 10,
+				slog.LevelInfo: 1,
+			},
+		},
+
+		"Error no exit disks information": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "error no exit",
+			partitionInfo: "regular",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 2,
+				slog.LevelInfo: 1,
+			},
+		},
+
+		"Error no exit partition information": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
+			partitionInfo: "error no exit",
+
+			screenResInfo:  "regular",
+			screenSizeInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 2,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -372,6 +443,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -387,7 +459,7 @@ func TestCollectWindows(t *testing.T) {
 			screenSizeInfo: "regular",
 
 			logs: map[slog.Level]uint{
-				slog.LevelInfo: 1,
+				slog.LevelInfo: 3,
 				slog.LevelWarn: 2,
 			},
 		},
@@ -405,6 +477,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -421,6 +494,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -437,6 +511,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -453,6 +528,7 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 	}
@@ -897,393 +973,102 @@ func TestFakeDiskInfo(_ *testing.T) {
 		os.Exit(1)
 	case "regular":
 		fmt.Println(`
-
-ConfigManagerErrorCode      : 0
-LastErrorCode               : 
-NeedsCleaning               : 
-Status                      : OK
-DeviceID                    : \\.\PHYSICALDRIVE3
-StatusInfo                  : 
-Partitions                  : 3
-BytesPerSector              : 512
-ConfigManagerUserConfig     : False
-DefaultBlockSize            : 
-Index                       : 3
-InstallDate                 : 
-InterfaceType               : SCSI
-MaxBlockSize                : 
-MaxMediaSize                : 
-MinBlockSize                : 
-NumberOfMediaSupported      : 
-SectorsPerTrack             : 63
-Size                        : 12345
-TotalCylinders              : 12345
-TotalHeads                  : 255
-TotalSectors                : 1953520065
-TotalTracks                 : 31008255
-TracksPerCylinder           : 255
-Caption                     : REDACTED SSD
-Description                 : Disk drive
-Name                        : \\.\PHYSICALDRIVE3
-Availability                : 
-CreationClassName           : Win32_DiskDrive
-ErrorCleared                : 
-ErrorDescription            : 
-PNPDeviceID                 : REDACTED
-PowerManagementCapabilities : 
-PowerManagementSupported    : 
-SystemCreationClassName     : Win32_ComputerSystem
-SystemName                  : REDACTED SYSTEM NAME
-Capabilities                : {3, 4}
-CapabilityDescriptions      : {Random Access, Supports Writing}
-CompressionMethod           : 
-ErrorMethodology            : 
-FirmwareRevision            : REDACTED
-Manufacturer                : (Standard disk drives)
-MediaLoaded                 : True
-MediaType                   : Fixed hard disk media
-Model                       : REDACTED SSD MODEL
-SCSIBus                     : 0
-SCSILogicalUnit             : 0
-SCSIPort                    : 3
-SCSITargetId                : 0
-SerialNumber                : REDACTED SERIAL NUMBER.
-Signature                   : 
-PSComputerName              : 
-CimClass                    : root/cimv2:Win32_DiskDrive
-CimInstanceProperties       : {Caption, Description, InstallDate, Name…}
-CimSystemProperties         : Microsoft.Management.Infrastructure.CimSystemProperties
-
-ConfigManagerErrorCode      : 0
-LastErrorCode               : 
-NeedsCleaning               : 
-Status                      : OK
-DeviceID                    : \\.\PHYSICALDRIVE4
-StatusInfo                  : 
-Partitions                  : 1
-BytesPerSector              : 512
-ConfigManagerUserConfig     : False
-DefaultBlockSize            : 
-Index                       : 4
-InstallDate                 : 
-InterfaceType               : SCSI
-MaxBlockSize                : 
-MaxMediaSize                : 
-MinBlockSize                : 
-NumberOfMediaSupported      : 
-SectorsPerTrack             : 63
-Size                        : 536864025600
-TotalCylinders              : 65270
-TotalHeads                  : 255
-TotalSectors                : 1048562550
-TotalTracks                 : 16643850
-TracksPerCylinder           : 255
-Caption                     : Microsoft Virtual Disk
-Description                 : Disk drive
-Name                        : \\.\PHYSICALDRIVE4
-Availability                : 
-CreationClassName           : Win32_DiskDrive
-ErrorCleared                : 
-ErrorDescription            : 
-PNPDeviceID                 : SCSI\DISK&VEN_MSFT&PROD_VIRTUAL_DISK\
-PowerManagementCapabilities : 
-PowerManagementSupported    : 
-SystemCreationClassName     : Win32_ComputerSystem
-SystemName                  : REDACTED SYSTEM NAME
-Capabilities                : {3, 4}
-CapabilityDescriptions      : {Random Access, Supports Writing}
-CompressionMethod           : 
-ErrorMethodology            : 
-FirmwareRevision            : 1.0
-Manufacturer                : (Standard disk drives)
-MediaLoaded                 : True
-MediaType                   : Fixed hard disk media
-Model                       : Microsoft Virtual Disk
-SCSIBus                     : 0
-SCSILogicalUnit             : 1
-SCSIPort                    : 4
-SCSITargetId                : 0
-SerialNumber                : 
-Signature                   : 
-PSComputerName              : 
-CimClass                    : root/cimv2:Win32_DiskDrive
-CimInstanceProperties       : {Caption, Description, InstallDate, Name…}
-CimSystemProperties         : Microsoft.Management.Infrastructure.CimSystemProperties
-
-ConfigManagerErrorCode      : 0
-LastErrorCode               : 
-NeedsCleaning               : 
-Status                      : OK
-DeviceID                    : \\.\PHYSICALDRIVE0
-StatusInfo                  : 
-Partitions                  : 1
-BytesPerSector              : 512
-ConfigManagerUserConfig     : False
-DefaultBlockSize            : 
-Index                       : 0
-InstallDate                 : 
-InterfaceType               : IDE
-MaxBlockSize                : 
-MaxMediaSize                : 
-MinBlockSize                : 
-NumberOfMediaSupported      : 
-SectorsPerTrack             : 63
-Size                        : 10000830067200
-TotalCylinders              : 1215865
-TotalHeads                  : 255
-TotalSectors                : 19532871225
-TotalTracks                 : 310045575
-TracksPerCylinder           : 255
-Caption                     : REDACTED
-Description                 : Disk drive
-Name                        : \\.\PHYSICALDRIVE0
-Availability                : 
-CreationClassName           : Win32_DiskDrive
-ErrorCleared                : 
-ErrorDescription            : 
-PNPDeviceID                 : REDACTED
-PowerManagementCapabilities : 
-PowerManagementSupported    : 
-SystemCreationClassName     : Win32_ComputerSystem
-SystemName                  : REDACTED SYSTEM NAME
-Capabilities                : {3, 4}
-CapabilityDescriptions      : {Random Access, Supports Writing}
-CompressionMethod           : 
-ErrorMethodology            : 
-FirmwareRevision            : DN01
-Manufacturer                : (Standard disk drives)
-MediaLoaded                 : True
-MediaType                   : Fixed hard disk media
-Model                       : REDACTED
-SCSIBus                     : 0
-SCSILogicalUnit             : 0
-SCSIPort                    : 0
-SCSITargetId                : 0
-SerialNumber                :             REDACTED SERIAL NUMBER
-Signature                   : 
-PSComputerName              : 
-CimClass                    : root/cimv2:Win32_DiskDrive
-CimInstanceProperties       : {Caption, Description, InstallDate, Name…}
-CimSystemProperties         : Microsoft.Management.Infrastructure.CimSystemProperties
-
-ConfigManagerErrorCode      : 0
-LastErrorCode               : 
-NeedsCleaning               : 
-Status                      : OK
-DeviceID                    : \\.\PHYSICALDRIVE2
-StatusInfo                  : 
-Partitions                  : 2
-BytesPerSector              : 512
-ConfigManagerUserConfig     : False
-DefaultBlockSize            : 
-Index                       : 2
-InstallDate                 : 
-InterfaceType               : SCSI
-MaxBlockSize                : 
-MaxMediaSize                : 
-MinBlockSize                : 
-NumberOfMediaSupported      : 
-SectorsPerTrack             : 63
-Size                        : 1024203640320
-TotalCylinders              : 124519
-TotalHeads                  : 255
-TotalSectors                : 2000397735
-TotalTracks                 : 31752345
-TracksPerCylinder           : 255
-Caption                     : REDACTED
-Description                 : Disk drive
-Name                        : \\.\PHYSICALDRIVE2
-Availability                : 
-CreationClassName           : Win32_DiskDrive
-ErrorCleared                : 
-ErrorDescription            : 
-PNPDeviceID                 : REDACTED
-PowerManagementCapabilities : 
-PowerManagementSupported    : 
-SystemCreationClassName     : Win32_ComputerSystem
-SystemName                  : REDACTED SYSTEM NAME
-Capabilities                : {3, 4}
-CapabilityDescriptions      : {Random Access, Supports Writing}
-CompressionMethod           : 
-ErrorMethodology            : 
-FirmwareRevision            : 70626000
-Manufacturer                : (Standard disk drives)
-MediaLoaded                 : True
-MediaType                   : Fixed hard disk media
-Model                       : REDACTED MODEL
-SCSIBus                     : 0
-SCSILogicalUnit             : 0
-SCSIPort                    : 2
-SCSITargetId                : 0
-SerialNumber                : REDACTED SERIAL NUMBER.
-Signature                   : 
-PSComputerName              : 
-CimClass                    : root/cimv2:Win32_DiskDrive
-CimInstanceProperties       : {Caption, Description, InstallDate, Name…}
-CimSystemProperties         : Microsoft.Management.Infrastructure.CimSystemProperties
-
-ConfigManagerErrorCode      : 0
-LastErrorCode               : 
-NeedsCleaning               : 
-Status                      : OK
-DeviceID                    : \\.\PHYSICALDRIVE1
-StatusInfo                  : 
-Partitions                  : 1
-BytesPerSector              : 512
-ConfigManagerUserConfig     : False
-DefaultBlockSize            : 
-Index                       : 1
-InstallDate                 : 
-InterfaceType               : IDE
-MaxBlockSize                : 
-MaxMediaSize                : 
-MinBlockSize                : 
-NumberOfMediaSupported      : 
-SectorsPerTrack             : 63
-Size                        : 1000202273280
-TotalCylinders              : 121601
-TotalHeads                  : 255
-TotalSectors                : 1953520065
-TotalTracks                 : 31008255
-TracksPerCylinder           : 255
-Caption                     : REDACTED
-Description                 : Disk drive
-Name                        : \\.\PHYSICALDRIVE1
-Availability                : 
-CreationClassName           : Win32_DiskDrive
-ErrorCleared                : 
-ErrorDescription            : 
-PNPDeviceID                 : REDACTED ID
-PowerManagementCapabilities : 
-PowerManagementSupported    : 
-SystemCreationClassName     : Win32_ComputerSystem
-SystemName                  : REDACTED SYSTEM NAME
-Capabilities                : {3, 4}
-CapabilityDescriptions      : {Random Access, Supports Writing}
-CompressionMethod           : 
-ErrorMethodology            : 
-FirmwareRevision            : REDACTED FIRMWARE
-Manufacturer                : (Standard disk drives)
-MediaLoaded                 : True
-MediaType                   : Fixed hard disk media
-Model                       : REDACTED MODEL
-SCSIBus                     : 2
-SCSILogicalUnit             : 0
-SCSIPort                    : 0
-SCSITargetId                : 0
-SerialNumber                : REDACTED SERIAL NUMBER.
-Signature                   : 
-PSComputerName              : 
-CimClass                    : root/cimv2:Win32_DiskDrive
-CimInstanceProperties       : {Caption, Description, InstallDate, Name…}
-CimSystemProperties         : Microsoft.Management.Infrastructure.CimSystemProperties`)
+[
+  {
+    "MediaType": "Fixed hard disk media",
+    "Index": 3,
+    "Size": 1000202273280,
+    "Partitions": 3
+  },
+  {
+    "MediaType": "Fixed hard disk media",
+    "Index": 4,
+    "Size": 536864025600,
+    "Partitions": 1
+  },
+  {
+    "MediaType": "Fixed hard disk media",
+    "Index": 0,
+    "Size": 10000830067200,
+    "Partitions": 1
+  },
+  {
+    "MediaType": "Removable Media",
+    "Index": 5,
+    "Size": 123971420160,
+    "Partitions": 1
+  },
+  {
+    "MediaType": "Fixed hard disk media",
+    "Index": 2,
+    "Size": 1024203640320,
+    "Partitions": 2
+  },
+  {
+    "MediaType": "Fixed hard disk media",
+    "Index": 1,
+    "Size": 1000202273280,
+    "Partitions": 1
+  }
+]`)
 	case "malicious":
 		fmt.Println(`
-
-Partitions                  : 999999999999
-BytesPerSector              : 512
-Index                       : 0
-SectorsPerTrack             : 63
-Size                        : 2000396321280
-TotalCylinders              : 243201
-TotalHeads                  : 255
-TotalSectors                : 3907024065
-TotalTracks                 : 62016255
-TracksPerCylinder           : 255
-Caption                     : WD Green SN350 2TB
-Description                 : Disk drive
-Name                        : \\.\PHYSICALDRIVE0
-Model                       : WD Green SN350 2TB
-
-Partitions                  : -1
-BytesPerSector              : 512
-Index                       : 1
-SectorsPerTrack             : 63
-Size                        : 2000396321280
-TotalCylinders              : 243201
-TotalHeads                  : 255
-TotalSectors                : 3907024065
-TotalTracks                 : 62016255
-TracksPerCylinder           : 255
-Caption                     : WD Green SN350 2TB
-Description                 : Disk drive
-Name                        : \\.\PHYSICALDRIVE0
-Model                       : WD Green SN350 2TB
-
-Partitions                  : one gazillion
-BytesPerSector              : 512
-Index                       : 2
-SectorsPerTrack             : 63
-Size                        : 2000396321280
-TotalCylinders              : 243201
-TotalHeads                  : 255
-TotalSectors                : 3907024065
-TotalTracks                 : 62016255
-TracksPerCylinder           : 255
-Caption                     : WD Green SN350 2TB
-Description                 : Disk drive
-Name                        : \\.\PHYSICALDRIVE0
-Model                       : WD Green SN350 2TB
-
-Partitions                  : 1
-BytesPerSector              : 512
-Index                       : -2
-SectorsPerTrack             : 63
-Size                        : 2000396321280
-TotalCylinders              : 243201
-TotalHeads                  : 255
-TotalSectors                : 3907024065
-TotalTracks                 : 62016255
-TracksPerCylinder           : 255
-Caption                     : Generic Drive
-Description                 : Disk drive
-Name                        : \\.\PHYSICALDRIVE111
-Model                       : Generic Drive
-
-Partitions                  : 1
-BytesPerSector              : 512
-Index                       : 500
-SectorsPerTrack             : 63
-Size                        : 2000396321280
-TotalCylinders              : 243201
-TotalHeads                  : 255
-TotalSectors                : 3907024065
-TotalTracks                 : 62016255
-TracksPerCylinder           : 255
-Caption                     : Generic Drive
-Description                 : Disk drive
-Name                        : \\.\PHYSICALDRIVE111
-Model                       : Generic Drive
-
-Partitions                  : 1
-BytesPerSector              : 512
-Index                       : 3
-SectorsPerTrack             : 63
-Size                        : Not a Number
-TotalCylinders              : 243201
-TotalHeads                  : 255
-TotalSectors                : 3907024065
-TotalTracks                 : 62016255
-TracksPerCylinder           : 255
-Caption                     : Generic Drive
-Description                 : Disk drive
-Name                        : \\.\PHYSICALDRIVE111
-Model                       : Generic Drive
-
-Partitions                  : 1
-BytesPerSector              : 512
-Index                       : 0
-SectorsPerTrack             : 63
-Size                        : 2000396321280
-TotalCylinders              : 243201
-TotalHeads                  : 255
-TotalSectors                : 3907024065
-TotalTracks                 : 62016255
-TracksPerCylinder           : 255
-Caption                     : Generic Drive
-Description                 : Duplicate disk
-Name                        : \\.\PHYSICALDRIVE111
-Model                       : Generic Drive`)
+[
+  {
+    "MediaType": "Junk",
+    "Index": 3,
+    "Size": 1000202273280,
+    "Partitions": 3
+  },
+  {
+    "MediaType": "Fixed hard disk media",
+    "Index": 4,
+    "Size": -536864025600,
+    "Partitions": 1
+  },
+  {
+    "MediaType": "Fixed hard disk media",
+    "Index": -1,
+    "Size": 10000830067200,
+    "Partitions": 1
+  },
+  {
+    "MediaType": "Removable Media",
+    "Index": 5,
+    "Size": 123971420160,
+    "Partitions": 100000000000000000
+  },
+  {
+    "MediaType": "Fixed hard disk media",
+    "Index": 2,
+    "Size": 102420364032000000000,
+    "Partitions": 2
+  },
+  {
+    "MediaType": "Fixed hard disk media",
+    "Size": 1000202273280,
+    "Partitions": 1
+	"UnknownField": "Unknown"
+  }
+]`)
+	case "improper disks":
+		fmt.Println(`
+[
+	{
+			"MediaType": "Fixed hard disk media",
+			"Index": 0,
+			"Size": 1,
+			"Partitions": 129
+	},
+	{
+			"MediaType": "Fixed hard disk media",
+			"Index": 0,
+			"Size": 1,
+			"Partitions": 126
+	}
+]`)
+	case "error no exit":
+		fmt.Fprint(os.Stderr, "Error requested in fake disk info")
 	case "":
 		fallthrough
 	case "missing":
@@ -1304,365 +1089,103 @@ func TestFakePartitionInfo(_ *testing.T) {
 		os.Exit(1)
 	case "regular":
 		fmt.Println(`
-
-Index                       : 0
-Status                      : 
-StatusInfo                  : 
-Name                        : Disk #3, Partition #0
-Caption                     : Disk #3, Partition #0
-Description                 : GPT: System
-InstallDate                 : 
-Availability                : 
-ConfigManagerErrorCode      : 
-ConfigManagerUserConfig     : 
-CreationClassName           : Win32_DiskPartition
-DeviceID                    : Disk #3, Partition #0
-ErrorCleared                : 
-ErrorDescription            : 
-LastErrorCode               : 
-PNPDeviceID                 : 
-PowerManagementCapabilities : 
-PowerManagementSupported    : 
-SystemCreationClassName     : Win32_ComputerSystem
-SystemName                  : REDACTED SYSTEM NAME
-Access                      : 
-BlockSize                   : 512
-ErrorMethodology            : 
-NumberOfBlocks              : 204800
-Purpose                     : 
-Bootable                    : True
-PrimaryPartition            : True
-BootPartition               : True
-DiskIndex                   : 3
-HiddenSectors               : 
-RewritePartition            : 
-Size                        : 104857600
-StartingOffset              : 1048576
-Type                        : GPT: System
-PSComputerName              : 
-CimClass                    : root/cimv2:Win32_DiskPartition
-CimInstanceProperties       : {Caption, Description, InstallDate, Name…}
-CimSystemProperties         : Microsoft.Management.Infrastructure.CimSystemProperties
-
-Index                       : 1
-Status                      : 
-StatusInfo                  : 
-Name                        : Disk #3, Partition #1
-Caption                     : Disk #3, Partition #1
-Description                 : GPT: Basic Data
-InstallDate                 : 
-Availability                : 
-ConfigManagerErrorCode      : 
-ConfigManagerUserConfig     : 
-CreationClassName           : Win32_DiskPartition
-DeviceID                    : Disk #3, Partition #1
-ErrorCleared                : 
-ErrorDescription            : 
-LastErrorCode               : 
-PNPDeviceID                 : 
-PowerManagementCapabilities : 
-PowerManagementSupported    : 
-SystemCreationClassName     : Win32_ComputerSystem
-SystemName                  : REDACTED SYSTEM NAME
-Access                      : 
-BlockSize                   : 512
-ErrorMethodology            : 
-NumberOfBlocks              : 1951709184
-Purpose                     : 
-Bootable                    : False
-PrimaryPartition            : True
-BootPartition               : False
-DiskIndex                   : 3
-HiddenSectors               : 
-RewritePartition            : 
-Size                        : 999275102208
-StartingOffset              : 122683392
-Type                        : GPT: Basic Data
-PSComputerName              : 
-CimClass                    : root/cimv2:Win32_DiskPartition
-CimInstanceProperties       : {Caption, Description, InstallDate, Name…}
-CimSystemProperties         : Microsoft.Management.Infrastructure.CimSystemProperties
-
-Index                       : 2
-Status                      : 
-StatusInfo                  : 
-Name                        : Disk #3, Partition #2
-Caption                     : Disk #3, Partition #2
-Description                 : GPT: Unknown
-InstallDate                 : 
-Availability                : 
-ConfigManagerErrorCode      : 
-ConfigManagerUserConfig     : 
-CreationClassName           : Win32_DiskPartition
-DeviceID                    : Disk #3, Partition #2
-ErrorCleared                : 
-ErrorDescription            : 
-LastErrorCode               : 
-PNPDeviceID                 : 
-PowerManagementCapabilities : 
-PowerManagementSupported    : 
-SystemCreationClassName     : Win32_ComputerSystem
-SystemName                  : REDACTED SYSTEM NAME
-Access                      : 
-BlockSize                   : 512
-ErrorMethodology            : 
-NumberOfBlocks              : 1572864
-Purpose                     : 
-Bootable                    : False
-PrimaryPartition            : False
-BootPartition               : False
-DiskIndex                   : 3
-HiddenSectors               : 
-RewritePartition            : 
-Size                        : 805306368
-StartingOffset              : 999397785600
-Type                        : GPT: Unknown
-PSComputerName              : 
-CimClass                    : root/cimv2:Win32_DiskPartition
-CimInstanceProperties       : {Caption, Description, InstallDate, Name…}
-CimSystemProperties         : Microsoft.Management.Infrastructure.CimSystemProperties
-
-Index                       : 0
-Status                      : 
-StatusInfo                  : 
-Name                        : Disk #4, Partition #0
-Caption                     : Disk #4, Partition #0
-Description                 : GPT: Basic Data
-InstallDate                 : 
-Availability                : 
-ConfigManagerErrorCode      : 
-ConfigManagerUserConfig     : 
-CreationClassName           : Win32_DiskPartition
-DeviceID                    : Disk #4, Partition #0
-ErrorCleared                : 
-ErrorDescription            : 
-LastErrorCode               : 
-PNPDeviceID                 : 
-PowerManagementCapabilities : 
-PowerManagementSupported    : 
-SystemCreationClassName     : Win32_ComputerSystem
-SystemName                  : REDACTED SYSTEM NAME
-Access                      : 
-BlockSize                   : 512
-ErrorMethodology            : 
-NumberOfBlocks              : 1048541184
-Purpose                     : 
-Bootable                    : False
-PrimaryPartition            : True
-BootPartition               : False
-DiskIndex                   : 4
-HiddenSectors               : 
-RewritePartition            : 
-Size                        : 536853086208
-StartingOffset              : 16777216
-Type                        : GPT: Basic Data
-PSComputerName              : 
-CimClass                    : root/cimv2:Win32_DiskPartition
-CimInstanceProperties       : {Caption, Description, InstallDate, Name…}
-CimSystemProperties         : Microsoft.Management.Infrastructure.CimSystemProperties
-
-Index                       : 0
-Status                      : 
-StatusInfo                  : 
-Name                        : Disk #0, Partition #0
-Caption                     : Disk #0, Partition #0
-Description                 : GPT: Basic Data
-InstallDate                 : 
-Availability                : 
-ConfigManagerErrorCode      : 
-ConfigManagerUserConfig     : 
-CreationClassName           : Win32_DiskPartition
-DeviceID                    : Disk #0, Partition #0
-ErrorCleared                : 
-ErrorDescription            : 
-LastErrorCode               : 
-PNPDeviceID                 : 
-PowerManagementCapabilities : 
-PowerManagementSupported    : 
-SystemCreationClassName     : Win32_ComputerSystem
-SystemName                  : REDACTED SYSTEM NAME
-Access                      : 
-BlockSize                   : 512
-ErrorMethodology            : 
-NumberOfBlocks              : 19532869632
-Purpose                     : 
-Bootable                    : False
-PrimaryPartition            : True
-BootPartition               : False
-DiskIndex                   : 0
-HiddenSectors               : 
-RewritePartition            : 
-Size                        : 10000829251584
-StartingOffset              : 1048576
-Type                        : GPT: Basic Data
-PSComputerName              : 
-CimClass                    : root/cimv2:Win32_DiskPartition
-CimInstanceProperties       : {Caption, Description, InstallDate, Name…}
-CimSystemProperties         : Microsoft.Management.Infrastructure.CimSystemProperties
-
-Index                       : 0
-Status                      : 
-StatusInfo                  : 
-Name                        : Disk #2, Partition #0
-Caption                     : Disk #2, Partition #0
-Description                 : GPT: System
-InstallDate                 : 
-Availability                : 
-ConfigManagerErrorCode      : 
-ConfigManagerUserConfig     : 
-CreationClassName           : Win32_DiskPartition
-DeviceID                    : Disk #2, Partition #0
-ErrorCleared                : 
-ErrorDescription            : 
-LastErrorCode               : 
-PNPDeviceID                 : 
-PowerManagementCapabilities : 
-PowerManagementSupported    : 
-SystemCreationClassName     : Win32_ComputerSystem
-SystemName                  : REDACTED SYSTEM NAME
-Access                      : 
-BlockSize                   : 512
-ErrorMethodology            : 
-NumberOfBlocks              : 2201600
-Purpose                     : 
-Bootable                    : True
-PrimaryPartition            : True
-BootPartition               : True
-DiskIndex                   : 2
-HiddenSectors               : 
-RewritePartition            : 
-Size                        : 1127219200
-StartingOffset              : 1048576
-Type                        : GPT: System
-PSComputerName              : 
-CimClass                    : root/cimv2:Win32_DiskPartition
-CimInstanceProperties       : {Caption, Description, InstallDate, Name…}
-CimSystemProperties         : Microsoft.Management.Infrastructure.CimSystemProperties
-
-Index                       : 1
-Status                      : 
-StatusInfo                  : 
-Name                        : Disk #2, Partition #1
-Caption                     : Disk #2, Partition #1
-Description                 : GPT: Unknown
-InstallDate                 : 
-Availability                : 
-ConfigManagerErrorCode      : 
-ConfigManagerUserConfig     : 
-CreationClassName           : Win32_DiskPartition
-DeviceID                    : Disk #2, Partition #1
-ErrorCleared                : 
-ErrorDescription            : 
-LastErrorCode               : 
-PNPDeviceID                 : 
-PowerManagementCapabilities : 
-PowerManagementSupported    : 
-SystemCreationClassName     : Win32_ComputerSystem
-SystemName                  : REDACTED SYSTEM NAME
-Access                      : 
-BlockSize                   : 512
-ErrorMethodology            : 
-NumberOfBlocks              : 1998204928
-Purpose                     : 
-Bootable                    : False
-PrimaryPartition            : False
-BootPartition               : False
-DiskIndex                   : 2
-HiddenSectors               : 
-RewritePartition            : 
-Size                        : 1023080923136
-StartingOffset              : 1128267776
-Type                        : GPT: Unknown
-PSComputerName              : 
-CimClass                    : root/cimv2:Win32_DiskPartition
-CimInstanceProperties       : {Caption, Description, InstallDate, Name…}
-CimSystemProperties         : Microsoft.Management.Infrastructure.CimSystemProperties
-
-Index                       : 0
-Status                      : 
-StatusInfo                  : 
-Name                        : Disk #1, Partition #0
-Caption                     : Disk #1, Partition #0
-Description                 : GPT: Basic Data
-InstallDate                 : 
-Availability                : 
-ConfigManagerErrorCode      : 
-ConfigManagerUserConfig     : 
-CreationClassName           : Win32_DiskPartition
-DeviceID                    : Disk #1, Partition #0
-ErrorCleared                : 
-ErrorDescription            : 
-LastErrorCode               : 
-PNPDeviceID                 : 
-PowerManagementCapabilities : 
-PowerManagementSupported    : 
-SystemCreationClassName     : Win32_ComputerSystem
-SystemName                  : REDACTED SYSTEM NAME
-Access                      : 
-BlockSize                   : 512
-ErrorMethodology            : 
-NumberOfBlocks              : 1953488896
-Purpose                     : 
-Bootable                    : False
-PrimaryPartition            : True
-BootPartition               : False
-DiskIndex                   : 1
-HiddenSectors               : 
-RewritePartition            : 
-Size                        : 1000186314752
-StartingOffset              : 16777216
-Type                        : GPT: Basic Data
-PSComputerName              : 
-CimClass                    : root/cimv2:Win32_DiskPartition
-CimInstanceProperties       : {Caption, Description, InstallDate, Name…}
-CimSystemProperties         : Microsoft.Management.Infrastructure.CimSystemProperties`)
+[
+  {
+    "DiskIndex": 3,
+    "Size": 104857600,
+    "Type": "GPT: System"
+  },
+  {
+    "DiskIndex": 3,
+    "Size": 999275102208,
+    "Type": "GPT: Basic Data"
+  },
+  {
+    "DiskIndex": 3,
+    "Size": 805306368,
+    "Type": "GPT: Unknown"
+  },
+  {
+    "DiskIndex": 4,
+    "Size": 536853086208,
+    "Type": "GPT: Basic Data"
+  },
+  {
+    "DiskIndex": 0,
+    "Size": 10000829251584,
+    "Type": "GPT: Basic Data"
+  },
+  {
+    "DiskIndex": 5,
+    "Size": 123977334784,
+    "Type": "Installable File System"
+  },
+  {
+    "DiskIndex": 2,
+    "Size": 1127219200,
+    "Type": "GPT: System"
+  },
+  {
+    "DiskIndex": 2,
+    "Size": 1023080923136,
+    "Type": "GPT: Unknown"
+  },
+  {
+    "DiskIndex": 1,
+    "Size": 1000186314752,
+    "Type": "GPT: Basic Data"
+  }
+]`)
 	case "malicious":
 		fmt.Println(`
-
-Index                       : -1
-Name                        : Disk #0, Partition #-1
-DiskIndex                   : 0
-Size                        : 314572800
-
-Index                       : alpha
-Name                        : Disk #0, Partition alpha
-DiskIndex                   : 0
-Size                        : 943718400
-
-Index                       : 4
-Name                        : Disk #0, Partition #4
-DiskIndex                   : 0
-Size                        : 22153265152
-
-Index                       : 0
-Name                        : Disk #-1, Partition #0
-DiskIndex                   : -1
-Size                        : 22153265152
-
-Index                       : 1
-Name                        : Disk #1, Partition #1
-DiskIndex                   : 1
-Size                        : 22153265152
-
-Index                       : 2
-Name                        : Disk beta, Partition #2
-DiskIndex                   : beta
-Size                        : 1976850972672
-
-Index                       : 500
-Name                        : Disk 1, Partition #500
-DiskIndex                   : 1
-Size                        : 1976850972672
-
-Index                       : 3
-Name                        : Disk #0, Partition #3
-DiskIndex                   : 0
-Size                        : -20
-
-Index                       : 3
-Name                        : Disk #500, Partition #0
-DiskIndex                   : 500
-Size                        : -20`)
+[
+  {
+    "DiskIndex": -3,
+    "Size": 104857600,
+    "Type": "GPT: System"
+  },
+  {
+    "DiskIndex": 10000,
+    "Size": 999275102208,
+    "Type": "GPT: Basic Data"
+  },
+  {
+    "DiskIndex": 0,
+    "Size": 805306368,
+    "Type": "GPT: Unknown"
+  },
+  {
+    "DiskIndex": 0,
+    "Size": 536853086208,
+    "Type": "GPT: Basic Data"
+  },
+  {
+    "DiskIndex": 2,
+    "Size": 10000829251584,
+    "Type": "GPT: Basic Data"
+  },
+  {
+    "DiskIndex": 8,
+    "Size": 123977334784,
+    "Type": "Installable File System"
+  },
+  {
+    "DiskIndex": -2,
+    "Size": 1127219200,
+    "Type": "GPT: System"
+  },
+  {
+    "DiskIndex": 2,
+    "Size": 1023080923136,
+    "Type": "GPT: Unknown"
+  },
+  {
+    "Size": 1000186314752,
+    "Type": "GPT: Basic Data"
+  }
+]`)
+	case "error no exit":
+		fmt.Fprint(os.Stderr, "Error requested in fake partition info")
 	case "":
 		fallthrough
 	case "missing":

@@ -22,43 +22,43 @@ gpus:
 mem:
     total: 65237
 blks:
-    - size: 9537534
-      type: disk
-      children:
-        - size: 9537534
-          type: part
-          children: []
     - size: 953867
       type: disk
       children:
-        - size: 953852
-          type: part
-          children: []
-    - size: 976756
-      type: disk
-      children:
-        - size: 1075
-          type: part
-          children: []
-        - size: 975686
-          type: part
-          children: []
-    - size: 0
-      type: disk
-      children:
         - size: 100
-          type: part
+          type: 'GPT: System'
           children: []
         - size: 952983
-          type: part
+          type: 'GPT: Basic Data'
           children: []
         - size: 768
-          type: part
+          type: 'GPT: Unknown'
           children: []
     - size: 511993
       type: disk
       children:
         - size: 511983
-          type: part
+          type: 'GPT: Basic Data'
+          children: []
+    - size: 9537534
+      type: disk
+      children:
+        - size: 9537534
+          type: 'GPT: Basic Data'
+          children: []
+    - size: 976756
+      type: disk
+      children:
+        - size: 1075
+          type: 'GPT: System'
+          children: []
+        - size: 975686
+          type: 'GPT: Unknown'
+          children: []
+    - size: 953867
+      type: disk
+      children:
+        - size: 953852
+          type: 'GPT: Basic Data'
           children: []
 screens: []
