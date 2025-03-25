@@ -213,6 +213,17 @@ func TestCollectLinux(t *testing.T) {
 			},
 		},
 
+		"Bad block nesting depth": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "bad nesting depth",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
 		"Missing Screen information": {
 			root:       "regular",
 			cpuInfo:    "regular",
@@ -705,6 +716,99 @@ func TestFakeBlkList(_ *testing.T) {
          ]
       }
    ]
+}`)
+	case "bad nesting depth":
+		fmt.Println(`
+{
+  "blockdevices": [
+    {
+      "name": "sda",
+      "size": "931.5G",
+      "type": "disk",
+      "rm": false,
+      "children": [
+        {
+          "name": "sda",
+          "size": "931.5G",
+          "type": "disk",
+          "rm": false,
+          "children": [
+            {
+              "name": "sda",
+              "size": "931.5G",
+              "type": "disk",
+              "rm": false,
+              "children": [
+                {
+                  "name": "sda",
+                  "size": "931.5G",
+                  "type": "disk",
+                  "rm": false,
+                  "children": [
+                    {
+                      "name": "sda",
+                      "size": "931.5G",
+                      "type": "disk",
+                      "rm": false,
+                      "children": [
+                        {
+                          "name": "sda",
+                          "size": "931.5G",
+                          "type": "disk",
+                          "rm": false,
+                          "children": [
+                            {
+                              "name": "sda",
+                              "size": "931.5G",
+                              "type": "disk",
+                              "rm": false,
+                              "children": [
+                                {
+                                  "name": "sda",
+                                  "size": "931.5G",
+                                  "type": "disk",
+                                  "rm": false,
+                                  "children": [
+                                    {
+                                      "name": "sda",
+                                      "size": "931.5G",
+                                      "type": "disk",
+                                      "rm": false,
+                                      "children": [
+                                        {
+                                          "name": "sda",
+                                          "size": "931.5G",
+                                          "type": "disk",
+                                          "rm": false,
+                                          "children": [
+                                            {
+                                              "name": "sda",
+                                              "size": "931.5G",
+                                              "type": "disk",
+                                              "rm": false,
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }`)
 	case "garbage":
 		fmt.Println(`my ssd is broken :(
