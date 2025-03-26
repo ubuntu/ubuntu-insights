@@ -655,15 +655,18 @@ func TestFakeBlkList(_ *testing.T) {
       {
          "name": "loop0",
          "size": "4K",
-         "type": "loop"
+         "type": "loop",
+		 "rm": false
       },{
          "name": "loop1",
          "size": "9.5M",
-         "type": "loop"
+         "type": "loop",
+		 "rm": false
       },{
          "name": "sda",
          "size": "931.5G",
          "type": "disk",
+		 "rm": false,
          "children": [
             {
                "name": "sda1",
@@ -714,7 +717,30 @@ func TestFakeBlkList(_ *testing.T) {
 				]
 			}
          ]
-      }
+      },{
+         "name": "sda",
+         "size": "931.5G",
+         "type": "disk",
+		 "rm": true,
+         "children": [
+            {
+               "name": "sda1",
+               "size": "1G",
+               "type": "part",
+			   "rm": true
+            },{
+               "name": "sda2",
+               "size": "2G",
+               "type": "part",
+			   "rm": true
+            },{
+               "name": "sda3",
+               "size": "928.5G",
+               "type": "part",
+			   "rm": false
+            }
+		]
+	}
    ]
 }`)
 	case "bad nesting depth":
