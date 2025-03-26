@@ -1,9 +1,12 @@
 package hardware
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ubuntu/ubuntu-insights/internal/cmdutils"
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/platform"
@@ -32,8 +35,8 @@ func defaultPlatformOptions() platformOptions {
 		gpuCmd:     []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_VideoController", "|", "Format-List", "-Property", "*"},
 		memoryCmd:  []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_ComputerSystem", "|", "Format-List", "-Property", "TotalPhysicalMemory"},
 
-		diskCmd:      []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_DiskDrive", "|", "Format-List", "-Property", "*"},
-		partitionCmd: []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_DiskPartition", "|", "Format-List", "-Property", "*"},
+		diskCmd:      []string{"powershell.exe", "-Command", "Get-WmiObject", "Win32_DiskDrive", "|", "Select-Object", "MediaType, Index, Size, Partitions", "|", "ConvertTo-Json", "-Depth", "3"},
+		partitionCmd: []string{"powershell.exe", "-Command", "Get-WmiObject", "Win32_DiskPartition", "|", "Select-Object", "DiskIndex, Size, Type", "|", "ConvertTo-Json", "-Depth", "3"},
 
 		screenResCmd:   []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_DesktopMonitor", "|", "Format-List", "-Property", "*"},
 		displaySizeCmd: []string{"powershell.exe", "-Command", "Get-CIMInstance", "-Namespace", "root\\wmi", "WmiMonitorBasicDisplayParams", "|", "Format-List", "-Property", "*"},
@@ -169,113 +172,106 @@ func (s Collector) collectMemory() (mem memory, err error) {
 
 // collectDisks uses Win32_DiskDrive and Win32_DiskPartition to collect information about disks.
 func (s Collector) collectDisks() (blks []disk, err error) {
-	var usedDiskFields = map[string]struct{}{
-		"Size":       {},
-		"Index":      {},
-		"Partitions": {},
+	type diskOut struct {
+		MediaType  string
+		Index      uint64
+		Size       uint64
+		Partitions uint64
 	}
 
-	var usedPartitionFields = map[string]struct{}{
-		"DiskIndex": {},
-		"Index":     {},
-		"Size":      {},
+	type partOut struct {
+		DiskIndex uint64
+		Size      uint64
+		Type      string
 	}
 
-	getSize := func(b string) uint64 {
-		v, err := strconv.ParseUint(b, 10, 64)
-		if err != nil {
-			s.log.Warn("disk partition contains invalid size")
-			return 0
-		}
-		v, _ = fileutils.ConvertUnitToStandard("b", v)
-		return v
-	}
-
-	disks, err := cmdutils.RunListFmt(s.platform.diskCmd, usedDiskFields, s.log)
+	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, s.platform.diskCmd[0], s.platform.diskCmd[1:]...)
 	if err != nil {
+		s.log.Warn("Failed to run disk command", "error", err, "stderr", stderr)
 		return nil, err
 	}
 
-	const maxPartitions = 128
+	if stderr.String() != "" {
+		s.log.Info("disk command returned stderr", "stderr", stderr)
+	}
 
-	blks = make([]disk, len(disks))
-	for _, d := range disks {
-		parts, err := strconv.Atoi(d["Partitions"])
+	var disksOut []diskOut
+	if err = json.Unmarshal(stdout.Bytes(), &disksOut); err != nil {
+		s.log.Warn("Failed to unmarshal disk output", "error", err)
+		return nil, err
+	}
+
+	diskIndicesSeen := make(map[uint64]bool)
+	diskMap := make(map[uint64]int) // Map between blk index and disk index
+	for _, d := range disksOut {
+		if value, ok := diskIndicesSeen[d.Index]; ok && value {
+			s.log.Warn("Skipping duplicate disk index", "index", d.Index)
+			continue
+		}
+		diskIndicesSeen[d.Index] = true
+
+		if d.MediaType != "Fixed hard disk media" {
+			s.log.Info("Skipping non-fixed disk", "mediaType", d.MediaType)
+			continue
+		}
+
+		if d.Partitions > 128 {
+			s.log.Warn("Skipping disk with too many partitions", "partitions", d.Partitions)
+			continue
+		}
+
+		d.Size, err = fileutils.ConvertUnitToStandard("b", d.Size)
 		if err != nil {
-			s.log.Warn("disk partitions was not an integer", "error", err)
-			parts = 0
-		}
-		if parts < 0 {
-			s.log.Warn("disk partitions was negative", "value", parts)
-			parts = 0
-		}
-		if parts > maxPartitions {
-			s.log.Warn("disk partitions too large", "value", parts)
-			parts = maxPartitions
+			s.log.Warn("Failed to convert disk size to standard unit", "error", err)
+			continue
 		}
 
-		c := disk{
-			Size:     getSize(d["Size"]),
+		blks = append(blks, disk{
+			Size:     d.Size,
 			Type:     "disk",
-			Children: make([]disk, parts),
-		}
-
-		idx, err := strconv.ParseUint(d["Index"], 10, 64)
-		if err != nil {
-			s.log.Warn("disk index was not an unsigned integer", "error", err)
-			continue
-		}
-		if idx >= uint64(len(blks)) {
-			s.log.Warn("disk index was larger than disks", "value", idx)
-			continue
-		}
-		if blks[idx].Size != 0 {
-			s.log.Warn("duplicate disk index", "value", idx)
-			continue
-		}
-		blks[idx] = c
+			Children: make([]disk, 0, d.Partitions),
+		})
+		diskMap[d.Index] = len(blks) - 1
 	}
 
-	parts, err := cmdutils.RunListFmt(s.platform.partitionCmd, usedPartitionFields, s.log)
+	stdout, stderr, err = cmdutils.RunWithTimeout(context.Background(), 15*time.Second, s.platform.partitionCmd[0], s.platform.partitionCmd[1:]...)
 	if err != nil {
-		s.log.Warn("can't get partitions", "error", err)
-		return blks, nil
+		s.log.Warn("Failed to run partition command", "error", err, "stderr", stderr)
+		return nil, err
 	}
 
-	for _, p := range parts {
-		d, err := strconv.Atoi(p["DiskIndex"])
-		if err != nil {
-			s.log.Warn("partition disk index was not an integer", "error", err)
-			continue
-		}
-		if d < 0 {
-			s.log.Warn("partition disk index was negative", "value", d)
-			continue
-		}
-		if d >= len(blks) {
-			s.log.Warn("partition disk index was larger than disks", "value", d)
+	if stderr.String() != "" {
+		s.log.Info("partition command returned stderr", "stderr", stderr)
+	}
+
+	var partsOut []partOut
+	if err = json.Unmarshal(stdout.Bytes(), &partsOut); err != nil {
+		s.log.Warn("Failed to unmarshal partition output", "error", err)
+		return nil, err
+	}
+
+	for _, p := range partsOut {
+		if valid, ok := diskIndicesSeen[p.DiskIndex]; !ok || !valid {
+			s.log.Warn("Skipping partition with unknown disk index", "diskIndex", p.DiskIndex)
 			continue
 		}
 
-		idx, err := strconv.Atoi(p["Index"])
-		if err != nil {
-			s.log.Warn("partition index was not an integer", "error", err, "disk", d)
-			continue
-		}
-		if idx < 0 {
-			s.log.Warn("partition index was negative", "value", idx, "disk", d)
-			continue
-		}
-		if idx >= len(blks[d].Children) {
-			s.log.Warn("Partition index was larger than the number of partitions", "value", idx, "disk", d)
+		i, ok := diskMap[p.DiskIndex]
+		if !ok {
+			s.log.Info("Skipping partition with discarded disk index", "diskIndex", p.DiskIndex)
 			continue
 		}
 
-		blks[d].Children[idx] = disk{
-			Size:     getSize(p["Size"]),
-			Type:     "part",
-			Children: []disk{},
+		p.Size, err = fileutils.ConvertUnitToStandard("b", p.Size)
+		if err != nil {
+			s.log.Warn("Failed to convert partition size to standard unit", "error", err)
+			continue
 		}
+
+		blks[i].Children = append(blks[i].Children, disk{
+			Size: p.Size,
+			Type: p.Type,
+		})
 	}
 
 	return blks, nil

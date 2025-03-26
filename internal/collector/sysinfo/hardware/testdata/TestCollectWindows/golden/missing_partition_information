@@ -21,46 +21,7 @@ gpus:
       driver: igdumdim0.dll
 mem:
     total: 65237
-blks:
-    - size: 9537534
-      type: disk
-      children:
-        - size: 0
-          type: ""
-          children: []
-    - size: 953867
-      type: disk
-      children:
-        - size: 0
-          type: ""
-          children: []
-    - size: 976756
-      type: disk
-      children:
-        - size: 0
-          type: ""
-          children: []
-        - size: 0
-          type: ""
-          children: []
-    - size: 0
-      type: disk
-      children:
-        - size: 0
-          type: ""
-          children: []
-        - size: 0
-          type: ""
-          children: []
-        - size: 0
-          type: ""
-          children: []
-    - size: 511993
-      type: disk
-      children:
-        - size: 0
-          type: ""
-          children: []
+blks: []
 screens:
     - physicalresolution: ""
       size: 340mm x 190mm
