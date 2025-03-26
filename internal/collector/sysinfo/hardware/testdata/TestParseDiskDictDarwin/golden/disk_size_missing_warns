@@ -1,6 +1,8 @@
 name: disk0
 size: 0
-partitions:
+type: disk
+children:
     - name: disk0s0
       size: 0
-      partitions: []
+      type: part
+      children: []

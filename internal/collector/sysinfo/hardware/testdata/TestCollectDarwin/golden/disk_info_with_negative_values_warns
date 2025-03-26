@@ -21,9 +21,11 @@ mem:
     total: 16384
 blks:
     - size: 0
-      partitions:
+      type: "disk"
+      children:
         - size: 0
-          partitions: []
+          type: "part"
+          children: []
 screens:
     - physicalresolution: 3072x1920
       size: ""

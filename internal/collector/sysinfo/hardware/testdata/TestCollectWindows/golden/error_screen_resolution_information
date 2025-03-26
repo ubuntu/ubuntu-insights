@@ -23,29 +23,42 @@ mem:
     total: 65237
 blks:
     - size: 9537534
-      partitions:
+      type: disk
+      children:
         - size: 9537534
-          partitions: []
+          type: part
+          children: []
     - size: 953867
-      partitions:
+      type: disk
+      children:
         - size: 953852
-          partitions: []
+          type: part
+          children: []
     - size: 976756
-      partitions:
+      type: disk
+      children:
         - size: 1075
-          partitions: []
+          type: part
+          children: []
         - size: 975686
-          partitions: []
+          type: part
+          children: []
     - size: 0
-      partitions:
+      type: disk
+      children:
         - size: 100
-          partitions: []
+          type: part
+          children: []
         - size: 952983
-          partitions: []
+          type: part
+          children: []
         - size: 768
-          partitions: []
+          type: part
+          children: []
     - size: 511993
-      partitions:
+      type: disk
+      children:
         - size: 511983
-          partitions: []
+          type: part
+          children: []
 screens: []

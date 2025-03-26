@@ -213,6 +213,17 @@ func TestCollectLinux(t *testing.T) {
 			},
 		},
 
+		"Bad block nesting depth": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "bad nesting depth",
+			screenInfo: "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
 		"Missing Screen information": {
 			root:       "regular",
 			cpuInfo:    "regular",
@@ -680,10 +691,124 @@ func TestFakeBlkList(_ *testing.T) {
                      ]
                   }
                ]
-            }
+            },{
+				"name": "sdb4",
+				"size": "350G",
+				"type": "part",
+				"children": [
+					{
+					"name": "sdb6",
+					"size": "175G",
+					"type": "part"
+					},
+					{
+					"name": "sdb7",
+					"size": "100G",
+					"type": "part"
+					},
+					{
+					"name": "sdb8",
+					"size": "75G",
+					"type": "part"
+					}
+				]
+			}
          ]
       }
    ]
+}`)
+	case "bad nesting depth":
+		fmt.Println(`
+{
+  "blockdevices": [
+    {
+      "name": "sda",
+      "size": "931.5G",
+      "type": "disk",
+      "rm": false,
+      "children": [
+        {
+          "name": "sda",
+          "size": "931.5G",
+          "type": "disk",
+          "rm": false,
+          "children": [
+            {
+              "name": "sda",
+              "size": "931.5G",
+              "type": "disk",
+              "rm": false,
+              "children": [
+                {
+                  "name": "sda",
+                  "size": "931.5G",
+                  "type": "disk",
+                  "rm": false,
+                  "children": [
+                    {
+                      "name": "sda",
+                      "size": "931.5G",
+                      "type": "disk",
+                      "rm": false,
+                      "children": [
+                        {
+                          "name": "sda",
+                          "size": "931.5G",
+                          "type": "disk",
+                          "rm": false,
+                          "children": [
+                            {
+                              "name": "sda",
+                              "size": "931.5G",
+                              "type": "disk",
+                              "rm": false,
+                              "children": [
+                                {
+                                  "name": "sda",
+                                  "size": "931.5G",
+                                  "type": "disk",
+                                  "rm": false,
+                                  "children": [
+                                    {
+                                      "name": "sda",
+                                      "size": "931.5G",
+                                      "type": "disk",
+                                      "rm": false,
+                                      "children": [
+                                        {
+                                          "name": "sda",
+                                          "size": "931.5G",
+                                          "type": "disk",
+                                          "rm": false,
+                                          "children": [
+                                            {
+                                              "name": "sda",
+                                              "size": "931.5G",
+                                              "type": "disk",
+                                              "rm": false,
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }`)
 	case "garbage":
 		fmt.Println(`my ssd is broken :(

@@ -217,7 +217,7 @@ func (s Collector) collectDisks() (out []disk, err error) {
 }
 
 func parseDiskDict(data map[string]any, partition bool, log *slog.Logger) (out disk, err error) {
-	out.Partitions = []disk{}
+	out.Children = []disk{}
 	if _, ok := data["APFSPhysicalStores"]; ok {
 		return out, errors.New("disk is a virtual APFS disk")
 	}
@@ -249,10 +249,12 @@ func parseDiskDict(data map[string]any, partition bool, log *slog.Logger) (out d
 
 	// partition is true if we are currently parsing a partition.
 	if partition {
+		out.Type = "part"
 		return out, err
 	}
 
 	// otherwise, we want to get the current disk's partitions.
+	out.Type = "disk"
 	partsI, ok := data["Partitions"]
 	if !ok {
 		log.Warn("disk missing partitions")
@@ -276,7 +278,7 @@ func parseDiskDict(data map[string]any, partition bool, log *slog.Logger) (out d
 			log.Warn("partitions contained a fake partition", "error", err)
 			continue
 		}
-		out.Partitions = append(out.Partitions, d)
+		out.Children = append(out.Children, d)
 	}
 
 	return out, err

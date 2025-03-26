@@ -1,9 +1,12 @@
 name: disk0
 size: 39
-partitions:
+type: disk
+children:
     - name: disk0s0
       size: 9
-      partitions: []
+      type: part
+      children: []
     - name: disk0s1
       size: 29
-      partitions: []
+      type: part
+      children: []

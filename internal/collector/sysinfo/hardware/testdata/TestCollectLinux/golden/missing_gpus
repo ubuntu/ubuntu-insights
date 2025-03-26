@@ -15,13 +15,35 @@ mem:
     total: 31941
 blks:
     - size: 953856
-      partitions:
+      type: disk
+      children:
         - size: 1024
-          partitions: []
+          type: part
+          children: []
         - size: 2048
-          partitions: []
+          type: part
+          children: []
         - size: 950784
-          partitions: []
+          type: part
+          children:
+            - size: 950681
+              type: crypt
+              children:
+                - size: 950681
+                  type: lvm
+                  children: []
+        - size: 358400
+          type: part
+          children:
+            - size: 179200
+              type: part
+              children: []
+            - size: 102400
+              type: part
+              children: []
+            - size: 76800
+              type: part
+              children: []
 screens:
     - physicalresolution: 3840x2160
       size: 598mm x 336mm
