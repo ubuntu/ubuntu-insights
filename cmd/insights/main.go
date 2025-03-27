@@ -10,7 +10,7 @@ import (
 )
 
 //go:generate go run ../generate_completion_documentation.go completion ../../generated
-//go:generate go run ../generate_completion_documentation.go man ../../generated
+//go:generate go run -ldflags=-X=github.com/ubuntu/ubuntu-insights/internal/constants.manGeneration=true ../generate_completion_documentation.go man ../../generated
 
 func main() {
 	slog.SetLogLoggerLevel(constants.DefaultLogLevel)
