@@ -5,7 +5,7 @@ go 1.24.1
 require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/spf13/cobra v1.9.1
-	github.com/spf13/viper v1.20.0
+	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
 	github.com/ubuntu/decorate v0.0.0-20240820145549-b76bb81d1209
 	golang.org/x/text v0.23.0
