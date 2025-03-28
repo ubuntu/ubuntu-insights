@@ -4,8 +4,7 @@ export DH_VERBOSE = 1
 export DEB_BUILD_MAINT_OPTIONS = optimize=-lto
 export GOTOOLCHAIN := local
 export INSIGHTS_GO_PACKAGE := $(shell grep-dctrl -s XS-Go-Import-Path -n - ./debian/control)
-# export GOFLAGS := -ldflags=-X=$(INSIGHTS_GO_PACKAGE)/internal/constants.Version=$(DEB_VERSION_UPSTREAM) --mod=vendor -buildmode=pie
-export GOFLAGS := --mod=vendor -buildmode=pie
+export GOFLAGS := -ldflags=-X=$(INSIGHTS_GO_PACKAGE)/internal/constants.Version=$(DEB_VERSION_UPSTREAM) --mod=vendor -buildmode=pie
 export DH_GOLANG_BUILDPKG := github.com/ubuntu/ubuntu-insights/cmd/insights
 export DH_GOLANG_GO_GENERATE := 1
 
