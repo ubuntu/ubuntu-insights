@@ -12,6 +12,9 @@ import (
 var (
 	// Version is the version of the application.
 	Version = "Dev"
+
+	// manGeneration is whenever or not man pages are being generated.
+	manGeneration = "false"
 )
 
 const (
@@ -53,6 +56,12 @@ var (
 )
 
 func init() {
+	if manGeneration == "true" {
+		DefaultConfigPath = ""
+		DefaultCachePath = ""
+		return
+	}
+
 	userConfigDir, err := os.UserConfigDir()
 	if err != nil {
 		panic(fmt.Sprintf("Could not fetch config directory: %v", err))

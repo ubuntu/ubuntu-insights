@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/internal/collector"
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo"
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
@@ -250,6 +251,9 @@ func TestCompile(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assert.NotNil(t, results)
+
+			assert.Equal(t, constants.Version, results.InsightsVersion, "Compiled insights should have the expected version")
+			results.InsightsVersion = "Tests"
 
 			got, err := json.MarshalIndent(results, "", "  ")
 			require.NoError(t, err)
