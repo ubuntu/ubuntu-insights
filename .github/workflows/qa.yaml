@@ -70,13 +70,22 @@ jobs:
         shell: bash
 
       - name: Run tests (with race detector)
-        if: matrix.test == 'race'
+        if: matrix.test == 'race' && runner.os != 'macOS'
         env:
           GO_TESTS_TIMEOUT: 35m
         run: |
           set -euo pipefail
           go test -json -timeout ${GO_TESTS_TIMEOUT} -race ./... | \
             gotestfmt --logfile "${INSIGHTS_TEST_ARTIFACTS_PATH}/gotestfmt.race.log"
+        shell: bash
+
+      - name: Run tests (with race detector)
+        if: matrix.test == 'race' && runner.os == 'macOS'
+        env:
+          GO_TESTS_TIMEOUT: 35m
+        run: |
+          set -euo pipefail
+          go test -json -timeout ${GO_TESTS_TIMEOUT} -race ./...
         shell: bash
 
       - name: Upload coverage to Codecov
