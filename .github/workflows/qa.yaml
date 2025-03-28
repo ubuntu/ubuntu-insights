@@ -79,7 +79,7 @@ jobs:
             gotestfmt --logfile "${INSIGHTS_TEST_ARTIFACTS_PATH}/gotestfmt.race.log"
         shell: bash
 
-      - name: Run tests (with race detector)
+      - name: Run tests (with unformatted race detector)
         if: matrix.test == 'race' && runner.os == 'macOS'
         env:
           GO_TESTS_TIMEOUT: 35m

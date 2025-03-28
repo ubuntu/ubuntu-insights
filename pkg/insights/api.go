@@ -2,8 +2,11 @@
 package insights
 
 import (
+	"log/slog"
+
 	"github.com/ubuntu/ubuntu-insights/internal/collector"
 	"github.com/ubuntu/ubuntu-insights/internal/consent"
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/uploader"
 )
 
@@ -49,6 +52,8 @@ type UploadFlags struct {
 // returns an error if metricsPath is "" and not ignored.
 // returns an error if collection fails.
 func (c Config) Collect(metricsPath string, flags CollectFlags) error {
+	setVerbosity(c.Verbose)
+
 	cConf := collector.Config{
 		Source:        c.Source,
 		Period:        flags.Period,
@@ -66,6 +71,8 @@ func (c Config) Collect(metricsPath string, flags CollectFlags) error {
 // if Config.Source is "", all reports are uploaded.
 // returns an error if uploading fails.
 func (c Config) Upload(flags UploadFlags) error {
+	setVerbosity(c.Verbose)
+
 	uConf := uploader.Config{
 		Sources: []string{c.Source},
 		MinAge:  flags.MinAge,
@@ -82,6 +89,8 @@ func (c Config) Upload(flags UploadFlags) error {
 // returns ConsentUnknown if it could not be retrieved.
 // returns ConsentTrue or ConsentFalse otherwise.
 func (c Config) GetConsentState() ConsentState {
+	setVerbosity(c.Verbose)
+
 	cm := consent.New(c.ConsentDir)
 	s, err := cm.GetState(c.Source)
 	if err != nil {
@@ -98,6 +107,17 @@ func (c Config) GetConsentState() ConsentState {
 // if Config.Source is "", the global source is effected.
 // returns an error if the state could not be set.
 func (c Config) SetConsentState(consentState bool) error {
+	setVerbosity(c.Verbose)
+
 	cm := consent.New(c.ConsentDir)
 	return cm.SetState(c.Source, consentState)
+}
+
+// setVerbosity sets the logging verbosity.
+func setVerbosity(verbose bool) {
+	if verbose {
+		slog.SetLogLoggerLevel(slog.LevelDebug)
+	} else {
+		slog.SetLogLoggerLevel(constants.DefaultLogLevel)
+	}
 }
