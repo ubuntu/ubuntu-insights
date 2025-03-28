@@ -53,11 +53,11 @@ blks:
               type: part
               children: []
 screens:
-    - physicalresolution: 3840x2160
+    - physicalresolution: ""
       size: 598mm x 336mm
       resolution: 1920x1080
       refreshrate: "60.00"
-    - physicalresolution: 3072x1728
+    - physicalresolution: ""
       size: 344mm x 193mm
       resolution: 1920x1080
       refreshrate: "60.03"
