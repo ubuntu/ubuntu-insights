@@ -27,6 +27,14 @@ By default, Ubuntu Insights will only collect once per collection period.
 
 To execute the interactive command-line interface manually, use `ubuntu-insights`.
 
+## Default Paths
+
+### Linux
+
+Consent Files: `~/.config/ubuntu-insights`
+
+Reports Cache: `~/.cache/ubuntu-insights`
+
 ## Command-Line Interface Usage
 
 ### ubuntu-insights
