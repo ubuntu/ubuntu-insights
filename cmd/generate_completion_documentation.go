@@ -37,7 +37,7 @@ func main() {
 	}
 
 	commands := []cobra.Command{i.RootCmd()}
-	
+
 	if len(os.Args) < 3 {
 		log.Fatalf(usage, os.Args[0])
 	}
@@ -163,10 +163,14 @@ func cleanDirectory(p string) error {
 // Prefer this way of creating directories instead of os.Mkdir as the latter
 // could bypass fakeroot and cause unexpected confusion.
 func createDirectory(dir string, perm uint32) error {
-	// #nosec:G204 - we control the mode and directory we run mkdir on
-	cmd := exec.Command("mkdir", "-m", fmt.Sprintf("%o", perm), "-p", dir)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("Couldn't create dest directory: %v", string(output))
+	// First attempt with os.MkdirAll
+	if err := os.MkdirAll(dir, os.FileMode(perm)); err != nil {
+		// #nosec:G204 - we control the mode and directory we run mkdir on
+		cmd := exec.Command("mkdir", "-m", fmt.Sprintf("%o", perm), "-p", dir)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("Couldn't create dest directory: %v", string(output))
+		}
 	}
+
 	return nil
 }
