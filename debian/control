@@ -19,49 +19,17 @@ Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
 Built-Using: ${misc:Built-Using}
-Description: Ubuntu Insights (program)
- Welcome to Ubuntu Insights
- .
- Code quality (https://github.com/ubuntu/ubuntu-
- insights/actions?query=branch%3Amain+event%3Apush) License (/LICENSE)
- Code coverage (https://codecov.io/gh/ubuntu/ubuntu-insights) Go Report
- Card (https://goreportcard.com/report/github.com/ubuntu/ubuntu-insights)
- .
- This is the code repository for **Ubuntu Insights**, a user transparent,
- open, platform-agnostic and cross application solution for reporting
+Description: Ubuntu metrics reporting service
+ Ubuntu Insights, a user transparent, open, 
+ platform-agnostic and cross application solution for reporting
  hardware information and other collected metrics.
  .
  Ubuntu Insight is designed to show you exactly what is being sent, and
- allow you to acknowledge and control your own data. The code in this
- repository is designed to mainly be invoked by a controlling
- application, but a command line tool is also provided.
+ allow you to acknowledge and control your own data. The information 
+ can't be used to identify a single machine, and is cached for local viewing
+ before being sent to the server.
  .
  This is designed to be a full replacement for Ubuntu Report.
  .
- Troubleshooting
- .
- TODO: Add details on how to debug this project, where to increase
- verbosity, how to find logs, how to run in debug mode.
- .
- Get involved
- .
- This is an open source (/LICENSE) project and we warmly welcome
- community contributions, suggestions, and constructive feedback. If
- you're interested in contributing, please take a look at our
- Contribution guidelines (/CONTRIBUTING.md) first.
- .
-  * to report an issue, please file a bug report against our repository,
-    using a bug template.
-  * for suggestions and constructive feedback, report a feature request
-    bug report, using the proposed template.
- .
- Get in touch
- .
- We're friendly! We have a community forum at
- (https://discourse.ubuntu.com) where we discuss feature plans,
- development news, issues, updates and troubleshooting.
- .
- For news and updates, follow the Ubuntu twitter account
- (https://twitter.com/ubuntu) and on Facebook
- (https://www.facebook.com/ubuntu).
+ This package contains the command line tool and systemd service triggers.
 
