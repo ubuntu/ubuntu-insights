@@ -93,8 +93,8 @@ type Config struct {
 // Factory represents a function that creates a new Collector.
 type Factory = func(cm Consent, cachePath, source string, period uint, dryRun bool, args ...Options) (Collector, error)
 
-// Run creates a collector then collects using it based off the given config and arguments.
-func (c Config) Run(consentDir, cacheDir string, writer func(Collector, Insights) error, factory Factory) error {
+// Collect creates a collector then collects using it based off the given config and arguments.
+func (c Config) Collect(consentDir, cacheDir string, consumer func(Insights) error, factory Factory) error {
 	// Handle global source and source metrics.
 	if c.SourceMetrics == "" && c.Source != "" {
 		return fmt.Errorf("no metricsPath for %s", c.Source)
@@ -105,14 +105,6 @@ func (c Config) Run(consentDir, cacheDir string, writer func(Collector, Insights
 	}
 	if c.Source == "" { // Default source to platform
 		c.Source = constants.DefaultCollectSource
-	}
-
-	// Setup defaults.
-	if cacheDir == "" {
-		cacheDir = constants.DefaultCachePath
-	}
-	if c.Period == 0 {
-		c.Period = 1
 	}
 
 	cm := consent.New(consentDir)
@@ -126,7 +118,12 @@ func (c Config) Run(consentDir, cacheDir string, writer func(Collector, Insights
 		return err
 	}
 
-	return writer(col, insights)
+	err = consumer(insights)
+	if err != nil {
+		return err
+	}
+
+	return col.Write(insights)
 }
 
 // WithSourceMetricsPath sets the path to an optional pre-made JSON file containing source specific metrics.
