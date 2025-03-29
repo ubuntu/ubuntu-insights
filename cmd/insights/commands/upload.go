@@ -25,7 +25,7 @@ If consent is not given for a source, an opt-out notification will be sent regar
 			app.config.Upload.Sources = args
 
 			slog.Info("Running upload command")
-			return app.config.Upload.Run(app.config.consentDir, app.config.insightsDir, app.newUploader)
+			return app.config.Upload.Upload(app.config.consentDir, app.config.insightsDir, app.newUploader)
 		},
 	}
 

@@ -52,7 +52,11 @@ type UploadFlags struct {
 // returns an error if metricsPath is "" and not ignored.
 // returns an error if collection fails.
 func (c Config) Collect(metricsPath string, flags CollectFlags) error {
-	setVerbosity(c.Verbose)
+	c.setup()
+
+	if flags.Period == 0 {
+		flags.Period = 1
+	}
 
 	cConf := collector.Config{
 		Source:        c.Source,
@@ -62,8 +66,8 @@ func (c Config) Collect(metricsPath string, flags CollectFlags) error {
 		SourceMetrics: metricsPath,
 	}
 
-	return cConf.Run(c.ConsentDir, c.InsightsDir, func(c collector.Collector, b collector.Insights) error {
-		return c.Write(b)
+	return cConf.Collect(c.ConsentDir, c.InsightsDir, func(collector.Insights) error {
+		return nil
 	}, collector.New)
 }
 
@@ -71,7 +75,7 @@ func (c Config) Collect(metricsPath string, flags CollectFlags) error {
 // if Config.Source is "", all reports are uploaded.
 // returns an error if uploading fails.
 func (c Config) Upload(flags UploadFlags) error {
-	setVerbosity(c.Verbose)
+	c.setup()
 
 	uConf := uploader.Config{
 		Sources: []string{c.Source},
@@ -81,7 +85,7 @@ func (c Config) Upload(flags UploadFlags) error {
 		Retry:   false,
 	}
 
-	return uConf.Run(c.ConsentDir, c.InsightsDir, uploader.New)
+	return uConf.Upload(c.ConsentDir, c.InsightsDir, uploader.New)
 }
 
 // GetConsentState gets the state for Config.Source.
@@ -89,7 +93,7 @@ func (c Config) Upload(flags UploadFlags) error {
 // returns ConsentUnknown if it could not be retrieved.
 // returns ConsentTrue or ConsentFalse otherwise.
 func (c Config) GetConsentState() ConsentState {
-	setVerbosity(c.Verbose)
+	c.setup()
 
 	cm := consent.New(c.ConsentDir)
 	s, err := cm.GetState(c.Source)
@@ -107,7 +111,7 @@ func (c Config) GetConsentState() ConsentState {
 // if Config.Source is "", the global source is effected.
 // returns an error if the state could not be set.
 func (c Config) SetConsentState(consentState bool) error {
-	setVerbosity(c.Verbose)
+	c.setup()
 
 	cm := consent.New(c.ConsentDir)
 	return cm.SetState(c.Source, consentState)
@@ -119,5 +123,17 @@ func setVerbosity(verbose bool) {
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 	} else {
 		slog.SetLogLoggerLevel(constants.DefaultLogLevel)
+	}
+}
+
+// setup sets verbosity and sets defaults.
+func (c *Config) setup() {
+	setVerbosity(c.Verbose)
+
+	if c.ConsentDir == "" {
+		c.ConsentDir = constants.DefaultConfigPath
+	}
+	if c.InsightsDir == "" {
+		c.InsightsDir = constants.DefaultCachePath
 	}
 }

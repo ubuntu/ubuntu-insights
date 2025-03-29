@@ -33,9 +33,6 @@ type CFile struct {
 // New returns a new ConsentManager.
 // path is the folder the consents are stored into.
 func New(path string) *Manager {
-	if path == "" {
-		path = constants.DefaultConfigPath
-	}
 	return &Manager{path: path}
 }
 

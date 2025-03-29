@@ -67,15 +67,14 @@ If source is provided, then the source-metrics-path should be provided as well.`
 func (a App) collectRun() (err error) {
 	defer decorate.OnError(&err, "failed to collect insights")
 
-	err = a.config.Collect.Run(a.config.consentDir, a.config.insightsDir, func(c collector.Collector, insights collector.Insights) error {
+	err = a.config.Collect.Collect(a.config.consentDir, a.config.insightsDir, func(insights collector.Insights) error {
 		// Pretty print insights
 		ib, err := json.MarshalIndent(insights, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal insights report for console printing: %v", err)
 		}
 		fmt.Println(string(ib))
-
-		return c.Write(insights)
+		return nil
 	}, a.newCollector)
 
 	if errors.Is(err, consent.ErrConsentFileNotFound) {
