@@ -16,3 +16,6 @@
 
 # Built CLI-executable binary
 cmd/insights/insights
+
+# Built Lib binary
+build

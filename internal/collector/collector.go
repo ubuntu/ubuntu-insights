@@ -13,6 +13,7 @@ import (
 
 	"github.com/ubuntu/decorate"
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo"
+	"github.com/ubuntu/ubuntu-insights/internal/consent"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 	"github.com/ubuntu/ubuntu-insights/internal/report"
@@ -79,6 +80,51 @@ var defaultOptions = options{
 
 // Options represents an optional function to override Collector default values.
 type Options func(*options)
+
+// Config represents the collector specific data needed to collect.
+type Config struct {
+	Source        string
+	Period        uint
+	Force         bool
+	DryRun        bool
+	SourceMetrics string
+}
+
+// Factory represents a function that creates a new Collector.
+type Factory = func(cm Consent, cachePath, source string, period uint, dryRun bool, args ...Options) (Collector, error)
+
+// Collect creates a collector then collects using it based off the given config and arguments.
+func (c Config) Collect(consentDir, cacheDir string, consumer func(Insights) error, factory Factory) error {
+	// Handle global source and source metrics.
+	if c.SourceMetrics == "" && c.Source != "" {
+		return fmt.Errorf("no metricsPath for %s", c.Source)
+	}
+	if c.Source == "" && c.SourceMetrics != "" { // ignore SourceMetrics for platform source
+		slog.Warn("Source Metrics were provided but is ignored for the global source")
+		c.SourceMetrics = ""
+	}
+	if c.Source == "" { // Default source to platform
+		c.Source = constants.DefaultCollectSource
+	}
+
+	cm := consent.New(consentDir)
+	col, err := factory(cm, cacheDir, c.Source, c.Period, c.DryRun, WithSourceMetricsPath(c.SourceMetrics))
+	if err != nil {
+		return err
+	}
+
+	insights, err := col.Compile(c.Force)
+	if err != nil {
+		return err
+	}
+
+	err = consumer(insights)
+	if err != nil {
+		return err
+	}
+
+	return col.Write(insights)
+}
 
 // WithSourceMetricsPath sets the path to an optional pre-made JSON file containing source specific metrics.
 func WithSourceMetricsPath(path string) Options {
