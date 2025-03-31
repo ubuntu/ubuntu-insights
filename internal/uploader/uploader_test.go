@@ -184,7 +184,7 @@ func TestUpload(t *testing.T) {
 			got, err := testutils.GetDirContents(t, dir, 3)
 			require.NoError(t, err)
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-			require.EqualValues(t, want, got)
+			require.Equal(t, want, got)
 		})
 	}
 }
@@ -292,7 +292,7 @@ func TestBackoffUpload(t *testing.T) {
 			got, err := testutils.GetDirContents(t, dir, 3)
 			require.NoError(t, err)
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-			require.EqualValues(t, want, got)
+			require.Equal(t, want, got)
 		})
 	}
 }

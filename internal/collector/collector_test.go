@@ -371,7 +371,7 @@ func TestWrite(t *testing.T) {
 			require.NoError(t, err)
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-			require.EqualValues(t, want, got)
+			require.Equal(t, want, got)
 		})
 	}
 }
