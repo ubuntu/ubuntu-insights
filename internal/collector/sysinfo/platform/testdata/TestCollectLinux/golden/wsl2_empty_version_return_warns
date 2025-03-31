@@ -4,4 +4,8 @@ wsl:
     interop: enabled
     version: ""
     kernelversion: 5.15.167.4-microsoft-standard-WSL2
+desktop:
+    desktopenvironment: ""
+    sessionname: ""
+    sessiontype: ""
 proattached: true

@@ -20,8 +20,9 @@ import (
 
 // Info contains platform information for Linux.
 type Info struct {
-	WSL         WSL  `json:"wsl,omitzero"`
-	ProAttached bool `json:"proAttached,omitempty"`
+	WSL         WSL     `json:"wsl,omitzero"`
+	Desktop     Desktop `json:"desktop,omitzero"`
+	ProAttached bool    `json:"proAttached,omitempty"`
 }
 
 // WSL contains platform information specific to Windows Subsystem for Linux.
@@ -33,12 +34,21 @@ type WSL struct {
 	KernelVersion    string `json:"kernelVersion,omitempty"`
 }
 
+// Desktop contains platform information for Linux desktop environments.
+type Desktop struct {
+	DesktopEnvironment string `json:"desktopEnvironment,omitempty"`
+	SessionName        string `json:"sessionName,omitempty"`
+	SessionType        string `json:"sessionType,omitempty"`
+}
+
 type platformOptions struct {
 	root              string
 	detectVirtCmd     []string
 	systemdAnalyzeCmd []string
 	wslVersionCmd     []string
 	proStatusCmd      []string
+
+	getenv func(key string) string
 }
 
 // defaultOptions returns options for when running under a normal environment.
@@ -49,6 +59,8 @@ func defaultPlatformOptions() platformOptions {
 		systemdAnalyzeCmd: []string{"systemd-analyze", "time", "--system"},
 		wslVersionCmd:     []string{"wsl.exe", "-v"},
 		proStatusCmd:      []string{"pro", "api", "u.pro.status.is_attached.v1"},
+
+		getenv: os.Getenv,
 	}
 }
 
@@ -57,6 +69,9 @@ func (p Collector) collectPlatform() (info Info, err error) {
 		decorate.OnError(&err, "failed to collect platform information")
 	}()
 	info.WSL = p.collectWSL()
+	if info.WSL.SubsystemVersion == 0 {
+		info.Desktop = p.getDesktop()
+	}
 	info.ProAttached = p.isProAttached()
 
 	return info, nil
@@ -248,6 +263,15 @@ func (p Collector) wasSystemdUsed() bool {
 		return false
 	}
 	return true
+}
+
+// getDesktop returns the desktop environment, session name, and session type in a Desktop struct.
+func (p Collector) getDesktop() Desktop {
+	return Desktop{
+		DesktopEnvironment: p.platform.getenv("XDG_CURRENT_DESKTOP"),
+		SessionName:        p.platform.getenv("XDG_SESSION_DESKTOP"),
+		SessionType:        p.platform.getenv("XDG_SESSION_TYPE"),
+	}
 }
 
 // isProAttached returns the attach state of Ubuntu Pro.

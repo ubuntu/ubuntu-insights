@@ -4,4 +4,8 @@ wsl:
     interop: enabled
     version: 2.4.11.0
     kernelversion: 1.1.1.1-custom
+desktop:
+    desktopenvironment: ""
+    sessionname: ""
+    sessiontype: ""
 proattached: true

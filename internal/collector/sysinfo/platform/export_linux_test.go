@@ -34,3 +34,12 @@ func WithProStatusCmd(cmd []string) Options {
 		o.platform.proStatusCmd = cmd
 	}
 }
+
+// WithGetenv sets the getenv function for the linux platform collector using a map.
+func WithGetenv(env map[string]string) Options {
+	return func(o *options) {
+		o.platform.getenv = func(key string) string {
+			return env[key]
+		}
+	}
+}

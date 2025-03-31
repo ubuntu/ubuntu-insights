@@ -5,7 +5,7 @@ wsl:
     version: ""
     kernelversion: ""
 desktop:
-    desktopenvironment: ubuntu:GNOME
-    sessionname: ubuntu
-    sessiontype: wayland
+    desktopenvironment: ""
+    sessionname: ""
+    sessiontype: ""
 proattached: true
