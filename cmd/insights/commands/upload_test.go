@@ -99,17 +99,15 @@ func TestUpload(t *testing.T) {
 				require.NoError(t, testutils.CopyDir(t, "testdata/reports", dir), "Setup: could not copy reports dir")
 			}
 
-			gotSources := make([]string, 0)
 			var (
 				gotMinAge uint
 				dRun      bool
 			)
-			newUploader := func(cm uploader.Consent, _, source string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error) {
-				gotSources = append(gotSources, source)
+			newUploader := func(cm uploader.Consent, _ string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error) {
 				gotMinAge = minAge
 				dRun = dryRun
 
-				return uploader.New(cm, dir, source, minAge, true, args...)
+				return uploader.New(cm, dir, minAge, true, args...)
 			}
 			a, cDir, _ := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewUploader(newUploader))
 
@@ -131,15 +129,13 @@ func TestUpload(t *testing.T) {
 			require.False(t, a.UsageError())
 
 			type results struct {
-				Sources []string
-				MinAge  uint
-				DryRun  bool
+				MinAge uint
+				DryRun bool
 			}
 
 			got := results{
-				Sources: gotSources,
-				MinAge:  gotMinAge,
-				DryRun:  dRun,
+				MinAge: gotMinAge,
+				DryRun: dRun,
 			}
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)

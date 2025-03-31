@@ -27,14 +27,12 @@ func (realTimeProvider) Now() time.Time {
 
 // Uploader is an abstraction of the uploader component.
 type Uploader struct {
-	source  string
-	consent Consent
-	minAge  time.Duration
-	dryRun  bool
+	consent  Consent
+	minAge   time.Duration
+	dryRun   bool
+	cacheDir string
 
 	baseServerURL      string
-	collectedDir       string
-	uploadedDir        string
 	maxReports         uint
 	timeProvider       timeProvider
 	initialRetryPeriod time.Duration // initialRetryPeriod is the initial wait period between retries.
@@ -71,7 +69,7 @@ type Config struct {
 }
 
 // Factory represents a function that creates a new Uploader.
-type Factory = func(cm Consent, cachePath, source string, minAge uint, dryRun bool, args ...Options) (Uploader, error)
+type Factory = func(cm Consent, cachePath string, minAge uint, dryRun bool, args ...Options) (Uploader, error)
 
 // Upload creates an uploader then uploads using it based off the given config and arguments.
 func (c Config) Upload(consentDir, cacheDir string, factory Factory) error {
@@ -85,36 +83,31 @@ func (c Config) Upload(consentDir, cacheDir string, factory Factory) error {
 	}
 
 	cm := consent.New(consentDir)
-
-	uploaders := make(map[string]Uploader)
-	for _, source := range c.Sources {
-		u, err := factory(cm, cacheDir, source, c.MinAge, c.DryRun)
-		if err != nil {
-			return fmt.Errorf("failed to create uploader for source %s: %v", source, err)
-		}
-		uploaders[source] = u
+	uploader, err := factory(cm, cacheDir, c.MinAge, c.DryRun)
+	if err != nil {
+		return fmt.Errorf("failed to create uploader: %v", err)
 	}
 
 	var uploadError error
 	mu := &sync.Mutex{}
 	var wg sync.WaitGroup
-	for s, u := range uploaders {
+	for _, source := range c.Sources {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			var err error
 			if c.Retry {
-				err = u.BackoffUpload(c.Force)
+				err = uploader.BackoffUpload(source, c.Force)
 			} else {
-				err = u.Upload(c.Force)
+				err = uploader.Upload(source, c.Force)
 			}
 			if errors.Is(err, consent.ErrConsentFileNotFound) {
-				slog.Warn("Consent file not found, skipping upload", "source", s)
+				slog.Warn("Consent file not found, skipping upload", "source", source)
 				return
 			}
 
 			if err != nil {
-				errMsg := fmt.Errorf("failed to upload reports for source %s: %v", s, err)
+				errMsg := fmt.Errorf("failed to upload reports for source %s: %v", source, err)
 				mu.Lock()
 				defer mu.Unlock()
 				uploadError = errors.Join(uploadError, errMsg)
@@ -134,12 +127,8 @@ type Consent interface {
 }
 
 // New returns a new UploaderManager.
-func New(cm Consent, cachePath, source string, minAge uint, dryRun bool, args ...Options) (Uploader, error) {
-	slog.Debug("Creating new uploader manager", "source", source, "minAge", minAge, "dryRun", dryRun)
-
-	if source == "" {
-		return Uploader{}, fmt.Errorf("source cannot be an empty string")
-	}
+func New(cm Consent, cachePath string, minAge uint, dryRun bool, args ...Options) (Uploader, error) {
+	slog.Debug("Creating new uploader manager", "minAge", minAge, "dryRun", dryRun)
 
 	if minAge > (1<<63-1)/uint(time.Second) {
 		return Uploader{}, fmt.Errorf("min age %d is too large, would overflow", minAge)
@@ -151,15 +140,13 @@ func New(cm Consent, cachePath, source string, minAge uint, dryRun bool, args ..
 	}
 
 	return Uploader{
-		source:       source,
 		consent:      cm,
 		minAge:       time.Duration(minAge) * time.Second,
 		dryRun:       dryRun,
 		timeProvider: opts.timeProvider,
+		cacheDir:     cachePath,
 
 		baseServerURL:      opts.baseServerURL,
-		collectedDir:       filepath.Join(cachePath, source, constants.LocalFolder),
-		uploadedDir:        filepath.Join(cachePath, source, constants.UploadedFolder),
 		maxReports:         opts.maxReports,
 		initialRetryPeriod: opts.initialRetryPeriod,
 		maxRetryPeriod:     opts.maxRetryPeriod,
