@@ -4,4 +4,8 @@ wsl:
     interop: ""
     version: ""
     kernelversion: ""
+desktop:
+    desktopenvironment: ubuntu:GNOME
+    sessionname: ubuntu
+    sessiontype: wayland
 proattached: true

@@ -243,6 +243,11 @@ Global Flags:
       }
     },
     "platform": {
+      "desktop": {
+        "desktopEnvironment": "ubuntu:GNOME",
+        "sessionName": "ubuntu",
+        "sessionType": "wayland"
+      },
       "proAttached": true
     }
   }

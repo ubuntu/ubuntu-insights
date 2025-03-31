@@ -29,6 +29,7 @@ func TestCollectLinux(t *testing.T) {
 		systemdAnalyzeCmd string
 		wslVersionCmd     string
 		proStatusCmd      string
+		env               map[string]string
 
 		missingFiles []string
 
@@ -41,18 +42,30 @@ func TestCollectLinux(t *testing.T) {
 			systemdAnalyzeCmd: "regular",
 			wslVersionCmd:     "error",
 			proStatusCmd:      "attached",
+			env: map[string]string{
+				"XDG_CURRENT_DESKTOP": "ubuntu:GNOME",
+				"XDG_SESSION_DESKTOP": "ubuntu",
+				"XDG_SESSION_TYPE":    "wayland"},
 		},
 		"Non-WSL Basic with Pro Detached": {
 			detectVirtCmd:     "none",
 			systemdAnalyzeCmd: "regular",
 			wslVersionCmd:     "error",
 			proStatusCmd:      "detached",
+			env: map[string]string{
+				"XDG_CURRENT_DESKTOP": "ubuntu:GNOME",
+				"XDG_SESSION_DESKTOP": "ubuntu",
+				"XDG_SESSION_TYPE":    "wayland"},
 		},
 		"Non-WSL Garbage Returns from Commands warns": {
 			detectVirtCmd:     "garbage",
 			systemdAnalyzeCmd: "garbage",
 			wslVersionCmd:     "garbage",
 			proStatusCmd:      "garbage",
+			env: map[string]string{
+				"XDG_CURRENT_DESKTOP": "ubuntu:GNOME",
+				"XDG_SESSION_DESKTOP": "ubuntu",
+				"XDG_SESSION_TYPE":    "wayland"},
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -63,6 +76,10 @@ func TestCollectLinux(t *testing.T) {
 			systemdAnalyzeCmd: "",
 			wslVersionCmd:     "",
 			proStatusCmd:      "",
+			env: map[string]string{
+				"XDG_CURRENT_DESKTOP": "ubuntu:GNOME",
+				"XDG_SESSION_DESKTOP": "ubuntu",
+				"XDG_SESSION_TYPE":    "wayland"},
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
@@ -73,6 +90,10 @@ func TestCollectLinux(t *testing.T) {
 			systemdAnalyzeCmd: "error",
 			wslVersionCmd:     "error",
 			proStatusCmd:      "error",
+			env: map[string]string{
+				"XDG_CURRENT_DESKTOP": "ubuntu:GNOME",
+				"XDG_SESSION_DESKTOP": "ubuntu",
+				"XDG_SESSION_TYPE":    "wayland"},
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 2,
@@ -83,18 +104,43 @@ func TestCollectLinux(t *testing.T) {
 			systemdAnalyzeCmd: "error no exit",
 			wslVersionCmd:     "error no exit",
 			proStatusCmd:      "error no exit",
+			env: map[string]string{
+				"XDG_CURRENT_DESKTOP": "ubuntu:GNOME",
+				"XDG_SESSION_DESKTOP": "ubuntu",
+				"XDG_SESSION_TYPE":    "wayland"},
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
 				slog.LevelInfo: 2,
 			},
 		},
+		"Non-WSl with empty deskstop env vars": {
+			detectVirtCmd:     "none",
+			systemdAnalyzeCmd: "regular",
+			wslVersionCmd:     "error",
+			proStatusCmd:      "attached",
+		},
+		"Non-WSL with garbage desktop env vars": {
+			detectVirtCmd:     "none",
+			systemdAnalyzeCmd: "regular",
+			wslVersionCmd:     "error",
+			proStatusCmd:      "attached",
+			env: map[string]string{
+				"XDG_CURRENT_DESKTOP": "❤️",
+				"XDG_SESSION_DESKTOP": "(●'◡'●)",
+				"XDG_SESSION_TYPE":    "(╯°□°）╯︵ ┻━┻"},
+		},
+
 		// Other virt types
 		"Other virt type (uml) with Pro Attached": {
 			detectVirtCmd:     "uml",
 			systemdAnalyzeCmd: "regular",
 			wslVersionCmd:     "error",
 			proStatusCmd:      "attached",
+			env: map[string]string{
+				"XDG_CURRENT_DESKTOP": "ubuntu:GNOME",
+				"XDG_SESSION_DESKTOP": "ubuntu",
+				"XDG_SESSION_TYPE":    "wayland"},
 		},
 
 		// WSL 2
@@ -274,6 +320,17 @@ func TestCollectLinux(t *testing.T) {
 				slog.LevelWarn: 4,
 			},
 		},
+		"WSL2 ignores desktop env vars": {
+			roots:             []string{"enabled", "version-wsl2"},
+			detectVirtCmd:     "wsl",
+			systemdAnalyzeCmd: "regular",
+			wslVersionCmd:     "regular-en",
+			proStatusCmd:      "attached",
+			env: map[string]string{
+				"XDG_CURRENT_DESKTOP": "ubuntu:GNOME",
+				"XDG_SESSION_DESKTOP": "ubuntu",
+				"XDG_SESSION_TYPE":    "wayland"},
+		},
 
 		// WSL 1
 		"WSL1 with interop and pro attached does not warn": {
@@ -351,6 +408,7 @@ func TestCollectLinux(t *testing.T) {
 			options := []platform.Options{
 				platform.WithRoot(tmp),
 				platform.WithLogger(&l),
+				platform.WithGetenv(tc.env),
 			}
 
 			if tc.detectVirtCmd != "-" {
