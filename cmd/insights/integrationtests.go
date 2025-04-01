@@ -10,6 +10,7 @@ import (
 
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo"
 	collectortestutils "github.com/ubuntu/ubuntu-insights/internal/collector/testutils"
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	uploadertestutils "github.com/ubuntu/ubuntu-insights/internal/uploader/testutils"
 )
 
@@ -76,6 +77,8 @@ func init() {
 		}
 		collectortestutils.SetSysInfo(si)
 	}
+
+	constants.Version = "Dev"
 }
 
 type testSysInfo struct {
