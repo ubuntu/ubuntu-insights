@@ -62,11 +62,11 @@ blks:
           type: 'GPT: Basic Data'
           children: []
 screens:
-    - physicalresolution: ""
+    - physicalresolution: 2560x1600
       size: ""
-      resolution: 1920x1080
+      resolution: 1280x800
       refreshrate: ""
-    - physicalresolution: ""
+    - physicalresolution: 2560x1440
       size: ""
-      resolution: 1920x1080
+      resolution: 2560x1440
       refreshrate: ""

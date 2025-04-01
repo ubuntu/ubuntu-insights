@@ -49,8 +49,15 @@ func WithScreenResInfo(cmd []string) Options {
 	}
 }
 
-// WithScreenResInfo overrides default screen size info.
-func WithScreenSizeInfo(cmd []string) Options {
+// WithScreenPhysResInfo overrides default screen physical resolution info.
+func WithScreenPhysResInfo(cmd []string) Options {
+	return func(o *options) {
+		o.platform.screenPhysResCmd = cmd
+	}
+}
+
+// WithDisplaySizeInfo overrides default screen size info.
+func WithDisplaySizeInfo(cmd []string) Options {
 	return func(o *options) {
 		o.platform.displaySizeCmd = cmd
 	}

@@ -31,14 +31,15 @@ func TestCollectWindows(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		productInfo    string
-		cpuInfo        string
-		gpuInfo        string
-		memoryInfo     string
-		diskInfo       string
-		partitionInfo  string
-		screenResInfo  string
-		screenSizeInfo string
+		productInfo       string
+		cpuInfo           string
+		gpuInfo           string
+		memoryInfo        string
+		diskInfo          string
+		partitionInfo     string
+		screenResInfo     string
+		screenPhysResInfo string
+		screenSizeInfo    string
 
 		logs    map[slog.Level]uint
 		wantErr bool
@@ -51,11 +52,12 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 
@@ -67,12 +69,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 
@@ -84,12 +87,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 
@@ -101,12 +105,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 
@@ -118,12 +123,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 2,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 
@@ -135,12 +141,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 
@@ -152,12 +159,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 
@@ -169,12 +177,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 
@@ -186,12 +195,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 
@@ -203,12 +213,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 
@@ -220,12 +231,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 
@@ -237,12 +249,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 
@@ -254,12 +267,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 
@@ -271,12 +285,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 
@@ -288,11 +303,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "missing",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 2,
+				slog.LevelInfo: 1,
 			},
 		},
 
@@ -304,11 +321,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "error",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 2,
+				slog.LevelInfo: 1,
 			},
 		},
 
@@ -320,11 +339,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "malicious",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 2,
+				slog.LevelInfo: 1,
 			},
 		},
 
@@ -336,12 +357,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "missing",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 2,
-				slog.LevelInfo: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -353,12 +375,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "error",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 2,
-				slog.LevelInfo: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -370,12 +393,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "malicious",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 2,
-				slog.LevelInfo: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -387,12 +411,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "improper disks",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 10,
-				slog.LevelInfo: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -404,12 +429,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "error no exit",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 2,
-				slog.LevelInfo: 1,
+				slog.LevelInfo: 2,
 			},
 		},
 
@@ -421,12 +447,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "error no exit",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "regular",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 2,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 
@@ -438,12 +465,67 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "missing",
-			screenSizeInfo: "regular",
+			screenResInfo:     "missing",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 4,
+			},
+		},
+
+		// Screens
+		"Single screen": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
+			partitionInfo: "regular",
+
+			screenResInfo:     "single",
+			screenPhysResInfo: "single",
+			screenSizeInfo:    "single",
+
+			logs: map[slog.Level]uint{
+				slog.LevelInfo: 3,
+			},
+		},
+
+		"Missing Screens": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
+			partitionInfo: "regular",
+
+			screenResInfo:     "missing",
+			screenPhysResInfo: "missing",
+			screenSizeInfo:    "missing",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 4,
 				slog.LevelInfo: 2,
+			},
+		},
+
+		"Null Screens": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
+			partitionInfo: "regular",
+
+			screenResInfo:     "null",
+			screenPhysResInfo: "null",
+			screenSizeInfo:    "null",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 4,
+				slog.LevelInfo: 5,
 			},
 		},
 
@@ -455,11 +537,30 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "no resolution",
-			screenSizeInfo: "regular",
+			screenResInfo:     "no resolution",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
-				slog.LevelInfo: 3,
+				slog.LevelInfo: 5,
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Partial missing screen resolution and size information": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
+			partitionInfo: "regular",
+
+			screenResInfo:     "no resolution",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "null",
+
+			logs: map[slog.Level]uint{
+				slog.LevelInfo: 6,
 				slog.LevelWarn: 2,
 			},
 		},
@@ -472,12 +573,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "error",
-			screenSizeInfo: "regular",
+			screenResInfo:     "error",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 4,
 			},
 		},
 
@@ -489,12 +591,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "missing",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "missing",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 
@@ -506,12 +609,13 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "single",
-			screenSizeInfo: "regular",
+			screenResInfo:     "single",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
 
 			logs: map[slog.Level]uint{
-				slog.LevelWarn: 1,
-				slog.LevelInfo: 2,
+				slog.LevelWarn: 2,
+				slog.LevelInfo: 3,
 			},
 		},
 
@@ -523,12 +627,30 @@ func TestCollectWindows(t *testing.T) {
 			diskInfo:      "regular",
 			partitionInfo: "regular",
 
-			screenResInfo:  "regular",
-			screenSizeInfo: "error",
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "error",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
-				slog.LevelInfo: 2,
+				slog.LevelInfo: 3,
+			},
+		},
+
+		"Screen error no exit information": {
+			productInfo:       "regular",
+			cpuInfo:           "regular",
+			gpuInfo:           "regular",
+			memoryInfo:        "regular",
+			diskInfo:          "regular",
+			partitionInfo:     "regular",
+			screenResInfo:     "error no exit",
+			screenPhysResInfo: "error no exit",
+			screenSizeInfo:    "error no exit",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 4,
+				slog.LevelInfo: 5,
 			},
 		},
 	}
@@ -579,9 +701,14 @@ func TestCollectWindows(t *testing.T) {
 				options = append(options, hardware.WithScreenResInfo(cmdArgs))
 			}
 
+			if tc.screenPhysResInfo != "-" {
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeScreenPhysResInfo", tc.screenPhysResInfo)
+				options = append(options, hardware.WithScreenPhysResInfo(cmdArgs))
+			}
+
 			if tc.screenSizeInfo != "-" {
-				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeScreenSizeInfo", tc.screenSizeInfo)
-				options = append(options, hardware.WithScreenSizeInfo(cmdArgs))
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeDisplaySizeInfo", tc.screenSizeInfo)
+				options = append(options, hardware.WithDisplaySizeInfo(cmdArgs))
 			}
 
 			s := hardware.New(options...)
@@ -1206,105 +1333,110 @@ func TestFakeScreenResInfo(_ *testing.T) {
 		os.Exit(1)
 	case "regular":
 		fmt.Println(`
-
-DeviceID                    : DesktopMonitor1
-Name                        : Default Monitor
-PixelsPerXLogicalInch       : 120
-PixelsPerYLogicalInch       : 120
-ScreenHeight                : 1080
-ScreenWidth                 : 1920
-IsLocked                    :
-LastErrorCode               :
-Status                      : OK
-StatusInfo                  :
-Caption                     : Default Monitor
-Description                 : Default Monitor
-InstallDate                 :
-Availability                : 3
-ConfigManagerErrorCode      :
-ConfigManagerUserConfig     :
-CreationClassName           : Win32_DesktopMonitor
-ErrorCleared                :
-ErrorDescription            :
-PNPDeviceID                 :
-PowerManagementCapabilities :
-PowerManagementSupported    :
-SystemCreationClassName     : Win32_ComputerSystem
-SystemName                  : MSI
-Bandwidth                   :
-DisplayType                 :
-MonitorManufacturer         :
-MonitorType                 : Default Monitor
-
-DeviceID                    : DesktopMonitor2
-Name                        : Generic PnP Monitor
-PixelsPerXLogicalInch       : 120
-PixelsPerYLogicalInch       : 120
-ScreenHeight                : 1080
-ScreenWidth                 : 1920
-IsLocked                    :
-LastErrorCode               :
-Status                      : OK
-StatusInfo                  :
-Caption                     : Generic PnP Monitor
-Description                 : Generic PnP Monitor
-InstallDate                 :
-Availability                : 3
-ConfigManagerErrorCode      : 0
-ConfigManagerUserConfig     : False
-CreationClassName           : Win32_DesktopMonitor
-ErrorCleared                :
-ErrorDescription            :
-PNPDeviceID                 : DISPLAY\AUOAF90\4&28FE40F5&0&UID8388688
-PowerManagementCapabilities :
-PowerManagementSupported    :
-SystemCreationClassName     : Win32_ComputerSystem
-SystemName                  : MSI
-Bandwidth                   :
-DisplayType                 :
-MonitorManufacturer         : (Standard monitor types)
-MonitorType                 : Generic PnP Monitor`)
+[
+  {
+    "Bounds": {
+      "Location": {
+        "IsEmpty": false,
+        "X": 2560,
+        "Y": 0
+      },
+      "Size": {
+        "IsEmpty": false,
+        "Width": 1280,
+        "Height": 800
+      },
+      "X": 2560,
+      "Y": 0,
+      "Width": 1280,
+      "Height": 800,
+      "Left": 2560,
+      "Top": 0,
+      "Right": 3840,
+      "Bottom": 800,
+      "IsEmpty": false
+    }
+  },
+  {
+    "Bounds": {
+      "Location": {
+        "IsEmpty": true,
+        "X": 0,
+        "Y": 0
+      },
+      "Size": {
+        "IsEmpty": false,
+        "Width": 2560,
+        "Height": 1440
+      },
+      "X": 0,
+      "Y": 0,
+      "Width": 2560,
+      "Height": 1440,
+      "Left": 0,
+      "Top": 0,
+      "Right": 2560,
+      "Bottom": 1440,
+      "IsEmpty": false
+    }
+  }
+]`)
 	case "single":
 		fmt.Println(`
-
-ScreenHeight                : 1080
-ScreenWidth                 : 1920`)
+{
+  "Bounds": {
+    "Location": {
+      "IsEmpty": true,
+      "X": 0,
+      "Y": 0
+    },
+    "Size": {
+      "IsEmpty": false,
+      "Width": 2560,
+      "Height": 1440
+    },
+    "X": 0,
+    "Y": 0,
+    "Width": 2560,
+    "Height": 1440,
+    "Left": 0,
+    "Top": 0,
+    "Right": 2560,
+    "Bottom": 1440,
+    "IsEmpty": false
+  }
+}`)
 
 	case "no resolution":
 		fmt.Println(`
-
-DeviceID                    : DesktopMonitor1
-Name                        : Generic PnP Monitor
-PixelsPerXLogicalInch       : 96
-PixelsPerYLogicalInch       : 96
-ScreenHeight                : 
-ScreenWidth                 : 
-IsLocked                    : 
-LastErrorCode               : 
-Status                      : OK
-StatusInfo                  : 
-Caption                     : Generic PnP Monitor
-Description                 : Generic PnP Monitor
-InstallDate                 : 
-Availability                : 8
-ConfigManagerErrorCode      : 0
-ConfigManagerUserConfig     : False
-CreationClassName           : Win32_DesktopMonitor
-ErrorCleared                : 
-ErrorDescription            : 
-PNPDeviceID                 : DISPLAY\ACI24AA\5&2974733&0&UID4354
-PowerManagementCapabilities : 
-PowerManagementSupported    : 
-SystemCreationClassName     : Win32_ComputerSystem
-SystemName                  : DL-WORKSTATION
-Bandwidth                   : 
-DisplayType                 : 
-MonitorManufacturer         : (Standard monitor types)
-MonitorType                 : Generic PnP Monitor
-PSComputerName              : 
-CimClass                    : root/cimv2:Win32_DesktopMonitor
-CimInstanceProperties       : {Caption, Description, InstallDate, Name...}
-CimSystemProperties         : Microsoft.Management.Infrastructure.CimSystemProperties`)
+{
+  "Bounds": {
+    "Location": {
+      "IsEmpty": true,
+      "X": 0,
+      "Y": 0
+    },
+    "Size": {
+      "IsEmpty": false,
+      "Width": 2560,
+      "Height": 1440
+    },
+    "X": 0,
+    "Y": 0,
+    "Left": 0,
+    "Top": 0,
+    "Right": 2560,
+    "Bottom": 1440,
+    "IsEmpty": false
+  }
+}`)
+	case "null":
+		fmt.Println(`
+{
+	"Bounds": null
+}`)
+	case "error no exit":
+		fmt.Fprint(os.Stderr, "Error requested in fake screen resolution info")
 	case "":
 		fallthrough
 	case "missing":
@@ -1312,7 +1444,67 @@ CimSystemProperties         : Microsoft.Management.Infrastructure.CimSystemPrope
 	}
 }
 
-func TestFakeScreenSizeInfo(_ *testing.T) {
+func TestFakeScreenPhysResInfo(_ *testing.T) {
+	args, err := testutils.GetFakeCmdArgs()
+	if err != nil {
+		return
+	}
+	defer os.Exit(0)
+
+	switch args[0] {
+	case "error":
+		fmt.Fprint(os.Stderr, "Error requested in fake screen physical size info")
+		os.Exit(1)
+	case "regular":
+		fmt.Println(`
+[
+  {
+    "ScreenWidth": null,
+    "ScreenHeight": null
+  },
+  {
+    "ScreenWidth": 2560,
+    "ScreenHeight": 1600
+  },
+  {
+    "ScreenWidth": 2560,
+    "ScreenHeight": 1440
+  }
+]`)
+	case "single":
+		fmt.Println(`
+[
+{
+    "ScreenWidth": null,
+    "ScreenHeight": null
+  },
+  {
+	"ScreenWidth": 2560,
+	"ScreenHeight": 1440
+}
+]`)
+	case "true single":
+		fmt.Println(`
+{
+	"ScreenWidth": 2560,
+	"ScreenHeight": 1440
+}`)
+	case "null":
+		fmt.Println(`
+{
+	"ScreenWidth": null,
+	"ScreenHeight": null
+}`)
+	case "error no exit":
+		fmt.Fprint(os.Stderr, "Error requested in fake screen physical size info")
+	case "":
+		fallthrough
+	case "missing":
+		os.Exit(0)
+	}
+}
+
+func TestFakeDisplaySizeInfo(_ *testing.T) {
 	args, err := testutils.GetFakeCmdArgs()
 	if err != nil {
 		return
@@ -1325,22 +1517,30 @@ func TestFakeScreenSizeInfo(_ *testing.T) {
 		os.Exit(1)
 	case "regular":
 		fmt.Println(`
-
-Active                        : True
-DisplayTransferCharacteristic : 120
-InstanceName                  : DISPLAY\AUOAF90\4&28fe40f5&0&UID1234
-MaxHorizontalImageSize        : 34
-MaxVerticalImageSize          : 19
-SupportedDisplayFeatures      : WmiMonitorSupportedDisplayFeatures
-VideoInputType                : 1
-
-Active                        : True
-DisplayTransferCharacteristic : 120
-InstanceName                  : DISPLAY\ACR09D8\4&28fe40f5&0&UID4321
-MaxHorizontalImageSize        : 60
-MaxVerticalImageSize          : 34
-SupportedDisplayFeatures      : WmiMonitorSupportedDisplayFeatures
-VideoInputType                : 1`)
+[
+  {
+    "MaxHorizontalImageSize": 30,
+    "MaxVerticalImageSize": 19
+  },
+  {
+    "MaxHorizontalImageSize": 60,
+    "MaxVerticalImageSize": 34
+  }
+]`)
+	case "single":
+		fmt.Println(`
+{
+	"MaxHorizontalImageSize": 30,
+	"MaxVerticalImageSize": 19
+}`)
+	case "null":
+		fmt.Println(`
+{
+	"MaxHorizontalImageSize": null,
+	"MaxVerticalImageSize": null
+}`)
+	case "error no exit":
+		fmt.Fprint(os.Stderr, "Error requested in fake screen size info")
 	case "":
 		fallthrough
 	case "missing":

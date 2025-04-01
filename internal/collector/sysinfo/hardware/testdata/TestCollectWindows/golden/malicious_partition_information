@@ -23,11 +23,11 @@ mem:
     total: 65237
 blks: []
 screens:
-    - physicalresolution: ""
-      size: 340mm x 190mm
-      resolution: 1920x1080
+    - physicalresolution: 2560x1600
+      size: 300mm x 190mm
+      resolution: 1280x800
       refreshrate: ""
-    - physicalresolution: ""
+    - physicalresolution: 2560x1440
       size: 600mm x 340mm
-      resolution: 1920x1080
+      resolution: 2560x1440
       refreshrate: ""
