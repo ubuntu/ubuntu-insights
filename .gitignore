@@ -16,3 +16,5 @@
 
 # Built CLI-executable binary
 cmd/insights/insights
+
+generated
