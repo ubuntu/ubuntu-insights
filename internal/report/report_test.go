@@ -304,7 +304,7 @@ func TestMarkAsProcessed(t *testing.T) {
 			data:         []byte(`{"test": true}`),
 			srcFilePerms: os.FileMode(000),
 			dstFilePerms: os.FileMode(0o600),
-			wantErr:      runtime.GOOS != "windows",
+			wantErr:      testutils.IsUnixNonRoot(),
 		}, "DstPerm None": {
 			srcFile:      map[string]string{"1.json": `{"test": true}`},
 			dstFile:      map[string]string{"1.json": "old data"},
