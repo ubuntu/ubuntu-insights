@@ -11,13 +11,11 @@ export DH_GOLANG_GO_GENERATE := 1
 BUILDDIR := _build
 
 %:
+ifeq ($(strip $(shell ./debian/prepare-source.sh)),)
+	@echo "Vendoring probably failed"
+	exit 1
+endif
 	dh $@ --builddirectory=$(BUILDDIR) --buildsystem=golang
-
-override_dh_auto_clean:
-	dh_auto_clean
-
-	# Vendor Go dependencies when building the source package
-	[ -d vendor/ ] || go mod vendor
 
 override_dh_auto_install:
 	mv $(BUILDDIR)/bin/insights $(BUILDDIR)/bin/ubuntu-insights
