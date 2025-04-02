@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
@@ -126,7 +125,7 @@ func TestUpload(t *testing.T) {
 		"Errors when a report has already been uploaded": {
 			lFiles: map[string]reportType{"1.json": normal}, uFiles: map[string]reportType{"1.json": badContent}, consent: cTrue, wantErr: true},
 		"Errors when not on Windows with bad file permissions": {
-			lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, noPerms: true, wantErr: runtime.GOOS != "windows", skipContentCheck: true},
+			lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, noPerms: true, wantErr: testutils.IsUnixNonRoot(), skipContentCheck: true},
 
 		// Server errors
 		"Errors when given a bad URL":               {lFiles: map[string]reportType{"1.json": normal}, consent: cTrue, url: "http://a b.com/", wantErr: true},
@@ -317,7 +316,7 @@ func TestGetAllSources(t *testing.T) {
 		"Source with Subdirectories":           {folders: []string{"source"}, subDirs: []string{"sub1", "sub2"}},
 		"Source with Subdirectories and Files": {folders: []string{"source"}, subDirs: []string{"sub1", "sub2"}, subFiles: []string{"1.json", "2.json"}},
 
-		"Source with No Folder Perms": {folders: []string{"source"}, noFolderPerms: true, wantErr: runtime.GOOS != "windows"},
+		"Source with No Folder Perms": {folders: []string{"source"}, noFolderPerms: true, wantErr: testutils.IsUnixNonRoot()},
 		"Source with No File Perms":   {folders: []string{"source"}, files: []string{"1.json", "2.json"}, noFilePerms: true},
 	}
 
