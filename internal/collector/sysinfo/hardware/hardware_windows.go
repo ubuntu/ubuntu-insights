@@ -2,7 +2,6 @@ package hardware
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -199,19 +198,8 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 		Type      string
 	}
 
-	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, s.platform.diskCmd[0], s.platform.diskCmd[1:]...)
+	disksOut, err := runJSONCommand[diskOut]("disk", s.log, s.platform.diskCmd[0], s.platform.diskCmd[1:]...)
 	if err != nil {
-		s.log.Warn("Failed to run disk command", "error", err, "stderr", stderr)
-		return nil, err
-	}
-
-	if stderr.String() != "" {
-		s.log.Info("disk command returned stderr", "stderr", stderr)
-	}
-
-	var disksOut []diskOut
-	if err = json.Unmarshal(stdout.Bytes(), &disksOut); err != nil {
-		s.log.Warn("Failed to unmarshal disk output", "error", err)
 		return nil, err
 	}
 
@@ -248,19 +236,9 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 		diskMap[d.Index] = len(blks) - 1
 	}
 
-	stdout, stderr, err = cmdutils.RunWithTimeout(context.Background(), 15*time.Second, s.platform.partitionCmd[0], s.platform.partitionCmd[1:]...)
+	// Paritions
+	partsOut, err := runJSONCommand[partOut]("partition", s.log, s.platform.partitionCmd[0], s.platform.partitionCmd[1:]...)
 	if err != nil {
-		s.log.Warn("Failed to run partition command", "error", err, "stderr", stderr)
-		return nil, err
-	}
-
-	if stderr.String() != "" {
-		s.log.Info("partition command returned stderr", "stderr", stderr)
-	}
-
-	var partsOut []partOut
-	if err = json.Unmarshal(stdout.Bytes(), &partsOut); err != nil {
-		s.log.Warn("Failed to unmarshal partition output", "error", err)
 		return nil, err
 	}
 
