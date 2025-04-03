@@ -2,7 +2,7 @@
 Description="Upload collected and mature platform report using Ubuntu Insights while respecting consent."
 
 [Service]
-Type=simple
+Type=oneshot
 ExecStart=/usr/bin/ubuntu-insights upload -r
 Restart=no
 SuccessExitStatus=1
