@@ -13,7 +13,6 @@ import (
 
 	"github.com/ubuntu/decorate"
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo"
-	"github.com/ubuntu/ubuntu-insights/internal/consent"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 	"github.com/ubuntu/ubuntu-insights/internal/report"
@@ -90,11 +89,11 @@ type Config struct {
 	SourceMetrics string
 }
 
-// Setup checks that the Config is properly configured and creates a consent manager.
-func (c *Config) Setup(consentDir string) (*consent.Manager, error) {
+// Sanitize sets defaults and checks that the Config is properly configured.
+func (c *Config) Sanitize() error {
 	// Handle global source and source metrics.
 	if c.SourceMetrics == "" && c.Source != "" {
-		return nil, fmt.Errorf("no metricsPath for %s", c.Source)
+		return fmt.Errorf("no metricsPath for %s", c.Source)
 	}
 	if c.Source == "" && c.SourceMetrics != "" { // ignore SourceMetrics for platform source
 		slog.Warn("Source Metrics were provided but is ignored for the global source")
@@ -104,7 +103,7 @@ func (c *Config) Setup(consentDir string) (*consent.Manager, error) {
 		c.Source = constants.DefaultCollectSource
 	}
 
-	return consent.New(consentDir), nil
+	return nil
 }
 
 // WithSourceMetricsPath sets the path to an optional pre-made JSON file containing source specific metrics.

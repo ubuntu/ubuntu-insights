@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ubuntu/ubuntu-insights/internal/consent"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
@@ -66,18 +65,18 @@ type Config struct {
 	Retry   bool `mapstructure:"retry"`
 }
 
-// Setup sets defaults for config and creates a consent manager.
-func (c *Config) Setup(consentDir, cacheDir string) (*consent.Manager, error) {
+// Sanitize sets defaults and checks that the Config is properly configured.
+func (c *Config) Sanitize(cacheDir string) error {
 	if len(c.Sources) == 0 {
 		slog.Info("No sources provided, uploading all sources")
 		var err error
 		c.Sources, err = GetAllSources(cacheDir)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get all sources: %v", err)
+			return fmt.Errorf("failed to get all sources: %v", err)
 		}
 	}
 
-	return consent.New(consentDir), nil
+	return nil
 }
 
 // Options represents an optional function to override Upload Manager default values.

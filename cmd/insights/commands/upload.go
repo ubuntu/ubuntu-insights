@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/spf13/cobra"
+	"github.com/ubuntu/ubuntu-insights/internal/consent"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/uploader"
 )
@@ -40,11 +41,12 @@ If consent is not given for a source, an opt-out notification will be sent regar
 }
 
 func runUpload(config uploader.Config, consentDir, cacheDir string, factory newUploader) error {
-	cm, err := config.Setup(consentDir, cacheDir)
+	err := config.Sanitize(cacheDir)
 	if err != nil {
 		return err
 	}
 
+	cm := consent.New(consentDir)
 	u, err := factory(cm, cacheDir, config.MinAge, config.DryRun)
 	if err != nil {
 		return fmt.Errorf("failed to create uploader: %v", err)

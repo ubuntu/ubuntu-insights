@@ -66,11 +66,12 @@ func (c Config) Collect(metricsPath string, flags CollectFlags) error {
 		DryRun:        flags.DryRun,
 		SourceMetrics: metricsPath,
 	}
-	cm, err := cConf.Setup(c.ConsentDir)
+	err := cConf.Sanitize()
 	if err != nil {
 		return err
 	}
 
+	cm := consent.New(c.ConsentDir)
 	col, err := collector.New(cm, c.InsightsDir, cConf.Source, cConf.Period, cConf.DryRun, collector.WithSourceMetricsPath(metricsPath))
 	if err != nil {
 		return err
@@ -97,11 +98,12 @@ func (c Config) Upload(flags UploadFlags) error {
 		DryRun:  flags.DryRun,
 		Retry:   false,
 	}
-	cm, err := uConf.Setup(c.ConsentDir, c.InsightsDir)
+	err := uConf.Sanitize(c.ConsentDir)
 	if err != nil {
 		return err
 	}
 
+	cm := consent.New(c.ConsentDir)
 	uploader, err := uploader.New(cm, c.InsightsDir, uConf.MinAge, uConf.DryRun)
 	if err != nil {
 		return fmt.Errorf("failed to create uploader: %v", err)

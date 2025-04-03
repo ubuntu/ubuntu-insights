@@ -69,11 +69,12 @@ func (a App) collectRun() (err error) {
 
 	cConfig := a.config.Collect
 
-	cm, err := cConfig.Setup(a.config.consentDir)
+	err = cConfig.Sanitize()
 	if err != nil {
 		return err
 	}
 
+	cm := consent.New(a.config.consentDir)
 	c, err := a.newCollector(cm, a.config.insightsDir, cConfig.Source, cConfig.Period, cConfig.DryRun, collector.WithSourceMetricsPath(cConfig.SourceMetrics))
 	if err != nil {
 		return err
