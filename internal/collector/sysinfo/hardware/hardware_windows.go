@@ -3,7 +3,10 @@ package hardware
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log/slog"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -23,8 +26,9 @@ type platformOptions struct {
 	diskCmd      []string
 	partitionCmd []string
 
-	screenResCmd   []string
-	displaySizeCmd []string
+	screenResCmd     []string
+	screenPhysResCmd []string
+	displaySizeCmd   []string
 }
 
 // defaultOptions returns options for when running under a normal environment.
@@ -38,8 +42,18 @@ func defaultPlatformOptions() platformOptions {
 		diskCmd:      []string{"powershell.exe", "-Command", "Get-WmiObject", "Win32_DiskDrive", "|", "Select-Object", "MediaType, Index, Size, Partitions", "|", "ConvertTo-Json", "-Depth", "3"},
 		partitionCmd: []string{"powershell.exe", "-Command", "Get-WmiObject", "Win32_DiskPartition", "|", "Select-Object", "DiskIndex, Size, Type", "|", "ConvertTo-Json", "-Depth", "3"},
 
-		screenResCmd:   []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_DesktopMonitor", "|", "Format-List", "-Property", "*"},
-		displaySizeCmd: []string{"powershell.exe", "-Command", "Get-CIMInstance", "-Namespace", "root\\wmi", "WmiMonitorBasicDisplayParams", "|", "Format-List", "-Property", "*"},
+		screenResCmd: []string{"powershell.exe", "-Command",
+			"Add-Type", "-AssemblyName", "System.Windows.Forms", ";", "[System.Windows.Forms.Screen]::AllScreens", "|",
+			"Select-Object", "Bounds", "|",
+			"ConvertTo-Json", "-Depth", "3"},
+		screenPhysResCmd: []string{"powershell.exe", "-Command",
+			"Get-CIMInstance", "Win32_DesktopMonitor", "|",
+			"Select-Object", "ScreenWidth, ScreenHeight", "|",
+			"ConvertTo-Json", "-Depth", "3"},
+		displaySizeCmd: []string{"powershell.exe", "-Command",
+			"Get-CIMInstance", "-Namespace", "root\\wmi", "WmiMonitorBasicDisplayParams", "|",
+			"Select-Object", "MaxHorizontalImageSize, MaxVerticalImageSize", "|",
+			"ConvertTo-Json", "-Depth", "3"},
 	}
 }
 
@@ -279,55 +293,112 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 
 // collectScreens uses Win32_DesktopMonitor to collect information about screens.
 func (s Collector) collectScreens(_ platform.Info) (screens []screen, err error) {
-	var usedScreenResFields = map[string]struct{}{
-		"ScreenWidth":  {},
-		"ScreenHeight": {},
-	}
-
-	var usedDisplaySizeFields = map[string]struct{}{
-		"MaxHorizontalImageSize": {},
-		"MaxVerticalImageSize":   {},
-	}
-
-	displays, err := cmdutils.RunListFmt(s.platform.screenResCmd, usedScreenResFields, s.log)
-	if err != nil {
-		return nil, err
-	}
-
-	screens = make([]screen, 0, len(displays))
-	for _, m := range displays {
-		if m["ScreenWidth"] == "" && m["ScreenHeight"] == "" {
-			s.log.Warn("screen resolution was empty")
-			continue
+	defer func() {
+		if err == nil && len(screens) == 0 {
+			err = errors.New("no screens found")
 		}
+	}()
 
-		screens = append(screens, screen{
-			Resolution: fmt.Sprintf("%sx%s", m["ScreenWidth"], m["ScreenHeight"]),
-		})
+	type screenPhysResFields struct {
+		ScreenWidth  uint
+		ScreenHeight uint
 	}
 
-	displays, err = cmdutils.RunListFmt(s.platform.displaySizeCmd, usedDisplaySizeFields, s.log)
+	type screenResFields struct {
+		Bounds struct {
+			Width  uint
+			Height uint
+		}
+	}
+
+	type displaySizeFields struct {
+		MaxHorizontalImageSize uint
+		MaxVerticalImageSize   uint
+	}
+
+	// Screen resolutions
+	screenRes, err := runJSONCommand[screenResFields]("screen resolution", s.log, s.platform.screenResCmd[0], s.platform.screenResCmd[1:]...)
 	if err != nil {
-		s.log.Warn("physical screen size could not be determined", "error", err)
-		return screens, nil
+		screenRes = nil
 	}
-	if len(displays) != len(screens) {
-		s.log.Warn("different number of monitors than display physical size returned", "monitors", len(screens), "physicalSizes", len(displays))
 
+	screens = make([]screen, 0, len(screenRes))
+	for _, sc := range screenRes {
+		screens = append(screens, screen{Resolution: fmt.Sprintf("%dx%d", sc.Bounds.Width, sc.Bounds.Height)})
+	}
+
+	displaySizes, err := runJSONCommand[displaySizeFields]("physical display size", s.log, s.platform.displaySizeCmd[0], s.platform.displaySizeCmd[1:]...)
+	if err != nil {
+		displaySizes = nil
+	}
+
+	if len(displaySizes) != len(screens) && len(displaySizes) != 0 {
 		if len(screens) != 0 {
-			return screens, nil
+			// Ignore display physical sizes and move on
+			s.log.Warn("Different number of screens than display physical size returned", "screens", len(screens), "physicalSizes", len(displaySizes))
+			displaySizes = nil
+		} else {
+			// Make do with what we have.
+			s.log.Info("No screen resolution available, using physical size only")
+			screens = make([]screen, len(displaySizes))
 		}
-
-		// Make do with what we have.
-		s.log.Info("No screen resolution available, using physical size only")
-		screens = make([]screen, len(displays))
 	}
 
 	// assuming that the order of the monitors returned is the same.
-	for i, d := range displays {
-		str := fmt.Sprintf("%s0mm x %s0mm", d["MaxHorizontalImageSize"], d["MaxVerticalImageSize"])
-		screens[i].Size = str
+	for i, d := range displaySizes {
+		screens[i].Size = fmt.Sprintf("%d0mm x %d0mm", d.MaxHorizontalImageSize, d.MaxVerticalImageSize)
+	}
+
+	// Physical reolution - Should be last and lowest priority due to its often inconsistent behavior.
+	screenPhysRes, err := runJSONCommand[screenPhysResFields]("screen physical resolution", s.log, s.platform.screenPhysResCmd[0], s.platform.screenPhysResCmd[1:]...)
+	if err != nil {
+		screenPhysRes = nil
+	}
+
+	if len(screenPhysRes) != len(screens) && len(screenPhysRes) != 0 {
+		if len(screens) != 0 {
+			s.log.Warn("Different number of screens than screen physical resolution returned", "screens", len(screens), "screenPhysRes", len(screenPhysRes))
+			return screens, nil
+		}
+		// Make do with what we have.
+		s.log.Info("No screen resolution available, using physical size only")
+		screens = make([]screen, len(screenPhysRes))
+	}
+
+	for i, m := range screenPhysRes {
+		screens[i].PhysicalResolution = fmt.Sprintf("%dx%d", m.ScreenWidth, m.ScreenHeight)
 	}
 
 	return screens, nil
+}
+
+// runJSONCommand runs a command and returns the output as a list of objects.
+func runJSONCommand[T any](cmdName string, log *slog.Logger, cmd string, cmdArgs ...string) ([]T, error) {
+	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, cmd, cmdArgs...)
+	if err != nil {
+		log.Warn(fmt.Sprintf("Failed to run %s command", cmdName), "error", err, "stderr", stderr)
+		return nil, err
+	}
+
+	if stderr.String() != "" {
+		log.Info(fmt.Sprintf("Command %s returned stderr", cmdName), "stderr", stderr)
+	}
+
+	r, err := fileutils.UnmarshalJSON[T](stdout.Bytes())
+	// Filter out empty results
+	results := make([]T, 0, len(r))
+	var empty T
+	for _, res := range r {
+		if reflect.DeepEqual(res, empty) {
+			log.Info(fmt.Sprintf("Command %s returned an empty result", cmdName))
+			continue
+		}
+		results = append(results, res)
+	}
+
+	if len(results) == 0 {
+		log.Warn(fmt.Sprintf("Command %s returned no results", cmdName))
+	}
+
+	return results, err
 }

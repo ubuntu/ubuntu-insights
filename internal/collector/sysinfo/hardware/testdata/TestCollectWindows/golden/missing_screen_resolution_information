@@ -61,4 +61,12 @@ blks:
         - size: 953852
           type: 'GPT: Basic Data'
           children: []
-screens: []
+screens:
+    - physicalresolution: 2560x1600
+      size: 300mm x 190mm
+      resolution: ""
+      refreshrate: ""
+    - physicalresolution: 2560x1440
+      size: 600mm x 340mm
+      resolution: ""
+      refreshrate: ""

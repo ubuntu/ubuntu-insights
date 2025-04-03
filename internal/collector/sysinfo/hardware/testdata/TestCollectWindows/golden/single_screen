@@ -10,7 +10,15 @@ cpu:
     sockets: 1
     cores: 8
     threads: 2
-gpus: []
+gpus:
+    - name: NVIDIA GeForce RTX 3050 Ti Laptop GPU
+      device: ""
+      vendor: NVIDIA
+      driver: nvldumdx.dll
+    - name: Intel(R) UHD Graphics
+      device: ""
+      vendor: Intel Corporation
+      driver: igdumdim0.dll
 mem:
     total: 65237
 blks:
@@ -54,11 +62,7 @@ blks:
           type: 'GPT: Basic Data'
           children: []
 screens:
-    - physicalresolution: 2560x1600
-      size: 300mm x 190mm
-      resolution: 1280x800
-      refreshrate: ""
     - physicalresolution: 2560x1440
-      size: 600mm x 340mm
+      size: 300mm x 190mm
       resolution: 2560x1440
       refreshrate: ""
