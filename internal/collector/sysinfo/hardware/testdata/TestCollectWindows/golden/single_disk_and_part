@@ -1,0 +1,39 @@
+product:
+    family: "1582.3"
+    name: Star 11 CPP
+    vendor: Micro-Star International Co., Ltd.
+cpu:
+    name: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz
+    vendor: GenuineIntel
+    arch: amd64
+    cpus: 16
+    sockets: 1
+    cores: 8
+    threads: 2
+gpus:
+    - name: NVIDIA GeForce RTX 3050 Ti Laptop GPU
+      device: ""
+      vendor: NVIDIA
+      driver: nvldumdx.dll
+    - name: Intel(R) UHD Graphics
+      device: ""
+      vendor: Intel Corporation
+      driver: igdumdim0.dll
+mem:
+    total: 65237
+blks:
+    - size: 953867
+      type: disk
+      children:
+        - size: 100
+          type: 'GPT: System'
+          children: []
+screens:
+    - physicalresolution: 2560x1600
+      size: 300mm x 190mm
+      resolution: 1280x800
+      refreshrate: ""
+    - physicalresolution: 2560x1440
+      size: 600mm x 340mm
+      resolution: 2560x1440
+      refreshrate: ""

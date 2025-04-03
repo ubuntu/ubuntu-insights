@@ -295,6 +295,23 @@ func TestCollectWindows(t *testing.T) {
 			},
 		},
 
+		"Single disk and part": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "single",
+			partitionInfo: "single",
+
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelInfo: 1,
+			},
+		},
+
 		"Missing disk information": {
 			productInfo:   "regular",
 			cpuInfo:       "regular",
@@ -1138,6 +1155,14 @@ func TestFakeDiskInfo(_ *testing.T) {
     "Partitions": 1
   }
 ]`)
+	case "single":
+		fmt.Println(`
+{
+		  "MediaType": "Fixed hard disk media",
+		  "Index": 0,
+		  "Size": 1000202273280,
+		  "Partitions": 1
+}`)
 	case "malicious":
 		fmt.Println(`
 [
@@ -1263,6 +1288,13 @@ func TestFakePartitionInfo(_ *testing.T) {
     "Type": "GPT: Basic Data"
   }
 ]`)
+	case "single":
+		fmt.Println(`
+{
+		  "DiskIndex": 0,
+		  "Size": 104857600,
+		  "Type": "GPT: System"
+}`)
 	case "malicious":
 		fmt.Println(`
 [
