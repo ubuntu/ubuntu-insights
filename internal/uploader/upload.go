@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ubuntu/ubuntu-insights/internal/consent"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/report"
 )
@@ -24,6 +25,38 @@ var (
 	// ErrSendFailure is returned when a report fails to be sent to the server, either due to a network error or a non-200 status code.
 	ErrSendFailure = errors.New("report send failed")
 )
+
+// UploadAll concurrently calls Upload for all the provided sources.
+func (um Uploader) UploadAll(sources []string, force, retry bool) error {
+	var uploadError error
+	mu := &sync.Mutex{}
+	var wg sync.WaitGroup
+	for _, source := range sources {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			var err error
+			if retry {
+				err = um.BackoffUpload(source, force)
+			} else {
+				err = um.Upload(source, force)
+			}
+			if errors.Is(err, consent.ErrConsentFileNotFound) {
+				slog.Warn("Consent file not found, skipping upload", "source", source)
+				return
+			}
+
+			if err != nil {
+				errMsg := fmt.Errorf("failed to upload reports for source %s: %v", source, err)
+				mu.Lock()
+				defer mu.Unlock()
+				uploadError = errors.Join(uploadError, errMsg)
+			}
+		}()
+	}
+	wg.Wait()
+	return uploadError
+}
 
 // Upload uploads the reports corresponding to the source to the configured server.
 //

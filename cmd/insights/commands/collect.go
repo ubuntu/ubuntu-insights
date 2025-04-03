@@ -67,19 +67,34 @@ If source is provided, then the source-metrics-path should be provided as well.`
 func (a App) collectRun() (err error) {
 	defer decorate.OnError(&err, "failed to collect insights")
 
-	err = a.config.Collect.Collect(a.config.consentDir, a.config.insightsDir, func(insights collector.Insights) error {
-		// Pretty print insights
-		ib, err := json.MarshalIndent(insights, "", "  ")
-		if err != nil {
-			return fmt.Errorf("failed to marshal insights report for console printing: %v", err)
-		}
-		fmt.Println(string(ib))
-		return nil
-	}, a.newCollector)
+	cConfig := a.config.Collect
 
+	cm, err := cConfig.Setup(a.config.consentDir)
+	if err != nil {
+		return err
+	}
+
+	c, err := a.newCollector(cm, a.config.insightsDir, cConfig.Source, cConfig.Period, cConfig.DryRun, collector.WithSourceMetricsPath(cConfig.SourceMetrics))
+	if err != nil {
+		return err
+	}
+
+	insights, err := c.Compile(cConfig.Force)
+	if err != nil {
+		return err
+	}
+
+	ib, err := json.MarshalIndent(insights, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal insights report for console printing: %v", err)
+	}
+	fmt.Println(string(ib))
+
+	err = c.Write(insights)
 	if errors.Is(err, consent.ErrConsentFileNotFound) {
-		slog.Warn("Consent file not found, aborting collection")
+		slog.Warn("Consent file not found, will not write insights report to disk or upload.")
 		return nil
 	}
+
 	return err
 }

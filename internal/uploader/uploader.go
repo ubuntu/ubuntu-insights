@@ -3,12 +3,10 @@
 package uploader
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/ubuntu/ubuntu-insights/internal/consent"
@@ -68,54 +66,18 @@ type Config struct {
 	Retry   bool `mapstructure:"retry"`
 }
 
-// Factory represents a function that creates a new Uploader.
-type Factory = func(cm Consent, cachePath string, minAge uint, dryRun bool, args ...Options) (Uploader, error)
-
-// Upload creates an uploader then uploads using it based off the given config and arguments.
-func (c Config) Upload(consentDir, cacheDir string, factory Factory) error {
+// Setup sets defaults for config and creates a consent manager.
+func (c *Config) Setup(consentDir, cacheDir string) (*consent.Manager, error) {
 	if len(c.Sources) == 0 {
 		slog.Info("No sources provided, uploading all sources")
 		var err error
 		c.Sources, err = GetAllSources(cacheDir)
 		if err != nil {
-			return fmt.Errorf("failed to get all sources: %v", err)
+			return nil, fmt.Errorf("failed to get all sources: %v", err)
 		}
 	}
 
-	cm := consent.New(consentDir)
-	uploader, err := factory(cm, cacheDir, c.MinAge, c.DryRun)
-	if err != nil {
-		return fmt.Errorf("failed to create uploader: %v", err)
-	}
-
-	var uploadError error
-	mu := &sync.Mutex{}
-	var wg sync.WaitGroup
-	for _, source := range c.Sources {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			var err error
-			if c.Retry {
-				err = uploader.BackoffUpload(source, c.Force)
-			} else {
-				err = uploader.Upload(source, c.Force)
-			}
-			if errors.Is(err, consent.ErrConsentFileNotFound) {
-				slog.Warn("Consent file not found, skipping upload", "source", source)
-				return
-			}
-
-			if err != nil {
-				errMsg := fmt.Errorf("failed to upload reports for source %s: %v", source, err)
-				mu.Lock()
-				defer mu.Unlock()
-				uploadError = errors.Join(uploadError, errMsg)
-			}
-		}()
-	}
-	wg.Wait()
-	return uploadError
+	return consent.New(consentDir), nil
 }
 
 // Options represents an optional function to override Upload Manager default values.

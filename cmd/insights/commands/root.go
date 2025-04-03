@@ -12,6 +12,9 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/uploader"
 )
 
+type newUploader func(cm uploader.Consent, cachePath string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error)
+type newCollector func(cm collector.Consent, cachePath, source string, period uint, dryRun bool, args ...collector.Options) (collector.Collector, error)
+
 // App represents the application.
 type App struct {
 	cmd   *cobra.Command
@@ -31,13 +34,13 @@ type App struct {
 		}
 	}
 
-	newUploader  uploader.Factory
-	newCollector collector.Factory
+	newUploader  newUploader
+	newCollector newCollector
 }
 
 type options struct {
-	newUploader  uploader.Factory
-	newCollector collector.Factory
+	newUploader  newUploader
+	newCollector newCollector
 }
 
 // Options represents an optional function to override App default values.

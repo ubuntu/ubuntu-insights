@@ -2,6 +2,7 @@
 package insights
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/ubuntu/ubuntu-insights/internal/collector"
@@ -65,10 +66,22 @@ func (c Config) Collect(metricsPath string, flags CollectFlags) error {
 		DryRun:        flags.DryRun,
 		SourceMetrics: metricsPath,
 	}
+	cm, err := cConf.Setup(c.ConsentDir)
+	if err != nil {
+		return err
+	}
 
-	return cConf.Collect(c.ConsentDir, c.InsightsDir, func(collector.Insights) error {
-		return nil
-	}, collector.New)
+	col, err := collector.New(cm, c.InsightsDir, cConf.Source, cConf.Period, cConf.DryRun, collector.WithSourceMetricsPath(metricsPath))
+	if err != nil {
+		return err
+	}
+
+	insights, err := col.Compile(cConf.Force)
+	if err != nil {
+		return err
+	}
+
+	return col.Write(insights)
 }
 
 // Upload uploads reports for Config.Source.
@@ -84,8 +97,17 @@ func (c Config) Upload(flags UploadFlags) error {
 		DryRun:  flags.DryRun,
 		Retry:   false,
 	}
+	cm, err := uConf.Setup(c.ConsentDir, c.InsightsDir)
+	if err != nil {
+		return err
+	}
 
-	return uConf.Upload(c.ConsentDir, c.InsightsDir, uploader.New)
+	uploader, err := uploader.New(cm, c.InsightsDir, uConf.MinAge, uConf.DryRun)
+	if err != nil {
+		return fmt.Errorf("failed to create uploader: %v", err)
+	}
+
+	return uploader.UploadAll(uConf.Sources, uConf.Force, uConf.Retry)
 }
 
 // GetConsentState gets the state for Config.Source.

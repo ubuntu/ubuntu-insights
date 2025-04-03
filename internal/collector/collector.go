@@ -90,14 +90,11 @@ type Config struct {
 	SourceMetrics string
 }
 
-// Factory represents a function that creates a new Collector.
-type Factory = func(cm Consent, cachePath, source string, period uint, dryRun bool, args ...Options) (Collector, error)
-
-// Collect creates a collector then collects using it based off the given config and arguments.
-func (c Config) Collect(consentDir, cacheDir string, consumer func(Insights) error, factory Factory) error {
+// Setup checks that the Config is properly configured and creates a consent manager.
+func (c *Config) Setup(consentDir string) (*consent.Manager, error) {
 	// Handle global source and source metrics.
 	if c.SourceMetrics == "" && c.Source != "" {
-		return fmt.Errorf("no metricsPath for %s", c.Source)
+		return nil, fmt.Errorf("no metricsPath for %s", c.Source)
 	}
 	if c.Source == "" && c.SourceMetrics != "" { // ignore SourceMetrics for platform source
 		slog.Warn("Source Metrics were provided but is ignored for the global source")
@@ -107,23 +104,7 @@ func (c Config) Collect(consentDir, cacheDir string, consumer func(Insights) err
 		c.Source = constants.DefaultCollectSource
 	}
 
-	cm := consent.New(consentDir)
-	col, err := factory(cm, cacheDir, c.Source, c.Period, c.DryRun, WithSourceMetricsPath(c.SourceMetrics))
-	if err != nil {
-		return err
-	}
-
-	insights, err := col.Compile(c.Force)
-	if err != nil {
-		return err
-	}
-
-	err = consumer(insights)
-	if err != nil {
-		return err
-	}
-
-	return col.Write(insights)
+	return consent.New(consentDir), nil
 }
 
 // WithSourceMetricsPath sets the path to an optional pre-made JSON file containing source specific metrics.

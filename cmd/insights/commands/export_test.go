@@ -5,14 +5,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/ubuntu-insights/internal/collector"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
-	"github.com/ubuntu/ubuntu-insights/internal/uploader"
 )
 
 type (
-	NewUploader  = uploader.Factory
-	NewCollector = collector.Factory
+	NewUploader  = newUploader
+	NewCollector = newCollector
 )
 
 // SetArgs sets the arguments for the command.
