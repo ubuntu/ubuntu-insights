@@ -2,7 +2,7 @@
 Description="Collect platform report using Ubuntu Insights while respecting consent."
 
 [Service]
-Type=simple
+Type=oneshot
 ExecStart=/usr/bin/ubuntu-insights collect -p=2629743
 Restart=no
 Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/mnt/c/WINDOWS/system32"

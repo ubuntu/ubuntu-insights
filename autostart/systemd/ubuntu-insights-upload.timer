@@ -2,9 +2,9 @@
 Description="Run Ubuntu-Insights upload 5 mins after boot and every week relative to the activation time"
 
 [Timer]
-OnBootSec=5min
+OnBootSec=8min
 OnUnitActiveSec=1weeks
-Unit=ubuntu-insights-upload.service
+Unit=ubuntu-insights-upload
 
 [Install]
 WantedBy=timers.target
