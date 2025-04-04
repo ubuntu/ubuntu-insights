@@ -1,0 +1,9 @@
+conf:
+    source: ""
+    consentdir: ""
+    insightsdir: ""
+    verbose: false
+flags:
+    minage: 0
+    force: false
+    dryrun: false

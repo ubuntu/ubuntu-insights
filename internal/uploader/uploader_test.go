@@ -48,7 +48,6 @@ func TestNew(t *testing.T) {
 		"Valid":        {consent: cTrue, source: "source", minAge: 5, dryRun: true},
 		"Zero Min Age": {consent: cTrue, source: "source", minAge: 0},
 
-		"Empty Source":    {consent: cTrue, source: "", wantErr: true},
 		"Minage Overflow": {consent: cTrue, source: "source", minAge: math.MaxUint64, wantErr: true},
 	}
 
@@ -56,7 +55,7 @@ func TestNew(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := uploader.New(tc.consent, "", tc.source, tc.minAge, tc.dryRun)
+			_, err := uploader.New(tc.consent, "", tc.minAge, tc.dryRun)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
@@ -160,11 +159,11 @@ func TestUpload(t *testing.T) {
 				t.Cleanup(func() { require.NoError(t, os.Chmod(localDir, 0750), "Cleanup: failed to restore permissions") }) //nolint:gosec //0750 is fine for folders
 			}
 
-			mgr, err := uploader.New(tc.consent, dir, source, tc.minAge, tc.dryRun,
+			mgr, err := uploader.New(tc.consent, dir, tc.minAge, tc.dryRun,
 				uploader.WithBaseServerURL(tc.url), uploader.WithTimeProvider(uploader.MockTimeProvider{CurrentTime: mockTime}))
 			require.NoError(t, err, "Setup: failed to create new uploader manager")
 
-			err = mgr.Upload(tc.force)
+			err = mgr.Upload(source, tc.force)
 			if tc.wantErr {
 				require.Error(t, err)
 			} else {
@@ -273,7 +272,7 @@ func TestBackoffUpload(t *testing.T) {
 				testutils.MakeReadOnly(t, filepath.Join(dir, source, file))
 			}
 
-			mgr, err := uploader.New(tc.consent, dir, source, tc.minAge, tc.dryRun,
+			mgr, err := uploader.New(tc.consent, dir, tc.minAge, tc.dryRun,
 				uploader.WithBaseServerURL(url),
 				uploader.WithTimeProvider(uploader.MockTimeProvider{CurrentTime: mockTime}),
 				uploader.WithInitialRetryPeriod(1*time.Second),
@@ -281,7 +280,7 @@ func TestBackoffUpload(t *testing.T) {
 				uploader.WithResponseTimeout(2*time.Second))
 			require.NoError(t, err, "Setup: failed to create new uploader manager")
 
-			err = mgr.BackoffUpload(tc.force)
+			err = mgr.BackoffUpload(source, tc.force)
 			if tc.wantErr {
 				require.Error(t, err)
 			} else {

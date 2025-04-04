@@ -12,7 +12,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/uploader"
 )
 
-type newUploader func(cm uploader.Consent, cachePath, source string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error)
+type newUploader func(cm uploader.Consent, cachePath string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error)
 type newCollector func(cm collector.Consent, cachePath, source string, period uint, dryRun bool, args ...collector.Options) (collector.Collector, error)
 
 // App represents the application.
@@ -24,20 +24,10 @@ type App struct {
 		Verbose     int
 		consentDir  string
 		insightsDir string
-		Upload      struct {
-			Sources []string
-			MinAge  uint `mapstructure:"minAge"`
-			Force   bool
-			DryRun  bool `mapstructure:"dryRun"`
-			Retry   bool `mapstructure:"retry"`
-		}
-		Collect struct {
-			Source        string
-			Period        uint
-			Force         bool
-			DryRun        bool
-			SourceMetrics string
-		}
+
+		Upload  uploader.Config
+		Collect collector.Config
+
 		Consent struct {
 			Sources []string
 			State   string

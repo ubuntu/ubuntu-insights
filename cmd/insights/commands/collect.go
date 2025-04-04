@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"runtime"
 
 	"github.com/spf13/cobra"
 	"github.com/ubuntu/decorate"
 	"github.com/ubuntu/ubuntu-insights/internal/collector"
 	"github.com/ubuntu/ubuntu-insights/internal/consent"
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
 func installCollectCmd(app *App) {
@@ -45,9 +45,6 @@ If source is provided, then the source-metrics-path should be provided as well.`
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Default source to platform
-			app.config.Collect.Source = runtime.GOOS
-
 			// Set Sources to Args
 			if len(args) == 2 {
 				app.config.Collect.Source = args[0]
@@ -59,7 +56,7 @@ If source is provided, then the source-metrics-path should be provided as well.`
 		},
 	}
 
-	collectCmd.Flags().UintVarP(&app.config.Collect.Period, "period", "p", 1, "the minimum period between 2 collection periods for validation purposes in seconds")
+	collectCmd.Flags().UintVarP(&app.config.Collect.Period, "period", "p", constants.DefaultPeriod, "the minimum period between 2 collection periods for validation purposes in seconds")
 	collectCmd.Flags().BoolVarP(&app.config.Collect.Force, "force", "f", false, "force a collection, override the report if there are any conflicts (doesn't ignore consent)")
 	collectCmd.Flags().BoolVarP(&app.config.Collect.DryRun, "dry-run", "d", false, "perform a dry-run where a report is collected, but not written to disk")
 
@@ -71,14 +68,14 @@ func (a App) collectRun() (err error) {
 	defer decorate.OnError(&err, "failed to collect insights")
 
 	cConfig := a.config.Collect
-	cm := consent.New(a.config.consentDir)
 
-	opts := []collector.Options{}
-	if cConfig.SourceMetrics != "" {
-		opts = append(opts, collector.WithSourceMetricsPath(cConfig.SourceMetrics))
+	err = cConfig.Sanitize()
+	if err != nil {
+		return err
 	}
 
-	c, err := a.newCollector(cm, a.config.insightsDir, cConfig.Source, cConfig.Period, cConfig.DryRun, opts...)
+	cm := consent.New(a.config.consentDir)
+	c, err := a.newCollector(cm, a.config.insightsDir, cConfig.Source, cConfig.Period, cConfig.DryRun, collector.WithSourceMetricsPath(cConfig.SourceMetrics))
 	if err != nil {
 		return err
 	}

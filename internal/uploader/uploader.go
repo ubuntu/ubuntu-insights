@@ -24,14 +24,12 @@ func (realTimeProvider) Now() time.Time {
 
 // Uploader is an abstraction of the uploader component.
 type Uploader struct {
-	source  string
-	consent Consent
-	minAge  time.Duration
-	dryRun  bool
+	consent  Consent
+	minAge   time.Duration
+	dryRun   bool
+	cacheDir string
 
 	baseServerURL      string
-	collectedDir       string
-	uploadedDir        string
 	maxReports         uint
 	timeProvider       timeProvider
 	initialRetryPeriod time.Duration // initialRetryPeriod is the initial wait period between retries.
@@ -58,6 +56,29 @@ var defaultOptions = options{
 	responseTimeout:    10 * time.Second,
 }
 
+// Config represents the uploader specific data needed to upload.
+type Config struct {
+	Sources []string
+	MinAge  uint `mapstructure:"minAge"`
+	Force   bool
+	DryRun  bool `mapstructure:"dryRun"`
+	Retry   bool `mapstructure:"retry"`
+}
+
+// Sanitize sets defaults and checks that the Config is properly configured.
+func (c *Config) Sanitize(cacheDir string) error {
+	if len(c.Sources) == 0 {
+		slog.Info("No sources provided, uploading all sources")
+		var err error
+		c.Sources, err = GetAllSources(cacheDir)
+		if err != nil {
+			return fmt.Errorf("failed to get all sources: %v", err)
+		}
+	}
+
+	return nil
+}
+
 // Options represents an optional function to override Upload Manager default values.
 type Options func(*options)
 
@@ -67,12 +88,8 @@ type Consent interface {
 }
 
 // New returns a new UploaderManager.
-func New(cm Consent, cachePath, source string, minAge uint, dryRun bool, args ...Options) (Uploader, error) {
-	slog.Debug("Creating new uploader manager", "source", source, "minAge", minAge, "dryRun", dryRun)
-
-	if source == "" {
-		return Uploader{}, fmt.Errorf("source cannot be an empty string")
-	}
+func New(cm Consent, cachePath string, minAge uint, dryRun bool, args ...Options) (Uploader, error) {
+	slog.Debug("Creating new uploader manager", "minAge", minAge, "dryRun", dryRun)
 
 	if minAge > (1<<63-1)/uint(time.Second) {
 		return Uploader{}, fmt.Errorf("min age %d is too large, would overflow", minAge)
@@ -84,15 +101,13 @@ func New(cm Consent, cachePath, source string, minAge uint, dryRun bool, args ..
 	}
 
 	return Uploader{
-		source:       source,
 		consent:      cm,
 		minAge:       time.Duration(minAge) * time.Second,
 		dryRun:       dryRun,
 		timeProvider: opts.timeProvider,
+		cacheDir:     cachePath,
 
 		baseServerURL:      opts.baseServerURL,
-		collectedDir:       filepath.Join(cachePath, source, constants.LocalFolder),
-		uploadedDir:        filepath.Join(cachePath, source, constants.UploadedFolder),
 		maxReports:         opts.maxReports,
 		initialRetryPeriod: opts.initialRetryPeriod,
 		maxRetryPeriod:     opts.maxRetryPeriod,

@@ -19,14 +19,14 @@ func (a *App) SetArgs(args []string) {
 }
 
 // WithNewUploader sets the new uploader function for the app.
-func WithNewUploader(nu newUploader) Options {
+func WithNewUploader(nu NewUploader) Options {
 	return func(o *options) {
 		o.newUploader = nu
 	}
 }
 
 // WithNewCollector sets the new collector function for the app.
-func WithNewCollector(nc newCollector) Options {
+func WithNewCollector(nc NewCollector) Options {
 	return func(o *options) {
 		o.newCollector = nc
 	}

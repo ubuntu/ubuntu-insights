@@ -1,0 +1,4 @@
+source: platform
+consentdir: home/etc/dir
+insightsdir: insights/dir
+verbose: true

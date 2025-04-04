@@ -1,0 +1,10 @@
+conf:
+    source: platform
+    consentdir: home/etc/dir
+    insightsdir: insights/dir
+    verbose: true
+metrics: ""
+flags:
+    period: 0
+    force: false
+    dryrun: false

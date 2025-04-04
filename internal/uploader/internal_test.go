@@ -53,16 +53,17 @@ func TestUploadBadFile(t *testing.T) {
 
 			dir := t.TempDir()
 
+			collectedDir := filepath.Join(dir, constants.LocalFolder)
+			uploadedDir := filepath.Join(dir, constants.UploadedFolder)
+
 			um := &Uploader{
-				collectedDir: filepath.Join(dir, constants.LocalFolder),
-				uploadedDir:  filepath.Join(dir, constants.UploadedFolder),
 				minAge:       0,
 				timeProvider: MockTimeProvider{CurrentTime: 0},
 			}
 
-			require.NoError(t, os.Mkdir(um.collectedDir, 0750), "Setup: failed to create uploaded folder")
-			require.NoError(t, os.Mkdir(um.uploadedDir, 0750), "Setup: failed to create collected folder")
-			fPath := filepath.Join(um.collectedDir, tc.fName)
+			require.NoError(t, os.Mkdir(collectedDir, 0750), "Setup: failed to create uploaded folder")
+			require.NoError(t, os.Mkdir(uploadedDir, 0750), "Setup: failed to create collected folder")
+			fPath := filepath.Join(collectedDir, tc.fName)
 
 			if !tc.missingFile && !tc.fileIsDir {
 				require.NoError(t, fileutils.AtomicWrite(fPath, []byte(tc.fileContents)), "Setup: failed to create report file")
@@ -85,7 +86,7 @@ func TestUploadBadFile(t *testing.T) {
 				return
 			}
 			require.NoError(t, err, "Setup: failed to create report object")
-			err = um.upload(r, tc.url, tc.consent, false)
+			err = um.upload(r, uploadedDir, tc.url, tc.consent, false)
 			if tc.wantErr {
 				require.Error(t, err)
 				return

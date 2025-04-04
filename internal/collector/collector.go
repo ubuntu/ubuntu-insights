@@ -80,6 +80,32 @@ var defaultOptions = options{
 // Options represents an optional function to override Collector default values.
 type Options func(*options)
 
+// Config represents the collector specific data needed to collect.
+type Config struct {
+	Source        string
+	Period        uint
+	Force         bool
+	DryRun        bool
+	SourceMetrics string
+}
+
+// Sanitize sets defaults and checks that the Config is properly configured.
+func (c *Config) Sanitize() error {
+	// Handle global source and source metrics.
+	if c.SourceMetrics == "" && c.Source != "" {
+		return fmt.Errorf("no metricsPath for %s", c.Source)
+	}
+	if c.Source == "" && c.SourceMetrics != "" { // ignore SourceMetrics for platform source
+		slog.Warn("Source Metrics were provided but is ignored for the global source")
+		c.SourceMetrics = ""
+	}
+	if c.Source == "" { // Default source to platform
+		c.Source = constants.DefaultCollectSource
+	}
+
+	return nil
+}
+
 // WithSourceMetricsPath sets the path to an optional pre-made JSON file containing source specific metrics.
 func WithSourceMetricsPath(path string) Options {
 	return func(o *options) {
