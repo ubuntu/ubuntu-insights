@@ -17,7 +17,8 @@
 # Built CLI-executable binary
 cmd/insights/insights
 
+# Generated files
+build/
+_build/
 generated
-
-# Built Lib binary
-build
+vendor
