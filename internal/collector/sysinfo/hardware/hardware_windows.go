@@ -242,7 +242,7 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 		diskMap[d.Index] = len(blks) - 1
 	}
 
-	// Paritions
+	// Partitions
 	partsOut, err := runJSONCommand[partOut]("partition", s.log, s.platform.partitionCmd[0], s.platform.partitionCmd[1:]...)
 	if err != nil {
 		return nil, err
@@ -333,7 +333,7 @@ func (s Collector) collectScreens(_ platform.Info) (screens []screen, err error)
 		screens[i].Size = fmt.Sprintf("%d0mm x %d0mm", d.MaxHorizontalImageSize, d.MaxVerticalImageSize)
 	}
 
-	// Physical reolution - Should be last and lowest priority due to its often inconsistent behavior.
+	// Physical resolution - Should be last and lowest priority due to its often inconsistent behavior.
 	screenPhysRes, err := runJSONCommand[screenPhysResFields]("screen physical resolution", s.log, s.platform.screenPhysResCmd[0], s.platform.screenPhysResCmd[1:]...)
 	if err != nil {
 		screenPhysRes = nil
