@@ -1,8 +1,8 @@
 wsl:
     subsystemversion: 2
     systemd: used
-    interop: disabled
-    version: ""
+    interop: enabled
+    version: 2.4.11.0
     kernelversion: 5.15.167.4-microsoft-standard-WSL2
 desktop:
     desktopenvironment: ""

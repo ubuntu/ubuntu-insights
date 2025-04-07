@@ -216,14 +216,14 @@ func TestCollectLinux(t *testing.T) {
 			proStatusCmd:      "attached",
 		},
 		// WSL 2 interop testing
-		"WSL2 without interop file does not warn": {
+		"WSL2 without wsl.conf file does not warn": {
 			roots:             []string{"enabled", "version-wsl2"},
 			detectVirtCmd:     "wsl",
 			systemdAnalyzeCmd: "regular",
-			wslVersionCmd:     "error",
+			wslVersionCmd:     "regular-en",
 			proStatusCmd:      "attached",
 
-			missingFiles: []string{"proc/sys/fs/binfmt_misc/WSLInterop-late"},
+			missingFiles: []string{"etc/wsl.conf"},
 		},
 		"WSL2 with disabled interop does not warn": {
 			roots:             []string{"disabled", "version-wsl2"},
@@ -232,25 +232,25 @@ func TestCollectLinux(t *testing.T) {
 			wslVersionCmd:     "error",
 			proStatusCmd:      "attached",
 		},
-		"WSL2 with late-disabled interop does not warn": {
-			roots:             []string{"late-disabled", "version-wsl2"},
+		"WSL2 with assumed-enabled interop does not warn": {
+			roots:             []string{"assumed-enabled", "version-wsl2"},
 			detectVirtCmd:     "wsl",
 			systemdAnalyzeCmd: "regular",
-			wslVersionCmd:     "error",
+			wslVersionCmd:     "regular-en",
 			proStatusCmd:      "attached",
 		},
 		"WSL2 with garbage interop file does not warn": {
 			roots:             []string{"garbage", "version-wsl2"},
 			detectVirtCmd:     "wsl",
 			systemdAnalyzeCmd: "regular",
-			wslVersionCmd:     "error",
+			wslVersionCmd:     "regular-en",
 			proStatusCmd:      "attached",
 		},
 		"WSL2 with empty interop file does not warn": {
 			roots:             []string{"empty", "version-wsl2"},
 			detectVirtCmd:     "wsl",
 			systemdAnalyzeCmd: "regular",
-			wslVersionCmd:     "error",
+			wslVersionCmd:     "regular-en",
 			proStatusCmd:      "attached",
 		},
 		"WSL2 empty version return warns": {
@@ -339,8 +339,6 @@ func TestCollectLinux(t *testing.T) {
 			systemdAnalyzeCmd: "wsl1",
 			wslVersionCmd:     "regular-en",
 			proStatusCmd:      "attached",
-
-			missingFiles: []string{"proc/sys/fs/binfmt_misc/WSLInterop-late"},
 		},
 		"WSL1 with interop and pro detached does not warn": {
 			roots:             []string{"enabled", "version-wsl1"},
@@ -350,14 +348,14 @@ func TestCollectLinux(t *testing.T) {
 			proStatusCmd:      "detached",
 		},
 		// WSL 1 interop testing
-		"WSL1 without interop file does not warn": {
+		"WSL1 without wsl.conf file does not warn": {
 			roots:             []string{"enabled", "version-wsl2"},
 			detectVirtCmd:     "wsl",
 			systemdAnalyzeCmd: "wsl1",
-			wslVersionCmd:     "error",
+			wslVersionCmd:     "regular-en",
 			proStatusCmd:      "attached",
 
-			missingFiles: []string{"proc/sys/fs/binfmt_misc/WSLInterop-late", "proc/sys/fs/binfmt_misc/WSLInterop"},
+			missingFiles: []string{"etc/wsl.conf"},
 		},
 		"WSL1 with disabled interop does not warn": {
 			roots:             []string{"disabled", "version-wsl1"},
@@ -366,8 +364,8 @@ func TestCollectLinux(t *testing.T) {
 			wslVersionCmd:     "error",
 			proStatusCmd:      "attached",
 		},
-		"WSL1 with late-disabled interop does not warn": {
-			roots:             []string{"late-disabled", "version-wsl1"},
+		"WSL1 with assumed-enabled interop does not warn": {
+			roots:             []string{"assumed-enabled", "version-wsl1"},
 			detectVirtCmd:     "wsl",
 			systemdAnalyzeCmd: "wsl1",
 			wslVersionCmd:     "regular-en",
@@ -377,14 +375,14 @@ func TestCollectLinux(t *testing.T) {
 			roots:             []string{"garbage", "version-wsl1"},
 			detectVirtCmd:     "wsl",
 			systemdAnalyzeCmd: "wsl1",
-			wslVersionCmd:     "error",
+			wslVersionCmd:     "regular-en",
 			proStatusCmd:      "attached",
 		},
 		"WSL1 with empty interop file does not warn": {
 			roots:             []string{"empty", "version-wsl1"},
 			detectVirtCmd:     "wsl",
 			systemdAnalyzeCmd: "wsl1",
-			wslVersionCmd:     "error",
+			wslVersionCmd:     "regular-en",
 			proStatusCmd:      "attached",
 		},
 	}
