@@ -1,0 +1,63 @@
+product:
+    family: Framework DIY
+    name: DIY Framework Laptop 16
+    vendor: Framework
+cpu:
+    name: Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz
+    vendor: GenuineIntel
+    arch: x86_64
+    cpus: 12
+    sockets: 1
+    cores: 6
+    threads: 2
+gpus:
+    - name: Onboard - Video
+      device: 0xdevice0
+      vendor: "0x8086"
+      driver: i915
+    - name: NVIDIA GeForce GTX 1050 Ti
+      device: 0xdevice1
+      vendor: "0x10de"
+      driver: nvidia
+mem:
+    total: 31941
+blks:
+    - size: 953856
+      type: disk
+      children:
+        - size: 1024
+          type: part
+          children: []
+        - size: 2048
+          type: part
+          children: []
+        - size: 950784
+          type: part
+          children:
+            - size: 950681
+              type: crypt
+              children:
+                - size: 950681
+                  type: lvm
+                  children: []
+        - size: 358400
+          type: part
+          children:
+            - size: 179200
+              type: part
+              children: []
+            - size: 102400
+              type: part
+              children: []
+            - size: 76800
+              type: part
+              children: []
+screens:
+    - physicalresolution: Wayland multi display 1
+      size: ""
+      resolution: ""
+      refreshrate: ""
+    - physicalresolution: 2nd display
+      size: ""
+      resolution: ""
+      refreshrate: ""
