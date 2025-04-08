@@ -16,6 +16,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
+	"gopkg.in/ini.v1"
 )
 
 // Info contains platform information for Linux.
@@ -100,37 +101,34 @@ func (p Collector) isWSL() bool {
 }
 
 // interopEnabled returns true if WSL interop is enabled.
-// It does this by checking the WSLInterop or WSLInterop-late, depending on the detected WSL version.
+// It does this by reading /etc/wsl.conf.
+// If /wtc/wsl.conf does not exist, it assumes the default behavior, interop is enabled.
 //
-// Note that this does not detect broken interop, such as if in WSL2, $WSL_INTEROP points to a broken location.
-func (p Collector) interopEnabled() (enabled bool) {
-	var path string
-	switch p.getWSLSubsystemVersion() {
-	case 1:
-		path = filepath.Join(p.platform.root, "proc/sys/fs/binfmt_misc/WSLInterop")
-	case 2:
-		path = filepath.Join(p.platform.root, "proc/sys/fs/binfmt_misc/WSLInterop-late")
-	default:
+// This function does not check if interop is disabled using an alternative methods.
+func (p Collector) interopEnabled() bool {
+	if p.getWSLSubsystemVersion() == 0 {
 		return false
 	}
-	// If case default, then WSL is not detected, and no log should be written.
-	defer func() {
-		if enabled {
-			p.log.Debug("WSL interop detected enabled")
-			return
-		}
-		p.log.Debug("WSL interop detected disabled")
-	}()
 
-	_, err := os.Stat(path)
+	path := filepath.Join(p.platform.root, "etc/wsl.conf")
+	cfg, err := ini.Load(path)
+	if os.IsNotExist(err) {
+		p.log.Debug("wsl.conf not found, assuming interop is enabled")
+		return true
+	}
 	if err != nil {
+		p.log.Warn("failed to read wsl.conf", "error", err)
 		return false
 	}
 
-	// Check if the first line of the file is 'enabled'
-	data := fileutils.ReadFileLogError(path, p.log)
-	lines := strings.Split(data, "\n")
-	return (len(lines) > 0 && lines[0] == "enabled")
+	// Check if interop is enabled
+	iEnabled, err := cfg.Section("interop").Key("enabled").Bool()
+	if err != nil {
+		p.log.Debug("Failed to parse interop.enabled in wsl.conf, assuming default behavior True", "error", err)
+		return true
+	}
+
+	return iEnabled
 }
 
 // collectWSL collects information about Windows Subsystem for Linux.
