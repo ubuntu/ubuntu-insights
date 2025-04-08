@@ -1,5 +1,11 @@
 package hardware
 
+/*
+#cgo LDFLAGS: -lwayland-client
+#include "wayland_displays_linux.h"
+*/
+import "C"
+
 import (
 	"context"
 	"fmt"
@@ -10,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/ubuntu/ubuntu-insights/internal/cmdutils"
 	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo/platform"
@@ -21,6 +28,7 @@ type platformOptions struct {
 	cpuInfoCmd []string
 	lsblkCmd   []string
 	screenCmd  []string
+	wayland    waylandProvider
 }
 
 // defaultOptions returns options for when running under a normal environment.
@@ -30,7 +38,15 @@ func defaultPlatformOptions() platformOptions {
 		cpuInfoCmd: []string{"lscpu", "-J"},
 		lsblkCmd:   []string{"lsblk", "-o", "NAME,SIZE,TYPE,RM", "--tree", "-J"},
 		screenCmd:  []string{"xrandr"},
+		wayland:    realWaylandProvider{},
 	}
+}
+
+type waylandProvider interface {
+	InitWayland() int
+	Cleanup()
+	GetDisplays() []screen
+	HadMemoryError() bool
 }
 
 // collectProduct reads sysfs to find information about the system.
@@ -378,8 +394,14 @@ var screenHeaderRegex = regexp.MustCompile(`(?m)^(\S+)\s+connected\s+(?:(primary
 // However: "720x480 60.00+ 120.00" does not match.
 var screenConfigRegex = regexp.MustCompile(`(?m)^\s*([0-9]+x[0-9]+)\s.*?([0-9]+\.[0-9]+)\+?\*\+?.*$`)
 
-// collectScreens uses xrandr to collect information about screens.
+// collectScreens collects screen information. Skips collection on WSL.
 func (h Collector) collectScreens(pi platform.Info) (info []screen, err error) {
+	info, err = h.cScreensWayland()
+	if err == nil && len(info) > 0 {
+		return info, nil
+	}
+
+	// Fall back to xrandr if Wayland fails.
 	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, h.platform.screenCmd[0], h.platform.screenCmd[1:]...)
 	if err != nil {
 		if pi.WSL.SubsystemVersion != 0 {
@@ -424,6 +446,54 @@ func (h Collector) collectScreens(pi platform.Info) (info []screen, err error) {
 			RefreshRate: v[2],
 		})
 	}
-
 	return info, nil
+}
+
+type realWaylandProvider struct{}
+
+func (realWaylandProvider) InitWayland() int {
+	return int(C.init_wayland())
+}
+
+func (realWaylandProvider) Cleanup() {
+	C.cleanup()
+}
+
+func (realWaylandProvider) GetDisplays() []screen {
+	count := int(C.get_output_count())
+	screens := make([]screen, count)
+	displays := C.get_displays()
+	for i := range count {
+		display := *(**C.struct_wayland_display)(unsafe.Pointer(uintptr(unsafe.Pointer(displays)) + uintptr(i)*unsafe.Sizeof((*C.struct_wayland_display)(nil))))
+		screens[i] = screen{}
+		if display.width != 0 && display.height != 0 {
+			screens[i].PhysicalResolution = fmt.Sprintf("%dx%d", display.width, display.height)
+		}
+		if display.refresh != 0 {
+			screens[i].RefreshRate = fmt.Sprintf("%.2f", float64(display.refresh)/1000)
+		}
+		if display.phys_width != 0 && display.phys_height != 0 {
+			screens[i].Size = fmt.Sprintf("%dmm x %dmm", display.phys_width, display.phys_height)
+		}
+	}
+
+	return screens
+}
+
+func (r realWaylandProvider) HadMemoryError() bool {
+	return bool(C.had_memory_error())
+}
+
+func (h Collector) cScreensWayland() (screens []screen, err error) {
+	if h.platform.wayland.InitWayland() != 0 {
+		return nil, fmt.Errorf("failed to connect to Wayland display")
+	}
+	defer h.platform.wayland.Cleanup()
+
+	if h.platform.wayland.HadMemoryError() {
+		h.log.Warn("Memory error while trying to get displays")
+		return nil, fmt.Errorf("failed to get displays")
+	}
+
+	return h.platform.wayland.GetDisplays(), nil
 }

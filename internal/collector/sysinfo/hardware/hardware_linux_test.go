@@ -47,6 +47,15 @@ func TestNewLinux(t *testing.T) {
 func TestCollectLinux(t *testing.T) {
 	t.Parallel()
 
+	type waylandType int
+	const (
+		WaylandNone waylandType = iota
+		WaylandMemoryError
+		WaylandNoDisplay
+		WaylandSingleDisplay
+		WaylandMultipleDisplays
+	)
+
 	tests := map[string]struct {
 		root         string
 		cpuInfo      string
@@ -54,6 +63,7 @@ func TestCollectLinux(t *testing.T) {
 		screenInfo   string
 		missingFiles []string
 		pinfo        platform.Info
+		wayland      waylandType
 
 		logs    map[slog.Level]uint
 		wantErr bool
@@ -268,6 +278,45 @@ func TestCollectLinux(t *testing.T) {
 			},
 		},
 
+		"Wayland MemoryError warns and falls back": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "regular",
+
+			wayland: WaylandMemoryError,
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Wayland NoDisplay falls back": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "regular",
+
+			wayland: WaylandNoDisplay,
+		},
+
+		"Wayland SingleDisplay is sane": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "regular",
+
+			wayland: WaylandSingleDisplay,
+		},
+
+		"Wayland MultipleDisplays is sane": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "regular",
+
+			wayland: WaylandMultipleDisplays,
+		},
+
 		"Missing hardware information is empty": {
 			root:       "withoutinfo",
 			cpuInfo:    "",
@@ -430,6 +479,23 @@ func TestCollectLinux(t *testing.T) {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeScreenList", tc.screenInfo)
 				options = append(options, hardware.WithScreenInfo(cmdArgs))
 			}
+
+			var wm waylandMock
+			switch tc.wayland {
+			case WaylandNone:
+				wm = waylandMock{initReturn: -1}
+			case WaylandMemoryError:
+				wm = waylandMock{initReturn: 0, memoryError: true}
+			case WaylandNoDisplay:
+				wm = waylandMock{initReturn: 0, displayReturn: []hardware.Screen{}}
+			case WaylandSingleDisplay:
+				wm = waylandMock{initReturn: 0, displayReturn: []hardware.Screen{{PhysicalResolution: "Wayland single display"}}}
+			case WaylandMultipleDisplays:
+				wm = waylandMock{initReturn: 0, displayReturn: []hardware.Screen{{PhysicalResolution: "Wayland multi display 1"}, {PhysicalResolution: "2nd display"}}}
+			default:
+				t.Fatalf("Setup: Wayland type not implemented, %d", tc.wayland)
+			}
+			options = append(options, hardware.WithWaylandProvider(wm))
 
 			l := testutils.NewMockHandler(slog.LevelDebug)
 			s := hardware.New(slog.New(&l), options...)
@@ -925,4 +991,24 @@ HDMI-0 connected primary 3840x2160+3072+0 (normal left inverted right x axis y a
 	case "missing":
 		os.Exit(0)
 	}
+}
+
+type waylandMock struct {
+	initReturn    int
+	memoryError   bool
+	displayReturn []hardware.Screen
+}
+
+func (w waylandMock) InitWayland() int {
+	return w.initReturn
+}
+
+func (waylandMock) Cleanup() {}
+
+func (w waylandMock) GetDisplays() []hardware.Screen {
+	return w.displayReturn
+}
+
+func (w waylandMock) HadMemoryError() bool {
+	return w.memoryError
 }
