@@ -312,6 +312,23 @@ func TestCollectWindows(t *testing.T) {
 			},
 		},
 
+		"Ignores virtual disks": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "virtual-disk",
+			partitionInfo: "single",
+
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelInfo: 2,
+			},
+		},
+
 		"Missing disk information": {
 			productInfo:   "regular",
 			cpuInfo:       "regular",
@@ -1163,6 +1180,23 @@ func TestFakeDiskInfo(_ *testing.T) {
 		  "Size": 1000202273280,
 		  "Partitions": 1
 }`)
+	case "virtual-disk":
+		fmt.Println(`
+[
+{
+		  "MediaType": "Fixed hard disk media",
+		  "Index": 0,
+		  "Size": 1000202273280,
+		  "Partitions": 1
+},
+{
+		"Model": "Microsoft Virtual Disk",
+		"MediaType": "Fixed hard disk media",
+		"Index": 1,
+		"Size": 1000202273280,
+		"Partitions": 1
+}
+]`)
 	case "malicious":
 		fmt.Println(`
 [

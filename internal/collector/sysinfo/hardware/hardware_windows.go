@@ -38,7 +38,7 @@ func defaultPlatformOptions() platformOptions {
 		gpuCmd:     []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_VideoController", "|", "Format-List", "-Property", "*"},
 		memoryCmd:  []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_ComputerSystem", "|", "Format-List", "-Property", "TotalPhysicalMemory"},
 
-		diskCmd:      []string{"powershell.exe", "-Command", "Get-WmiObject", "Win32_DiskDrive", "|", "Select-Object", "MediaType, Index, Size, Partitions", "|", "ConvertTo-Json", "-Depth", "3"},
+		diskCmd:      []string{"powershell.exe", "-Command", "Get-WmiObject", "Win32_DiskDrive", "|", "Select-Object", "Model, MediaType, Index, Size, Partitions", "|", "ConvertTo-Json", "-Depth", "3"},
 		partitionCmd: []string{"powershell.exe", "-Command", "Get-WmiObject", "Win32_DiskPartition", "|", "Select-Object", "DiskIndex, Size, Type", "|", "ConvertTo-Json", "-Depth", "3"},
 
 		screenResCmd: []string{"powershell.exe", "-Command",
@@ -186,6 +186,7 @@ func (s Collector) collectMemory() (mem memory, err error) {
 // collectDisks uses Win32_DiskDrive and Win32_DiskPartition to collect information about disks.
 func (s Collector) collectDisks() (blks []disk, err error) {
 	type diskOut struct {
+		Model      string
 		MediaType  string
 		Index      uint64
 		Size       uint64
@@ -217,6 +218,11 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 			continue
 		}
 
+		if d.Model == "Microsoft Virtual Disk" {
+			s.log.Info("Skipping virtual disk", "index", d.Index)
+			continue
+		}
+
 		if d.Partitions > 128 {
 			s.log.Warn("Skipping disk with too many partitions", "partitions", d.Partitions)
 			continue
@@ -236,7 +242,7 @@ func (s Collector) collectDisks() (blks []disk, err error) {
 		diskMap[d.Index] = len(blks) - 1
 	}
 
-	// Paritions
+	// Partitions
 	partsOut, err := runJSONCommand[partOut]("partition", s.log, s.platform.partitionCmd[0], s.platform.partitionCmd[1:]...)
 	if err != nil {
 		return nil, err
@@ -327,7 +333,7 @@ func (s Collector) collectScreens(_ platform.Info) (screens []screen, err error)
 		screens[i].Size = fmt.Sprintf("%d0mm x %d0mm", d.MaxHorizontalImageSize, d.MaxVerticalImageSize)
 	}
 
-	// Physical reolution - Should be last and lowest priority due to its often inconsistent behavior.
+	// Physical resolution - Should be last and lowest priority due to its often inconsistent behavior.
 	screenPhysRes, err := runJSONCommand[screenPhysResFields]("screen physical resolution", s.log, s.platform.screenPhysResCmd[0], s.platform.screenPhysResCmd[1:]...)
 	if err != nil {
 		screenPhysRes = nil
