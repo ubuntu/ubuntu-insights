@@ -275,16 +275,24 @@ Global Flags:
       },
       "disks": [
         {
-          "size": 388
+          "size": 388,
+          "type": "disk"
         },
         {
-          "size": 4096
+          "size": 185,
+          "type": "disk"
         },
         {
-          "size": 1048576
+          "size": 4096,
+          "type": "disk"
         },
         {
-          "size": 1048576
+          "size": 1048576,
+          "type": "disk"
+        },
+        {
+          "size": 1048576,
+          "type": "disk"
         }
       ]
     },
