@@ -44,12 +44,4 @@ blks:
             - size: 76800
               type: part
               children: []
-screens:
-    - physicalresolution: ""
-      size: 598mm x 336mm
-      resolution: 1920x1080
-      refreshrate: "60.00"
-    - physicalresolution: ""
-      size: 344mm x 193mm
-      resolution: 1920x1080
-      refreshrate: "60.03"
+screens: []

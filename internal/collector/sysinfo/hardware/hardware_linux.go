@@ -396,6 +396,11 @@ var screenConfigRegex = regexp.MustCompile(`(?m)^\s*([0-9]+x[0-9]+)\s.*?([0-9]+\
 
 // collectScreens collects screen information. Skips collection on WSL.
 func (h Collector) collectScreens(pi platform.Info) (info []screen, err error) {
+	if pi.WSL.SubsystemVersion != 0 {
+		h.log.Debug("skipping screen info collection on WSL")
+		return []screen{}, nil
+	}
+
 	info, err = h.cScreensWayland()
 	if err == nil && len(info) > 0 {
 		return info, nil
@@ -404,11 +409,6 @@ func (h Collector) collectScreens(pi platform.Info) (info []screen, err error) {
 	// Fall back to xrandr if Wayland fails.
 	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, h.platform.screenCmd[0], h.platform.screenCmd[1:]...)
 	if err != nil {
-		if pi.WSL.SubsystemVersion != 0 {
-			h.log.Debug("skipping screen info collection on WSL")
-			return []screen{}, nil
-		}
-
 		return nil, fmt.Errorf("failed to run xrandr: %v", err)
 	}
 	if stderr.Len() > 0 {
