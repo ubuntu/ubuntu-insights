@@ -369,7 +369,7 @@ func TestCollectLinux(t *testing.T) {
 				},
 			},
 		},
-		"WSL hardware information with xrandr": {
+		"WSL hardware information ignores xrandr": {
 			root:       "regular",
 			cpuInfo:    "regular",
 			blkInfo:    "regular",
@@ -416,32 +416,6 @@ func TestCollectLinux(t *testing.T) {
 			},
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 3,
-			},
-		},
-		"Missing WSL hardware information warns when xrandr is installed but returns empty": {
-			root:       "withoutinfo",
-			cpuInfo:    "",
-			blkInfo:    "",
-			screenInfo: "",
-			missingFiles: []string{
-				// Product
-				"sys/class/dmi/id/product_family",
-				"sys/class/dmi/id/product_name",
-				"sys/class/dmi/id/sys_vendor",
-				// GPU
-				"sys/class/drm/c0",
-				"sys/class/drm/c1",
-				"sys/class/drm/card0-DP-1",
-				"sys/class/drm/card0-DP-2",
-				"sys/class/drm/card1",
-			},
-			pinfo: platform.Info{
-				WSL: platform.WSL{
-					SubsystemVersion: 2,
-				},
-			},
-			logs: map[slog.Level]uint{
-				slog.LevelWarn: 4,
 			},
 		},
 	}
