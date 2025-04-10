@@ -57,7 +57,7 @@ type disk struct {
 	Children []disk `json:"children,omitempty"`
 }
 
-// screen contains information for a screen.
+// screen contains information for a Screen.
 type screen struct {
 	PhysicalResolution string `json:"physicalResolution,omitempty"`
 	Size               string `json:"size,omitempty"`
