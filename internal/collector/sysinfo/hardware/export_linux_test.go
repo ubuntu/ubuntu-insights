@@ -1,6 +1,7 @@
 package hardware
 
 type Screen = screen
+type CWaylandDisplay = cWaylandDisplay
 
 // WithRoot overrides default root directory of the system.
 func WithRoot(root string) Options {

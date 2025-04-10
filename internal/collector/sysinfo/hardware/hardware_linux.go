@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unsafe"
 
@@ -38,16 +39,15 @@ func defaultPlatformOptions() platformOptions {
 		cpuInfoCmd: []string{"lscpu", "-J"},
 		lsblkCmd:   []string{"lsblk", "-o", "NAME,SIZE,TYPE,RM", "--tree", "-J"},
 		screenCmd:  []string{"xrandr"},
-		wayland:    realWaylandProvider{},
+		wayland:    &realWaylandProvider{},
 	}
 }
 
 type waylandProvider interface {
 	InitWayland() int
-	Cleanup()
-	GetDisplays() []screen
-	HadMemoryError() bool
 }
+
+var waylandMutex sync.Mutex
 
 // collectProduct reads sysfs to find information about the system.
 func (h Collector) collectProduct(pi platform.Info) (product, error) {
@@ -451,21 +451,28 @@ func (h Collector) collectScreens(pi platform.Info) (info []screen, err error) {
 
 type realWaylandProvider struct{}
 
-func (realWaylandProvider) InitWayland() int {
+func (*realWaylandProvider) InitWayland() int {
 	return int(C.init_wayland())
 }
 
-func (realWaylandProvider) Cleanup() {
-	C.cleanup()
-}
+func (h Collector) cScreensWayland() (screens []screen, err error) {
+	waylandMutex.Lock()
+	defer waylandMutex.Unlock()
+	if h.platform.wayland.InitWayland() != 0 {
+		return nil, fmt.Errorf("failed to connect to Wayland display")
+	}
+	defer C.cleanup()
 
-func (realWaylandProvider) GetDisplays() []screen {
+	if bool(C.had_memory_error()) {
+		h.log.Warn("Memory error while trying to get displays")
+		return nil, fmt.Errorf("failed to get displays")
+	}
+
 	count := int(C.get_output_count())
-	screens := make([]screen, count)
+	screens = make([]screen, count)
 	displays := C.get_displays()
 	for i := range count {
 		display := *(**C.struct_wayland_display)(unsafe.Pointer(uintptr(unsafe.Pointer(displays)) + uintptr(i)*unsafe.Sizeof((*C.struct_wayland_display)(nil))))
-		screens[i] = screen{}
 		if display.width != 0 && display.height != 0 {
 			screens[i].PhysicalResolution = fmt.Sprintf("%dx%d", display.width, display.height)
 		}
@@ -477,23 +484,5 @@ func (realWaylandProvider) GetDisplays() []screen {
 		}
 	}
 
-	return screens
-}
-
-func (r realWaylandProvider) HadMemoryError() bool {
-	return bool(C.had_memory_error())
-}
-
-func (h Collector) cScreensWayland() (screens []screen, err error) {
-	if h.platform.wayland.InitWayland() != 0 {
-		return nil, fmt.Errorf("failed to connect to Wayland display")
-	}
-	defer h.platform.wayland.Cleanup()
-
-	if h.platform.wayland.HadMemoryError() {
-		h.log.Warn("Memory error while trying to get displays")
-		return nil, fmt.Errorf("failed to get displays")
-	}
-
-	return h.platform.wayland.GetDisplays(), nil
+	return screens, nil
 }

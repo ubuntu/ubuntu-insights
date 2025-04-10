@@ -52,16 +52,4 @@ blks:
             - size: 76800
               type: part
               children: []
-screens:
-    - physicalresolution: 2x2
-      size: 1mm x 1mm
-      resolution: ""
-      refreshrate: "10.00"
-    - physicalresolution: ""
-      size: ""
-      resolution: ""
-      refreshrate: ""
-    - physicalresolution: 3x3
-      size: 2mm x 2mm
-      resolution: ""
-      refreshrate: "10.00"
+screens: []

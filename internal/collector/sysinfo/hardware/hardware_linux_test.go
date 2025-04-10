@@ -256,6 +256,18 @@ func TestCollectLinux(t *testing.T) {
 			},
 		},
 
+		"Error no exit Screen warns": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "error no exit",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+				slog.LevelInfo: 1,
+			},
+		},
+
 		"Garbage Screen information is empty": {
 			root:       "regular",
 			cpuInfo:    "regular",
@@ -461,15 +473,19 @@ func TestCollectLinux(t *testing.T) {
 			case WaylandMemoryError:
 				wm = waylandMock{initReturn: 0, memoryError: true}
 			case WaylandNoDisplay:
-				wm = waylandMock{initReturn: 0, displayReturn: []hardware.Screen{}}
+				wm = waylandMock{initReturn: 0, displays: []hardware.CWaylandDisplay{}}
 			case WaylandSingleDisplay:
-				wm = waylandMock{initReturn: 0, displayReturn: []hardware.Screen{{PhysicalResolution: "Wayland single display"}}}
+				wm = waylandMock{initReturn: 0,
+					displays: []hardware.CWaylandDisplay{{Width: 1, Height: 1, Refresh: 10001, PhysWidth: 1, PhysHeight: 1}}}
 			case WaylandMultipleDisplays:
-				wm = waylandMock{initReturn: 0, displayReturn: []hardware.Screen{{PhysicalResolution: "Wayland multi display 1"}, {PhysicalResolution: "2nd display"}}}
+				wm = waylandMock{initReturn: 0,
+					displays: []hardware.CWaylandDisplay{{Width: 2, Height: 2, Refresh: 10001, PhysWidth: 1, PhysHeight: 1},
+						{}, {Width: 3, Height: 3, Refresh: 10002, PhysWidth: 2, PhysHeight: 2}}}
 			default:
 				t.Fatalf("Setup: Wayland type not implemented, %d", tc.wayland)
 			}
-			options = append(options, hardware.WithWaylandProvider(wm))
+			wm.t = t
+			options = append(options, hardware.WithWaylandProvider(&wm))
 
 			l := testutils.NewMockHandler(slog.LevelDebug)
 			s := hardware.New(slog.New(&l), options...)
@@ -895,6 +911,8 @@ func TestFakeScreenList(_ *testing.T) {
 	case "error":
 		fmt.Fprint(os.Stderr, "Error requested in fake xrandr")
 		os.Exit(1)
+	case "error no exit":
+		fmt.Fprint(os.Stderr, "Error requested in fake xrandr")
 	case "regular":
 		fmt.Println(`Screen 0: minimum 8 x 8, current 6912 x 2160, maximum 32767 x 32767
 HDMI-0 connected primary 3840x2160+3072+0 (normal left inverted right x axis y axis) 598mm x 336mm
@@ -968,21 +986,13 @@ HDMI-0 connected primary 3840x2160+3072+0 (normal left inverted right x axis y a
 }
 
 type waylandMock struct {
-	initReturn    int
-	memoryError   bool
-	displayReturn []hardware.Screen
+	t           *testing.T
+	initReturn  int
+	memoryError bool
+	displays    []hardware.CWaylandDisplay
 }
 
-func (w waylandMock) InitWayland() int {
+func (w *waylandMock) InitWayland() int {
+	hardware.TestingInitWayland(w.t, w.displays, w.memoryError)
 	return w.initReturn
-}
-
-func (waylandMock) Cleanup() {}
-
-func (w waylandMock) GetDisplays() []hardware.Screen {
-	return w.displayReturn
-}
-
-func (w waylandMock) HadMemoryError() bool {
-	return w.memoryError
 }

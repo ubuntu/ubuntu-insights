@@ -53,7 +53,7 @@ blks:
               type: part
               children: []
 screens:
-    - physicalresolution: Wayland single display
-      size: ""
+    - physicalresolution: 1x1
+      size: 1mm x 1mm
       resolution: ""
-      refreshrate: ""
+      refreshrate: "10.00"
