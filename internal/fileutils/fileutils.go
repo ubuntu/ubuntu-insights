@@ -13,15 +13,15 @@ import (
 // AtomicWrite writes data to a file atomically.
 // If the file already exists, then it will be overwritten.
 // Not atomic on Windows.
-func AtomicWrite(path string, data []byte) error {
+func AtomicWrite(path string, data []byte) (err error) {
 	tmp, err := os.CreateTemp(filepath.Dir(path), "tmp-*.tmp")
 	if err != nil {
 		return fmt.Errorf("could not create temporary file: %v", err)
 	}
 	defer func() {
 		_ = tmp.Close()
-		if err := os.Remove(tmp.Name()); err != nil && !os.IsNotExist(err) {
-			slog.Warn("Failed to remove temporary file", "file", tmp.Name(), "error", err)
+		if e := os.Remove(tmp.Name()); e != nil && !os.IsNotExist(e) {
+			err = fmt.Errorf("failed to remove temporary file %s: %v", tmp.Name(), e)
 		}
 	}()
 

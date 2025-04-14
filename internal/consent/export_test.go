@@ -11,7 +11,7 @@ func (cm Manager) GetAllSourceConsentStates(continueOnErr bool) (map[string]bool
 
 	consentStates := make(map[string]bool)
 	for source, path := range p {
-		consent, err := readFile(path)
+		consent, err := readFile(cm.log, path)
 		if err != nil && !continueOnErr {
 			return nil, err
 		}

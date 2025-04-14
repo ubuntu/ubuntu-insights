@@ -165,11 +165,8 @@ func TestCollectLinux(t *testing.T) {
 				require.NoError(t, err, "setup: failed to remove file %s: ", f)
 			}
 
-			l := testutils.NewMockHandler(slog.LevelDebug)
-
 			options := []software.Options{
 				software.WithRoot(root),
-				software.WithLogger(&l),
 				software.WithTimezone(func() string { return tc.timezone }),
 				software.WithLang(func() (string, bool) { return tc.language, !tc.missingLanguage }),
 			}
@@ -178,8 +175,8 @@ func TestCollectLinux(t *testing.T) {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeOSInfo", tc.osInfo)
 				options = append(options, software.WithOSInfo(cmdArgs))
 			}
-
-			s := software.New(options...)
+			l := testutils.NewMockHandler(slog.LevelDebug)
+			s := software.New(slog.New(&l), options...)
 
 			got, err := s.Collect(tc.pInfo)
 

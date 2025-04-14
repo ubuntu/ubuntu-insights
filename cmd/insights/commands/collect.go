@@ -68,14 +68,14 @@ func (a App) collectRun() (err error) {
 	defer decorate.OnError(&err, "failed to collect insights")
 
 	cConfig := a.config.Collect
-
-	err = cConfig.Sanitize()
+	l := slog.Default()
+	err = cConfig.Sanitize(l)
 	if err != nil {
 		return err
 	}
 
-	cm := consent.New(a.config.consentDir)
-	c, err := a.newCollector(cm, a.config.insightsDir, cConfig.Source, cConfig.Period, cConfig.DryRun, collector.WithSourceMetricsPath(cConfig.SourceMetrics))
+	cm := consent.New(l, a.config.consentDir)
+	c, err := a.newCollector(l, cm, a.config.insightsDir, cConfig.Source, cConfig.Period, cConfig.DryRun, collector.WithSourceMetricsPath(cConfig.SourceMetrics))
 	if err != nil {
 		return err
 	}

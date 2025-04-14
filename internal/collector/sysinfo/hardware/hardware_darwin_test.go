@@ -383,10 +383,7 @@ func TestCollectDarwin(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			l := testutils.NewMockHandler(slog.LevelDebug)
-
 			options := []hardware.Options{
-				hardware.WithLogger(&l),
 				hardware.WithArch("arm64"),
 			}
 
@@ -415,7 +412,8 @@ func TestCollectDarwin(t *testing.T) {
 				options = append(options, hardware.WithScreenInfo(cmdArgs))
 			}
 
-			s := hardware.New(options...)
+			l := testutils.NewMockHandler(slog.LevelDebug)
+			s := hardware.New(slog.New(&l), options...)
 
 			got, err := s.Collect(platform.Info{})
 			if tc.wantErr {

@@ -35,6 +35,8 @@ type Uploader struct {
 	initialRetryPeriod time.Duration // initialRetryPeriod is the initial wait period between retries.
 	maxRetryPeriod     time.Duration // maxRetryPeriod is the maximum wait period between retries.
 	responseTimeout    time.Duration // responseTimeout is the timeout for the HTTP request.
+
+	log *slog.Logger
 }
 
 type options struct {
@@ -66,9 +68,9 @@ type Config struct {
 }
 
 // Sanitize sets defaults and checks that the Config is properly configured.
-func (c *Config) Sanitize(cacheDir string) error {
+func (c *Config) Sanitize(l *slog.Logger, cacheDir string) error {
 	if len(c.Sources) == 0 {
-		slog.Info("No sources provided, uploading all sources")
+		l.Info("No sources provided, uploading all sources")
 		var err error
 		c.Sources, err = GetAllSources(cacheDir)
 		if err != nil {
@@ -88,8 +90,8 @@ type Consent interface {
 }
 
 // New returns a new UploaderManager.
-func New(cm Consent, cachePath string, minAge uint, dryRun bool, args ...Options) (Uploader, error) {
-	slog.Debug("Creating new uploader manager", "minAge", minAge, "dryRun", dryRun)
+func New(l *slog.Logger, cm Consent, cachePath string, minAge uint, dryRun bool, args ...Options) (Uploader, error) {
+	l.Debug("Creating new uploader manager", "minAge", minAge, "dryRun", dryRun)
 
 	if minAge > (1<<63-1)/uint(time.Second) {
 		return Uploader{}, fmt.Errorf("min age %d is too large, would overflow", minAge)
@@ -112,6 +114,8 @@ func New(cm Consent, cachePath string, minAge uint, dryRun bool, args ...Options
 		initialRetryPeriod: opts.initialRetryPeriod,
 		maxRetryPeriod:     opts.maxRetryPeriod,
 		responseTimeout:    opts.responseTimeout,
+
+		log: l,
 	}, nil
 }
 

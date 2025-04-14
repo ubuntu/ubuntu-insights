@@ -122,10 +122,7 @@ func TestCollectWindows(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			l := testutils.NewMockHandler(slog.LevelDebug)
-
 			options := []software.Options{
-				software.WithLogger(&l),
 				software.WithTimezone(func() string { return tc.timezone }),
 			}
 
@@ -143,8 +140,8 @@ func TestCollectWindows(t *testing.T) {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeBIOSInfo", tc.biosInfo)
 				options = append(options, software.WithBIOS(cmdArgs))
 			}
-
-			s := software.New(options...)
+			l := testutils.NewMockHandler(slog.LevelDebug)
+			s := software.New(slog.New(&l), options...)
 
 			got, err := s.Collect(platform.Info{})
 

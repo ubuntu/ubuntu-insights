@@ -2,6 +2,7 @@ package consent_test
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -55,7 +56,7 @@ func TestGetState(t *testing.T) {
 			t.Parallel()
 			dir, err := setupTmpConsentFiles(t, tc.globalFile)
 			require.NoError(t, err, "Setup: failed to setup temporary consent files")
-			cm := consent.New(dir)
+			cm := consent.New(slog.Default(), dir)
 
 			got, err := cm.GetState(tc.source)
 			if tc.wantErr {
@@ -111,7 +112,7 @@ func TestSetState(t *testing.T) {
 			t.Parallel()
 			dir, err := setupTmpConsentFiles(t, tc.globalFile)
 			require.NoError(t, err, "Setup: failed to setup temporary consent files")
-			cm := consent.New(dir)
+			cm := consent.New(slog.Default(), dir)
 
 			err = cm.SetState(tc.writeSource, tc.writeState)
 			if tc.wantErr {
@@ -168,7 +169,7 @@ func TestHasConsent(t *testing.T) {
 			t.Parallel()
 			dir, err := setupTmpConsentFiles(t, tc.globalFile)
 			require.NoError(t, err, "Setup: failed to setup temporary consent files")
-			cm := consent.New(dir)
+			cm := consent.New(slog.Default(), dir)
 
 			got, err := cm.HasConsent(tc.source)
 			if tc.wantErr {

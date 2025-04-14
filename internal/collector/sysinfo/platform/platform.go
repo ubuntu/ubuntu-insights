@@ -16,23 +16,19 @@ type Collector struct {
 type Options func(*options)
 
 type options struct {
-	log *slog.Logger
-
 	platform platformOptions
 }
 
 // New returns a new Collector.
-func New(args ...Options) Collector {
-	opts := &options{
-		log: slog.Default(),
-	}
+func New(l *slog.Logger, args ...Options) Collector {
+	opts := &options{}
 	opts.platform = defaultPlatformOptions()
 	for _, opt := range args {
 		opt(opts)
 	}
 
 	return Collector{
-		log:      opts.log,
+		log:      l,
 		platform: opts.platform,
 	}
 }

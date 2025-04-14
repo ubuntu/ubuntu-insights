@@ -23,6 +23,8 @@ var (
 // Manager is a struct that manages consent files.
 type Manager struct {
 	path string
+
+	log *slog.Logger
 }
 
 // CFile is a struct that represents a consent file.
@@ -32,8 +34,8 @@ type CFile struct {
 
 // New returns a new ConsentManager.
 // path is the folder the consents are stored into.
-func New(path string) *Manager {
-	return &Manager{path: path}
+func New(l *slog.Logger, path string) *Manager {
+	return &Manager{log: l, path: path}
 }
 
 // GetState gets the consent state for the given source.
@@ -49,7 +51,7 @@ func (cm Manager) GetState(source string) (state bool, err error) {
 			err = errors.Join(ErrConsentFileNotFound, err)
 		}
 	}()
-	sourceConsent, err := readFile(cm.getFile(source))
+	sourceConsent, err := readFile(cm.log, cm.getFile(source))
 	if err != nil {
 		return false, err
 	}
@@ -66,7 +68,7 @@ func (cm Manager) SetState(source string, state bool) (err error) {
 	defer decorate.OnError(&err, "could not set consent state")
 
 	consent := CFile{ConsentState: state}
-	return consent.write(cm.getFile(source))
+	return consent.write(cm.log, cm.getFile(source))
 }
 
 // HasConsent returns true if there is consent for the given source, based on the hierarchy rules.
@@ -77,7 +79,7 @@ func (cm Manager) SetState(source string, state bool) (err error) {
 func (cm Manager) HasConsent(source string) (bool, error) {
 	consent, err := cm.GetState(source)
 	if err != nil {
-		slog.Warn("Could not get source specific consent state, falling back to global consent state", "source", source, "error", err)
+		cm.log.Warn("Could not get source specific consent state, falling back to global consent state", "source", source, "error", err)
 		return cm.GetState("")
 	}
 
@@ -116,16 +118,16 @@ func (cm Manager) getFiles() (map[string]string, error) {
 		}
 		source := strings.TrimSuffix(entry.Name(), constants.ConsentSourceBaseSeparator+constants.GlobalFileName)
 		sourceFiles[source] = filepath.Join(cm.path, entry.Name())
-		slog.Debug("Found source consent file", "file", sourceFiles[source])
+		cm.log.Debug("Found source consent file", "file", sourceFiles[source])
 	}
 
 	return sourceFiles, nil
 }
 
-func readFile(path string) (CFile, error) {
+func readFile(l *slog.Logger, path string) (CFile, error) {
 	var consent CFile
 	_, err := toml.DecodeFile(path, &consent)
-	slog.Debug("Read consent file", "file", path, "consent", consent.ConsentState)
+	l.Debug("Read consent file", "file", path, "consent", consent.ConsentState)
 
 	return consent, err
 }
@@ -133,7 +135,7 @@ func readFile(path string) (CFile, error) {
 // writeConsentFile writes the given consent file to the given path atomically, replacing it if it already exists.
 // Not atomic on Windows.
 // Makes dir if it does not exist.
-func (cf CFile) write(path string) (err error) {
+func (cf CFile) write(l *slog.Logger, path string) (err error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
 		return fmt.Errorf("could not create directory: %v", err)
 	}
@@ -144,7 +146,7 @@ func (cf CFile) write(path string) (err error) {
 	defer func() {
 		_ = tmp.Close()
 		if err := os.Remove(tmp.Name()); err != nil && !os.IsNotExist(err) {
-			slog.Warn("Failed to remove temporary file when writing consent file", "file", tmp.Name(), "error", err)
+			l.Warn("Failed to remove temporary file when writing consent file", "file", tmp.Name(), "error", err)
 		}
 	}()
 
@@ -159,7 +161,7 @@ func (cf CFile) write(path string) (err error) {
 	if err := os.Rename(tmp.Name(), path); err != nil {
 		return fmt.Errorf("could not rename temporary file: %v", err)
 	}
-	slog.Debug("Wrote consent file", "file", path, "consent", cf.ConsentState)
+	l.Debug("Wrote consent file", "file", path, "consent", cf.ConsentState)
 
 	return nil
 }

@@ -143,7 +143,7 @@ func GetPeriodStart(period int, t time.Time) (int64, error) {
 // If no report is found, an empty report is returned.
 //
 // For example, given reports 1 and 7, with time 2 and period 7, the function will return the path for report 1.
-func GetForPeriod(dir string, t time.Time, period int) (Report, error) {
+func GetForPeriod(l *slog.Logger, dir string, t time.Time, period int) (Report, error) {
 	periodStart, err := GetPeriodStart(period, t)
 	if err != nil {
 		return Report{}, err
@@ -164,7 +164,7 @@ func GetForPeriod(dir string, t time.Time, period int) (Report, error) {
 
 		r, err := New(path)
 		if errors.Is(err, ErrInvalidReportExt) || errors.Is(err, ErrInvalidReportName) {
-			slog.Info("Skipping non-report file", "file", d.Name(), "error", err)
+			l.Info("Skipping non-report file", "file", d.Name(), "error", err)
 			return nil
 		} else if err != nil {
 			return fmt.Errorf("failed to create report object: %v", err)
@@ -192,7 +192,7 @@ func GetForPeriod(dir string, t time.Time, period int) (Report, error) {
 // The key of the map is the start of the period window, and the value is a Report object.
 //
 // If period is 1, then all reports in the dir are returned.
-func GetPerPeriod(dir string, period int) (map[int64]Report, error) {
+func GetPerPeriod(l *slog.Logger, dir string, period int) (map[int64]Report, error) {
 	if period <= 0 {
 		return nil, ErrInvalidPeriod
 	}
@@ -209,7 +209,7 @@ func GetPerPeriod(dir string, period int) (map[int64]Report, error) {
 
 		r, err := New(path)
 		if errors.Is(err, ErrInvalidReportExt) || errors.Is(err, ErrInvalidReportName) {
-			slog.Info("Skipping non-report file", "file", d.Name(), "error", err)
+			l.Info("Skipping non-report file", "file", d.Name(), "error", err)
 			return nil
 		} else if err != nil {
 			return fmt.Errorf("failed to create report object: %v", err)
@@ -233,7 +233,7 @@ func GetPerPeriod(dir string, period int) (map[int64]Report, error) {
 // GetAll returns all reports in a given directory.
 // Reports are expected to have the correct file extension, and have a name which can be parsed by a timestamp.
 // Does not traverse subdirectories. Returns in lexical order.
-func GetAll(dir string) ([]Report, error) {
+func GetAll(l *slog.Logger, dir string) ([]Report, error) {
 	reports := make([]Report, 0)
 	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -246,7 +246,7 @@ func GetAll(dir string) ([]Report, error) {
 
 		r, err := New(path)
 		if errors.Is(err, ErrInvalidReportExt) || errors.Is(err, ErrInvalidReportName) {
-			slog.Info("Skipping non-report file", "file", d.Name(), "error", err)
+			l.Info("Skipping non-report file", "file", d.Name(), "error", err)
 			return nil
 		} else if err != nil {
 			return fmt.Errorf("failed to create report object: %v", err)
@@ -265,20 +265,20 @@ func GetAll(dir string) ([]Report, error) {
 // Cleanup removes reports in a directory, keeping the most recent maxReports reports.
 // If a file does not appear to be a report, it is skipped and ignored.
 // If a file is unable to be removed, then it will be logged, but the function will continue.
-func Cleanup(dir string, maxReports uint) error {
+func Cleanup(l *slog.Logger, dir string, maxReports uint) error {
 	if maxReports > math.MaxInt {
 		return fmt.Errorf("maxReports is too large and would result in an overflow: %d", maxReports)
 	}
 
 	mReports := int(maxReports)
 
-	reports, err := GetAll(dir)
+	reports, err := GetAll(l, dir)
 	if err != nil {
 		return err
 	}
 
 	if len(reports) <= mReports {
-		slog.Debug("no reports to cleanup", "maxReports", mReports, "numReports", len(reports))
+		l.Debug("no reports to cleanup", "maxReports", mReports, "numReports", len(reports))
 		return nil
 	}
 
@@ -290,7 +290,7 @@ func Cleanup(dir string, maxReports uint) error {
 	// Remove the oldest reports, keeping the most recent maxReports.
 	for _, report := range reports[:len(reports)-mReports] {
 		if err := os.Remove(report.Path); err != nil {
-			slog.Error("failed to remove report", "path", report.Path, "error", err)
+			l.Error("failed to remove report", "path", report.Path, "error", err)
 		}
 	}
 

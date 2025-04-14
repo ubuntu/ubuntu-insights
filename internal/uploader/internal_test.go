@@ -1,6 +1,7 @@
 package uploader
 
 import (
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -59,6 +60,7 @@ func TestUploadBadFile(t *testing.T) {
 			um := &Uploader{
 				minAge:       0,
 				timeProvider: MockTimeProvider{CurrentTime: 0},
+				log:          slog.Default(),
 			}
 
 			require.NoError(t, os.Mkdir(collectedDir, 0750), "Setup: failed to create uploaded folder")
@@ -130,6 +132,7 @@ func TestSend(t *testing.T) {
 			}
 			um := &Uploader{
 				responseTimeout: 0,
+				log:             slog.Default(),
 			}
 			err := um.send(tc.url, []byte("payload"))
 			if tc.wantErr {

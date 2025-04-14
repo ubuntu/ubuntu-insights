@@ -37,7 +37,7 @@ func TestNewLinux(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			s := hardware.New(hardware.WithRoot("/myspecialroot"))
+			s := hardware.New(slog.Default(), hardware.WithRoot("/myspecialroot"))
 
 			require.NotEmpty(t, s, "sysinfo Collector has custom fields")
 		})
@@ -411,12 +411,9 @@ func TestCollectLinux(t *testing.T) {
 				require.NoError(t, err, "setup: failed to remove file %s: ", f)
 			}
 
-			l := testutils.NewMockHandler(slog.LevelDebug)
-
 			options := []hardware.Options{
 				hardware.WithRoot(root),
 				hardware.WithArch("amd64"),
-				hardware.WithLogger(&l),
 			}
 
 			if tc.cpuInfo != "-" {
@@ -434,7 +431,8 @@ func TestCollectLinux(t *testing.T) {
 				options = append(options, hardware.WithScreenInfo(cmdArgs))
 			}
 
-			s := hardware.New(options...)
+			l := testutils.NewMockHandler(slog.LevelDebug)
+			s := hardware.New(slog.New(&l), options...)
 
 			got, err := s.Collect(tc.pinfo)
 			if tc.wantErr {

@@ -78,16 +78,14 @@ type Collector struct {
 type Options func(*options)
 
 type options struct {
-	log  *slog.Logger
 	arch string
 
 	platform platformOptions
 }
 
 // New returns a new Collector.
-func New(args ...Options) Collector {
+func New(l *slog.Logger, args ...Options) Collector {
 	opts := &options{
-		log:  slog.Default(),
 		arch: runtime.GOARCH,
 	}
 	opts.platform = defaultPlatformOptions()
@@ -97,7 +95,7 @@ func New(args ...Options) Collector {
 	}
 
 	return Collector{
-		log:  opts.log,
+		log:  l,
 		arch: opts.arch,
 
 		platform: opts.platform,

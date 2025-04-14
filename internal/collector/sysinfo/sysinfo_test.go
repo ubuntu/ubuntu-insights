@@ -60,8 +60,7 @@ func TestNew(t *testing.T) {
 	for name := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-
-			s := sysinfo.New(
+			s := sysinfo.New(slog.Default(),
 				sysinfo.WithHardwareCollector(makeFakePCollector(hardware.Info{}, nil)),
 				sysinfo.WithSoftwareCollector(makeFakePCollector(software.Info{}, nil)),
 				sysinfo.WithPlatformCollector(makeFakeCollector(platform.Info{}, nil)),
@@ -107,11 +106,10 @@ func TestCollect(t *testing.T) {
 
 			l := testutils.NewMockHandler(slog.LevelDebug)
 
-			s := sysinfo.New(
+			s := sysinfo.New(slog.New(&l),
 				sysinfo.WithHardwareCollector(makeFakePCollector(tc.hw, tc.hwErr)),
 				sysinfo.WithSoftwareCollector(makeFakePCollector(tc.sw, tc.swErr)),
 				sysinfo.WithPlatformCollector(makeFakeCollector(tc.p, tc.pErr)),
-				sysinfo.WithLogger(&l),
 			)
 
 			got, err := s.Collect()

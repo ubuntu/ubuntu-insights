@@ -1,6 +1,7 @@
 package commands_test
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -103,11 +104,11 @@ func TestUpload(t *testing.T) {
 				gotMinAge uint
 				dRun      bool
 			)
-			newUploader := func(cm uploader.Consent, _ string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error) {
+			newUploader := func(l *slog.Logger, cm uploader.Consent, _ string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error) {
 				gotMinAge = minAge
 				dRun = dryRun
 
-				return uploader.New(cm, dir, minAge, true, args...)
+				return uploader.New(l, cm, dir, minAge, true, args...)
 			}
 			a, cDir, _ := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewUploader(newUploader))
 

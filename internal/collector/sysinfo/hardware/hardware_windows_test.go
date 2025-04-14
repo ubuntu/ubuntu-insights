@@ -693,10 +693,7 @@ func TestCollectWindows(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			l := testutils.NewMockHandler(slog.LevelDebug)
-
 			options := []hardware.Options{
-				hardware.WithLogger(&l),
 				hardware.WithArch("amd64"),
 			}
 
@@ -745,7 +742,8 @@ func TestCollectWindows(t *testing.T) {
 				options = append(options, hardware.WithDisplaySizeInfo(cmdArgs))
 			}
 
-			s := hardware.New(options...)
+			l := testutils.NewMockHandler(slog.LevelDebug)
+			s := hardware.New(slog.New(&l), options...)
 
 			got, err := s.Collect(platform.Info{})
 			if tc.wantErr {

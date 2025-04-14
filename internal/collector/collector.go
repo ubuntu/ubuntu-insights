@@ -61,6 +61,8 @@ type Collector struct {
 	maxReports        uint
 	time              time.Time
 	sysInfo           SysInfo
+
+	log *slog.Logger
 }
 
 type options struct {
@@ -68,13 +70,15 @@ type options struct {
 	// Private members exported for tests.
 	maxReports   uint
 	timeProvider timeProvider
-	sysInfo      SysInfo
+	sysInfo      func(*slog.Logger, ...sysinfo.Options) SysInfo
 }
 
 var defaultOptions = options{
 	maxReports:   constants.MaxReports,
 	timeProvider: realTimeProvider{},
-	sysInfo:      sysinfo.New(),
+	sysInfo: func(l *slog.Logger, opts ...sysinfo.Options) SysInfo {
+		return sysinfo.New(l, opts...)
+	},
 }
 
 // Options represents an optional function to override Collector default values.
@@ -90,13 +94,13 @@ type Config struct {
 }
 
 // Sanitize sets defaults and checks that the Config is properly configured.
-func (c *Config) Sanitize() error {
+func (c *Config) Sanitize(l *slog.Logger) error {
 	// Handle global source and source metrics.
 	if c.SourceMetrics == "" && c.Source != "" {
 		return fmt.Errorf("no metricsPath for %s", c.Source)
 	}
 	if c.Source == "" && c.SourceMetrics != "" { // ignore SourceMetrics for platform source
-		slog.Warn("Source Metrics were provided but is ignored for the global source")
+		l.Warn("Source Metrics were provided but is ignored for the global source")
 		c.SourceMetrics = ""
 	}
 	if c.Source == "" { // Default source to platform
@@ -116,8 +120,8 @@ func WithSourceMetricsPath(path string) Options {
 // New returns a new Collector.
 //
 // The internal time used for collecting and writing reports is the current time at the moment of creation of the Collector.
-func New(cm Consent, cachePath, source string, period uint, dryRun bool, args ...Options) (Collector, error) {
-	slog.Debug("Creating new collector", "source", source, "period", period, "dryRun", dryRun)
+func New(l *slog.Logger, cm Consent, cachePath, source string, period uint, dryRun bool, args ...Options) (Collector, error) {
+	l.Debug("Creating new collector", "source", source, "period", period, "dryRun", dryRun)
 
 	if source == "" {
 		return Collector{}, fmt.Errorf("source cannot be an empty string")
@@ -155,7 +159,9 @@ func New(cm Consent, cachePath, source string, period uint, dryRun bool, args ..
 		uploadedDir:       filepath.Join(cachePath, source, constants.UploadedFolder),
 		sourceMetricsPath: opts.sourceMetricsPath,
 		maxReports:        opts.maxReports,
-		sysInfo:           opts.sysInfo,
+		sysInfo:           opts.sysInfo(l),
+
+		log: l,
 	}, nil
 }
 
@@ -164,7 +170,7 @@ func New(cm Consent, cachePath, source string, period uint, dryRun bool, args ..
 // Checks if a report already exists for the current period, and returns an error if it does.
 // Does not check consent, as this should be done at write time.
 func (c Collector) Compile(force bool) (insights Insights, err error) {
-	slog.Debug("Collecting data", "force", force)
+	c.log.Debug("Collecting data", "force", force)
 	defer decorate.OnError(&err, "insights compile failed")
 
 	if err := c.makeDirs(); err != nil {
@@ -185,7 +191,7 @@ func (c Collector) Compile(force bool) (insights Insights, err error) {
 	if err != nil {
 		return Insights{}, fmt.Errorf("failed to compile insights: %v", err)
 	}
-	slog.Info("Insights report compiled", "report", insights)
+	c.log.Info("Insights report compiled", "report", insights)
 
 	return insights, nil
 }
@@ -195,7 +201,7 @@ func (c Collector) Compile(force bool) (insights Insights, err error) {
 //
 // If the dryRun is true, then Write does nothing, other than checking consent.
 func (c Collector) Write(insights Insights) (err error) {
-	slog.Debug("Writing data", "dryRun", c.dryRun)
+	c.log.Debug("Writing data", "dryRun", c.dryRun)
 	defer decorate.OnError(&err, "insights write failed")
 
 	data, err := json.Marshal(insights)
@@ -208,9 +214,9 @@ func (c Collector) Write(insights Insights) (err error) {
 		return fmt.Errorf("failed to get consent state: %w", err)
 	}
 	if consent {
-		slog.Info("Consent granted, writing insights report")
+		c.log.Info("Consent granted, writing insights report")
 	} else {
-		slog.Warn("Insights data will not be written to disk, as consent was not provided.")
+		c.log.Warn("Insights data will not be written to disk, as consent was not provided.")
 		data, err = json.Marshal(constants.OptOutJSON)
 		if err != nil {
 			return fmt.Errorf("failed to marshal opt-out JSON: %v", err)
@@ -218,7 +224,7 @@ func (c Collector) Write(insights Insights) (err error) {
 	}
 
 	if c.dryRun {
-		slog.Info("Dry run, not writing insights report")
+		c.log.Info("Dry run, not writing insights report")
 		return nil
 	}
 
@@ -230,7 +236,7 @@ func (c Collector) Write(insights Insights) (err error) {
 		return fmt.Errorf("failed to write insights report: %v", err)
 	}
 
-	if err := report.Cleanup(c.collectedDir, c.maxReports); err != nil {
+	if err := report.Cleanup(c.log, c.collectedDir, c.maxReports); err != nil {
 		return fmt.Errorf("failed to clean up old reports: %v", err)
 	}
 
@@ -250,12 +256,12 @@ func (c Collector) makeDirs() error {
 // duplicateExists returns true if a report for the current period already exists in the uploaded or collected directories.
 func (c Collector) duplicateExists() (bool, error) {
 	for _, dir := range []string{c.collectedDir, c.uploadedDir} {
-		cReport, err := report.GetForPeriod(dir, c.time, c.period)
+		cReport, err := report.GetForPeriod(c.log, dir, c.time, c.period)
 		if err != nil {
 			return false, fmt.Errorf("failed to check for duplicate report in %s for period: %v", dir, err)
 		}
 		if cReport.Name != "" {
-			slog.Info("Duplicate report already exists", "file", cReport.Path)
+			c.log.Info("Duplicate report already exists", "file", cReport.Path)
 			return true, nil
 		}
 	}
@@ -292,10 +298,10 @@ func (c Collector) compile() (Insights, error) {
 // If the file does not exist, or cannot be read, it returns an error.
 // If the file is not valid JSON, it returns an error.
 func (c Collector) getSourceMetrics() (map[string]any, error) {
-	slog.Debug("Loading source metrics", "path", c.sourceMetricsPath)
+	c.log.Debug("Loading source metrics", "path", c.sourceMetricsPath)
 
 	if c.sourceMetricsPath == "" {
-		slog.Info("No source metrics file provided")
+		c.log.Info("No source metrics file provided")
 		return nil, nil
 	}
 
@@ -323,7 +329,7 @@ func (c Collector) write(insights []byte) error {
 	if err := fileutils.AtomicWrite(reportPath, insights); err != nil {
 		return fmt.Errorf("failed to write to disk: %v", err)
 	}
-	slog.Info("Insights report written", "file", reportPath)
+	c.log.Info("Insights report written", "file", reportPath)
 
 	return nil
 }
