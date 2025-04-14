@@ -56,8 +56,8 @@ func (h Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate file size (max 1MB)
-	if header.Size > 1<<20 {
-		http.Error(w, "File size exceeds 1MB limit", http.StatusRequestEntityTooLarge)
+	if header.Size > 100<<10 {
+		http.Error(w, "File exceeds size limit", http.StatusRequestEntityTooLarge)
 		return
 	}
 
