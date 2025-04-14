@@ -61,11 +61,9 @@ func (h Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.configManager.lock.RLock()
 	baseDir := h.configManager.GetBaseDir()
-
-	// configLock.RLock()
-	// baseDir := config.BaseDir
-	// configLock.RUnlock()
+	h.configManager.lock.RUnlock()
 
 	targetDir := filepath.Join(baseDir, app)
 	if err := os.MkdirAll(targetDir, os.ModePerm); err != nil {
