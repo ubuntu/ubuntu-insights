@@ -82,5 +82,4 @@ func (h Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	slog.Info("Saved file", "app", app, "target", targetPath)
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "File uploaded successfully: %s", targetPath)
 }

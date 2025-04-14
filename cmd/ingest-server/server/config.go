@@ -49,11 +49,10 @@ func (cm *ConfigManager) Load() error {
 	cm.config = newConfig
 	cm.lock.Unlock()
 
-	slog.Info("Configuration loaded", "config", config)
+	slog.Info("Configuration loaded", "config", cm.config)
 	return nil
 }
 
-// func WatchConfig() {
 func (cm *ConfigManager) Watch() {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
