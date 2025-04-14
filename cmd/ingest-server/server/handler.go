@@ -30,6 +30,7 @@ func (h Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.configManager.lock.RLock()
 	allowed := false
 	for _, allowedApp := range h.configManager.GetAllowList() {
 		if allowedApp == app {
@@ -37,6 +38,8 @@ func (h Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
+	h.configManager.lock.RUnlock()
+
 	if !allowed {
 		http.Error(w, "Invalid application name in URL", http.StatusBadRequest)
 		return
