@@ -86,3 +86,8 @@ func (h Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Saved file", "app", app, "target", targetPath)
 	w.WriteHeader(http.StatusCreated)
 }
+
+func (h Server) VersionHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{"version":"1.0.0"}`)
+}
