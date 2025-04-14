@@ -24,7 +24,20 @@ func NewServer(configManager *ConfigManager) Server {
 
 func (h Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	app := r.PathValue("app")
-	if len(app) != 1 || app == "" {
+
+	if len(app) < 1 {
+		http.Error(w, "Invalid application name in URL", http.StatusBadRequest)
+		return
+	}
+
+	allowed := false
+	for _, allowedApp := range h.configManager.GetAllowList() {
+		if allowedApp == app {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
 		http.Error(w, "Invalid application name in URL", http.StatusBadRequest)
 		return
 	}
