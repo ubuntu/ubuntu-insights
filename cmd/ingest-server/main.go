@@ -28,6 +28,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("POST /upload/{app}", http.HandlerFunc(s.UploadHandler))
+	mux.Handle("GET /version", http.HandlerFunc(s.VersionHandler))
 
 	srv := &http.Server{
 		Addr: ":8080",
