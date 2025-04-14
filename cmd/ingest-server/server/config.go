@@ -13,6 +13,7 @@ import (
 
 type Config struct {
 	BaseDir string `json:"base_dir"`
+	AllowedList []string `json:"allowList"`
 }
 
 type ConfigManager struct {
@@ -101,4 +102,10 @@ func (cm *ConfigManager) GetBaseDir() string {
 	cm.lock.RLock()
 	defer cm.lock.RUnlock()
 	return cm.config.BaseDir
+}
+
+func (cm *ConfigManager) GetAllowList() []string {
+	cm.lock.RLock()
+	defer cm.lock.RUnlock()
+	return cm.config.AllowedList
 }
