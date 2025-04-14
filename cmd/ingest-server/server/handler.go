@@ -14,11 +14,13 @@ import (
 
 type Server struct {
 	configManager *ConfigManager
+	ipLimiter *ipLimiter
 }
 
 func NewServer(configManager *ConfigManager) Server {
 	return Server{
 		configManager: configManager,
+		ipLimiter: newIPLimiter(1, 3),
 	}
 }
 
