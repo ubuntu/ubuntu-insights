@@ -16,7 +16,7 @@ import (
 func TestNewLinux(t *testing.T) {
 	t.Parallel()
 
-	s := platform.New(platform.WithRoot("/myspecialroot"))
+	s := platform.New(slog.Default(), platform.WithRoot("/myspecialroot"))
 	require.NotEmpty(t, s, "platform sysinfo Collector has custom fields")
 }
 
@@ -405,7 +405,6 @@ func TestCollectLinux(t *testing.T) {
 			l := testutils.NewMockHandler(slog.LevelDebug)
 			options := []platform.Options{
 				platform.WithRoot(tmp),
-				platform.WithLogger(&l),
 				platform.WithGetenv(tc.env),
 			}
 
@@ -429,7 +428,7 @@ func TestCollectLinux(t *testing.T) {
 				options = append(options, platform.WithProStatusCmd(cmdArgs))
 			}
 
-			p := platform.New(options...)
+			p := platform.New(slog.New(&l), options...)
 
 			got, err := p.Collect()
 

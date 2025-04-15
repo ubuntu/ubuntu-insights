@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/ubuntu/ubuntu-insights/internal/consent"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
-	"github.com/ubuntu/ubuntu-insights/internal/uploader"
 )
 
 func installUploadCmd(app *App) {
@@ -28,7 +27,7 @@ If consent is not given for a source, an opt-out notification will be sent regar
 			app.config.Upload.Sources = args
 
 			slog.Info("Running upload command")
-			return runUpload(app.config.Upload, app.config.consentDir, app.config.insightsDir, app.newUploader)
+			return app.uploadRun()
 		},
 	}
 
@@ -40,17 +39,20 @@ If consent is not given for a source, an opt-out notification will be sent regar
 	app.cmd.AddCommand(uploadCmd)
 }
 
-func runUpload(config uploader.Config, consentDir, cacheDir string, factory newUploader) error {
-	err := config.Sanitize(cacheDir)
+// uploadRun runs the upload command.
+func (a App) uploadRun() error {
+	l := slog.Default()
+	uConfig := a.config.Upload
+	err := uConfig.Sanitize(l, a.config.insightsDir)
 	if err != nil {
 		return err
 	}
 
-	cm := consent.New(consentDir)
-	u, err := factory(cm, cacheDir, config.MinAge, config.DryRun)
+	cm := consent.New(l, a.config.consentDir)
+	u, err := a.newUploader(l, cm, a.config.insightsDir, uConfig.MinAge, uConfig.DryRun)
 	if err != nil {
 		return fmt.Errorf("failed to create uploader: %v", err)
 	}
 
-	return u.UploadAll(config.Sources, config.Force, config.Retry)
+	return u.UploadAll(uConfig.Sources, uConfig.Force, uConfig.Retry)
 }

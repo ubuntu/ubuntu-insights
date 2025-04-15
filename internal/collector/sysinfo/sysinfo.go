@@ -27,8 +27,6 @@ type options struct {
 	hw PCollectorT[hardware.Info]
 	sw PCollectorT[software.Info]
 	pl CollectorT[platform.Info]
-
-	log *slog.Logger
 }
 
 // Collector handles dependencies for collecting software & hardware information.
@@ -49,12 +47,11 @@ type Info struct {
 }
 
 // New returns a new Collector.
-func New(args ...Options) Collector {
+func New(l *slog.Logger, args ...Options) Collector {
 	opts := &options{
-		hw:  hardware.New(),
-		sw:  software.New(),
-		pl:  platform.New(),
-		log: slog.Default(),
+		hw: hardware.New(l),
+		sw: software.New(l),
+		pl: platform.New(l),
 	}
 
 	for _, opt := range args {
@@ -62,10 +59,11 @@ func New(args ...Options) Collector {
 	}
 
 	return Collector{
-		hw:  opts.hw,
-		sw:  opts.sw,
-		pl:  opts.pl,
-		log: opts.log,
+		log: l,
+
+		hw: opts.hw,
+		sw: opts.sw,
+		pl: opts.pl,
 	}
 }
 

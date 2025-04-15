@@ -59,7 +59,7 @@ If no sources are provided, the global consent state is managed.`,
 }
 
 func (a App) consentRun() error {
-	cm := consent.New(a.config.consentDir)
+	cm := consent.New(slog.Default(), a.config.consentDir)
 
 	if len(a.config.Consent.Sources) == 0 {
 		// Global consent state to be changed

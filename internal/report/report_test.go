@@ -1,6 +1,7 @@
 package report_test
 
 import (
+	"log/slog"
 	"math"
 	"os"
 	"path/filepath"
@@ -123,7 +124,7 @@ func TestGetForPeriod(t *testing.T) {
 				dir = filepath.Join(dir, "invalid dir")
 			}
 
-			r, err := report.GetForPeriod(dir, time.Unix(tc.time, 0), tc.period)
+			r, err := report.GetForPeriod(slog.Default(), dir, time.Unix(tc.time, 0), tc.period)
 			if tc.wantSpecificErr != nil {
 				require.ErrorIs(t, err, tc.wantSpecificErr)
 				return
@@ -183,7 +184,7 @@ func TestGetPerPeriod(t *testing.T) {
 				dir = filepath.Join(dir, "invalid dir")
 			}
 
-			reports, err := report.GetPerPeriod(dir, tc.period)
+			reports, err := report.GetPerPeriod(slog.Default(), dir, tc.period)
 			if tc.wantSpecificErr != nil {
 				require.ErrorIs(t, err, tc.wantSpecificErr)
 				return
@@ -234,7 +235,7 @@ func TestGetAll(t *testing.T) {
 				dir = filepath.Join(dir, "invalid dir")
 			}
 
-			reports, err := report.GetAll(dir)
+			reports, err := report.GetAll(slog.Default(), dir)
 			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return
@@ -566,7 +567,7 @@ func TestCleanup(t *testing.T) {
 			if tc.noDir {
 				dir = filepath.Join(baseDir, "invalid dir")
 			}
-			err := report.Cleanup(dir, tc.maxReports)
+			err := report.Cleanup(slog.Default(), dir, tc.maxReports)
 			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return

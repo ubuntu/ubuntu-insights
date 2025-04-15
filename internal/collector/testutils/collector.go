@@ -3,10 +3,12 @@
 package collectortestutils
 
 import (
+	"log/slog"
 	"time"
 	_ "unsafe" // For go:linkname
 
 	"github.com/ubuntu/ubuntu-insights/internal/collector"
+	"github.com/ubuntu/ubuntu-insights/internal/collector/sysinfo"
 	"github.com/ubuntu/ubuntu-insights/internal/testsdetection"
 )
 
@@ -24,7 +26,7 @@ var defaultOptions struct {
 	sourceMetricsPath string
 	maxReports        uint
 	timeProvider      timeProvider
-	sysInfo           collector.SysInfo
+	sysInfo           func(*slog.Logger, ...sysinfo.Options) collector.SysInfo
 }
 
 // SetMaxReports overrides the max reports count the uploader is using.
@@ -39,5 +41,7 @@ func SetTimeProvider(tp timeProvider) {
 
 // SetSysInfo overrides the sysinfo the collector is using.
 func SetSysInfo(si collector.SysInfo) {
-	defaultOptions.sysInfo = si
+	defaultOptions.sysInfo = func(*slog.Logger, ...sysinfo.Options) collector.SysInfo {
+		return si
+	}
 }

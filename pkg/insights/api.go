@@ -4,6 +4,7 @@ package insights
 import (
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/ubuntu/ubuntu-insights/internal/collector"
 	"github.com/ubuntu/ubuntu-insights/internal/consent"
@@ -53,7 +54,7 @@ type UploadFlags struct {
 // returns an error if metricsPath is "" and not ignored.
 // returns an error if collection fails.
 func (c Config) Collect(metricsPath string, flags CollectFlags) error {
-	c.setup()
+	l := c.setup()
 
 	if flags.Period == 0 {
 		flags.Period = 1
@@ -66,13 +67,13 @@ func (c Config) Collect(metricsPath string, flags CollectFlags) error {
 		DryRun:        flags.DryRun,
 		SourceMetrics: metricsPath,
 	}
-	err := cConf.Sanitize()
+	err := cConf.Sanitize(l)
 	if err != nil {
 		return err
 	}
 
-	cm := consent.New(c.ConsentDir)
-	col, err := collector.New(cm, c.InsightsDir, cConf.Source, cConf.Period, cConf.DryRun, collector.WithSourceMetricsPath(metricsPath))
+	cm := consent.New(l, c.ConsentDir)
+	col, err := collector.New(l, cm, c.InsightsDir, cConf.Source, cConf.Period, cConf.DryRun, collector.WithSourceMetricsPath(metricsPath))
 	if err != nil {
 		return err
 	}
@@ -89,7 +90,7 @@ func (c Config) Collect(metricsPath string, flags CollectFlags) error {
 // if Config.Source is "", all reports are uploaded.
 // returns an error if uploading fails.
 func (c Config) Upload(flags UploadFlags) error {
-	c.setup()
+	l := c.setup()
 
 	uConf := uploader.Config{
 		Sources: []string{c.Source},
@@ -98,13 +99,13 @@ func (c Config) Upload(flags UploadFlags) error {
 		DryRun:  flags.DryRun,
 		Retry:   false,
 	}
-	err := uConf.Sanitize(c.ConsentDir)
+	err := uConf.Sanitize(l, c.ConsentDir)
 	if err != nil {
 		return err
 	}
 
-	cm := consent.New(c.ConsentDir)
-	uploader, err := uploader.New(cm, c.InsightsDir, uConf.MinAge, uConf.DryRun)
+	cm := consent.New(l, c.ConsentDir)
+	uploader, err := uploader.New(l, cm, c.InsightsDir, uConf.MinAge, uConf.DryRun)
 	if err != nil {
 		return fmt.Errorf("failed to create uploader: %v", err)
 	}
@@ -117,9 +118,9 @@ func (c Config) Upload(flags UploadFlags) error {
 // returns ConsentUnknown if it could not be retrieved.
 // returns ConsentTrue or ConsentFalse otherwise.
 func (c Config) GetConsentState() ConsentState {
-	c.setup()
+	l := c.setup()
 
-	cm := consent.New(c.ConsentDir)
+	cm := consent.New(l, c.ConsentDir)
 	s, err := cm.GetState(c.Source)
 	if err != nil {
 		return ConsentUnknown
@@ -135,29 +136,31 @@ func (c Config) GetConsentState() ConsentState {
 // if Config.Source is "", the global source is effected.
 // returns an error if the state could not be set.
 func (c Config) SetConsentState(consentState bool) error {
-	c.setup()
+	l := c.setup()
 
-	cm := consent.New(c.ConsentDir)
+	cm := consent.New(l, c.ConsentDir)
 	return cm.SetState(c.Source, consentState)
 }
 
-// setVerbosity sets the logging verbosity.
-func setVerbosity(verbose bool) {
+// newLogger sets the logging verbosity.
+func newLogger(verbose bool) *slog.Logger {
+	var hOpts slog.HandlerOptions
 	if verbose {
-		slog.SetLogLoggerLevel(slog.LevelDebug)
+		hOpts.Level = slog.LevelDebug
 	} else {
-		slog.SetLogLoggerLevel(constants.DefaultLogLevel)
+		hOpts.Level = slog.LevelWarn
 	}
+	return slog.New(slog.NewJSONHandler(os.Stdout, &hOpts))
 }
 
-// setup sets verbosity and sets defaults.
-func (c *Config) setup() {
-	setVerbosity(c.Verbose)
-
+// setup sets defaults and creates a new logger.
+func (c *Config) setup() *slog.Logger {
 	if c.ConsentDir == "" {
 		c.ConsentDir = constants.DefaultConfigPath
 	}
 	if c.InsightsDir == "" {
 		c.InsightsDir = constants.DefaultCachePath
 	}
+
+	return newLogger(c.Verbose)
 }

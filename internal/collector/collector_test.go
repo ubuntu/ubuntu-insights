@@ -3,6 +3,7 @@ package collector_test
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math"
 	"os"
 	"path/filepath"
@@ -107,7 +108,8 @@ func TestNew(t *testing.T) {
 				dir = ""
 			}
 
-			result, err := collector.New(tc.consentM, dir, tc.source, tc.period, tc.dryRun)
+			l := slog.New(slog.NewTextHandler(os.Stderr, nil))
+			result, err := collector.New(l, tc.consentM, dir, tc.source, tc.period, tc.dryRun)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
@@ -232,7 +234,9 @@ func TestCompile(t *testing.T) {
 
 			opts := []collector.Options{
 				collector.WithTimeProvider(MockTimeProvider{CurrentTime: mockTime}),
-				collector.WithSysInfo(tc.sysInfo),
+				collector.WithSysInfo(func(l *slog.Logger, opts ...sysinfo.Options) collector.SysInfo {
+					return tc.sysInfo
+				}),
 				collector.WithMaxReports(maxReports),
 			}
 
@@ -240,7 +244,8 @@ func TestCompile(t *testing.T) {
 				opts = append(opts, collector.WithSourceMetricsPath(filepath.Join("testdata", "source_metrics", tc.sourceMetricsFile)))
 			}
 
-			c, err := collector.New(tc.consentM, dir, tc.source, tc.period, tc.dryRun, opts...)
+			l := slog.New(slog.NewTextHandler(os.Stderr, nil))
+			c, err := collector.New(l, tc.consentM, dir, tc.source, tc.period, tc.dryRun, opts...)
 			require.NoError(t, err, "Setup: failed to create collector")
 
 			results, err := c.Compile(tc.force)
@@ -361,7 +366,8 @@ func TestWrite(t *testing.T) {
 				collector.WithMaxReports(tc.maxReports),
 			}
 
-			c, err := collector.New(tc.consentM, dir, source, tc.period, tc.dryRun, opts...)
+			l := slog.New(slog.NewTextHandler(os.Stderr, nil))
+			c, err := collector.New(l, tc.consentM, dir, source, tc.period, tc.dryRun, opts...)
 			require.NoError(t, err, "Setup: failed to create collector")
 
 			err = c.Write(tc.insights)

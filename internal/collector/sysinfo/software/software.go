@@ -41,16 +41,14 @@ type Collector struct {
 type Options func(*options)
 
 type options struct {
-	log      *slog.Logger
 	timezone func() string
 
 	platform platformOptions
 }
 
 // New returns a new Collector.
-func New(args ...Options) Collector {
+func New(l *slog.Logger, args ...Options) Collector {
 	opts := &options{
-		log: slog.Default(),
 		timezone: func() string {
 			zone, _ := time.Now().Zone()
 			return zone
@@ -62,7 +60,7 @@ func New(args ...Options) Collector {
 	}
 
 	return Collector{
-		log:      opts.log,
+		log:      l,
 		timezone: opts.timezone,
 		platform: opts.platform,
 	}

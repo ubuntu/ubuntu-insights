@@ -2,6 +2,7 @@ package commands_test
 
 import (
 	"fmt"
+	"log/slog"
 	"math"
 	"math/big"
 	"os"
@@ -116,13 +117,13 @@ func TestCollect(t *testing.T) {
 				gotPeriod    uint
 				gotDryRun    bool
 			)
-			newCollector := func(cm collector.Consent, cachePath, source string, period uint, dryRun bool, args ...collector.Options) (collector.Collector, error) {
+			newCollector := func(l *slog.Logger, cm collector.Consent, cachePath, source string, period uint, dryRun bool, args ...collector.Options) (collector.Collector, error) {
 				gotCachePath = cachePath
 				gotSource = source
 				gotPeriod = period
 				gotDryRun = dryRun
 
-				return collector.New(cm, cachePath, source, period, true, args...)
+				return collector.New(slog.Default(), cm, cachePath, source, period, true, args...)
 			}
 
 			a, consentPath, cachePath := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewCollector(newCollector))

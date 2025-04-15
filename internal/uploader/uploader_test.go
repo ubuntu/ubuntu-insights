@@ -3,6 +3,7 @@ package uploader_test
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -55,7 +56,7 @@ func TestNew(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := uploader.New(tc.consent, "", tc.minAge, tc.dryRun)
+			_, err := uploader.New(slog.Default(), tc.consent, "", tc.minAge, tc.dryRun)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
@@ -159,7 +160,7 @@ func TestUpload(t *testing.T) {
 				t.Cleanup(func() { require.NoError(t, os.Chmod(localDir, 0750), "Cleanup: failed to restore permissions") }) //nolint:gosec //0750 is fine for folders
 			}
 
-			mgr, err := uploader.New(tc.consent, dir, tc.minAge, tc.dryRun,
+			mgr, err := uploader.New(slog.Default(), tc.consent, dir, tc.minAge, tc.dryRun,
 				uploader.WithBaseServerURL(tc.url), uploader.WithTimeProvider(uploader.MockTimeProvider{CurrentTime: mockTime}))
 			require.NoError(t, err, "Setup: failed to create new uploader manager")
 
@@ -272,7 +273,7 @@ func TestBackoffUpload(t *testing.T) {
 				testutils.MakeReadOnly(t, filepath.Join(dir, source, file))
 			}
 
-			mgr, err := uploader.New(tc.consent, dir, tc.minAge, tc.dryRun,
+			mgr, err := uploader.New(slog.Default(), tc.consent, dir, tc.minAge, tc.dryRun,
 				uploader.WithBaseServerURL(url),
 				uploader.WithTimeProvider(uploader.MockTimeProvider{CurrentTime: mockTime}),
 				uploader.WithInitialRetryPeriod(1*time.Second),
