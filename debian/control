@@ -18,6 +18,7 @@ Package: ubuntu-insights
 Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
+         libwayland-client0,
 Built-Using: ${misc:Built-Using}
 Description: Ubuntu metrics reporting service
  Ubuntu Insights, a user transparent, open, 
