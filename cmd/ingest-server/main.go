@@ -27,7 +27,7 @@ func main() {
 	s := server.NewServer(configManager)
 
 	mux := http.NewServeMux()
-	mux.Handle("POST /upload/{app}", http.HandlerFunc(s.UploadHandler))
+	mux.Handle("POST /upload/{app}", s.RateLimitMiddleware(http.HandlerFunc(s.UploadHandler)))
 	mux.Handle("GET /version", http.HandlerFunc(s.VersionHandler))
 
 	srv := &http.Server{
