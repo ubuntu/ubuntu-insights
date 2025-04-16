@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 
+	"github.com/google/uuid"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
@@ -76,8 +76,7 @@ func (h Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	timestamp := time.Now().Format("20060102_150405")
-	safeFilename := fmt.Sprintf("%s_%s", timestamp, header.Filename)
+	safeFilename := fmt.Sprintf("%s.json", uuid.New().String())
 	targetPath := filepath.Join(targetDir, safeFilename)
 	
 	if err := fileutils.AtomicWrite(targetPath, jsonData); err != nil {
