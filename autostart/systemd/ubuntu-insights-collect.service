@@ -16,7 +16,6 @@ LockPersonality=yes
 MemoryDenyWriteExecute=yes
 NoNewPrivileges=true
 PrivateTmp=yes
-PrivateIPC=yes
 PrivateUsers=yes
 ProtectControlGroups=yes
 ProtectKernelTunables=yes
@@ -27,11 +26,9 @@ SystemCallArchitectures=native
 SystemCallFilter=@system-service
 KeyringMode=private
 ProcSubset=pid
-ProtectHostname=yes
 IPAddressDeny=any
 ProtectProc=invisible
 RestrictAddressFamilies=AF_UNIX
-PrivateNetwork=yes
 RestrictNetworkInterfaces=yes
 
 [Install]
