@@ -47,6 +47,15 @@ func TestNewLinux(t *testing.T) {
 func TestCollectLinux(t *testing.T) {
 	t.Parallel()
 
+	type waylandType int
+	const (
+		WaylandNone waylandType = iota
+		WaylandMemoryError
+		WaylandNoDisplay
+		WaylandSingleDisplay
+		WaylandMultipleDisplays
+	)
+
 	tests := map[string]struct {
 		root         string
 		cpuInfo      string
@@ -54,6 +63,7 @@ func TestCollectLinux(t *testing.T) {
 		screenInfo   string
 		missingFiles []string
 		pinfo        platform.Info
+		wayland      waylandType
 
 		logs    map[slog.Level]uint
 		wantErr bool
@@ -246,6 +256,18 @@ func TestCollectLinux(t *testing.T) {
 			},
 		},
 
+		"Error no exit Screen warns": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "error no exit",
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+				slog.LevelInfo: 1,
+			},
+		},
+
 		"Garbage Screen information is empty": {
 			root:       "regular",
 			cpuInfo:    "regular",
@@ -266,6 +288,45 @@ func TestCollectLinux(t *testing.T) {
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 2,
 			},
+		},
+
+		"Wayland MemoryError warns and falls back": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "regular",
+
+			wayland: WaylandMemoryError,
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Wayland NoDisplay falls back": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "regular",
+
+			wayland: WaylandNoDisplay,
+		},
+
+		"Wayland SingleDisplay is sane": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "regular",
+
+			wayland: WaylandSingleDisplay,
+		},
+
+		"Wayland MultipleDisplays is sane": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "regular",
+
+			wayland: WaylandMultipleDisplays,
 		},
 
 		"Missing hardware information is empty": {
@@ -320,7 +381,7 @@ func TestCollectLinux(t *testing.T) {
 				},
 			},
 		},
-		"WSL hardware information with xrandr": {
+		"WSL hardware information ignores xrandr": {
 			root:       "regular",
 			cpuInfo:    "regular",
 			blkInfo:    "regular",
@@ -369,32 +430,6 @@ func TestCollectLinux(t *testing.T) {
 				slog.LevelWarn: 3,
 			},
 		},
-		"Missing WSL hardware information warns when xrandr is installed but returns empty": {
-			root:       "withoutinfo",
-			cpuInfo:    "",
-			blkInfo:    "",
-			screenInfo: "",
-			missingFiles: []string{
-				// Product
-				"sys/class/dmi/id/product_family",
-				"sys/class/dmi/id/product_name",
-				"sys/class/dmi/id/sys_vendor",
-				// GPU
-				"sys/class/drm/c0",
-				"sys/class/drm/c1",
-				"sys/class/drm/card0-DP-1",
-				"sys/class/drm/card0-DP-2",
-				"sys/class/drm/card1",
-			},
-			pinfo: platform.Info{
-				WSL: platform.WSL{
-					SubsystemVersion: 2,
-				},
-			},
-			logs: map[slog.Level]uint{
-				slog.LevelWarn: 4,
-			},
-		},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -430,6 +465,27 @@ func TestCollectLinux(t *testing.T) {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeScreenList", tc.screenInfo)
 				options = append(options, hardware.WithScreenInfo(cmdArgs))
 			}
+
+			var wm waylandMock
+			switch tc.wayland {
+			case WaylandNone:
+				wm = waylandMock{initReturn: -1}
+			case WaylandMemoryError:
+				wm = waylandMock{initReturn: 0, memoryError: true}
+			case WaylandNoDisplay:
+				wm = waylandMock{initReturn: 0, displays: []hardware.CWaylandDisplay{}}
+			case WaylandSingleDisplay:
+				wm = waylandMock{initReturn: 0,
+					displays: []hardware.CWaylandDisplay{{Width: 1, Height: 1, Refresh: 10001, PhysWidth: 1, PhysHeight: 1}}}
+			case WaylandMultipleDisplays:
+				wm = waylandMock{initReturn: 0,
+					displays: []hardware.CWaylandDisplay{{Width: 2, Height: 2, Refresh: 10001, PhysWidth: 1, PhysHeight: 1},
+						{}, {Width: 3, Height: 3, Refresh: 10002, PhysWidth: 2, PhysHeight: 2}}}
+			default:
+				t.Fatalf("Setup: Wayland type not implemented, %d", tc.wayland)
+			}
+			wm.t = t
+			options = append(options, hardware.WithWaylandProvider(&wm))
 
 			l := testutils.NewMockHandler(slog.LevelDebug)
 			s := hardware.New(slog.New(&l), options...)
@@ -855,6 +911,8 @@ func TestFakeScreenList(_ *testing.T) {
 	case "error":
 		fmt.Fprint(os.Stderr, "Error requested in fake xrandr")
 		os.Exit(1)
+	case "error no exit":
+		fmt.Fprint(os.Stderr, "Error requested in fake xrandr")
 	case "regular":
 		fmt.Println(`Screen 0: minimum 8 x 8, current 6912 x 2160, maximum 32767 x 32767
 HDMI-0 connected primary 3840x2160+3072+0 (normal left inverted right x axis y axis) 598mm x 336mm
@@ -925,4 +983,16 @@ HDMI-0 connected primary 3840x2160+3072+0 (normal left inverted right x axis y a
 	case "missing":
 		os.Exit(0)
 	}
+}
+
+type waylandMock struct {
+	t           *testing.T
+	initReturn  int
+	memoryError bool
+	displays    []hardware.CWaylandDisplay
+}
+
+func (w *waylandMock) InitWayland() int {
+	hardware.TestingInitWayland(w.t, w.displays, w.memoryError)
+	return w.initReturn
 }

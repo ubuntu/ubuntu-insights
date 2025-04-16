@@ -10,6 +10,7 @@ on:
 env:
   DEBIAN_FRONTEND: noninteractive
   GO_TESTS_TIMEOUT: 20m
+  apt_deps: "libwayland-dev"
 
 jobs:
   go-sanity:
@@ -44,6 +45,12 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+
+      - name: Install dependencies on Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt update
+          sudo apt install -y ${{ env.apt_deps }}
 
       - name: Install gotestfmt and our wrapper script
         uses: canonical/desktop-engineering/gh-actions/go/gotestfmt@main
