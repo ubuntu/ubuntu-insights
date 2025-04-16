@@ -30,7 +30,7 @@ ProcSubset=pid
 ProtectHostname=yes
 IPAddressDeny=any
 ProtectProc=invisible
-RestrictAddressFamilies=none
+RestrictAddressFamilies=AF_UNIX
 PrivateNetwork=yes
 RestrictNetworkInterfaces=yes
 
