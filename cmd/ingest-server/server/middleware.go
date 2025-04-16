@@ -10,16 +10,16 @@ import (
 
 type ipLimiter struct {
 	limiters map[string]*rate.Limiter
-	mu sync.Mutex
-	rate rate.Limit
-	burst int
+	mu       sync.Mutex
+	rate     rate.Limit
+	burst    int
 }
 
 func newIPLimiter(r rate.Limit, b int) *ipLimiter {
 	return &ipLimiter{
 		limiters: make(map[string]*rate.Limiter),
-		rate: r,
-		burst: b,
+		rate:     r,
+		burst:    b,
 	}
 }
 

@@ -12,13 +12,13 @@ import (
 )
 
 type Config struct {
-	BaseDir string `json:"base_dir"`
+	BaseDir     string   `json:"base_dir"`
 	AllowedList []string `json:"allowList"`
 }
 
 type ConfigManager struct {
-	config Config
-	lock sync.RWMutex
+	config     Config
+	lock       sync.RWMutex
 	configPath string
 }
 
@@ -28,7 +28,7 @@ func NewConfigManager(path string) *ConfigManager {
 
 var (
 	config     Config
-	lock sync.RWMutex
+	lock       sync.RWMutex
 	configPath = "config.json"
 )
 

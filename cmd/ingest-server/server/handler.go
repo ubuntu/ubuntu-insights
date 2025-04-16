@@ -13,20 +13,20 @@ import (
 )
 
 const (
-	maxUploadSize = 100 << 10 // 100 KB
+	maxUploadSize      = 100 << 10 // 100 KB
 	rateLimitPerSecond = 0.1
-	burstLimit = 3
+	burstLimit         = 3
 )
 
 type Server struct {
 	configManager *ConfigManager
-	ipLimiter *ipLimiter
+	ipLimiter     *ipLimiter
 }
 
 func NewServer(configManager *ConfigManager) Server {
 	return Server{
 		configManager: configManager,
-		ipLimiter: newIPLimiter(rateLimitPerSecond, burstLimit),
+		ipLimiter:     newIPLimiter(rateLimitPerSecond, burstLimit),
 	}
 }
 
@@ -77,15 +77,15 @@ func (h Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	targetDir := filepath.Join(baseDir, app)
 	if err := os.MkdirAll(targetDir, os.ModePerm); err != nil {
-		http.Error(w, "Error creating directory: " + err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error creating directory: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	safeFilename := fmt.Sprintf("%s.json", uuid.New().String())
 	targetPath := filepath.Join(targetDir, safeFilename)
-	
+
 	if err := fileutils.AtomicWrite(targetPath, jsonData); err != nil {
-		http.Error(w, "Error saving file: " + err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error saving file: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

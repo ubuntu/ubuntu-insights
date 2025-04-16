@@ -13,12 +13,12 @@ import (
 )
 
 const (
-	defaultConfigPath  = "config.json"
-	readTimeout        = 5 * time.Second
-	writeTimeout       = 10 * time.Second
-	requestTimeout     = 1 * time.Second
-	maxHeaderBytes     = 1 << 20 // 1 MB
-	listenAddr         = ":8080"
+	defaultConfigPath = "config.json"
+	readTimeout       = 5 * time.Second
+	writeTimeout      = 10 * time.Second
+	requestTimeout    = 1 * time.Second
+	maxHeaderBytes    = 1 << 20 // 1 MB
+	listenAddr        = ":8080"
 )
 
 func main() {
@@ -40,10 +40,10 @@ func main() {
 	mux.Handle("GET /version", http.HandlerFunc(s.VersionHandler))
 
 	srv := &http.Server{
-		Addr: listenAddr,
-		ReadTimeout: readTimeout,
-		WriteTimeout: writeTimeout,
-		Handler: http.TimeoutHandler(mux, requestTimeout, ""),
+		Addr:           listenAddr,
+		ReadTimeout:    readTimeout,
+		WriteTimeout:   writeTimeout,
+		Handler:        http.TimeoutHandler(mux, requestTimeout, ""),
 		MaxHeaderBytes: maxHeaderBytes,
 	}
 
