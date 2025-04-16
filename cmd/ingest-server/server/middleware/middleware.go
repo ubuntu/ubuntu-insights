@@ -1,4 +1,4 @@
-package server
+package middleware
 
 import (
 	"net"
@@ -8,22 +8,22 @@ import (
 	"golang.org/x/time/rate"
 )
 
-type ipLimiter struct {
+type IPLimiter struct {
 	limiters map[string]*rate.Limiter
 	mu       sync.Mutex
 	rate     rate.Limit
 	burst    int
 }
 
-func newIPLimiter(r rate.Limit, b int) *ipLimiter {
-	return &ipLimiter{
+func NewIPLimiter(r rate.Limit, b int) *IPLimiter {
+	return &IPLimiter{
 		limiters: make(map[string]*rate.Limiter),
 		rate:     r,
 		burst:    b,
 	}
 }
 
-func (l *ipLimiter) getLimiter(ip string) *rate.Limiter {
+func (l *IPLimiter) getLimiter(ip string) *rate.Limiter {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
@@ -35,14 +35,14 @@ func (l *ipLimiter) getLimiter(ip string) *rate.Limiter {
 	return limiter
 }
 
-func (h Server) RateLimitMiddleware(next http.Handler) http.Handler {
+func (l *IPLimiter) RateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			http.Error(w, "Unable to determine IP", http.StatusBadRequest)
 			return
 		}
-		if !h.ipLimiter.getLimiter(ip).Allow() {
+		if !l.getLimiter(ip).Allow() {
 			http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
 			return
 		}

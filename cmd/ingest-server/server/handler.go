@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/google/uuid"
+	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server/middleware"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
@@ -20,13 +21,13 @@ const (
 
 type Server struct {
 	configManager *ConfigManager
-	ipLimiter     *ipLimiter
+	IPLimiter     *middleware.IPLimiter
 }
 
 func NewServer(configManager *ConfigManager) Server {
 	return Server{
 		configManager: configManager,
-		ipLimiter:     newIPLimiter(rateLimitPerSecond, burstLimit),
+		IPLimiter:     middleware.NewIPLimiter(rateLimitPerSecond, burstLimit),
 	}
 }
 
