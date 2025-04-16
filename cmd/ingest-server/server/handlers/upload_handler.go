@@ -9,12 +9,15 @@ import (
 	"path/filepath"
 
 	"github.com/google/uuid"
+	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server/config"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
-const maxUploadSize	= 100 << 10 // 100 KB
+const maxUploadSize = 100 << 10 // 100 KB
 
-func (h Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
+var ConfigManager *config.ConfigManager
+
+func UploadHandler(w http.ResponseWriter, r *http.Request) {
 	app := r.PathValue("app")
 
 	if len(app) < 1 {
@@ -22,15 +25,15 @@ func (h Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.configManager.Lock.RLock()
+	ConfigManager.Lock.RLock()
 	allowed := false
-	for _, allowedApp := range h.configManager.GetAllowList() {
+	for _, allowedApp := range ConfigManager.GetAllowList() {
 		if allowedApp == app {
 			allowed = true
 			break
 		}
 	}
-	h.configManager.Lock.RUnlock()
+	ConfigManager.Lock.RUnlock()
 
 	if !allowed {
 		http.Error(w, "Invalid application name in URL", http.StatusBadRequest)
@@ -55,9 +58,9 @@ func (h Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.configManager.Lock.RLock()
-	baseDir := h.configManager.GetBaseDir()
-	h.configManager.Lock.RUnlock()
+	ConfigManager.Lock.RLock()
+	baseDir := ConfigManager.GetBaseDir()
+	ConfigManager.Lock.RUnlock()
 
 	targetDir := filepath.Join(baseDir, app)
 	if err := os.MkdirAll(targetDir, os.ModePerm); err != nil {

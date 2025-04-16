@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server"
+	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server/config"
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server/handlers"
 )
 
@@ -27,18 +28,18 @@ func main() {
 	flag.StringVar(&cfgPath, "config", defaultConfigPath, "Path to configuration file")
 	flag.Parse()
 
-	configManager := server.NewConfigManager(cfgPath)
+	configManager := config.NewConfigManager(cfgPath)
 	if err := configManager.Load(); err != nil {
 		slog.Error("Failed to load configuration", "err", err)
 		return
 	}
 	go configManager.Watch()
 
-	s := handlers.NewServer(configManager)
+	s := server.NewServer()
 
 	mux := http.NewServeMux()
-	mux.Handle("POST /upload/{app}", s.IPLimiter.RateLimitMiddleware(http.HandlerFunc(s.UploadHandler)))
-	mux.Handle("GET /version", http.HandlerFunc(s.VersionHandler))
+	mux.Handle("POST /upload/{app}", s.IPLimiter.RateLimitMiddleware(http.HandlerFunc(handlers.UploadHandler)))
+	mux.Handle("GET /version", http.HandlerFunc(handlers.VersionHandler))
 
 	srv := &http.Server{
 		Addr:           listenAddr,
