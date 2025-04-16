@@ -1,5 +1,8 @@
 name: Verify systemd files
 
+env:
+  apt_deps: "libwayland-dev"
+
 on:
   push:
     branches:
@@ -18,6 +21,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y ${{ env.apt_deps }}
       - name: Build Ubuntu-Insights
         run: |
           cd cmd/insights
