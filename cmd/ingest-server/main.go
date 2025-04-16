@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server"
+	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server/handlers"
 )
 
 const (
@@ -33,7 +34,7 @@ func main() {
 	}
 	go configManager.Watch()
 
-	s := server.NewServer(configManager)
+	s := handlers.NewServer(configManager)
 
 	mux := http.NewServeMux()
 	mux.Handle("POST /upload/{app}", s.IPLimiter.RateLimitMiddleware(http.HandlerFunc(s.UploadHandler)))

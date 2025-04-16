@@ -18,7 +18,7 @@ type Config struct {
 
 type ConfigManager struct {
 	config     Config
-	lock       sync.RWMutex
+	Lock       sync.RWMutex
 	configPath string
 }
 
@@ -45,9 +45,9 @@ func (cm *ConfigManager) Load() error {
 		return fmt.Errorf("decoding config JSON: %w", err)
 	}
 
-	cm.lock.Lock()
+	cm.Lock.Lock()
 	cm.config = newConfig
-	cm.lock.Unlock()
+	cm.Lock.Unlock()
 
 	slog.Info("Configuration loaded", "config", cm.config)
 	return nil
@@ -98,13 +98,13 @@ func (cm *ConfigManager) Watch() {
 }
 
 func (cm *ConfigManager) GetBaseDir() string {
-	cm.lock.RLock()
-	defer cm.lock.RUnlock()
+	cm.Lock.RLock()
+	defer cm.Lock.RUnlock()
 	return cm.config.BaseDir
 }
 
 func (cm *ConfigManager) GetAllowList() []string {
-	cm.lock.RLock()
-	defer cm.lock.RUnlock()
+	cm.Lock.RLock()
+	defer cm.Lock.RUnlock()
 	return cm.config.AllowedList
 }

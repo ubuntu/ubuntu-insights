@@ -1,4 +1,4 @@
-package server
+package handlers
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/google/uuid"
+	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server"
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server/middleware"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
@@ -20,11 +21,11 @@ const (
 )
 
 type Server struct {
-	configManager *ConfigManager
+	configManager *server.ConfigManager
 	IPLimiter     *middleware.IPLimiter
 }
 
-func NewServer(configManager *ConfigManager) Server {
+func NewServer(configManager *server.ConfigManager) Server {
 	return Server{
 		configManager: configManager,
 		IPLimiter:     middleware.NewIPLimiter(rateLimitPerSecond, burstLimit),
@@ -39,7 +40,7 @@ func (h Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.configManager.lock.RLock()
+	h.configManager.Lock.RLock()
 	allowed := false
 	for _, allowedApp := range h.configManager.GetAllowList() {
 		if allowedApp == app {
@@ -47,7 +48,7 @@ func (h Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	h.configManager.lock.RUnlock()
+	h.configManager.Lock.RUnlock()
 
 	if !allowed {
 		http.Error(w, "Invalid application name in URL", http.StatusBadRequest)
@@ -72,9 +73,9 @@ func (h Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.configManager.lock.RLock()
+	h.configManager.Lock.RLock()
 	baseDir := h.configManager.GetBaseDir()
-	h.configManager.lock.RUnlock()
+	h.configManager.Lock.RUnlock()
 
 	targetDir := filepath.Join(baseDir, app)
 	if err := os.MkdirAll(targetDir, os.ModePerm); err != nil {
