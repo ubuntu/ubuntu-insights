@@ -12,6 +12,12 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
+const (
+	maxUploadSize = 100 << 10 // 100 KB
+	rateLimitPerSecond = 0.1
+	burstLimit = 3
+)
+
 type Server struct {
 	configManager *ConfigManager
 	ipLimiter *ipLimiter
@@ -20,7 +26,7 @@ type Server struct {
 func NewServer(configManager *ConfigManager) Server {
 	return Server{
 		configManager: configManager,
-		ipLimiter: newIPLimiter(1, 3),
+		ipLimiter: newIPLimiter(rateLimitPerSecond, burstLimit),
 	}
 }
 
@@ -60,8 +66,7 @@ func (h Server) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate file size (max 1MB)
-	if header.Size > 100<<10 {
+	if header.Size > maxUploadSize {
 		http.Error(w, "File exceeds size limit", http.StatusRequestEntityTooLarge)
 		return
 	}

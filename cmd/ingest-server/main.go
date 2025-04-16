@@ -12,9 +12,18 @@ import (
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server"
 )
 
+const (
+	defaultConfigPath  = "config.json"
+	readTimeout        = 5 * time.Second
+	writeTimeout       = 10 * time.Second
+	requestTimeout     = 1 * time.Second
+	maxHeaderBytes     = 1 << 20 // 1 MB
+	listenAddr         = ":8080"
+)
+
 func main() {
 	var cfgPath string
-	flag.StringVar(&cfgPath, "config", "config.json", "Path to configuration file")
+	flag.StringVar(&cfgPath, "config", defaultConfigPath, "Path to configuration file")
 	flag.Parse()
 
 	configManager := server.NewConfigManager(cfgPath)
@@ -31,11 +40,11 @@ func main() {
 	mux.Handle("GET /version", http.HandlerFunc(s.VersionHandler))
 
 	srv := &http.Server{
-		Addr: ":8080",
-		ReadTimeout: 5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		Handler: http.TimeoutHandler(mux, 1 * time.Second, ""),
-		MaxHeaderBytes: 1 << 20,
+		Addr: listenAddr,
+		ReadTimeout: readTimeout,
+		WriteTimeout: writeTimeout,
+		Handler: http.TimeoutHandler(mux, requestTimeout, ""),
+		MaxHeaderBytes: maxHeaderBytes,
 	}
 
 	slog.Info("Server starting...")
