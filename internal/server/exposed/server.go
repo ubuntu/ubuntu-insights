@@ -1,6 +1,6 @@
 package server
 
-import "github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server/middleware"
+import "github.com/ubuntu/ubuntu-insights/internal/server/exposed/middleware"
 
 const (
 	rateLimitPerSecond = 0.1

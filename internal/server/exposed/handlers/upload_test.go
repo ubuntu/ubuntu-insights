@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server/handlers"
+	"github.com/ubuntu/ubuntu-insights/internal/server/exposed/handlers"
 )
 
 type mockConfigManager struct {

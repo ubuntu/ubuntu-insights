@@ -6,9 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server/handlers"
+	"github.com/ubuntu/ubuntu-insights/internal/server/exposed/handlers"
 )
-
 
 func TestVersionSuccess(t *testing.T) {
 	t.Parallel()

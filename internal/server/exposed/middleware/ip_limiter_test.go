@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server/middleware"
+	"github.com/ubuntu/ubuntu-insights/internal/server/exposed/middleware"
 	"golang.org/x/time/rate"
 )
 

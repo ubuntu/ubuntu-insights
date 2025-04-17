@@ -9,9 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server/config"
+	"github.com/ubuntu/ubuntu-insights/internal/server/shared/config"
 )
-
 
 func createTempConfigFile(t *testing.T, content string) string {
 	t.Helper()

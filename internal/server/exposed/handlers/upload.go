@@ -10,13 +10,13 @@ import (
 	"path/filepath"
 
 	"github.com/google/uuid"
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server/config"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
+	"github.com/ubuntu/ubuntu-insights/internal/server/shared/config"
 )
 
 const MaxUploadSize = 100 << 10 // 100 KB
 
-type UploadHandler struct{
+type UploadHandler struct {
 	Config config.ConfigProvider
 }
 
