@@ -16,7 +16,6 @@ MemoryDenyWriteExecute=yes
 NoNewPrivileges=true
 PrivateMounts=yes
 PrivateTmp=yes
-PrivateIPC=yes
 PrivateUsers=yes
 ProtectControlGroups=yes
 ProtectKernelTunables=yes
@@ -27,7 +26,6 @@ SystemCallArchitectures=native
 SystemCallFilter=@system-service
 KeyringMode=private
 ProcSubset=pid
-ProtectHostname=yes
 ProtectProc=invisible
 RestrictAddressFamilies=none
 
