@@ -1,5 +1,5 @@
-ubuntu-insights (0.0.1~ppa5) plucky; urgency=medium
+ubuntu-insights (0.0.1~ppa6) plucky; urgency=medium
 
-  * Initial release
+  * Initial release (LP: #2107478)
 
- -- Kat Kuo <kat.kuo@canonical.com>  Wed, 16 Apr 2025 13:38:25 -0400
+ -- Kat Kuo <kat.kuo@canonical.com>  Thu, 17 Apr 2025 13:12:57 -0400
