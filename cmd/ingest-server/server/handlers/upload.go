@@ -58,6 +58,12 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer jsonFile.Close()
 
+	if header.Size > MaxUploadSize {
+		http.Error(w, "File exceeds size limit", http.StatusRequestEntityTooLarge)
+		slog.Error("File exceeds size limit", "req_id", reqID, "app", app, "size", header.Size)
+		return
+	}
+
 	jsonData, err := io.ReadAll(jsonFile)
 	if err != nil {
 		http.Error(w, "Error reading the file: "+err.Error(), http.StatusBadRequest)
@@ -69,12 +75,6 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := json.Unmarshal(jsonData, &js); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		slog.Error("Invalid JSON in uploaded file", "req_id", reqID, "app", app, "err", err)
-		return
-	}
-
-	if header.Size > MaxUploadSize {
-		http.Error(w, "File exceeds size limit", http.StatusRequestEntityTooLarge)
-		slog.Error("File exceeds size limit", "req_id", reqID, "app", app, "size", header.Size)
 		return
 	}
 
