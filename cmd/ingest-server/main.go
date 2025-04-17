@@ -28,14 +28,14 @@ func main() {
 	flag.StringVar(&cfgPath, "config", defaultConfigPath, "Path to configuration file")
 	flag.Parse()
 
-	configManager := config.NewConfigManager(cfgPath)
+	configManager := config.New(cfgPath)
 	if err := configManager.Load(); err != nil {
 		slog.Error("Failed to load configuration", "err", err)
 		return
 	}
 	go configManager.Watch()
 
-	s := server.NewServer()
+	s := server.New()
 
 	mux := http.NewServeMux()
 	mux.Handle("POST /upload/{app}", s.IPLimiter.RateLimitMiddleware(http.HandlerFunc(handlers.UploadHandler)))

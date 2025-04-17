@@ -11,8 +11,8 @@ type Server struct {
 	IPLimiter *middleware.IPLimiter
 }
 
-func NewServer() Server {
+func New() Server {
 	return Server{
-		IPLimiter: middleware.NewIPLimiter(rateLimitPerSecond, burstLimit),
+		IPLimiter: middleware.New(rateLimitPerSecond, burstLimit),
 	}
 }

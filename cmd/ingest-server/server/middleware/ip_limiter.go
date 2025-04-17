@@ -15,7 +15,7 @@ type IPLimiter struct {
 	burst    int
 }
 
-func NewIPLimiter(r rate.Limit, b int) *IPLimiter {
+func New(r rate.Limit, b int) *IPLimiter {
 	return &IPLimiter{
 		limiters: make(map[string]*rate.Limiter),
 		rate:     r,

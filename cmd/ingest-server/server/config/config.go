@@ -22,7 +22,7 @@ type ConfigManager struct {
 	configPath string
 }
 
-func NewConfigManager(path string) *ConfigManager {
+func New(path string) *ConfigManager {
 	return &ConfigManager{configPath: path}
 }
 
