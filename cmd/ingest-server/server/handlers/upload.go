@@ -30,7 +30,6 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.Config.Lock.RLock()
 	allowed := false
 	for _, allowedApp := range h.Config.GetAllowList() {
 		if allowedApp == app {
@@ -38,7 +37,6 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	h.Config.Lock.RUnlock()
 
 	if !allowed {
 		http.Error(w, "Invalid application name in URL", http.StatusBadRequest)
@@ -67,9 +65,7 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.Config.Lock.RLock()
 	baseDir := h.Config.GetBaseDir()
-	h.Config.Lock.RUnlock()
 
 	targetDir := filepath.Join(baseDir, app)
 	if err := os.MkdirAll(targetDir, os.ModePerm); err != nil {
