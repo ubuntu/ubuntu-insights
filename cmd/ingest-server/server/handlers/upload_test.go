@@ -187,3 +187,23 @@ func TestFileTooLarge(t *testing.T) {
 		t.Fatalf("Expected no file to be written for oversized input, but found %d files", len(files))
 	}
 }
+
+func TestInvalidJSONContent(t *testing.T) {
+	handler, _, cleanup := setup(t)
+	defer cleanup()
+
+	// Intentionally invalid JSON data
+	invalidJSON := []byte(`{"invalid": true,,,`)
+
+	req, err := createMultipartRequest("testapp", "invalid.json", invalidJSON)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("Expected status 400 Bad Request for invalid JSON, got %d", rr.Code)
+	}
+}
