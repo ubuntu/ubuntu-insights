@@ -20,6 +20,7 @@ func makeRequestWithIP(handler http.Handler, ip string) *httptest.ResponseRecord
 }
 
 func TestLimiter_AllowsRequestsUnderLimit(t *testing.T) {
+	t.Parallel()
 	limiter := middleware.New(rate.Every(time.Second), 2) // 2 requests burst
 	handler := limiter.RateLimitMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -34,6 +35,7 @@ func TestLimiter_AllowsRequestsUnderLimit(t *testing.T) {
 }
 
 func TestLimiter_BlocksRequestsOverLimit(t *testing.T) {
+	t.Parallel()
 	limiter := middleware.New(rate.Every(10*time.Second), 1) // Only 1 allowed every 10s
 	handler := limiter.RateLimitMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -51,6 +53,7 @@ func TestLimiter_BlocksRequestsOverLimit(t *testing.T) {
 }
 
 func TestLimiter_SeparateLimitsForDifferentIPs(t *testing.T) {
+	t.Parallel()
 	limiter := middleware.New(rate.Every(10*time.Second), 1)
 	handler := limiter.RateLimitMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -65,6 +68,7 @@ func TestLimiter_SeparateLimitsForDifferentIPs(t *testing.T) {
 }
 
 func TestLimiter_InvalidRemoteAddr(t *testing.T) {
+	t.Parallel()
 	limiter := middleware.New(rate.Every(time.Second), 1)
 	handler := limiter.RateLimitMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("Handler should not be called for bad IP")

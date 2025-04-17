@@ -24,6 +24,7 @@ func createTempConfigFile(t *testing.T, content string) string {
 }
 
 func TestLoad_ValidConfig(t *testing.T) {
+	t.Parallel()
 	content := `{
 		"base_dir": "/tmp/data",
 		"allowList": ["foo", "bar"]
@@ -46,6 +47,7 @@ func TestLoad_ValidConfig(t *testing.T) {
 }
 
 func TestLoad_InvalidJSON(t *testing.T) {
+	t.Parallel()
 	content := `{
 		"base_dir": "/tmp/data",
 		"allowList": ["foo", "bar"]` // Missing closing brace
@@ -58,6 +60,7 @@ func TestLoad_InvalidJSON(t *testing.T) {
 }
 
 func TestLoad_MissingFile(t *testing.T) {
+	t.Parallel()
 	cm := config.New("nonexistent.json")
 	if err := cm.Load(); err == nil {
 		t.Fatal("expected error loading missing config file, got nil")
@@ -65,6 +68,7 @@ func TestLoad_MissingFile(t *testing.T) {
 }
 
 func TestWatch_ConfigReloadsOnChange(t *testing.T) {
+	t.Parallel()
 	initial := `{"base_dir": "/tmp/initial", "allowList": ["alpha"]}`
 	updated := `{"base_dir": "/tmp/updated", "allowList": ["beta"]}`
 	tmpFile := createTempConfigFile(t, initial)

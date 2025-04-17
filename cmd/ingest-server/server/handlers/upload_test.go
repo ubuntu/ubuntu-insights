@@ -73,7 +73,7 @@ func TestUploadSuccess(t *testing.T) {
 	defer cleanup()
 
 	data := []byte(`{"foo": "bar"}`)
-	req, err := createMultipartRequest("testapp", "sample.json", data)
+	req, err := createMultipartRequest(t, "testapp", "sample.json", data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +102,7 @@ func TestUploadDisallowedApp(t *testing.T) {
 
 	handler := &handlers.UploadHandler{Config: mockConfig}
 
-	req, err := createMultipartRequest("notallowed", "sample.json", []byte(`{"foo": "bar"}`))
+	req, err := createMultipartRequest(t, "notallowed", "sample.json", []byte(`{"foo": "bar"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func TestUploadMissingApp(t *testing.T) {
 	handler, _, cleanup := setup(t)
 	defer cleanup()
 
-	req, err := createMultipartRequest("", "sample.json", []byte(`{"foo": "bar"}`))
+	req, err := createMultipartRequest(t, "", "sample.json", []byte(`{"foo": "bar"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +177,7 @@ func TestUploadFileTooLarge(t *testing.T) {
 	// Create a file that's too big
 	oversizedData := bytes.Repeat([]byte("a"), handlers.MaxUploadSize+1)
 
-	req, err := createMultipartRequest("testapp", "huge.json", oversizedData)
+	req, err := createMultipartRequest(t, "testapp", "huge.json", oversizedData)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,7 +203,7 @@ func TestUploadInvalidJSONContent(t *testing.T) {
 	// Intentionally invalid JSON data
 	invalidJSON := []byte(`{"invalid": true,,,`)
 
-	req, err := createMultipartRequest("testapp", "invalid.json", invalidJSON)
+	req, err := createMultipartRequest(t, "testapp", "invalid.json", invalidJSON)
 	if err != nil {
 		t.Fatal(err)
 	}
