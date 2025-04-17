@@ -66,7 +66,7 @@ func createMultipartRequest(app, filename string, data []byte) (*http.Request, e
 	return req, nil
 }
 
-func TestUploadHandler_Success(t *testing.T) {
+func TestSuccess(t *testing.T) {
 	handler, mockConfig, cleanup := setup(t)
 	defer cleanup()
 
@@ -92,7 +92,7 @@ func TestUploadHandler_Success(t *testing.T) {
 	}
 }
 
-func TestUploadHandler_DisallowedApp(t *testing.T) {
+func TestDisallowedApp(t *testing.T) {
 	mockConfig := &mockConfigManager{
 		AllowedList: []string{"allowedapp"},
 	}
@@ -108,5 +108,27 @@ func TestUploadHandler_DisallowedApp(t *testing.T) {
 
 	if rr.Code != http.StatusForbidden {
 		t.Fatalf("Expected 403 Forbidden, got %d", rr.Code)
+	}
+}
+
+func TestMissingFile(t *testing.T) {
+	handler, _, cleanup := setup(t)
+	defer cleanup()
+
+	// Make a POST request but without a "file" part
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+	w.WriteField("not_a_file", "oops")
+	w.Close()
+
+	req := httptest.NewRequest("POST", "/upload/testapp", &b)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	req.SetPathValue("app", "testapp")
+
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("Expected 400 Bad Request for missing file, got %d", rr.Code)
 	}
 }
