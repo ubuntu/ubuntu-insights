@@ -1,9 +1,11 @@
 package config_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -87,4 +89,44 @@ func TestWatch_ConfigReloadsOnChange(t *testing.T) {
 	if got := cm.GetAllowList(); !reflect.DeepEqual(got, []string{"beta"}) {
 		t.Errorf("expected allowList [beta], got %v", got)
 	}
+}
+
+func TestConfigManager_ReadWhileWrite(t *testing.T) {
+	content := `{}`
+	tmpFile := createTempConfigFile(t, content)
+
+	cm := config.New(tmpFile)
+	err := os.WriteFile(tmpFile, []byte(`{"base_dir":"/tmp/test","allowList":["foo"]}`), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cm.Load(); err != nil {
+		t.Fatal(err)
+	}
+
+	var wg sync.WaitGroup
+	writeCount := 100
+	readCount := 100
+
+	// Writer goroutine
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < writeCount; i++ {
+			_ = os.WriteFile(tmpFile, []byte(fmt.Sprintf(`{"base_dir":"/tmp/test%d","allowList":["foo"]}`, i)), 0644)
+			_ = cm.Load()
+		}
+	}()
+
+	// Reader goroutines
+	for i := 0; i < readCount; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = cm.GetBaseDir()
+			_ = cm.GetAllowList()
+		}()
+	}
+
+	wg.Wait()
 }
