@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -61,6 +62,13 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Error reading the file: "+err.Error(), http.StatusBadRequest)
 		slog.Error("Error reading the file", "req_id", reqID, "app", app, "err", err)
+		return
+	}
+
+	var js map[string]interface{}
+	if err := json.Unmarshal(jsonData, &js); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		slog.Error("Invalid JSON in uploaded file", "req_id", reqID, "app", app, "err", err)
 		return
 	}
 
