@@ -47,7 +47,8 @@ func setup(t *testing.T) (*handlers.UploadHandler, *mockConfigManager, func()) {
 	return uploadHandler, mockConfig, cleanup
 }
 
-func createMultipartRequest(app, filename string, data []byte) (*http.Request, error) {
+func createMultipartRequest(t *testing.T, app, filename string, data []byte) (*http.Request, error) {
+	t.Helper()
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
 	fw, err := w.CreateFormFile("file", filename)
