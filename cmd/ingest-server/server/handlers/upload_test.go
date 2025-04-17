@@ -66,7 +66,7 @@ func createMultipartRequest(app, filename string, data []byte) (*http.Request, e
 	return req, nil
 }
 
-func TestSuccess(t *testing.T) {
+func TestUploadSuccess(t *testing.T) {
 	t.Parallel()
 	handler, mockConfig, cleanup := setup(t)
 	defer cleanup()
@@ -93,7 +93,7 @@ func TestSuccess(t *testing.T) {
 	}
 }
 
-func TestDisallowedApp(t *testing.T) {
+func TestUploadDisallowedApp(t *testing.T) {
 	t.Parallel()
 	mockConfig := &mockConfigManager{
 		AllowedList: []string{"allowedapp"},
@@ -113,7 +113,7 @@ func TestDisallowedApp(t *testing.T) {
 	}
 }
 
-func TestMissingApp(t *testing.T) {
+func TestUploadMissingApp(t *testing.T) {
 	t.Parallel()
 	handler, _, cleanup := setup(t)
 	defer cleanup()
@@ -130,7 +130,7 @@ func TestMissingApp(t *testing.T) {
 	}
 }
 
-func TestMissingFile(t *testing.T) {
+func TestUploadMissingFile(t *testing.T) {
 	t.Parallel()
 	handler, _, cleanup := setup(t)
 	defer cleanup()
@@ -153,7 +153,7 @@ func TestMissingFile(t *testing.T) {
 	}
 }
 
-func TestUploadHandler_InvalidMethod(t *testing.T) {
+func TestUploadInvalidMethod(t *testing.T) {
 	t.Parallel()
 	handler, _, cleanup := setup(t)
 	defer cleanup()
@@ -169,7 +169,7 @@ func TestUploadHandler_InvalidMethod(t *testing.T) {
 	}
 }
 
-func TestFileTooLarge(t *testing.T) {
+func TestUploadFileTooLarge(t *testing.T) {
 	t.Parallel()
 	handler, mockConfig, cleanup := setup(t)
 	defer cleanup()
@@ -194,7 +194,7 @@ func TestFileTooLarge(t *testing.T) {
 	}
 }
 
-func TestInvalidJSONContent(t *testing.T) {
+func TestUploadInvalidJSONContent(t *testing.T) {
 	t.Parallel()
 	handler, _, cleanup := setup(t)
 	defer cleanup()
