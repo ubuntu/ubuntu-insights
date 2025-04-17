@@ -91,3 +91,22 @@ func TestUploadHandler_Success(t *testing.T) {
 		t.Fatalf("Expected one file to be written, got %d", len(files))
 	}
 }
+
+func TestUploadHandler_DisallowedApp(t *testing.T) {
+	mockConfig := &mockConfigManager{
+		AllowedList: []string{"allowedapp"},
+	}
+
+	handler := &handlers.UploadHandler{Config: mockConfig}
+
+	req, err := createMultipartRequest("notallowed", "sample.json", []byte(`{"foo": "bar"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("Expected 403 Forbidden, got %d", rr.Code)
+	}
+}
