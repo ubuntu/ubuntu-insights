@@ -13,7 +13,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
-const maxUploadSize = 100 << 10 // 100 KB
+const MaxUploadSize = 100 << 10 // 100 KB
 
 type UploadHandler struct{
 	Config config.ConfigProvider
@@ -64,7 +64,7 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if header.Size > maxUploadSize {
+	if header.Size > MaxUploadSize {
 		http.Error(w, "File exceeds size limit", http.StatusRequestEntityTooLarge)
 		slog.Error("File exceeds size limit", "req_id", reqID, "app", app, "size", header.Size)
 		return

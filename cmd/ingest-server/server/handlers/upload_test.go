@@ -163,3 +163,27 @@ func TestUploadHandler_InvalidMethod(t *testing.T) {
 		t.Fatalf("Expected 405 Method Not Allowed, got %d", rr.Code)
 	}
 }
+
+func TestFileTooLarge(t *testing.T) {
+	handler, mockConfig, cleanup := setup(t)
+	defer cleanup()
+	// Create a file that's too big
+	oversizedData := bytes.Repeat([]byte("a"), handlers.MaxUploadSize+1)
+
+	req, err := createMultipartRequest("testapp", "huge.json", oversizedData)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("Expected status 413 Request Entity Too Large, got %d", rr.Code)
+	}
+
+	files, err := os.ReadDir(filepath.Join(mockConfig.GetBaseDir(), "testapp"))
+	if err == nil && len(files) > 0 {
+		t.Fatalf("Expected no file to be written for oversized input, but found %d files", len(files))
+	}
+}
