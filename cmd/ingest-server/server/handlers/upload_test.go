@@ -148,3 +148,18 @@ func TestMissingFile(t *testing.T) {
 		t.Fatalf("Expected 400 Bad Request for missing file, got %d", rr.Code)
 	}
 }
+
+func TestUploadHandler_InvalidMethod(t *testing.T) {
+	handler, _, cleanup := setup(t)
+	defer cleanup()
+
+	req := httptest.NewRequest("PUT", "/upload/testapp", nil)
+	req.SetPathValue("app", "testapp")
+
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("Expected 405 Method Not Allowed, got %d", rr.Code)
+	}
+}
