@@ -35,10 +35,13 @@ func main() {
 	}
 	go configManager.Watch()
 
-	s := server.New()
+	uploadHandler := &handlers.UploadHandler{
+		Config: configManager,
+	}
 
+	s := server.New()
 	mux := http.NewServeMux()
-	mux.Handle("POST /upload/{app}", s.IPLimiter.RateLimitMiddleware(http.HandlerFunc(handlers.UploadHandler)))
+	mux.Handle("POST /upload/{app}", s.IPLimiter.RateLimitMiddleware(uploadHandler))
 	mux.Handle("GET /version", http.HandlerFunc(handlers.VersionHandler))
 
 	srv := &http.Server{

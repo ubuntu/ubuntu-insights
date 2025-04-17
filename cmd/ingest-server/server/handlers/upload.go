@@ -15,9 +15,11 @@ import (
 
 const maxUploadSize = 100 << 10 // 100 KB
 
-var ConfigManager *config.ConfigManager
+type UploadHandler struct{
+	Config *config.ConfigManager
+}
 
-func UploadHandler(w http.ResponseWriter, r *http.Request) {
+func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	reqID := uuid.New().String()
 	app := r.PathValue("app")
 
@@ -28,15 +30,15 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ConfigManager.Lock.RLock()
+	h.Config.Lock.RLock()
 	allowed := false
-	for _, allowedApp := range ConfigManager.GetAllowList() {
+	for _, allowedApp := range h.Config.GetAllowList() {
 		if allowedApp == app {
 			allowed = true
 			break
 		}
 	}
-	ConfigManager.Lock.RUnlock()
+	h.Config.Lock.RUnlock()
 
 	if !allowed {
 		http.Error(w, "Invalid application name in URL", http.StatusBadRequest)
@@ -65,9 +67,9 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ConfigManager.Lock.RLock()
-	baseDir := ConfigManager.GetBaseDir()
-	ConfigManager.Lock.RUnlock()
+	h.Config.Lock.RLock()
+	baseDir := h.Config.GetBaseDir()
+	h.Config.Lock.RUnlock()
 
 	targetDir := filepath.Join(baseDir, app)
 	if err := os.MkdirAll(targetDir, os.ModePerm); err != nil {
