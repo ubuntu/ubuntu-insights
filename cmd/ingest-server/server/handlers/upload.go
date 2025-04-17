@@ -26,7 +26,7 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Request recv'd", "req_id", reqID, "app", app)
 
 	if len(app) < 1 {
-		http.Error(w, "Invalid application name in URL", http.StatusBadRequest)
+		http.Error(w, "Invalid application name in URL", http.StatusForbidden)
 		return
 	}
 

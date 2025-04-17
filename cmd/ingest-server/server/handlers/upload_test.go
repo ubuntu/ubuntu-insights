@@ -111,6 +111,22 @@ func TestDisallowedApp(t *testing.T) {
 	}
 }
 
+func TestMissingApp(t *testing.T) {
+	handler, _, cleanup := setup(t)
+	defer cleanup()
+
+	req, err := createMultipartRequest("", "sample.json", []byte(`{"foo": "bar"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("Expected 403 Forbidden, got %d", rr.Code)
+	}
+}
+
 func TestMissingFile(t *testing.T) {
 	handler, _, cleanup := setup(t)
 	defer cleanup()
