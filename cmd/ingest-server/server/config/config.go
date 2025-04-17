@@ -11,6 +11,11 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+type ConfigProvider interface {
+	GetBaseDir() string
+	GetAllowList() []string
+}
+
 type Config struct {
 	BaseDir     string   `json:"base_dir"`
 	AllowedList []string `json:"allowList"`

@@ -16,7 +16,7 @@ import (
 const maxUploadSize = 100 << 10 // 100 KB
 
 type UploadHandler struct{
-	Config *config.ConfigManager
+	Config config.ConfigProvider
 }
 
 func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
