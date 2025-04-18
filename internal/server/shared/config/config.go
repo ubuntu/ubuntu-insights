@@ -11,40 +11,34 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-type ConfigProvider interface {
+type Provider interface {
 	GetBaseDir() string
 	GetAllowList() []string
 }
 
-type Config struct {
+type Conf struct {
 	BaseDir     string   `json:"base_dir"`
 	AllowedList []string `json:"allowList"`
 }
 
-type ConfigManager struct {
-	config     Config
+type Manager struct {
+	config     Conf
 	Lock       sync.RWMutex
 	configPath string
 }
 
-func New(path string) *ConfigManager {
-	return &ConfigManager{configPath: path}
+func New(path string) *Manager {
+	return &Manager{configPath: path}
 }
 
-var (
-	config     Config
-	lock       sync.RWMutex
-	configPath = "config.json"
-)
-
-func (cm *ConfigManager) Load() error {
+func (cm *Manager) Load() error {
 	file, err := os.Open(cm.configPath)
 	if err != nil {
 		return fmt.Errorf("opening config file: %w", err)
 	}
 	defer file.Close()
 
-	var newConfig Config
+	var newConfig Conf
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&newConfig); err != nil {
 		return fmt.Errorf("decoding config JSON: %w", err)
@@ -58,7 +52,7 @@ func (cm *ConfigManager) Load() error {
 	return nil
 }
 
-func (cm *ConfigManager) Watch() {
+func (cm *Manager) Watch() {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		slog.Warn("Failed to create watcher", "err", err)
@@ -102,13 +96,13 @@ func (cm *ConfigManager) Watch() {
 	}
 }
 
-func (cm *ConfigManager) GetBaseDir() string {
+func (cm *Manager) GetBaseDir() string {
 	cm.Lock.RLock()
 	defer cm.Lock.RUnlock()
 	return cm.config.BaseDir
 }
 
-func (cm *ConfigManager) GetAllowList() []string {
+func (cm *Manager) GetAllowList() []string {
 	cm.Lock.RLock()
 	defer cm.Lock.RUnlock()
 	return cm.config.AllowedList

@@ -25,7 +25,7 @@ func (m *mockConfigManager) GetAllowList() []string {
 	return m.AllowedList
 }
 
-func setup(t *testing.T) (*handlers.UploadHandler, *mockConfigManager, func()) {
+func setup(t *testing.T) (*handlers.Upload, *mockConfigManager, func()) {
 	tmpDir, err := os.MkdirTemp("", "upload_test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
@@ -36,7 +36,7 @@ func setup(t *testing.T) (*handlers.UploadHandler, *mockConfigManager, func()) {
 		AllowedList: []string{"testapp"},
 	}
 
-	uploadHandler := &handlers.UploadHandler{
+	uploadHandler := &handlers.Upload{
 		Config: mockConfig,
 	}
 
@@ -100,7 +100,7 @@ func TestUploadDisallowedApp(t *testing.T) {
 		AllowedList: []string{"allowedapp"},
 	}
 
-	handler := &handlers.UploadHandler{Config: mockConfig}
+	handler := &handlers.Upload{Config: mockConfig}
 
 	req, err := createMultipartRequest(t, "notallowed", "sample.json", []byte(`{"foo": "bar"}`))
 	if err != nil {

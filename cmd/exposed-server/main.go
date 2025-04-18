@@ -1,66 +1,78 @@
+// Package main is the entry point for the exposed-server application.
 package main
 
 import (
-	"flag"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
-	"time"
 
-	server "github.com/ubuntu/ubuntu-insights/internal/server/exposed"
-	"github.com/ubuntu/ubuntu-insights/internal/server/exposed/handlers"
-	"github.com/ubuntu/ubuntu-insights/internal/server/shared/config"
-)
-
-const (
-	defaultConfigPath = "config.json"
-	readTimeout       = 5 * time.Second
-	writeTimeout      = 10 * time.Second
-	requestTimeout    = 1 * time.Second
-	maxHeaderBytes    = 1 << 20 // 1 MB
-	listenAddr        = ":8080"
+	"github.com/ubuntu/ubuntu-insights/cmd/exposed-server/daemon"
 )
 
 func main() {
-	var cfgPath string
-	flag.StringVar(&cfgPath, "config", defaultConfigPath, "Path to configuration file")
-	flag.Parse()
-
-	configManager := config.New(cfgPath)
-	if err := configManager.Load(); err != nil {
-		slog.Error("Failed to load configuration", "err", err)
-		return
-	}
-	go configManager.Watch()
-
-	uploadHandler := &handlers.UploadHandler{
-		Config: configManager,
+	a, err := daemon.New()
+	if err != nil {
+		os.Exit(1)
 	}
 
-	s := server.New()
-	mux := http.NewServeMux()
-	mux.Handle("POST /upload/{app}", s.IPLimiter.RateLimitMiddleware(uploadHandler))
-	mux.Handle("GET /version", http.HandlerFunc(handlers.VersionHandler))
+	os.Exit(run(a))
+}
 
-	srv := &http.Server{
-		Addr:           listenAddr,
-		ReadTimeout:    readTimeout,
-		WriteTimeout:   writeTimeout,
-		Handler:        http.TimeoutHandler(mux, requestTimeout, ""),
-		MaxHeaderBytes: maxHeaderBytes,
+type app interface {
+	Run() error
+	UsageError() bool
+	Hup() bool
+	Quit()
+}
+
+func run(a app) int {
+	defer installSignalHandler(a)()
+
+	if err := a.Run(); err != nil {
+		slog.Error(err.Error())
+
+		if a.UsageError() {
+			return 2
+		}
+		return 1
 	}
 
-	slog.Info("Server starting...")
+	return 0
+}
+
+func installSignalHandler(a app) func() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("Server failed", "err", err)
+		defer wg.Done()
+		for {
+			switch v, ok := <-c; v {
+			case syscall.SIGINT, syscall.SIGTERM:
+				a.Quit()
+				return
+			case syscall.SIGHUP:
+				if a.Hup() {
+					a.Quit()
+					return
+				}
+			default:
+				// channel was closed: we exited
+				if !ok {
+					slog.Warn("Signal channel closed")
+					return
+				}
+			}
 		}
 	}()
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	<-sigChan
-	slog.Info("Shutting down server...")
+	return func() {
+		signal.Stop(c)
+		close(c)
+		wg.Wait()
+	}
 }

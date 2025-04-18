@@ -16,11 +16,11 @@ import (
 
 const MaxUploadSize = 100 << 10 // 100 KB
 
-type UploadHandler struct {
-	Config config.ConfigProvider
+type Upload struct {
+	Config config.Provider
 }
 
-func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Upload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	reqID := uuid.New().String()
 	app := r.PathValue("app")
 

@@ -1,11 +1,10 @@
-package commands
+package daemon
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
 func TestUsageError(t *testing.T) {
@@ -28,5 +27,5 @@ func TestRootCmd(t *testing.T) {
 	cmd := app.RootCmd()
 
 	assert.NotNil(t, cmd, "Returned root cmd should not be nil")
-	assert.Equal(t, constants.CmdName, cmd.Name())
+	assert.Equal(t, esCmdName, cmd.Name())
 }
