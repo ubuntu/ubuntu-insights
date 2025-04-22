@@ -36,13 +36,28 @@ func TestVersionSuccess(t *testing.T) {
 func TestVersionMethodNotAllowed(t *testing.T) {
 	t.Parallel()
 
-	req := httptest.NewRequest(http.MethodPost, "/version", nil)
-	rr := httptest.NewRecorder()
-
-	handler := http.HandlerFunc(handlers.VersionHandler)
-	handler.ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusMethodNotAllowed {
-		t.Errorf("Expected status code 405 Method Not Allowed, got %d", status)
+	tests := map[string]struct {
+		method string
+	}{
+		"HEAD":    {method: http.MethodHead},
+		"POST":    {method: http.MethodPost},
+		"PUT":     {method: http.MethodPut},
+		"PATCH":   {method: http.MethodPatch},
+		"DELETE":  {method: http.MethodDelete},
+		"CONNECT": {method: http.MethodConnect},
+		"OPTIONS": {method: http.MethodOptions},
+		"TRACE":   {method: http.MethodTrace},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			req := httptest.NewRequest(test.method, "/version", nil)
+			rr := httptest.NewRecorder()
+			handler := http.HandlerFunc(handlers.VersionHandler)
+			handler.ServeHTTP(rr, req)
+			if status := rr.Code; status != http.StatusMethodNotAllowed {
+				t.Errorf("Expected status code 405 Method Not Allowed, got %d", status)
+			}
+		})
 	}
 }
