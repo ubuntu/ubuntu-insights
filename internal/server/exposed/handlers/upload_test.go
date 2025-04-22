@@ -5,11 +5,9 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"path/filepath"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/internal/server/exposed/handlers"
@@ -77,15 +75,15 @@ func TestUpload(t *testing.T) {
 		expectNoFile bool
 	}{
 		"Valid Upload": {
-			request: createMultipartRequest(t, defaultApp, []byte(`{"foo": "bar"}`)),
+			request: createRequest(t, defaultApp, []byte(`{"foo": "bar"}`)),
 		},
 		"Disallowed App": {
-			request:      createMultipartRequest(t, "unknown-app", []byte(`{"foo": "bar"}`)),
+			request:      createRequest(t, "unknown-app", []byte(`{"foo": "bar"}`)),
 			expectedCode: http.StatusForbidden,
 			expectNoFile: true,
 		},
 		"Empty App Name": {
-			request:      createMultipartRequest(t, "", []byte(`{"foo": "bar"}`)),
+			request:      createRequest(t, "", []byte(`{"foo": "bar"}`)),
 			expectedCode: http.StatusForbidden,
 			expectNoFile: true,
 		},
@@ -95,25 +93,25 @@ func TestUpload(t *testing.T) {
 			expectNoFile: true,
 		},
 		"Invalid Method - GET": {
-			request:      createMultipartRequest(t, defaultApp, []byte(`{"foo": "bar"}`)),
+			request:      createRequest(t, defaultApp, []byte(`{"foo": "bar"}`)),
 			method:       http.MethodGet,
 			expectedCode: http.StatusMethodNotAllowed,
 			expectNoFile: true,
 		},
 		"Invalid Method - PUT": {
-			request:      createMultipartRequest(t, defaultApp, []byte(`{"foo": "bar"}`)),
+			request:      createRequest(t, defaultApp, []byte(`{"foo": "bar"}`)),
 			method:       http.MethodPut,
 			expectedCode: http.StatusMethodNotAllowed,
 			expectNoFile: true,
 		},
 		"File too large": {
-			request:       createMultipartRequest(t, defaultApp, bytes.Repeat([]byte("a"), 1<<20)), // 1 MB
-			maxUploadSize: 1 << 10,                                                                 // 1 KB
-			expectedCode:  http.StatusRequestEntityTooLarge,
+			request:       createRequest(t, defaultApp, bytes.Repeat([]byte("a"), 1<<20)), // 1 MB
+			maxUploadSize: 1 << 10,                                                        // 1 KB
+			expectedCode:  http.StatusBadRequest,
 			expectNoFile:  true,
 		},
 		"Invalid JSON": {
-			request:      createMultipartRequest(t, defaultApp, []byte(`{"foo": "bar",}`)),
+			request:      createRequest(t, defaultApp, []byte(`{"foo": "bar",}`)),
 			expectedCode: http.StatusBadRequest,
 			expectNoFile: true,
 		},
@@ -135,7 +133,7 @@ func TestUpload(t *testing.T) {
 				tc.maxUploadSize = 1 << 10 // 1 KB
 			}
 			if tc.expectedCode == 0 {
-				tc.expectedCode = http.StatusCreated
+				tc.expectedCode = http.StatusAccepted
 			}
 
 			handler := handlers.NewUpload(mockConfig, tc.maxUploadSize)
@@ -161,18 +159,12 @@ func TestUpload(t *testing.T) {
 	}
 }
 
-func createMultipartRequest(t *testing.T, app string, data []byte) *http.Request {
+func createRequest(t *testing.T, app string, data []byte) *http.Request {
 	t.Helper()
-	var b bytes.Buffer
-	w := multipart.NewWriter(&b)
-	fw, err := w.CreateFormFile("file", uuid.New().String()+".json")
-	require.NoError(t, err, "Setup: failed to create form file")
-	_, err = fw.Write(data)
-	require.NoError(t, err, "Setup: failed to write data to form file")
-	w.Close()
 
-	req := httptest.NewRequest(http.MethodPost, "/upload/"+url.PathEscape(app), &b)
-	req.Header.Set("Content-Type", w.FormDataContentType())
+	body := bytes.NewReader(data)
+	req := httptest.NewRequest(http.MethodPost, "/upload/"+app, body)
+	req.Header.Set("Content-Type", "application/json")
 	req.SetPathValue("app", app)
 	return req
 }
@@ -185,7 +177,7 @@ func missingFileRequest(t *testing.T, app string) *http.Request {
 	w.Close()
 
 	req := httptest.NewRequest(http.MethodPost, "/upload/"+app, &b)
-	req.Header.Set("Content-Type", w.FormDataContentType())
+	req.Header.Set("Content-Type", "application/json")
 	req.SetPathValue("app", app)
 	return req
 }
