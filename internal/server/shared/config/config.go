@@ -12,8 +12,8 @@ import (
 )
 
 type Provider interface {
-	GetBaseDir() string
-	GetAllowList() []string
+	BaseDir() string
+	AllowList() []string
 }
 
 type Conf struct {
@@ -96,13 +96,13 @@ func (cm *Manager) Watch() {
 	}
 }
 
-func (cm *Manager) GetBaseDir() string {
+func (cm *Manager) BaseDir() string {
 	cm.Lock.RLock()
 	defer cm.Lock.RUnlock()
 	return cm.config.BaseDir
 }
 
-func (cm *Manager) GetAllowList() []string {
+func (cm *Manager) AllowList() []string {
 	cm.Lock.RLock()
 	defer cm.Lock.RUnlock()
 	return cm.config.AllowedList

@@ -12,7 +12,7 @@ import (
 func TestVersionSuccess(t *testing.T) {
 	t.Parallel()
 
-	req := httptest.NewRequest("GET", "/version", nil)
+	req := httptest.NewRequest(http.MethodGet, "/version", nil)
 	rr := httptest.NewRecorder()
 
 	handler := http.HandlerFunc(handlers.VersionHandler)
@@ -27,7 +27,7 @@ func TestVersionSuccess(t *testing.T) {
 		t.Errorf("Expected Content-Type %s, got %s", expectedContentType, contentType)
 	}
 
-	var js map[string]interface{}
+	var js map[string]any
 	if err := json.Unmarshal(rr.Body.Bytes(), &js); err != nil {
 		t.Errorf("Expected valid JSON response, got error: %v", err)
 	}
@@ -36,7 +36,7 @@ func TestVersionSuccess(t *testing.T) {
 func TestVersionMethodNotAllowed(t *testing.T) {
 	t.Parallel()
 
-	req := httptest.NewRequest("POST", "/version", nil)
+	req := httptest.NewRequest(http.MethodPost, "/version", nil)
 	rr := httptest.NewRecorder()
 
 	handler := http.HandlerFunc(handlers.VersionHandler)

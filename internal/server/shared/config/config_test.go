@@ -35,12 +35,12 @@ func TestLoad_ValidConfig(t *testing.T) {
 		t.Fatalf("expected no error loading config, got %v", err)
 	}
 
-	if got := cm.GetBaseDir(); got != "/tmp/data" {
+	if got := cm.BaseDir(); got != "/tmp/data" {
 		t.Errorf("expected base_dir /tmp/data, got %s", got)
 	}
 
 	expected := []string{"foo", "bar"}
-	if got := cm.GetAllowList(); !reflect.DeepEqual(got, expected) {
+	if got := cm.AllowList(); !reflect.DeepEqual(got, expected) {
 		t.Errorf("expected allowList %v, got %v", expected, got)
 	}
 }
@@ -86,10 +86,10 @@ func TestWatch_ConfigReloadsOnChange(t *testing.T) {
 
 	time.Sleep(200 * time.Millisecond) // let watcher reload
 
-	if cm.GetBaseDir() != "/tmp/updated" {
-		t.Errorf("expected base_dir to be updated, got %s", cm.GetBaseDir())
+	if cm.BaseDir() != "/tmp/updated" {
+		t.Errorf("expected base_dir to be updated, got %s", cm.BaseDir())
 	}
-	if got := cm.GetAllowList(); !reflect.DeepEqual(got, []string{"beta"}) {
+	if got := cm.AllowList(); !reflect.DeepEqual(got, []string{"beta"}) {
 		t.Errorf("expected allowList [beta], got %v", got)
 	}
 }
@@ -126,8 +126,8 @@ func TestConfigManager_ReadWhileWrite(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_ = cm.GetBaseDir()
-			_ = cm.GetAllowList()
+			_ = cm.BaseDir()
+			_ = cm.AllowList()
 		}()
 	}
 

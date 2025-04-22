@@ -37,6 +37,7 @@ type DaemonConfig struct {
 	WriteTimeout   time.Duration
 	RequestTimeout time.Duration
 	MaxHeaderBytes int
+	MaxUploadBytes int
 
 	RateLimitPS float64
 	BurstLimit  int
@@ -48,8 +49,8 @@ type DaemonConfig struct {
 type dConfigManager interface {
 	Load() error
 	Watch()
-	GetAllowList() []string
-	GetBaseDir() string
+	AllowList() []string
+	BaseDir() string
 }
 
 // New creates a new Server instance with the given http.Server and config.ConfigManager.
@@ -70,10 +71,9 @@ func (c DaemonConfig) New(ctx context.Context, cm dConfigManager) (*Server, erro
 		gracefulCtx:    gCtx,
 		gracefulCancel: gCancel}
 
+	uploadHandler := handlers.NewUpload(cm, int64(c.MaxUploadBytes))
 	mux := http.NewServeMux()
-	mux.Handle("POST /upload/{app}", s.ipLimiter.RateLimitMiddleware(&handlers.Upload{
-		Config: cm,
-	}))
+	mux.Handle("POST /upload/{app}", s.ipLimiter.RateLimitMiddleware(uploadHandler))
 	mux.Handle("GET /version", http.HandlerFunc(handlers.VersionHandler))
 
 	s.httpServer = &http.Server{

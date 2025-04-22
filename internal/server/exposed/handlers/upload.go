@@ -1,3 +1,4 @@
+// Package handlers provides HTTP handlers for the server.
 package handlers
 
 import (
@@ -8,18 +9,28 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 	"github.com/ubuntu/ubuntu-insights/internal/server/shared/config"
 )
 
-const MaxUploadSize = 100 << 10 // 100 KB
-
+// Upload is a handler for uploading JSON files.
 type Upload struct {
-	Config config.Provider
+	config        config.Provider
+	maxUploadSize int64
 }
 
+// NewUpload creates a new Upload handler.
+func NewUpload(cfg config.Provider, maxUploadSize int64) *Upload {
+	return &Upload{
+		config:        cfg,
+		maxUploadSize: maxUploadSize,
+	}
+}
+
+// ServeHTTP handles the HTTP request for uploading JSON files.
 func (h *Upload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	reqID := uuid.New().String()
 	app := r.PathValue("app")
@@ -36,13 +47,7 @@ func (h *Upload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	allowed := false
-	for _, allowedApp := range h.Config.GetAllowList() {
-		if allowedApp == app {
-			allowed = true
-			break
-		}
-	}
+	allowed := slices.Contains(h.config.AllowList(), app)
 
 	if !allowed {
 		http.Error(w, "Invalid application name in URL", http.StatusForbidden)
@@ -58,7 +63,7 @@ func (h *Upload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer jsonFile.Close()
 
-	if header.Size > MaxUploadSize {
+	if header.Size > h.maxUploadSize {
 		http.Error(w, "File exceeds size limit", http.StatusRequestEntityTooLarge)
 		slog.Error("File exceeds size limit", "req_id", reqID, "app", app, "size", header.Size)
 		return
@@ -71,17 +76,16 @@ func (h *Upload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var js map[string]interface{}
-	if err := json.Unmarshal(jsonData, &js); err != nil {
+	if !json.Valid(jsonData) {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		slog.Error("Invalid JSON in uploaded file", "req_id", reqID, "app", app, "err", err)
+		slog.Error("Invalid JSON in uploaded file", "req_id", reqID, "app", app)
 		return
 	}
 
-	baseDir := h.Config.GetBaseDir()
+	baseDir := h.config.BaseDir()
 
 	targetDir := filepath.Join(baseDir, app)
-	if err := os.MkdirAll(targetDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(targetDir, 0750); err != nil {
 		http.Error(w, "Error creating directory: "+err.Error(), http.StatusInternalServerError)
 		slog.Error("Error creating directory", "req_id", reqID, "app", app, "target", targetDir, "err", err)
 		return

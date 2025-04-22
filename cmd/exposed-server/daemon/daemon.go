@@ -90,7 +90,8 @@ func installRootCmd(app *App) error {
 		ReadTimeout:    5 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		RequestTimeout: 3 * time.Second,
-		MaxHeaderBytes: 1 << 17, // 128 KB
+		MaxHeaderBytes: 1 << 13, // 8 KB
+		MaxUploadBytes: 1 << 17, // 128 KB
 
 		RateLimitPS: 0.1,
 		BurstLimit:  3,
@@ -106,6 +107,7 @@ func installRootCmd(app *App) error {
 	cmd.PersistentFlags().DurationVar(&app.config.Daemon.WriteTimeout, "write-timeout", defaultConf.WriteTimeout, "Write timeout for HTTP server")
 	cmd.PersistentFlags().DurationVar(&app.config.Daemon.RequestTimeout, "request-timeout", defaultConf.RequestTimeout, "Request timeout for HTTP server")
 	cmd.PersistentFlags().IntVar(&app.config.Daemon.MaxHeaderBytes, "max-header-bytes", defaultConf.MaxHeaderBytes, "Maximum header bytes for HTTP server")
+	cmd.PersistentFlags().IntVar(&app.config.Daemon.MaxUploadBytes, "max-upload-bytes", defaultConf.MaxUploadBytes, "Maximum upload bytes for HTTP server")
 
 	cmd.PersistentFlags().Float64Var(&app.config.Daemon.RateLimitPS, "rate-limit-ps", defaultConf.RateLimitPS, "Rate limit in packets per second")
 	cmd.PersistentFlags().IntVar(&app.config.Daemon.BurstLimit, "burst-limit", defaultConf.BurstLimit, "Burst limit for rate limiting")
