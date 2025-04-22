@@ -7,63 +7,76 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/ubuntu/ubuntu-insights/internal/server/exposed/middleware"
 	"golang.org/x/time/rate"
 )
 
-func makeRequestWithIP(handler http.Handler, ip string) *httptest.ResponseRecorder {
-	req := httptest.NewRequest("GET", "/", nil)
-	req.RemoteAddr = net.JoinHostPort(ip, "12345")
+func makeRequestWithIP(handler http.Handler, port string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = net.JoinHostPort("1.2.3.4", port)
 	rr := httptest.NewRecorder()
+
 	handler.ServeHTTP(rr, req)
 	return rr
 }
 
-func TestLimiter_AllowsRequestsUnderLimit(t *testing.T) {
+func TestLimiter(t *testing.T) {
 	t.Parallel()
-	limiter := middleware.New(rate.Every(time.Second), 2) // 2 requests burst
-	handler := limiter.RateLimitMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusAccepted)
-	}))
 
-	rr1 := makeRequestWithIP(handler, "1.2.3.4")
-	rr2 := makeRequestWithIP(handler, "1.2.3.4")
+	tests := map[string]struct {
+		limiter     *middleware.IPLimiter
+		handlerFunc http.HandlerFunc
+		port1       string
+		port2       string
 
-	if rr1.Code != http.StatusAccepted || rr2.Code != http.StatusAccepted {
-		t.Fatal("Expected both requests to succeed")
+		status1 int
+		status2 int
+	}{
+		"Under limit OK": {
+			limiter: middleware.New(rate.Every(time.Second), 2),
+			port1:   "8080",
+			port2:   "8080",
+		},
+		"Blocks over limit": {
+			limiter: middleware.New(rate.Every(time.Second), 1),
+			port1:   "8081",
+			port2:   "8081",
+			status2: http.StatusTooManyRequests,
+		},
+		"Different ports have independent limits": {
+			limiter: middleware.New(rate.Every(time.Second), 1),
+			port1:   "8082",
+			port2:   "8083",
+			status2: http.StatusTooManyRequests,
+		},
 	}
-}
 
-func TestLimiter_BlocksRequestsOverLimit(t *testing.T) {
-	t.Parallel()
-	limiter := middleware.New(rate.Every(10*time.Second), 1) // Only 1 allowed every 10s
-	handler := limiter.RateLimitMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusAccepted)
-	}))
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	rr1 := makeRequestWithIP(handler, "5.6.7.8")
-	rr2 := makeRequestWithIP(handler, "5.6.7.8")
+			if tc.status1 == 0 {
+				tc.status1 = http.StatusOK
+			}
+			if tc.status2 == 0 {
+				tc.status2 = http.StatusOK
+			}
 
-	if rr1.Code != http.StatusAccepted {
-		t.Fatal("Expected first request to succeed")
-	}
-	if rr2.Code != http.StatusTooManyRequests {
-		t.Fatal("Expected second request to be rate-limited")
-	}
-}
+			if tc.handlerFunc == nil {
+				tc.handlerFunc = func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				}
+			}
 
-func TestLimiter_SeparateLimitsForDifferentIPs(t *testing.T) {
-	t.Parallel()
-	limiter := middleware.New(rate.Every(10*time.Second), 1)
-	handler := limiter.RateLimitMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusAccepted)
-	}))
+			handler := tc.limiter.RateLimitMiddleware(tc.handlerFunc)
 
-	rr1 := makeRequestWithIP(handler, "1.1.1.1")
-	rr2 := makeRequestWithIP(handler, "2.2.2.2")
+			rr1 := makeRequestWithIP(handler, tc.port1)
+			rr2 := makeRequestWithIP(handler, tc.port2)
 
-	if rr1.Code != http.StatusAccepted || rr2.Code != http.StatusAccepted {
-		t.Fatal("Expected both IPs to have separate rate limits")
+			assert.Equal(t, tc.status1, rr1.Code)
+			assert.Equal(t, tc.status2, rr2.Code)
+		})
 	}
 }
 
@@ -74,13 +87,11 @@ func TestLimiter_InvalidRemoteAddr(t *testing.T) {
 		t.Fatal("Handler should not be called for bad IP")
 	}))
 
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.RemoteAddr = "invalid-ip" // not in host:port format
 	rr := httptest.NewRecorder()
 
 	handler.ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("Expected status 400, got %d", rr.Code)
-	}
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }

@@ -1,3 +1,4 @@
+// Package middleware provides middleware functions for HTTP servers.
 package middleware
 
 import (
@@ -8,6 +9,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
+// IPLimiter is a middleware that limits the number of requests from a single IP address.
 type IPLimiter struct {
 	limiters map[string]*rate.Limiter
 	mu       sync.Mutex
@@ -15,6 +17,7 @@ type IPLimiter struct {
 	burst    int
 }
 
+// New creates a new IPLimiter with the specified rate limit and burst size.
 func New(r rate.Limit, b int) *IPLimiter {
 	return &IPLimiter{
 		limiters: make(map[string]*rate.Limiter),
@@ -35,6 +38,7 @@ func (l *IPLimiter) getLimiter(ip string) *rate.Limiter {
 	return limiter
 }
 
+// RateLimitMiddleware is the middleware function that applies the rate limiting.
 func (l *IPLimiter) RateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
