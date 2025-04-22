@@ -48,7 +48,7 @@ type DaemonConfig struct {
 
 type dConfigManager interface {
 	Load() error
-	Watch()
+	Watch(context.Context)
 	AllowList() []string
 	BaseDir() string
 }
@@ -58,10 +58,11 @@ func (c DaemonConfig) New(ctx context.Context, cm dConfigManager) (*Server, erro
 	if err := cm.Load(); err != nil {
 		return nil, fmt.Errorf("failed to load configuration: %v", err)
 	}
-	go cm.Watch()
 
 	ctx, cancel := context.WithCancel(ctx)
 	gCtx, gCancel := context.WithCancel(ctx)
+
+	go cm.Watch(gCtx)
 
 	s := Server{
 		ipLimiter: middleware.New(rate.Limit(c.RateLimitPS), c.BurstLimit),

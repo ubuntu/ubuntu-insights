@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -52,7 +53,7 @@ func (cm *Manager) Load() error {
 	return nil
 }
 
-func (cm *Manager) Watch() {
+func (cm *Manager) Watch(ctx context.Context) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		slog.Warn("Failed to create watcher", "err", err)
@@ -74,6 +75,9 @@ func (cm *Manager) Watch() {
 
 	for {
 		select {
+		case <-ctx.Done():
+			slog.Info("Configuration watcher stopped")
+			return
 		case event, ok := <-watcher.Events:
 			if !ok {
 				return

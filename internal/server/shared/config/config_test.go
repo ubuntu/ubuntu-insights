@@ -77,7 +77,7 @@ func TestWatch_ConfigReloadsOnChange(t *testing.T) {
 		t.Fatalf("initial load failed: %v", err)
 	}
 
-	go cm.Watch()
+	go cm.Watch(t.Context())
 	time.Sleep(100 * time.Millisecond) // let watcher initialize
 
 	if err := os.WriteFile(tmpFile, []byte(updated), 0644); err != nil {
