@@ -197,7 +197,7 @@ func (um Uploader) getURL(source string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to parse base server URL %s: %v", um.baseServerURL, err)
 	}
-	u.Path = path.Join(u.Path, source)
+	u.Path = path.Join(u.Path, "upload", source)
 	return u.String(), nil
 }
 
@@ -216,7 +216,7 @@ func (um Uploader) send(url string, data []byte) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusAccepted {
 		return errors.Join(ErrSendFailure, fmt.Errorf("unexpected status code: %d", resp.StatusCode))
 	}
 

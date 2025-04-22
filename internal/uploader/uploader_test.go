@@ -71,7 +71,7 @@ func TestUpload(t *testing.T) {
 
 	const (
 		mockTime        = 10
-		defaultResponse = http.StatusOK
+		defaultResponse = http.StatusAccepted
 		source          = "source"
 	)
 
@@ -193,7 +193,7 @@ func TestBackoffUpload(t *testing.T) {
 
 	const (
 		mockTime        = 10
-		defaultResponse = http.StatusOK
+		defaultResponse = http.StatusAccepted
 		source          = "source"
 	)
 
@@ -256,7 +256,7 @@ func TestBackoffUpload(t *testing.T) {
 					w.WriteHeader(tc.initialResponse)
 					return
 				}
-				w.WriteHeader(http.StatusOK)
+				w.WriteHeader(http.StatusAccepted)
 			}))
 			if !tc.serverOffline {
 				t.Cleanup(func() { ts.Close() })

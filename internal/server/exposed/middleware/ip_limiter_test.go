@@ -23,13 +23,13 @@ func TestLimiter_AllowsRequestsUnderLimit(t *testing.T) {
 	t.Parallel()
 	limiter := middleware.New(rate.Every(time.Second), 2) // 2 requests burst
 	handler := limiter.RateLimitMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusAccepted)
 	}))
 
 	rr1 := makeRequestWithIP(handler, "1.2.3.4")
 	rr2 := makeRequestWithIP(handler, "1.2.3.4")
 
-	if rr1.Code != http.StatusOK || rr2.Code != http.StatusOK {
+	if rr1.Code != http.StatusAccepted || rr2.Code != http.StatusAccepted {
 		t.Fatal("Expected both requests to succeed")
 	}
 }
@@ -38,13 +38,13 @@ func TestLimiter_BlocksRequestsOverLimit(t *testing.T) {
 	t.Parallel()
 	limiter := middleware.New(rate.Every(10*time.Second), 1) // Only 1 allowed every 10s
 	handler := limiter.RateLimitMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusAccepted)
 	}))
 
 	rr1 := makeRequestWithIP(handler, "5.6.7.8")
 	rr2 := makeRequestWithIP(handler, "5.6.7.8")
 
-	if rr1.Code != http.StatusOK {
+	if rr1.Code != http.StatusAccepted {
 		t.Fatal("Expected first request to succeed")
 	}
 	if rr2.Code != http.StatusTooManyRequests {
@@ -56,13 +56,13 @@ func TestLimiter_SeparateLimitsForDifferentIPs(t *testing.T) {
 	t.Parallel()
 	limiter := middleware.New(rate.Every(10*time.Second), 1)
 	handler := limiter.RateLimitMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusAccepted)
 	}))
 
 	rr1 := makeRequestWithIP(handler, "1.1.1.1")
 	rr2 := makeRequestWithIP(handler, "2.2.2.2")
 
-	if rr1.Code != http.StatusOK || rr2.Code != http.StatusOK {
+	if rr1.Code != http.StatusAccepted || rr2.Code != http.StatusAccepted {
 		t.Fatal("Expected both IPs to have separate rate limits")
 	}
 }
