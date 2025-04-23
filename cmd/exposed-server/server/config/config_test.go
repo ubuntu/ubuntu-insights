@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server/config"
+	"github.com/ubuntu/ubuntu-insights/cmd/exposed-server/server/config"
 )
 
 

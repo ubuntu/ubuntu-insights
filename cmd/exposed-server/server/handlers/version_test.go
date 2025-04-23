@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server/handlers"
+	"github.com/ubuntu/ubuntu-insights/cmd/exposed-server/server/handlers"
 )
 
 

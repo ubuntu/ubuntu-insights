@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/google/uuid"
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server/config"
+	"github.com/ubuntu/ubuntu-insights/cmd/exposed-server/server/config"
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 

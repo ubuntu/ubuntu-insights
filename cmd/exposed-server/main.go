@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server"
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server/config"
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-server/server/handlers"
+	"github.com/ubuntu/ubuntu-insights/cmd/exposed-server/server"
+	"github.com/ubuntu/ubuntu-insights/cmd/exposed-server/server/config"
+	"github.com/ubuntu/ubuntu-insights/cmd/exposed-server/server/handlers"
 )
 
 const (
