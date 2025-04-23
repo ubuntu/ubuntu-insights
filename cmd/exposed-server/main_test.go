@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"os"
 	"syscall"
 	"testing"
 	"time"
@@ -82,9 +83,9 @@ func TestRun(t *testing.T) {
 			switch tc.sendSig {
 			case syscall.SIGINT:
 				fallthrough
-			case syscall.SIGTERM:
-				err := syscall.Kill(syscall.Getpid(), tc.sendSig)
-				require.NoError(t, err, "Teardown: kill should return no error")
+			case os.Interrupt, syscall.SIGTERM:
+				err := sendSignal(tc.sendSig)
+				require.NoError(t, err, "Teardown: sending signal should return no error")
 				select {
 				case <-time.After(50 * time.Millisecond):
 					exited = false
@@ -93,8 +94,8 @@ func TestRun(t *testing.T) {
 				}
 				require.True(t, exited, "Expect to exit on SIGINT and SIGTERM")
 			case syscall.SIGHUP:
-				err := syscall.Kill(syscall.Getpid(), syscall.SIGHUP)
-				require.NoError(t, err, "Teardown: kill should return no error")
+				err := sendSignal(tc.sendSig)
+				require.NoError(t, err, "Teardown: sending signal should return no error")
 				select {
 				case <-time.After(50 * time.Millisecond):
 					exited = false
@@ -114,4 +115,13 @@ func TestRun(t *testing.T) {
 			require.Equal(t, tc.wantReturnCode, rc, "Return expected code")
 		})
 	}
+}
+
+// sendSignal sends a signal to the current process in a cross-platform way.
+func sendSignal(sig os.Signal) error {
+	process, err := os.FindProcess(os.Getpid())
+	if err != nil {
+		return err
+	}
+	return process.Signal(sig)
 }
