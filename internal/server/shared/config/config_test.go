@@ -16,7 +16,7 @@ func createTempConfigFile(t *testing.T, content string) string {
 	t.Helper()
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "config.json")
-	if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(tmpFile, []byte(content), 0600); err != nil {
 		t.Fatalf("failed to write temp config file: %v", err)
 	}
 	return tmpFile
@@ -80,7 +80,7 @@ func TestWatch_ConfigReloadsOnChange(t *testing.T) {
 	go cm.Watch(t.Context())
 	time.Sleep(100 * time.Millisecond) // let watcher initialize
 
-	if err := os.WriteFile(tmpFile, []byte(updated), 0644); err != nil {
+	if err := os.WriteFile(tmpFile, []byte(updated), 0600); err != nil {
 		t.Fatalf("failed to write updated config: %v", err)
 	}
 
@@ -99,7 +99,7 @@ func TestConfigManager_ReadWhileWrite(t *testing.T) {
 	tmpFile := createTempConfigFile(t, content)
 
 	cm := config.New(tmpFile)
-	err := os.WriteFile(tmpFile, []byte(`{"base_dir":"/tmp/test","allowList":["foo"]}`), 0644)
+	err := os.WriteFile(tmpFile, []byte(`{"base_dir":"/tmp/test","allowList":["foo"]}`), 0600)
 	if err != nil {
 		t.Fatal(err)
 	}

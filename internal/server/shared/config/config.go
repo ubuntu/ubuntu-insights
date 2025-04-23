@@ -1,3 +1,4 @@
+// Package config provides a configuration manager that loads and watches a JSON configuration file.
 package config
 
 import (
@@ -12,26 +13,31 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+// Provider is an interface that defines methods to access configuration values.
 type Provider interface {
 	BaseDir() string
 	AllowList() []string
 }
 
+// Conf represents the configuration structure.
 type Conf struct {
 	BaseDir     string   `json:"base_dir"`
 	AllowedList []string `json:"allowList"`
 }
 
+// Manager is a struct that manages the configuration.
 type Manager struct {
 	config     Conf
 	Lock       sync.RWMutex
 	configPath string
 }
 
+// New creates a new configuration manager with the specified path.
 func New(path string) *Manager {
 	return &Manager{configPath: path}
 }
 
+// Load reads the configuration from the specified file and updates the internal state.
 func (cm *Manager) Load() error {
 	file, err := os.Open(cm.configPath)
 	if err != nil {
@@ -53,6 +59,7 @@ func (cm *Manager) Load() error {
 	return nil
 }
 
+// Watch starts watching the configuration file for changes.
 func (cm *Manager) Watch(ctx context.Context) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -64,7 +71,6 @@ func (cm *Manager) Watch(ctx context.Context) {
 	configDir, _ := filepath.Split(cm.configPath)
 	if configDir == "" {
 		configDir = "."
-
 	}
 	if err := watcher.Add(configDir); err != nil {
 		slog.Warn("Failed to add directory to watcher", "dir", configDir, "err", err)
@@ -100,12 +106,14 @@ func (cm *Manager) Watch(ctx context.Context) {
 	}
 }
 
+// BaseDir returns the base directory from the configuration.
 func (cm *Manager) BaseDir() string {
 	cm.Lock.RLock()
 	defer cm.Lock.RUnlock()
 	return cm.config.BaseDir
 }
 
+// AllowList returns the allow list from the configuration.
 func (cm *Manager) AllowList() []string {
 	cm.Lock.RLock()
 	defer cm.Lock.RUnlock()
