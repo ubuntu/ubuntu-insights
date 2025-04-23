@@ -3,6 +3,8 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 )
 
 // VersionHandler handles requests to the /version endpoint.
@@ -13,5 +15,5 @@ func VersionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, `{"version":"1.0.0"}`)
+	fmt.Fprintf(w, `{"version":"%s"}`, constants.Version)
 }
