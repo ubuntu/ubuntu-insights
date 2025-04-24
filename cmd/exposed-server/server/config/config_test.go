@@ -12,12 +12,11 @@ import (
 	"github.com/ubuntu/ubuntu-insights/cmd/exposed-server/server/config"
 )
 
-
 func createTempConfigFile(t *testing.T, content string) string {
 	t.Helper()
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "config.json")
-	if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(tmpFile, []byte(content), 0600); err != nil {
 		t.Fatalf("failed to write temp config file: %v", err)
 	}
 	return tmpFile
@@ -81,7 +80,7 @@ func TestWatch_ConfigReloadsOnChange(t *testing.T) {
 	go cm.Watch()
 	time.Sleep(100 * time.Millisecond) // let watcher initialize
 
-	if err := os.WriteFile(tmpFile, []byte(updated), 0644); err != nil {
+	if err := os.WriteFile(tmpFile, []byte(updated), 0600); err != nil {
 		t.Fatalf("failed to write updated config: %v", err)
 	}
 
@@ -100,7 +99,7 @@ func TestConfigManager_ReadWhileWrite(t *testing.T) {
 	tmpFile := createTempConfigFile(t, content)
 
 	cm := config.New(tmpFile)
-	err := os.WriteFile(tmpFile, []byte(`{"base_dir":"/tmp/test","allowList":["foo"]}`), 0644)
+	err := os.WriteFile(tmpFile, []byte(`{"base_dir":"/tmp/test","allowList":["foo"]}`), 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,14 +115,14 @@ func TestConfigManager_ReadWhileWrite(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for i := 0; i < writeCount; i++ {
-			_ = os.WriteFile(tmpFile, []byte(fmt.Sprintf(`{"base_dir":"/tmp/test%d","allowList":["foo"]}`, i)), 0644)
+		for i := range writeCount {
+			_ = os.WriteFile(tmpFile, []byte(fmt.Sprintf(`{"base_dir":"/tmp/test%d","allowList":["foo"]}`, i)), 0600)
 			_ = cm.Load()
 		}
 	}()
 
 	// Reader goroutines
-	for i := 0; i < readCount; i++ {
+	for range readCount {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

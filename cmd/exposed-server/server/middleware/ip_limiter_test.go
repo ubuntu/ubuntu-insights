@@ -12,7 +12,7 @@ import (
 )
 
 func makeRequestWithIP(handler http.Handler, ip string) *httptest.ResponseRecorder {
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.RemoteAddr = net.JoinHostPort(ip, "12345")
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
@@ -74,7 +74,7 @@ func TestLimiter_InvalidRemoteAddr(t *testing.T) {
 		t.Fatal("Handler should not be called for bad IP")
 	}))
 
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.RemoteAddr = "invalid-ip" // not in host:port format
 	rr := httptest.NewRecorder()
 

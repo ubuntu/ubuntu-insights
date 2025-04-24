@@ -1,3 +1,5 @@
+// Package handlers provides HTTP handlers for the exposed server.
+// It includes handlers for file uploads and version information.
 package handlers
 
 import (
@@ -14,12 +16,15 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
+// MaxUploadSize defines the maximum size for uploaded files.
 const MaxUploadSize = 100 << 10 // 100 KB
 
-type UploadHandler struct{
-	Config config.ConfigProvider
+// UploadHandler handles file uploads for a specific application.
+type UploadHandler struct {
+	Config config.Provider
 }
 
+// ServeHTTP handles the HTTP request for file uploads.
 func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	reqID := uuid.New().String()
 	app := r.PathValue("app")
@@ -81,7 +86,7 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	baseDir := h.Config.GetBaseDir()
 
 	targetDir := filepath.Join(baseDir, app)
-	if err := os.MkdirAll(targetDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(targetDir, 0750); err != nil {
 		http.Error(w, "Error creating directory: "+err.Error(), http.StatusInternalServerError)
 		slog.Error("Error creating directory", "req_id", reqID, "app", app, "target", targetDir, "err", err)
 		return

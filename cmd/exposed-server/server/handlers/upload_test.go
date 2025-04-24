@@ -26,6 +26,7 @@ func (m *mockConfigManager) GetAllowList() []string {
 }
 
 func setup(t *testing.T) (*handlers.UploadHandler, *mockConfigManager, func()) {
+	t.Helper()
 	tmpDir, err := os.MkdirTemp("", "upload_test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
@@ -61,7 +62,7 @@ func createMultipartRequest(t *testing.T, app, filename string, data []byte) (*h
 	}
 	w.Close()
 
-	req := httptest.NewRequest("POST", "/upload/"+app, &b)
+	req := httptest.NewRequest(http.MethodPost, "/upload/"+app, &b)
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	req.SetPathValue("app", app)
 	return req, nil
@@ -139,10 +140,9 @@ func TestUploadMissingFile(t *testing.T) {
 	// Make a POST request but without a "file" part
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
-	w.WriteField("not_a_file", "oops")
 	w.Close()
 
-	req := httptest.NewRequest("POST", "/upload/testapp", &b)
+	req := httptest.NewRequest(http.MethodPost, "/upload/testapp", &b)
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	req.SetPathValue("app", "testapp")
 
@@ -159,7 +159,7 @@ func TestUploadInvalidMethod(t *testing.T) {
 	handler, _, cleanup := setup(t)
 	defer cleanup()
 
-	req := httptest.NewRequest("PUT", "/upload/testapp", nil)
+	req := httptest.NewRequest(http.MethodPut, "/upload/testapp", nil)
 	req.SetPathValue("app", "testapp")
 
 	rr := httptest.NewRecorder()

@@ -1,3 +1,4 @@
+// Package config provides configuration management for the server.
 package config
 
 import (
@@ -11,33 +12,32 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-type ConfigProvider interface {
+// Provider defines the interface for configuration management.
+type Provider interface {
 	GetBaseDir() string
 	GetAllowList() []string
 }
 
+// Config represents the configuration structure for the server.
 type Config struct {
 	BaseDir     string   `json:"base_dir"`
 	AllowedList []string `json:"allowList"`
 }
 
-type ConfigManager struct {
+// Manager manages the configuration for the server.
+type Manager struct {
 	config     Config
 	Lock       sync.RWMutex
 	configPath string
 }
 
-func New(path string) *ConfigManager {
-	return &ConfigManager{configPath: path}
+// New creates a new ConfigManager with the specified configuration file path.
+func New(path string) *Manager {
+	return &Manager{configPath: path}
 }
 
-var (
-	config     Config
-	lock       sync.RWMutex
-	configPath = "config.json"
-)
-
-func (cm *ConfigManager) Load() error {
+// Load reads the configuration from the specified JSON file.
+func (cm *Manager) Load() error {
 	file, err := os.Open(cm.configPath)
 	if err != nil {
 		return fmt.Errorf("opening config file: %w", err)
@@ -58,7 +58,9 @@ func (cm *ConfigManager) Load() error {
 	return nil
 }
 
-func (cm *ConfigManager) Watch() {
+// Watch starts watching the configuration file for changes.
+// When a change is detected, it reloads the configuration.
+func (cm *Manager) Watch() {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		slog.Warn("Failed to create watcher", "err", err)
@@ -69,7 +71,6 @@ func (cm *ConfigManager) Watch() {
 	configDir, _ := filepath.Split(cm.configPath)
 	if configDir == "" {
 		configDir = "."
-
 	}
 	if err := watcher.Add(configDir); err != nil {
 		slog.Warn("Failed to add directory to watcher", "dir", configDir, "err", err)
@@ -102,13 +103,15 @@ func (cm *ConfigManager) Watch() {
 	}
 }
 
-func (cm *ConfigManager) GetBaseDir() string {
+// GetBaseDir returns the base directory for file storage.
+func (cm *Manager) GetBaseDir() string {
 	cm.Lock.RLock()
 	defer cm.Lock.RUnlock()
 	return cm.config.BaseDir
 }
 
-func (cm *ConfigManager) GetAllowList() []string {
+// GetAllowList returns the allowed list of applications.
+func (cm *Manager) GetAllowList() []string {
 	cm.Lock.RLock()
 	defer cm.Lock.RUnlock()
 	return cm.config.AllowedList

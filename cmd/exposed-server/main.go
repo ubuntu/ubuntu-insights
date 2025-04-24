@@ -1,3 +1,7 @@
+// Package main for the exposed-server
+//
+// This package is responsible for starting the HTTP server that handles
+// incoming requests for uploading collected data.
 package main
 
 import (

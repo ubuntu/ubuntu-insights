@@ -9,11 +9,10 @@ import (
 	"github.com/ubuntu/ubuntu-insights/cmd/exposed-server/server/handlers"
 )
 
-
 func TestVersionSuccess(t *testing.T) {
 	t.Parallel()
 
-	req := httptest.NewRequest("GET", "/version", nil)
+	req := httptest.NewRequest(http.MethodGet, "/version", nil)
 	rr := httptest.NewRecorder()
 
 	handler := http.HandlerFunc(handlers.VersionHandler)
@@ -37,7 +36,7 @@ func TestVersionSuccess(t *testing.T) {
 func TestVersionMethodNotAllowed(t *testing.T) {
 	t.Parallel()
 
-	req := httptest.NewRequest("POST", "/version", nil)
+	req := httptest.NewRequest(http.MethodPost, "/version", nil)
 	rr := httptest.NewRecorder()
 
 	handler := http.HandlerFunc(handlers.VersionHandler)
