@@ -186,12 +186,9 @@ func TestWatchWarnsIfLoadFails(t *testing.T) {
 	time.Sleep(time.Second) // let watcher reload
 
 	// There are sometimes two warning entries due to how different OSes handle events related to os.WriteFile.
-	have := make(map[slog.Level]uint)
-	for _, r := range l.HandleCalls {
-		have[r.Level]++
-	}
-	assert.GreaterOrEqual(t, have[slog.LevelWarn], uint(1), "expected at least one warning log")
-	assert.LessOrEqual(t, have[slog.LevelWarn], uint(2), "expected at most two warning logs")
+	levels := l.GetLevels()
+	assert.GreaterOrEqual(t, levels[slog.LevelWarn], uint(1), "expected at least one warning log")
+	assert.LessOrEqual(t, levels[slog.LevelWarn], uint(2), "expected at most two warning logs")
 
 	select {
 	case err := <-watchErr:
