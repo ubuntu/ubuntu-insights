@@ -1,3 +1,4 @@
+// Package config provides configuration management for the ingest service.
 package config
 
 import (
@@ -6,6 +7,8 @@ import (
 	"os"
 )
 
+// DBConfig represents the database configuration.
+// It contains the necessary fields to connect to a PostgreSQL database.
 type DBConfig struct {
 	Host     string `json:"host"`
 	Port     int    `json:"port"`
@@ -15,11 +18,14 @@ type DBConfig struct {
 	SSLMode  string `json:"sslmode"`
 }
 
+// ServiceConfig represents the configuration for the ingest service.
 type ServiceConfig struct {
 	InputDir string   `json:"input_dir"`
 	DB       DBConfig `json:"db"`
 }
 
+// Load reads the configuration from the specified JSON file.
+// It returns a ServiceConfig struct populated with the values from the file.
 func Load(path string) (*ServiceConfig, error) {
 	f, err := os.Open(path)
 	if err != nil {
