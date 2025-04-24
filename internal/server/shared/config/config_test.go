@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -9,20 +10,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/internal/server/shared/config"
+	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
 func createTempConfigFile(t *testing.T, content string) string {
 	t.Helper()
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "config.json")
-	if err := os.WriteFile(tmpFile, []byte(content), 0600); err != nil {
-		t.Fatalf("failed to write temp config file: %v", err)
-	}
+	require.NoError(t, os.WriteFile(tmpFile, []byte(content), 0600), "failed to write temp config file")
 	return tmpFile
 }
 
-func TestLoad_ValidConfig(t *testing.T) {
+func TestLoadValidConfig(t *testing.T) {
 	t.Parallel()
 	content := `{
 		"base_dir": "/tmp/data",
@@ -45,7 +47,7 @@ func TestLoad_ValidConfig(t *testing.T) {
 	}
 }
 
-func TestLoad_InvalidJSON(t *testing.T) {
+func TestLoadInvalidJSON(t *testing.T) {
 	t.Parallel()
 	content := `{
 		"base_dir": "/tmp/data",
@@ -53,59 +55,159 @@ func TestLoad_InvalidJSON(t *testing.T) {
 	tmpFile := createTempConfigFile(t, content)
 
 	cm := config.New(tmpFile)
-	if err := cm.Load(); err == nil {
-		t.Fatal("expected error loading malformed JSON, got nil")
-	}
+	require.Error(t, cm.Load(), "expected error loading malformed JSON")
 }
 
-func TestLoad_MissingFile(t *testing.T) {
+func TestLoadMissingFile(t *testing.T) {
 	t.Parallel()
 	cm := config.New("nonexistent.json")
-	if err := cm.Load(); err == nil {
-		t.Fatal("expected error loading missing config file, got nil")
+	require.Error(t, cm.Load(), "expected error loading missing config file")
+}
+
+func TestWatchMissingFile(t *testing.T) {
+	t.Parallel()
+	cm := config.New("somewhere/nonexistent.json")
+	watchErr := testWatch(t, cm)
+
+	select {
+	case err := <-watchErr:
+		require.Error(t, err, "expected error watching missing config file")
+	case <-time.After(200 * time.Millisecond):
+		require.Fail(t, "expected error watching missing config file")
 	}
 }
 
-func TestWatch_ConfigReloadsOnChange(t *testing.T) {
+func TestWatchConfigReloadsOnChange(t *testing.T) {
 	t.Parallel()
 	initial := `{"base_dir": "/tmp/initial", "allowList": ["alpha"]}`
 	updated := `{"base_dir": "/tmp/updated", "allowList": ["beta"]}`
 	tmpFile := createTempConfigFile(t, initial)
 
 	cm := config.New(tmpFile)
-	if err := cm.Load(); err != nil {
-		t.Fatalf("initial load failed: %v", err)
-	}
+	require.NoError(t, cm.Load(), "Setup: initial load failed")
 
-	go cm.Watch(t.Context())
-	time.Sleep(100 * time.Millisecond) // let watcher initialize
+	watchErr := testWatch(t, cm)
 
-	if err := os.WriteFile(tmpFile, []byte(updated), 0600); err != nil {
-		t.Fatalf("failed to write updated config: %v", err)
-	}
+	require.NoError(t, os.WriteFile(tmpFile, []byte(updated), 0600), "Setup: failed to write updated config")
 
-	time.Sleep(200 * time.Millisecond) // let watcher reload
+	time.Sleep(time.Second) // let watcher reload
 
-	if cm.BaseDir() != "/tmp/updated" {
-		t.Errorf("expected base_dir to be updated, got %s", cm.BaseDir())
-	}
+	assert.Equal(t, "/tmp/updated", cm.BaseDir(), "expected base_dir to be updated")
 	if got := cm.AllowList(); !reflect.DeepEqual(got, []string{"beta"}) {
 		t.Errorf("expected allowList [beta], got %v", got)
 	}
+
+	select {
+	case err := <-watchErr:
+		require.NoError(t, err, "expected no error watching config file")
+	case <-time.After(200 * time.Millisecond):
+	}
 }
 
-func TestConfigManager_ReadWhileWrite(t *testing.T) {
+func TestWatchConfigRemoved(t *testing.T) {
+	t.Parallel()
+	logs := map[slog.Level]uint{
+		slog.LevelInfo: 2,
+	}
+
+	initial := `{"base_dir": "/tmp/initial", "allowList": ["alpha"]}`
+	tmpFile := createTempConfigFile(t, initial)
+
+	l := testutils.NewMockHandler(slog.LevelDebug)
+	cm := config.New(tmpFile, config.WithLogger(slog.New(&l)))
+	require.NoError(t, cm.Load(), "Setup: initial load failed")
+	watchErr := testWatch(t, cm)
+
+	if !l.AssertLevels(t, logs) {
+		l.OutputLogs(t)
+	}
+
+	require.NoError(t, os.Remove(tmpFile), "Setup: failed to remove config file")
+	time.Sleep(200 * time.Millisecond) // let watcher reload
+
+	require.Error(t, cm.Load(), "Expected error loading removed config file")
+
+	if !l.AssertLevels(t, logs) {
+		l.OutputLogs(t)
+	}
+
+	select {
+	case err := <-watchErr:
+		require.NoError(t, err, "expected no error watching config file")
+	case <-time.After(200 * time.Millisecond):
+	}
+}
+
+func TestWatchIgnoresIrrelevantFiles(t *testing.T) {
+	t.Parallel()
+	logs := map[slog.Level]uint{
+		slog.LevelInfo: 2,
+	}
+
+	initial := `{"base_dir": "/tmp/initial", "allowList": ["alpha"]}`
+	tmpFile := createTempConfigFile(t, initial)
+	irrelevantFile := filepath.Join(filepath.Dir(tmpFile), "irrelevant.txt")
+
+	l := testutils.NewMockHandler(slog.LevelDebug)
+	cm := config.New(tmpFile, config.WithLogger(slog.New(&l)))
+	require.NoError(t, cm.Load(), "Setup: initial load failed")
+	watchErr := testWatch(t, cm)
+
+	if !l.AssertLevels(t, logs) {
+		l.OutputLogs(t)
+	}
+
+	require.NoError(t, os.WriteFile(irrelevantFile, []byte("irrelevant content"), 0600), "Setup: failed to write irrelevant file")
+	time.Sleep(200 * time.Millisecond) // let watcher reload
+
+	if !l.AssertLevels(t, logs) {
+		l.OutputLogs(t)
+	}
+
+	select {
+	case err := <-watchErr:
+		require.NoError(t, err, "expected no error watching config file")
+	case <-time.After(200 * time.Millisecond):
+	}
+}
+
+func TestWatchWarnsIfLoadFails(t *testing.T) {
+	t.Parallel()
+
+	initial := `{"base_dir": "/tmp/initial", "allowList": ["alpha"]}`
+	tmpFile := createTempConfigFile(t, initial)
+
+	l := testutils.NewMockHandler(slog.LevelInfo)
+	cm := config.New(tmpFile, config.WithLogger(slog.New(&l)))
+	require.NoError(t, cm.Load(), "Setup: initial load failed")
+	watchErr := testWatch(t, cm)
+
+	require.NoError(t, os.WriteFile(tmpFile, []byte("invalid json"), 0600), "Setup: failed to write invalid config")
+	time.Sleep(time.Second) // let watcher reload
+
+	// There are sometimes two warning entries due to how different OSes handle events related to os.WriteFile.
+	have := make(map[slog.Level]uint)
+	for _, r := range l.HandleCalls {
+		have[r.Level]++
+	}
+	assert.GreaterOrEqual(t, have[slog.LevelWarn], uint(1), "expected at least one warning log")
+	assert.LessOrEqual(t, have[slog.LevelWarn], uint(2), "expected at most two warning logs")
+
+	select {
+	case err := <-watchErr:
+		require.NoError(t, err, "expected no error watching config file")
+	case <-time.After(200 * time.Millisecond):
+	}
+}
+
+func TestConfigManagerReadWhileWrite(t *testing.T) {
 	content := `{}`
 	tmpFile := createTempConfigFile(t, content)
 
 	cm := config.New(tmpFile)
 	err := os.WriteFile(tmpFile, []byte(`{"base_dir":"/tmp/test","allowList":["foo"]}`), 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := cm.Load(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err, "Setup: Failed to write initial config")
+	require.NoError(t, cm.Load(), "Setup: Failed to load initial config")
 
 	var wg sync.WaitGroup
 	writeCount := 100
@@ -115,14 +217,14 @@ func TestConfigManager_ReadWhileWrite(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for i := 0; i < writeCount; i++ {
-			_ = os.WriteFile(tmpFile, []byte(fmt.Sprintf(`{"base_dir":"/tmp/test%d","allowList":["foo"]}`, i)), 0644)
+		for i := range writeCount {
+			_ = os.WriteFile(tmpFile, fmt.Appendf(nil, `{"base_dir":"/tmp/test%d","allowList":["foo"]}`, i), 0600)
 			_ = cm.Load()
 		}
 	}()
 
 	// Reader goroutines
-	for i := 0; i < readCount; i++ {
+	for range readCount {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -132,4 +234,17 @@ func TestConfigManager_ReadWhileWrite(t *testing.T) {
 	}
 
 	wg.Wait()
+	require.Equal(t, "/tmp/test99", cm.BaseDir(), "Expected base_dir to be /tmp/test99")
+	require.Equal(t, []string{"foo"}, cm.AllowList(), "Expected allowList to be [foo]")
+}
+
+func testWatch(t *testing.T, cm *config.Manager) chan error {
+	t.Helper()
+	watchErr := make(chan error, 1)
+	go func() {
+		defer close(watchErr)
+		watchErr <- cm.Watch(t.Context())
+	}()
+	time.Sleep(100 * time.Millisecond) // let watcher initialize
+	return watchErr
 }

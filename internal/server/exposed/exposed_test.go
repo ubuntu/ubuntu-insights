@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -165,17 +166,120 @@ func TestServeMulti(t *testing.T) {
 	}
 }
 
-func TestRunError(t *testing.T) {
+func TestRunSingle(t *testing.T) {
 	t.Parallel()
 
-	dConf := *defaultDaemonConfig
-	dConf.ListenPort = -1
-	cm := &testConfigManager{allowList: []string{}}
-	s := newForTest(t, cm, &dConf)
-	defer s.Quit(false)
+	const defaultApp = "goodapp"
 
-	err := s.Run()
-	require.Error(t, err, "Run should fail when the port is invalid")
+	tests := map[string]struct {
+		dConf exposed.DaemonConfig
+		cm    testConfigManager
+
+		method      string
+		path        string
+		contentType string
+		body        []byte
+		wantStatus  int
+		wantErr     bool
+	}{
+		"Version": {
+			method:     http.MethodGet,
+			path:       "/version",
+			wantStatus: http.StatusOK,
+		},
+		"Basic Upload": {},
+
+		// Bad Server Configurations
+		"Bad Port": {
+			dConf: func() exposed.DaemonConfig {
+				d := *defaultDaemonConfig
+				d.ListenPort = -1
+				return d
+			}(),
+			wantErr: true,
+		},
+		"Watch Error": {
+			cm: testConfigManager{
+				allowList: []string{defaultApp},
+				watchErr:  fmt.Errorf("requested watch error"),
+			},
+			wantErr: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if tc.dConf == (exposed.DaemonConfig{}) {
+				tc.dConf = *defaultDaemonConfig
+			}
+
+			if tc.method == "" {
+				tc.method = http.MethodPost
+			}
+			if tc.path == "" {
+				tc.path = "/upload/" + defaultApp
+			}
+			if tc.contentType == "" {
+				tc.contentType = "application/json"
+			}
+			if tc.body == nil {
+				tc.body = []byte(`{"foo":"bar"}`)
+			}
+			if tc.wantStatus == 0 {
+				tc.wantStatus = http.StatusAccepted
+			}
+			if tc.cm.allowList == nil {
+				tc.cm.allowList = []string{defaultApp}
+			}
+
+			s := newForTest(t, &tc.cm, &tc.dConf)
+			defer s.Quit(false)
+
+			runErr := make(chan error, 1)
+			go func() {
+				defer close(runErr)
+				runErr <- s.Run()
+			}()
+			time.Sleep(100 * time.Millisecond)
+
+			select {
+			case err := <-runErr:
+				if tc.wantErr {
+					require.Error(t, err, "Run should fail")
+					return
+				}
+				require.NoError(t, err, "Run should not fail")
+			case <-time.After(1 * time.Second):
+			}
+
+			req, err := http.NewRequest(tc.method, "http://"+s.Addr()+tc.path, bytes.NewReader(tc.body))
+			require.NoError(t, err, "Setup: failed to create request")
+			req.Header.Set("Content-Type", tc.contentType)
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, tc.wantStatus, resp.StatusCode, "status")
+
+			// Check files and file content, ignore uuid name
+			if tc.wantStatus == http.StatusAccepted {
+				app := filepath.Base(tc.path)
+				contents, err := testutils.GetDirContents(t, filepath.Join(tc.cm.baseDir, app), 3)
+				require.NoError(t, err)
+				assert.Len(t, contents, 1, "one file created")
+				var got string
+				for _, v := range contents {
+					got = v
+					break
+				}
+				want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+				assert.Equal(t, want, got, "unexpected, file content")
+			}
+		})
+	}
 }
 
 func TestRunAfterQuitErrors(t *testing.T) {
@@ -217,18 +321,29 @@ func TestRunAfterQuitErrors(t *testing.T) {
 }
 
 type testConfigManager struct {
-	allowList []string
-	baseDir   string
-	loadErr   error
+	allowList   []string
+	baseDir     string
+	finishWatch bool
+	loadErr     error
+	watchErr    error
 }
 
 func (t testConfigManager) Load() error {
 	return t.loadErr
 }
 
-func (t testConfigManager) Watch(ctx context.Context) {
+func (t testConfigManager) Watch(ctx context.Context) error {
 	// Simulate watching for changes
+	if t.finishWatch {
+		<-ctx.Done()
+	}
+	if t.watchErr != nil {
+		return t.watchErr
+	}
+
+	// Block until the context is done
 	<-ctx.Done()
+	return nil
 }
 
 func (t testConfigManager) AllowList() []string {

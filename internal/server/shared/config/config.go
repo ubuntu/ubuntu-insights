@@ -28,13 +28,33 @@ type Conf struct {
 // Manager is a struct that manages the configuration.
 type Manager struct {
 	config     Conf
-	Lock       sync.RWMutex
+	lock       sync.RWMutex
 	configPath string
+
+	log *slog.Logger
 }
 
+type options struct {
+	Logger *slog.Logger
+}
+
+// Options represents an optional function to override Manager default values.
+type Options func(*options)
+
 // New creates a new configuration manager with the specified path.
-func New(path string) *Manager {
-	return &Manager{configPath: path}
+func New(path string, args ...Options) *Manager {
+	opts := options{
+		Logger: slog.Default(),
+	}
+
+	for _, opt := range args {
+		opt(&opts)
+	}
+
+	return &Manager{
+		configPath: path,
+		log:        opts.Logger,
+	}
 }
 
 // Load reads the configuration from the specified file and updates the internal state.
@@ -51,20 +71,19 @@ func (cm *Manager) Load() error {
 		return fmt.Errorf("decoding config JSON: %w", err)
 	}
 
-	cm.Lock.Lock()
+	cm.lock.Lock()
 	cm.config = newConfig
-	cm.Lock.Unlock()
+	cm.lock.Unlock()
 
-	slog.Info("Configuration loaded", "config", cm.config)
+	cm.log.Info("Configuration loaded", "config", cm.config)
 	return nil
 }
 
 // Watch starts watching the configuration file for changes.
-func (cm *Manager) Watch(ctx context.Context) {
+func (cm *Manager) Watch(ctx context.Context) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		slog.Warn("Failed to create watcher", "err", err)
-		return
+		return fmt.Errorf("failed to create watcher: %v", err)
 	}
 	defer watcher.Close()
 
@@ -73,49 +92,50 @@ func (cm *Manager) Watch(ctx context.Context) {
 		configDir = "."
 	}
 	if err := watcher.Add(configDir); err != nil {
-		slog.Warn("Failed to add directory to watcher", "dir", configDir, "err", err)
-		return
+		return fmt.Errorf("failed to add directory %s to watcher: %v", configDir, err)
 	}
 
-	slog.Info("Watching configuration directory", "dir", configDir)
-
+	cm.log.Info("Watching configuration directory", "dir", configDir)
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("Configuration watcher stopped")
-			return
+			cm.log.Info("Configuration watcher stopped")
+			return nil
 		case event, ok := <-watcher.Events:
 			if !ok {
-				return
+				return fmt.Errorf("watcher events channel closed unexpectedly")
 			}
 			if event.Op != fsnotify.Write && event.Op != fsnotify.Create {
 				continue
 			}
 
-			slog.Debug("Configuration file changed. Reloading...")
+			if event.Name != cm.configPath {
+				continue
+			}
 
+			cm.log.Debug("Configuration file changed. Reloading...")
 			if err := cm.Load(); err != nil {
-				slog.Warn("Error reloading config", "err", err)
+				cm.log.Warn("Error reloading config", "err", err)
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {
-				return
+				return fmt.Errorf("watcher errors channel closed unexpectedly")
 			}
-			slog.Warn("Watcher error", "err", err)
+			cm.log.Warn("Watcher error", "err", err)
 		}
 	}
 }
 
 // BaseDir returns the base directory from the configuration.
 func (cm *Manager) BaseDir() string {
-	cm.Lock.RLock()
-	defer cm.Lock.RUnlock()
+	cm.lock.RLock()
+	defer cm.lock.RUnlock()
 	return cm.config.BaseDir
 }
 
 // AllowList returns the allow list from the configuration.
 func (cm *Manager) AllowList() []string {
-	cm.Lock.RLock()
-	defer cm.Lock.RUnlock()
+	cm.lock.RLock()
+	defer cm.lock.RUnlock()
 	return cm.config.AllowedList
 }

@@ -18,6 +18,7 @@ import (
 type Server struct {
 	ipLimiter  *middleware.IPLimiter
 	httpServer *http.Server
+	cm         dConfigManager
 
 	// This context is used to interrupt any action.
 	// It must be the parent of gracefulCtx.
@@ -48,7 +49,7 @@ type DaemonConfig struct {
 
 type dConfigManager interface {
 	Load() error
-	Watch(context.Context)
+	Watch(context.Context) error
 	AllowList() []string
 	BaseDir() string
 }
@@ -62,10 +63,9 @@ func (c DaemonConfig) New(ctx context.Context, cm dConfigManager) (*Server, erro
 	ctx, cancel := context.WithCancel(ctx)
 	gCtx, gCancel := context.WithCancel(ctx)
 
-	go cm.Watch(gCtx)
-
 	s := Server{
 		ipLimiter: middleware.New(rate.Limit(c.RateLimitPS), c.BurstLimit),
+		cm:        cm,
 		ctx:       ctx,
 		cancel:    cancel,
 
@@ -98,6 +98,11 @@ func (s *Server) Run() error {
 		return errors.New("server is already shutting down")
 	default:
 	}
+	watchErrCh := make(chan error, 1)
+	go func() {
+		watchErrCh <- s.cm.Watch(s.gracefulCtx)
+		close(watchErrCh)
+	}()
 
 	serverErr := make(chan error, 1)
 	go func() {
@@ -129,6 +134,14 @@ func (s *Server) Run() error {
 		// unlikely: ListenAndServe returned nil
 		s.cancel()
 		return nil
+	case err := <-watchErrCh:
+		if err != nil {
+			slog.Error("Config watcher encountered error", "err", err)
+		}
+		errC := s.httpServer.Close()
+		s.cancel()
+
+		return errors.Join(err, errC)
 	}
 }
 
