@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"os"
+	"runtime"
 	"syscall"
 	"testing"
 	"time"
@@ -63,6 +64,11 @@ func TestRun(t *testing.T) {
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// Windows doesn't support delivering signals to the process itself.
+			if runtime.GOOS == "windows" && tc.sendSig != 0 {
+				t.Skipf("Skipping test %s on Windows: signals are not supported", name)
+			}
+
 			a := myApp{
 				done:             make(chan struct{}),
 				runError:         tc.runError,

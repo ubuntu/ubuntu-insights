@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -65,6 +66,9 @@ func TestUsageError(t *testing.T) {
 }
 
 func TestAppCanSigHupAfterExecute(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping Hup test on Windows")
+	}
 	r, w, err := os.Pipe()
 	require.NoError(t, err, "Setup: pipe shouldn't fail")
 
