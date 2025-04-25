@@ -1,3 +1,4 @@
+// Package main provides the entry point for the ingest service.
 package main
 
 import (
@@ -37,5 +38,4 @@ func main() {
 
 		time.Sleep(30 * time.Second)
 	}
-
 }
