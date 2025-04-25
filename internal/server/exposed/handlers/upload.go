@@ -57,7 +57,7 @@ func (h *Upload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, h.maxUploadSize)
 	jsonData, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Failed to read body: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
 		slog.Error("Error reading the file", "req_id", reqID, "app", app, "err", err)
 		return
 	}
@@ -69,7 +69,7 @@ func (h *Upload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	targetDir := filepath.Join(h.config.BaseDir(), app)
 	if err := os.MkdirAll(targetDir, 0750); err != nil {
-		http.Error(w, "Error creating directory: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error creating directory", http.StatusInternalServerError)
 		slog.Error("Error creating directory", "req_id", reqID, "app", app, "target", targetDir, "err", err)
 		return
 	}
@@ -78,7 +78,7 @@ func (h *Upload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	targetPath := filepath.Join(targetDir, safeFilename)
 
 	if err := fileutils.AtomicWrite(targetPath, jsonData); err != nil {
-		http.Error(w, "Error saving file: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error saving file", http.StatusInternalServerError)
 		slog.Error("Error saving file", "req_id", reqID, "app", app, "target", targetPath, "err", err)
 		return
 	}
