@@ -29,7 +29,7 @@ type App struct {
 // appConfig holds the configuration for the application.
 type appConfig struct {
 	Verbosity int
-	Daemon    exposed.DaemonConfig
+	Daemon    exposed.StaticConfig
 }
 
 const (
@@ -85,7 +85,7 @@ func New() (*App, error) {
 func installRootCmd(app *App) error {
 	cmd := app.cmd
 
-	defaultConf := exposed.DaemonConfig{
+	defaultConf := exposed.StaticConfig{
 		ConfigPath:     "config.json",
 		ReadTimeout:    5 * time.Second,
 		WriteTimeout:   10 * time.Second,

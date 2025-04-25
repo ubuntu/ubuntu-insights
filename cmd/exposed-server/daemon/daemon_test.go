@@ -45,7 +45,7 @@ func TestDaeConfigBadPathErrors(t *testing.T) {
 	t.Parallel()
 
 	conf := &daemon.AppConfig{
-		Daemon: exposed.DaemonConfig{
+		Daemon: exposed.StaticConfig{
 			ConfigPath: "/does/not/exist.yaml",
 		},
 	}

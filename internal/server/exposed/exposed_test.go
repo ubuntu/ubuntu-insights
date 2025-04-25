@@ -19,7 +19,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
-var defaultDaemonConfig = &exposed.DaemonConfig{
+var defaultDaemonConfig = &exposed.StaticConfig{
 	ReadTimeout:    5 * time.Second,
 	WriteTimeout:   10 * time.Second,
 	RequestTimeout: 3 * time.Second,
@@ -50,7 +50,7 @@ func TestNew(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			daemonConfig := &exposed.DaemonConfig{
+			daemonConfig := &exposed.StaticConfig{
 				ConfigPath: exposed.GenerateTestDaeConfig(t, &config.Conf{}),
 			}
 
@@ -172,7 +172,7 @@ func TestRunSingle(t *testing.T) {
 	const defaultApp = "goodapp"
 
 	tests := map[string]struct {
-		dConf exposed.DaemonConfig
+		dConf exposed.StaticConfig
 		cm    testConfigManager
 
 		method      string
@@ -209,7 +209,7 @@ func TestRunSingle(t *testing.T) {
 
 		// Bad Server Configurations
 		"Bad Port": {
-			dConf: func() exposed.DaemonConfig {
+			dConf: func() exposed.StaticConfig {
 				d := *defaultDaemonConfig
 				d.ListenPort = -1
 				return d
@@ -229,7 +229,7 @@ func TestRunSingle(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.dConf == (exposed.DaemonConfig{}) {
+			if tc.dConf == (exposed.StaticConfig{}) {
 				tc.dConf = *defaultDaemonConfig
 			}
 
@@ -372,7 +372,7 @@ func (t testConfigManager) BaseDir() string {
 	return t.baseDir
 }
 
-func newForTest(t *testing.T, cm *testConfigManager, daemonConfig *exposed.DaemonConfig) *exposed.Server {
+func newForTest(t *testing.T, cm *testConfigManager, daemonConfig *exposed.StaticConfig) *exposed.Server {
 	t.Helper()
 
 	if cm.baseDir == "" {

@@ -30,8 +30,8 @@ type Server struct {
 	gracefulCancel context.CancelFunc
 }
 
-// DaemonConfig holds the static configuration for the server.
-type DaemonConfig struct {
+// StaticConfig holds the static configuration for the server.
+type StaticConfig struct {
 	ConfigPath string
 
 	ReadTimeout    time.Duration
@@ -55,7 +55,7 @@ type dConfigManager interface {
 }
 
 // New creates a new Server instance with the given http.Server and config.ConfigManager.
-func (c DaemonConfig) New(ctx context.Context, cm dConfigManager) (*Server, error) {
+func (c StaticConfig) New(ctx context.Context, cm dConfigManager) (*Server, error) {
 	if err := cm.Load(); err != nil {
 		return nil, fmt.Errorf("failed to load configuration: %v", err)
 	}
