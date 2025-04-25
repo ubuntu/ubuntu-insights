@@ -1,0 +1,47 @@
+// Package storage provides the database connection and upload functionality for the ingest service.
+// It handles the connection to a PostgreSQL database and provides methods to upload data.
+package storage
+
+import (
+	"database/sql"
+	"fmt"
+	"log/slog"
+	"sync"
+
+	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/config"
+)
+
+var (
+	db   *sql.DB
+	once sync.Once
+)
+
+// Initialize sets up the database connection using the provided configuration.
+func Initialize(cfg config.DBConfig) error {
+	var err error
+	once.Do(func() {
+		dsn := fmt.Sprintf(
+			"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+			cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName, cfg.SSLMode,
+		)
+
+		db, err = sql.Open("postgres", dsn)
+		if err != nil {
+			return
+		}
+
+		if pingErr := db.Ping(); pingErr != nil {
+			err = pingErr
+			return
+		}
+	})
+	return err
+}
+
+// Get returns the initialized database connection.
+func Get() *sql.DB {
+	if db == nil {
+		slog.Error("DB not initialized", "err", "Call storage.Initialize first")
+	}
+	return db
+}
