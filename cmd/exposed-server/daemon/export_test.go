@@ -60,8 +60,9 @@ func GenerateTestConfig(t *testing.T, origConf *AppConfig, daeConf *config.Conf)
 		conf.Verbosity = 2
 	}
 
-	daeConfPath := GenerateTestDaeConfig(t, daeConf)
-	conf.Daemon.ConfigPath = daeConfPath
+	if conf.Daemon.ConfigPath == "" {
+		conf.Daemon.ConfigPath = GenerateTestDaeConfig(t, daeConf)
+	}
 
 	d, err := yaml.Marshal(conf)
 	require.NoError(t, err, "Setup: failed to marshal config for tests")

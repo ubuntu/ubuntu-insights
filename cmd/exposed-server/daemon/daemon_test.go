@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/cmd/exposed-server/daemon"
+	"github.com/ubuntu/ubuntu-insights/internal/server/exposed"
 	"github.com/ubuntu/ubuntu-insights/internal/server/shared/config"
 )
 
@@ -38,6 +39,27 @@ func TestConfigBadArg(t *testing.T) {
 
 	err = a.Run()
 	require.Error(t, err, "Run should return an error")
+}
+
+func TestDaeConfigBadPathErrors(t *testing.T) {
+	t.Parallel()
+
+	conf := &daemon.AppConfig{
+		Daemon: exposed.DaemonConfig{
+			ConfigPath: "/does/not/exist.yaml",
+		},
+	}
+	a := daemon.NewForTests(t, conf, nil)
+
+	chErr := make(chan error, 1)
+	go func() {
+		chErr <- a.Run()
+	}()
+	a.WaitReady()
+	time.Sleep(50 * time.Millisecond)
+
+	err := <-chErr
+	require.Error(t, err, "Run should return with an error")
 }
 
 func TestNoUsageError(t *testing.T) {
