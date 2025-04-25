@@ -77,3 +77,8 @@ func GenerateTestConfig(t *testing.T, origConf *AppConfig, daeConf *config.Conf)
 func (a *App) SetArgs(args ...string) {
 	a.cmd.SetArgs(args)
 }
+
+// SetSilenceUsage set the SilenceUsage flag on root command for tests.
+func (a *App) SetSilenceUsage(silence bool) {
+	a.cmd.SilenceUsage = silence
+}

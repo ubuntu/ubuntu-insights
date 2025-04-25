@@ -87,6 +87,14 @@ func TestUsageError(t *testing.T) {
 	require.Error(t, err, "Run should return an error")
 	isUsageError := a.UsageError()
 	require.True(t, isUsageError, "Usage error is reported as such")
+
+	// Test when SilenceUsage is true
+	a.SetSilenceUsage(true)
+	assert.False(t, a.UsageError())
+
+	// Test when SilenceUsage is false
+	a.SetSilenceUsage(false)
+	assert.True(t, a.UsageError())
 }
 
 func TestAppCanSigHupAfterExecute(t *testing.T) {
