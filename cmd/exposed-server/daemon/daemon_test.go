@@ -9,8 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/cmd/exposed-server/daemon"
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/server/exposed"
 	"github.com/ubuntu/ubuntu-insights/internal/server/shared/config"
 )
@@ -120,6 +122,16 @@ func TestBadConfigReturnsError(t *testing.T) {
 
 	err = a.Run()
 	require.Error(t, err, "Run should return an error on config file")
+}
+
+func TestRootCmd(t *testing.T) {
+	app, err := daemon.New()
+	require.NoError(t, err)
+
+	cmd := app.RootCmd()
+
+	assert.NotNil(t, cmd, "Returned root cmd should not be nil")
+	assert.Equal(t, constants.EServerCmdName, cmd.Name())
 }
 
 // startDaemon prepares and starts the daemon in the background. The done function should be called

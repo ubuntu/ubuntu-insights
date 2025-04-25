@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/ubuntu/ubuntu-insights/internal/cli"
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/server/exposed"
 	"github.com/ubuntu/ubuntu-insights/internal/server/shared/config"
 )
@@ -32,16 +33,12 @@ type appConfig struct {
 	Daemon    exposed.StaticConfig
 }
 
-const (
-	esCmdName = "ubuntu-insights-eserver"
-)
-
 // New creates a new App instance with default values.
 func New() (*App, error) {
 	a := App{ready: make(chan struct{})}
 
 	a.cmd = &cobra.Command{
-		Use:           esCmdName,
+		Use:           constants.EServerCmdName,
 		Short:         "Ubuntu Insights internet exposed server",
 		Long:          "Ubuntu Insights internet exposed server used for accepting insights reports from clients.",
 		SilenceErrors: true,
@@ -49,7 +46,7 @@ func New() (*App, error) {
 			// Command parsing has been successful. Returns to not print usage anymore.
 			a.cmd.SilenceUsage = true
 			cli.SetVerbosity(a.config.Verbosity) // Set verbosity before loading config
-			if err := cli.InitViperConfig(esCmdName, a.cmd, a.viper); err != nil {
+			if err := cli.InitViperConfig(constants.EServerCmdName, a.cmd, a.viper); err != nil {
 				return err
 			}
 			if err := a.viper.Unmarshal(&a.config); err != nil {

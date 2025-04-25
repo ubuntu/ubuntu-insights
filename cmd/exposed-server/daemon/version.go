@@ -10,7 +10,7 @@ import (
 func (a *App) installVersion() {
 	cmd := &cobra.Command{
 		Use:   "version",
-		Short: "Returns version of " + esCmdName + " and exits",
+		Short: "Returns the running version of " + constants.EServerCmdName + " and exits",
 		Args:  cobra.NoArgs,
 		RunE:  func(cmd *cobra.Command, args []string) error { return getVersion() },
 	}
@@ -19,6 +19,6 @@ func (a *App) installVersion() {
 
 // getVersion returns the current service version.
 func getVersion() (err error) {
-	fmt.Printf("%s\t%s\n", esCmdName, constants.Version)
+	fmt.Printf("%s\t%s\n", constants.EServerCmdName, constants.Version)
 	return nil
 }

@@ -19,13 +19,3 @@ func TestUsageError(t *testing.T) {
 	app.cmd.SilenceUsage = false
 	assert.True(t, app.UsageError())
 }
-
-func TestRootCmd(t *testing.T) {
-	app, err := New()
-	require.NoError(t, err)
-
-	cmd := app.RootCmd()
-
-	assert.NotNil(t, cmd, "Returned root cmd should not be nil")
-	assert.Equal(t, esCmdName, cmd.Name())
-}
