@@ -189,6 +189,24 @@ func TestRunSingle(t *testing.T) {
 		},
 		"Basic Upload": {},
 
+		// Bad Requests
+		"Bad App StatusForbidden": {
+			path:       "/upload/badapp",
+			wantStatus: http.StatusForbidden,
+		},
+		"Bad JSON StatusBadRequest": {
+			body:       []byte(`not-json`),
+			wantStatus: http.StatusBadRequest,
+		},
+		"Bad Method StatusMethodNotAllowed": {
+			method:     http.MethodGet,
+			wantStatus: http.StatusMethodNotAllowed,
+		},
+		"Bad Path StatusNotFound": {
+			path:       "/unknown-path",
+			wantStatus: http.StatusNotFound,
+		},
+
 		// Bad Server Configurations
 		"Bad Port": {
 			dConf: func() exposed.DaemonConfig {
