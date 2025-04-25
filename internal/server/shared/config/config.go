@@ -105,7 +105,7 @@ func (cm *Manager) Watch(ctx context.Context) error {
 			if !ok {
 				return fmt.Errorf("watcher events channel closed unexpectedly")
 			}
-			if event.Op != fsnotify.Write && event.Op != fsnotify.Create {
+			if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename) == 0 {
 				continue
 			}
 
