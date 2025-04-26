@@ -8,12 +8,15 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/config"
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/models"
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/storage"
 )
+
+var semverRegex = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
 
 func validateGeneratedTime(generated string) error {
 	parsedTime, err := time.Parse(time.RFC3339, generated)
@@ -50,6 +53,11 @@ func validateFile(data *models.FileData, path string) error {
 	}
 	if err := validateGeneratedTime(data.Generated); err != nil {
 		return fmt.Errorf("Generated timestamp is invalid: %w", err)
+	}
+
+	// Validate SchemaVersion
+	if !semverRegex.MatchString(data.SchemaVersion) {
+		return fmt.Errorf("invalid schema version %q", data.SchemaVersion)
 	}
 
 	return nil
