@@ -29,7 +29,7 @@ func getJSONFiles(dir string) ([]string, error) {
 	return files, err
 }
 
-func processFile(file string) error {
+func processFile(file string) (*models.FileData, error) {
 	defer func() {
 		if err := os.Remove(file); err != nil {
 			slog.Warn("Failed to remove file after processing", "file", file, "err", err)
@@ -40,15 +40,15 @@ func processFile(file string) error {
 
 	data, err := os.ReadFile(file)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var fileData models.FileData
 	if err = json.Unmarshal(data, &fileData); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &fileData, nil
 }
 
 // ProcessFiles processes all JSON files in the specified directory.
@@ -62,11 +62,17 @@ func ProcessFiles(cfg *config.ServiceConfig) error {
 	}
 
 	for _, file := range files {
-		err := processFile(file)
+		fileData, err := processFile(file)
 		if err != nil {
 			slog.Warn("Failed to process file", "file", file, "err", err)
 			continue
 		}
+
+		if err = storage.UploadToPostgres(fileData); err != nil {
+			slog.Warn("Failed to upload file to PostgreSQL", "file", file, "err", err)
+			continue
+		}
+
 		slog.Info("Successfully processed and uploaded file", "file", file)
 	}
 
