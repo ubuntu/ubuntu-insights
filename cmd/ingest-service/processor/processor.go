@@ -4,12 +4,25 @@ package processor
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/config"
 )
 
 func getJSONFiles(dir string) ([]string, error) {
-	return nil, nil
+	var files []string
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && filepath.Ext(path) == ".json" {
+			files = append(files, path)
+		}
+		return nil
+	})
+
+	return files, err
 }
 
 func processSingleFile(file string) error {
