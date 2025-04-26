@@ -60,6 +60,13 @@ func validateFile(data *models.FileData, path string) error {
 		return fmt.Errorf("invalid schema version %q", data.SchemaVersion)
 	}
 
+	if len(data.Common) == 0 {
+		return fmt.Errorf("empty payload")
+	}
+	if len(data.AppData) == 0 {
+		return fmt.Errorf("empty payload")
+	}
+	
 	return nil
 }
 
