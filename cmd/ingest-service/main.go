@@ -34,7 +34,7 @@ func main() {
 		return
 	}
 	defer func() {
-		if err := storage.Close(); err != nil {
+		if err := storage.Close(5 * time.Second); err != nil {
 			slog.Error("Error closing database", "err", err)
 		} else {
 			slog.Info("Database connection closed successfully")

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	_ "github.com/lib/pq" // PostgreSQL driver.
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/config"
@@ -49,11 +50,23 @@ func Get() *sql.DB {
 }
 
 // Close closes the database connection.
-func Close() error {
-	if db != nil {
-		return db.Close()
+func Close(timeout time.Duration) error {
+	if db == nil {
+		return nil
 	}
-	return nil
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		db.Close()
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-time.After(timeout):
+		return fmt.Errorf("timeout while closing database")
+	}
 }
 
 // UploadToPostgres uploads the provided FileData to the PostgreSQL database.
