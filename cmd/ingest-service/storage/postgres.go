@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"sync"
 
+	// _ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/config"
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/models"
 )
