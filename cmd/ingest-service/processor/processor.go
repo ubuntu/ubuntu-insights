@@ -14,6 +14,20 @@ import (
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/storage"
 )
 
+
+func validateFile(data *models.FileData, path string) error {
+	// Validate AppID
+	if data.AppID == "" {
+		return fmt.Errorf("AppID is required")
+	}
+	parentDir := filepath.Base(filepath.Dir(path))
+	if data.AppID != parentDir {
+		return fmt.Errorf("AppID %q does not match target app %q", data.AppID, parentDir)
+	}
+
+	return nil
+}
+
 func getJSONFiles(dir string) ([]string, error) {
 	var files []string
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
