@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/config"
+	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/models"
 )
 
 var (
@@ -44,4 +45,9 @@ func Get() *sql.DB {
 		slog.Error("DB not initialized", "err", "Call storage.Initialize first")
 	}
 	return db
+}
+
+// UploadToPostgres uploads the provided FileData to the PostgreSQL database.
+func UploadToPostgres(data *models.FileData) error {
+	return nil
 }
