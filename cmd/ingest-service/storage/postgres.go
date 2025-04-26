@@ -8,7 +8,7 @@ import (
 	"log/slog"
 	"sync"
 
-	// _ "github.com/lib/pq" // PostgreSQL driver
+	_ "github.com/lib/pq" // PostgreSQL driver.
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/config"
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/models"
 )
@@ -48,8 +48,20 @@ func Get() *sql.DB {
 	return db
 }
 
+// Close closes the database connection.
+func Close() error {
+	if db != nil {
+		return db.Close()
+	}
+	return nil
+}
+
 // UploadToPostgres uploads the provided FileData to the PostgreSQL database.
 func UploadToPostgres(data *models.FileData) error {
+	if db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
 	cmd := `INSERT INTO $1 (generated, schema_version) VALUES ($2, $3)`
 	_, err := db.Exec(cmd, data.AppID, data.Generated, data.SchemaVersion)
 
