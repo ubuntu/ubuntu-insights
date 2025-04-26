@@ -3,11 +3,15 @@
 package processor
 
 import (
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/config"
+	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/models"
+	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/storage"
 )
 
 func getJSONFiles(dir string) ([]string, error) {
@@ -25,7 +29,25 @@ func getJSONFiles(dir string) ([]string, error) {
 	return files, err
 }
 
-func processSingleFile(file string) error {
+func processFile(file string) error {
+	defer func() {
+		if err := os.Remove(file); err != nil {
+			slog.Warn("Failed to remove file after processing", "file", file, "err", err)
+		} else {
+			slog.Info("Removed file", "file", file)
+		}
+	}()
+
+	data, err := os.ReadFile(file)
+	if err != nil {
+		return err
+	}
+
+	var fileData models.FileData
+	if err = json.Unmarshal(data, &fileData); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -40,7 +62,12 @@ func ProcessFiles(cfg *config.ServiceConfig) error {
 	}
 
 	for _, file := range files {
-		processSingleFile(file)
+		err := processFile(file)
+		if err != nil {
+			slog.Warn("Failed to process file", "file", file, "err", err)
+			continue
+		}
+		slog.Info("Successfully processed and uploaded file", "file", file)
 	}
 
 	return nil
