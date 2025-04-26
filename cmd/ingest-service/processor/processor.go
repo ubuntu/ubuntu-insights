@@ -8,12 +8,26 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/config"
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/models"
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/storage"
 )
 
+func validateGeneratedTime(generated string) error {
+	parsedTime, err := time.Parse(time.RFC3339, generated)
+	if err != nil {
+		return fmt.Errorf("invalid Generated time format: %w", err)
+	}
+
+	now := time.Now()
+	if parsedTime.After(now) {
+		return fmt.Errorf("Generated time is in the future")
+	}
+
+	return nil
+}
 
 func validateFile(data *models.FileData, path string) error {
 	// Validate AppID
@@ -23,6 +37,14 @@ func validateFile(data *models.FileData, path string) error {
 	parentDir := filepath.Base(filepath.Dir(path))
 	if data.AppID != parentDir {
 		return fmt.Errorf("AppID %q does not match target app %q", data.AppID, parentDir)
+	}
+
+	// Validate Generated timestamp
+	if data.Generated == "" {
+		return fmt.Errorf("Generated timestamp is required")
+	}
+	if err := validateGeneratedTime(data.Generated); err != nil {
+		return fmt.Errorf("Generated timestamp is invalid: %w", err)
 	}
 
 	return nil
