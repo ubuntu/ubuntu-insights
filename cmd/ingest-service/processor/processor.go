@@ -26,6 +26,11 @@ func validateGeneratedTime(generated string) error {
 		return fmt.Errorf("Generated time is in the future")
 	}
 
+	inceptionDate := time.Date(2025, 4, 1, 0, 0, 0, 0, time.UTC)
+	if parsedTime.Before(inceptionDate) {
+		return fmt.Errorf("generated time %q is before inception of ubuntu-insights v2 %q", generated, inceptionDate.Format(time.RFC3339))
+	}
+
 	return nil
 }
 
