@@ -104,6 +104,10 @@ func processFile(file string) (*models.FileData, error) {
 		return nil, err
 	}
 
+	if err := validateFile(&fileData, file); err != nil {
+		return nil, err
+	}
+
 	return &fileData, nil
 }
 
