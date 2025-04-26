@@ -50,5 +50,8 @@ func Get() *sql.DB {
 
 // UploadToPostgres uploads the provided FileData to the PostgreSQL database.
 func UploadToPostgres(data *models.FileData) error {
-	return nil
+	cmd := `INSERT INTO $1 (generated, schema_version) VALUES ($2, $3)`
+	_, err := db.Exec(cmd, data.AppID, data.Generated, data.SchemaVersion)
+
+	return err
 }
