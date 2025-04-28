@@ -50,16 +50,37 @@ func main() {
 
 	slog.Info("Ingest service started")
 
-	for {
-		select {
-		case <-ctx.Done():
-			slog.Info("Shutdown signal received, exiting...")
-			return
+	// Channel to signal when the last processing finishes
+	idle := make(chan struct{})
 
-		case <-ticker.C:
-			if err := processor.ProcessFiles(cfg); err != nil {
-				slog.Warn("Failed to process files", "err", err)
+	go func() {
+		defer close(idle)
+
+		for {
+			select {
+			case <-ctx.Done():
+				// Stop processing new work immediately
+				slog.Info("Shutdown signal received, waiting for current work to finish...")
+				return
+
+			case <-ticker.C:
+				// Only process if context isn't already canceled
+				if ctx.Err() != nil {
+					return
+				}
+
+				if err := processor.ProcessFiles(ctx, cfg); err != nil {
+					slog.Warn("Failed to process files", "err", err)
+				}
 			}
 		}
-	}
+	}()
+
+	// Wait until either:
+	// - Context is canceled
+	// - Ongoing work finishes (whichever happens later)
+	<-ctx.Done()
+	<-idle
+
+	slog.Info("Ingest service shutdown complete")
 }
