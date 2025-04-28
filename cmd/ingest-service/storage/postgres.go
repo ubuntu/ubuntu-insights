@@ -3,13 +3,15 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
 	"time"
 
-	_ "github.com/lib/pq" // PostgreSQL driver.
+	"github.com/lib/pq"
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/config"
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/models"
 )
@@ -70,13 +72,19 @@ func Close(timeout time.Duration) error {
 }
 
 // UploadToPostgres uploads the provided FileData to the PostgreSQL database.
-func UploadToPostgres(data *models.FileData) error {
+func UploadToPostgres(ctx context.Context, data *models.FileData) error {
 	if db == nil {
 		return fmt.Errorf("database not initialized")
 	}
 
-	cmd := `INSERT INTO $1 (generated, schema_version) VALUES ($2, $3)`
-	_, err := db.Exec(cmd, data.AppID, data.Generated, data.SchemaVersion)
+	query := fmt.Sprintf(`INSERT INTO %s (generated, schema_version) VALUES ($2, $3)`, pq.QuoteIdentifier(data.AppID))
+	_, err := db.ExecContext(ctx, query, data.AppID, data.Generated, data.SchemaVersion)
 
-	return err
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return fmt.Errorf("upload canceled: %w", err)
+		}
+		return fmt.Errorf("failed to upload data: %w", err)
+	}
+	return nil
 }
