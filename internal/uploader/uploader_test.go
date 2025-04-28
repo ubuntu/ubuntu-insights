@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -245,9 +246,10 @@ func TestBackoffUpload(t *testing.T) {
 				tc.initialResponse = defaultResponse
 			}
 
+			var bc atomic.Int64
+			bc.Store(int64(tc.badCount))
 			ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if tc.badCount > 0 {
-					tc.badCount--
+				if bc.Add(-1) >= 0 {
 					// Unresponsive server if initialResponseCode < 0
 					if tc.initialResponse < 0 {
 						time.Sleep(4 * time.Second)
