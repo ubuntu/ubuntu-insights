@@ -1,4 +1,4 @@
-// Package main is the entry point for the exposed-server application.
+// Package main is the entry point for the web service application.
 package main
 
 import (
@@ -8,7 +8,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/ubuntu/ubuntu-insights/cmd/exposed-server/daemon"
+	"github.com/ubuntu/ubuntu-insights/cmd/web-service/daemon"
 )
 
 func main() {

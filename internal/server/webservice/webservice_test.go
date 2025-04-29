@@ -1,4 +1,4 @@
-package exposed_test
+package webservice_test
 
 import (
 	"bytes"
@@ -14,12 +14,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/ubuntu-insights/internal/server/exposed"
 	"github.com/ubuntu/ubuntu-insights/internal/server/shared/config"
+	"github.com/ubuntu/ubuntu-insights/internal/server/webservice"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
-var defaultDaemonConfig = &exposed.StaticConfig{
+var defaultDaemonConfig = &webservice.StaticConfig{
 	ReadTimeout:    5 * time.Second,
 	WriteTimeout:   10 * time.Second,
 	RequestTimeout: 3 * time.Second,
@@ -50,8 +50,8 @@ func TestNew(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			daemonConfig := &exposed.StaticConfig{
-				ConfigPath: exposed.GenerateTestDaeConfig(t, &config.Conf{}),
+			daemonConfig := &webservice.StaticConfig{
+				ConfigPath: webservice.GenerateTestDaeConfig(t, &config.Conf{}),
 			}
 
 			cm := &testConfigManager{
@@ -172,7 +172,7 @@ func TestRunSingle(t *testing.T) {
 	const defaultApp = "goodapp"
 
 	tests := map[string]struct {
-		dConf exposed.StaticConfig
+		dConf webservice.StaticConfig
 		cm    testConfigManager
 
 		method      string
@@ -209,7 +209,7 @@ func TestRunSingle(t *testing.T) {
 
 		// Bad Server Configurations
 		"Bad Port": {
-			dConf: func() exposed.StaticConfig {
+			dConf: func() webservice.StaticConfig {
 				d := *defaultDaemonConfig
 				d.ListenPort = -1
 				return d
@@ -229,7 +229,7 @@ func TestRunSingle(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.dConf == (exposed.StaticConfig{}) {
+			if tc.dConf == (webservice.StaticConfig{}) {
 				tc.dConf = *defaultDaemonConfig
 			}
 
@@ -372,7 +372,7 @@ func (t testConfigManager) BaseDir() string {
 	return t.baseDir
 }
 
-func newForTest(t *testing.T, cm *testConfigManager, daemonConfig *exposed.StaticConfig) *exposed.Server {
+func newForTest(t *testing.T, cm *testConfigManager, daemonConfig *webservice.StaticConfig) *webservice.Server {
 	t.Helper()
 
 	if cm.baseDir == "" {
@@ -384,7 +384,7 @@ func newForTest(t *testing.T, cm *testConfigManager, daemonConfig *exposed.Stati
 	}
 
 	if daemonConfig.ConfigPath == "" {
-		daemonConfig.ConfigPath = exposed.GenerateTestDaeConfig(t, &config.Conf{
+		daemonConfig.ConfigPath = webservice.GenerateTestDaeConfig(t, &config.Conf{
 			BaseDir:     cm.BaseDir(),
 			AllowedList: cm.AllowList(),
 		})

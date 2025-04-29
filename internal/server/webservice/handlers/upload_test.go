@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/ubuntu-insights/internal/server/exposed/handlers"
+	"github.com/ubuntu/ubuntu-insights/internal/server/webservice/handlers"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 

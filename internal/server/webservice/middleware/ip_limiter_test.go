@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/ubuntu/ubuntu-insights/internal/server/exposed/middleware"
+	"github.com/ubuntu/ubuntu-insights/internal/server/webservice/middleware"
 	"golang.org/x/time/rate"
 )
 

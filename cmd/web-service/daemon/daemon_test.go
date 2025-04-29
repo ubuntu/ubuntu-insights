@@ -11,10 +11,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/ubuntu-insights/cmd/exposed-server/daemon"
+	"github.com/ubuntu/ubuntu-insights/cmd/web-service/daemon"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
-	"github.com/ubuntu/ubuntu-insights/internal/server/exposed"
 	"github.com/ubuntu/ubuntu-insights/internal/server/shared/config"
+	"github.com/ubuntu/ubuntu-insights/internal/server/webservice"
 )
 
 func TestConfigArg(t *testing.T) {
@@ -47,7 +47,7 @@ func TestDaeConfigBadPathErrors(t *testing.T) {
 	t.Parallel()
 
 	conf := &daemon.AppConfig{
-		Daemon: exposed.StaticConfig{
+		Daemon: webservice.StaticConfig{
 			ConfigPath: "/does/not/exist.yaml",
 		},
 	}
@@ -139,7 +139,7 @@ func TestRootCmd(t *testing.T) {
 	cmd := app.RootCmd()
 
 	assert.NotNil(t, cmd, "Returned root cmd should not be nil")
-	assert.Equal(t, constants.EServerCmdName, cmd.Name())
+	assert.Equal(t, constants.WebServiceCmdName, cmd.Name())
 }
 
 // startDaemon prepares and starts the daemon in the background. The done function should be called

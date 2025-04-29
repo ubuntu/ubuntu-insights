@@ -22,8 +22,8 @@ const (
 	// CmdName is the name of the command line tool.
 	CmdName = "ubuntu-insights"
 
-	// EServerCmdName is the name of the exposed server command.
-	EServerCmdName = "ubuntu-insights-eserver"
+	// WebServiceCmdName is the name of the web service command.
+	WebServiceCmdName = "ubuntu-insights-webservice"
 
 	// DefaultAppFolder is the name of the default root folder.
 	DefaultAppFolder = "ubuntu-insights"

@@ -1,5 +1,5 @@
-// Package exposed provides an HTTP server that handles incoming requests for uploading data and retrieving version information.
-package exposed
+// Package webservice provides an HTTP server that handles incoming requests for uploading data and retrieving version information.
+package webservice
 
 import (
 	"context"
@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ubuntu/ubuntu-insights/internal/server/exposed/handlers"
-	"github.com/ubuntu/ubuntu-insights/internal/server/exposed/middleware"
+	"github.com/ubuntu/ubuntu-insights/internal/server/webservice/handlers"
+	"github.com/ubuntu/ubuntu-insights/internal/server/webservice/middleware"
 	"golang.org/x/time/rate"
 )
 

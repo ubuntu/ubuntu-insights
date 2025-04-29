@@ -1,4 +1,4 @@
-// Package daemon provides the exposed-server daemon for Ubuntu Insights.
+// Package daemon provides the web service daemon for Ubuntu Insights.
 package daemon
 
 import (
@@ -13,8 +13,8 @@ import (
 	"github.com/spf13/viper"
 	"github.com/ubuntu/ubuntu-insights/internal/cli"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
-	"github.com/ubuntu/ubuntu-insights/internal/server/exposed"
 	"github.com/ubuntu/ubuntu-insights/internal/server/shared/config"
+	"github.com/ubuntu/ubuntu-insights/internal/server/webservice"
 )
 
 // App represents the application.
@@ -23,7 +23,7 @@ type App struct {
 	viper  *viper.Viper
 	config appConfig
 
-	daemon *exposed.Server
+	daemon *webservice.Server
 
 	ready chan struct{}
 }
@@ -31,7 +31,7 @@ type App struct {
 // appConfig holds the configuration for the application.
 type appConfig struct {
 	Verbosity int
-	Daemon    exposed.StaticConfig
+	Daemon    webservice.StaticConfig
 }
 
 // New creates a new App instance with default values.
@@ -39,15 +39,15 @@ func New() (*App, error) {
 	a := App{ready: make(chan struct{})}
 
 	a.cmd = &cobra.Command{
-		Use:           constants.EServerCmdName,
-		Short:         "Ubuntu Insights internet exposed server",
-		Long:          "Ubuntu Insights internet exposed server used for accepting insights reports from clients.",
+		Use:           constants.WebServiceCmdName,
+		Short:         "Ubuntu Insights web service",
+		Long:          "Ubuntu Insights web service used for accepting HTTP requests with insights reports from clients.",
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// Command parsing has been successful. Returns to not print usage anymore.
 			a.cmd.SilenceUsage = true
 			cli.SetVerbosity(a.config.Verbosity) // Set verbosity before loading config
-			if err := cli.InitViperConfig(constants.EServerCmdName, a.cmd, a.viper); err != nil {
+			if err := cli.InitViperConfig(constants.WebServiceCmdName, a.cmd, a.viper); err != nil {
 				return err
 			}
 			if err := a.viper.Unmarshal(&a.config); err != nil {
@@ -83,7 +83,7 @@ func New() (*App, error) {
 func installRootCmd(app *App) error {
 	cmd := app.cmd
 
-	defaultConf := exposed.StaticConfig{
+	defaultConf := webservice.StaticConfig{
 		ConfigPath:     "config.json",
 		ReadTimeout:    5 * time.Second,
 		WriteTimeout:   10 * time.Second,

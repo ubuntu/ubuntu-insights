@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/ubuntu/ubuntu-insights/internal/server/exposed/handlers"
+	"github.com/ubuntu/ubuntu-insights/internal/server/webservice/handlers"
 )
 
 func TestVersionSuccess(t *testing.T) {

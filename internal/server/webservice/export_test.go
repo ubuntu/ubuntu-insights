@@ -1,4 +1,4 @@
-package exposed
+package webservice
 
 import (
 	"encoding/json"
