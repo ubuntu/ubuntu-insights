@@ -50,7 +50,7 @@ func TestNew(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			daemonConfig := &webservice.StaticConfig{
+			daemonConfig := webservice.StaticConfig{
 				ConfigPath: webservice.GenerateTestDaemonConfig(t, &config.Conf{}),
 			}
 
@@ -60,7 +60,7 @@ func TestNew(t *testing.T) {
 				loadErr:   tc.cmLoadErr,
 			}
 
-			s, err := daemonConfig.New(t.Context(), cm)
+			s, err := webservice.New(t.Context(), cm, daemonConfig)
 			if tc.wantErr {
 				require.Error(t, err)
 				assert.Nil(t, s)
@@ -390,7 +390,7 @@ func newForTest(t *testing.T, cm *testConfigManager, daemonConfig *webservice.St
 		})
 	}
 
-	s, err := daemonConfig.New(t.Context(), cm)
+	s, err := webservice.New(t.Context(), cm, *daemonConfig)
 	require.NoError(t, err, "Setup: failed to create server")
 	return s
 }

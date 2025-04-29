@@ -164,7 +164,7 @@ func (a *App) run() (err error) {
 	}
 	dConf := a.config.Daemon
 	cm := config.New(dConf.ConfigPath)
-	a.daemon, err = dConf.New(context.Background(), cm)
+	a.daemon, err = webservice.New(context.Background(), cm, dConf)
 	close(a.ready)
 	if err != nil {
 		return fmt.Errorf("failed to create server: %v", err)

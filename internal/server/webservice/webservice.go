@@ -55,7 +55,7 @@ type dConfigManager interface {
 }
 
 // New creates a new Server instance with the given http.Server and config.ConfigManager.
-func (c StaticConfig) New(ctx context.Context, cm dConfigManager) (*Server, error) {
+func New(ctx context.Context, cm dConfigManager, sc StaticConfig) (*Server, error) {
 	if err := cm.Load(); err != nil {
 		return nil, fmt.Errorf("failed to load configuration: %v", err)
 	}
@@ -64,7 +64,7 @@ func (c StaticConfig) New(ctx context.Context, cm dConfigManager) (*Server, erro
 	gCtx, gCancel := context.WithCancel(ctx)
 
 	s := Server{
-		ipLimiter: middleware.New(rate.Limit(c.RateLimitPS), c.BurstLimit),
+		ipLimiter: middleware.New(rate.Limit(sc.RateLimitPS), sc.BurstLimit),
 		cm:        cm,
 		ctx:       ctx,
 		cancel:    cancel,
@@ -72,17 +72,17 @@ func (c StaticConfig) New(ctx context.Context, cm dConfigManager) (*Server, erro
 		gracefulCtx:    gCtx,
 		gracefulCancel: gCancel}
 
-	uploadHandler := handlers.NewUpload(cm, int64(c.MaxUploadBytes))
+	uploadHandler := handlers.NewUpload(cm, int64(sc.MaxUploadBytes))
 	mux := http.NewServeMux()
 	mux.Handle("POST /upload/{app}", s.ipLimiter.RateLimitMiddleware(uploadHandler))
 	mux.Handle("GET /version", http.HandlerFunc(handlers.VersionHandler))
 
 	s.httpServer = &http.Server{
-		Addr:           fmt.Sprintf("%s:%d", c.ListenHost, c.ListenPort),
-		ReadTimeout:    c.ReadTimeout,
-		WriteTimeout:   c.WriteTimeout,
-		Handler:        http.TimeoutHandler(mux, c.RequestTimeout, ""),
-		MaxHeaderBytes: c.MaxHeaderBytes,
+		Addr:           fmt.Sprintf("%s:%d", sc.ListenHost, sc.ListenPort),
+		ReadTimeout:    sc.ReadTimeout,
+		WriteTimeout:   sc.WriteTimeout,
+		Handler:        http.TimeoutHandler(mux, sc.RequestTimeout, ""),
+		MaxHeaderBytes: sc.MaxHeaderBytes,
 	}
 
 	return &s, nil
