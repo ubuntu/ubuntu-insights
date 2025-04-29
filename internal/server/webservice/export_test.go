@@ -23,8 +23,8 @@ func (s *Server) HTTPServer() *http.Server {
 	return s.httpServer
 }
 
-// GenerateTestDaeConfig generates a temporary daemon config file for testing.
-func GenerateTestDaeConfig(t *testing.T, daeConf *config.Conf) string {
+// GenerateTestDaemonConfig generates a temporary daemon config file for testing.
+func GenerateTestDaemonConfig(t *testing.T, daeConf *config.Conf) string {
 	t.Helper()
 
 	d, err := json.Marshal(daeConf)

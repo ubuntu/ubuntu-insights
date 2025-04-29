@@ -34,8 +34,8 @@ func NewForTests(t *testing.T, conf *AppConfig, daeConf *config.Conf, args ...st
 	return a
 }
 
-// GenerateTestDaeConfig generates a temporary daemon config file for testing.
-func GenerateTestDaeConfig(t *testing.T, daeConf *config.Conf) string {
+// GenerateTestDaemonConfig generates a temporary daemon config file for testing.
+func GenerateTestDaemonConfig(t *testing.T, daeConf *config.Conf) string {
 	t.Helper()
 
 	d, err := json.Marshal(daeConf)
@@ -61,7 +61,7 @@ func GenerateTestConfig(t *testing.T, origConf *AppConfig, daeConf *config.Conf)
 	}
 
 	if conf.Daemon.ConfigPath == "" {
-		conf.Daemon.ConfigPath = GenerateTestDaeConfig(t, daeConf)
+		conf.Daemon.ConfigPath = GenerateTestDaemonConfig(t, daeConf)
 	}
 
 	d, err := yaml.Marshal(conf)

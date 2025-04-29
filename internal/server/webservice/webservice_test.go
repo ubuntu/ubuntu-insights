@@ -51,7 +51,7 @@ func TestNew(t *testing.T) {
 			t.Parallel()
 
 			daemonConfig := &webservice.StaticConfig{
-				ConfigPath: webservice.GenerateTestDaeConfig(t, &config.Conf{}),
+				ConfigPath: webservice.GenerateTestDaemonConfig(t, &config.Conf{}),
 			}
 
 			cm := &testConfigManager{
@@ -384,7 +384,7 @@ func newForTest(t *testing.T, cm *testConfigManager, daemonConfig *webservice.St
 	}
 
 	if daemonConfig.ConfigPath == "" {
-		daemonConfig.ConfigPath = webservice.GenerateTestDaeConfig(t, &config.Conf{
+		daemonConfig.ConfigPath = webservice.GenerateTestDaemonConfig(t, &config.Conf{
 			BaseDir:     cm.BaseDir(),
 			AllowedList: cm.AllowList(),
 		})
