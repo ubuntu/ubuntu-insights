@@ -1,0 +1,141 @@
+// Package config provides a configuration manager that loads and watches a JSON configuration file.
+package config
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"sync"
+
+	"github.com/fsnotify/fsnotify"
+)
+
+// Provider is an interface that defines methods to access configuration values.
+type Provider interface {
+	BaseDir() string
+	AllowList() []string
+}
+
+// Conf represents the configuration structure.
+type Conf struct {
+	BaseDir     string   `json:"base_dir"`
+	AllowedList []string `json:"allowList"`
+}
+
+// Manager is a struct that manages the configuration.
+type Manager struct {
+	config     Conf
+	lock       sync.RWMutex
+	configPath string
+
+	log *slog.Logger
+}
+
+type options struct {
+	Logger *slog.Logger
+}
+
+// Options represents an optional function to override Manager default values.
+type Options func(*options)
+
+// New creates a new configuration manager with the specified path.
+func New(path string, args ...Options) *Manager {
+	opts := options{
+		Logger: slog.Default(),
+	}
+
+	for _, opt := range args {
+		opt(&opts)
+	}
+
+	return &Manager{
+		configPath: path,
+		log:        opts.Logger,
+	}
+}
+
+// Load reads the configuration from the specified file and updates the internal state.
+func (cm *Manager) Load() error {
+	file, err := os.Open(cm.configPath)
+	if err != nil {
+		return fmt.Errorf("opening config file: %w", err)
+	}
+	defer file.Close()
+
+	var newConfig Conf
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&newConfig); err != nil {
+		return fmt.Errorf("decoding config JSON: %w", err)
+	}
+
+	cm.lock.Lock()
+	cm.config = newConfig
+	cm.lock.Unlock()
+
+	cm.log.Info("Configuration loaded", "config", cm.config)
+	return nil
+}
+
+// Watch starts watching the configuration file for changes.
+func (cm *Manager) Watch(ctx context.Context) error {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return fmt.Errorf("failed to create watcher: %v", err)
+	}
+	defer watcher.Close()
+
+	configDir, _ := filepath.Split(cm.configPath)
+	if configDir == "" {
+		configDir = "."
+	}
+	if err := watcher.Add(configDir); err != nil {
+		return fmt.Errorf("failed to add directory %s to watcher: %v", configDir, err)
+	}
+
+	cm.log.Info("Watching configuration directory", "dir", configDir)
+	for {
+		select {
+		case <-ctx.Done():
+			cm.log.Info("Configuration watcher stopped")
+			return nil
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return fmt.Errorf("watcher events channel closed unexpectedly")
+			}
+			if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename) == 0 {
+				continue
+			}
+
+			if event.Name != cm.configPath {
+				continue
+			}
+
+			cm.log.Debug("Configuration file changed. Reloading...")
+			if err := cm.Load(); err != nil {
+				cm.log.Warn("Error reloading config", "err", err)
+			}
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return fmt.Errorf("watcher errors channel closed unexpectedly")
+			}
+			cm.log.Warn("Watcher error", "err", err)
+		}
+	}
+}
+
+// BaseDir returns the base directory from the configuration.
+func (cm *Manager) BaseDir() string {
+	cm.lock.RLock()
+	defer cm.lock.RUnlock()
+	return cm.config.BaseDir
+}
+
+// AllowList returns the allow list from the configuration.
+func (cm *Manager) AllowList() []string {
+	cm.lock.RLock()
+	defer cm.lock.RUnlock()
+	return cm.config.AllowedList
+}

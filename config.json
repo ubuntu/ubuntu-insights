@@ -1,0 +1,4 @@
+{
+  "base_dir": "./temp",
+  "allowlist": ["multipass", "testing", "wsl", "yes"]
+}

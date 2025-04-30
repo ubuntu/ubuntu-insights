@@ -520,7 +520,7 @@ func TestUpload(t *testing.T) {
 			t.Parallel()
 
 			if tc.responseCode == 0 {
-				tc.responseCode = http.StatusOK
+				tc.responseCode = http.StatusAccepted
 			}
 
 			var mu sync.Mutex

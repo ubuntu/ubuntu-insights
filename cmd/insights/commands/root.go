@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/ubuntu/ubuntu-insights/internal/cli"
 	"github.com/ubuntu/ubuntu-insights/internal/collector"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/uploader"
@@ -71,15 +72,15 @@ The information collected can't be used to identify a single machine. All report
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// Command parsing has been successful. Returns to not print usage anymore.
 			a.cmd.SilenceUsage = true
-
-			if err := initViperConfig(constants.CmdName, a.cmd, a.viper); err != nil {
+			cli.SetVerbosity(a.config.Verbose) // Set verbosity before loading config
+			if err := cli.InitViperConfig(constants.CmdName, a.cmd, a.viper); err != nil {
 				return err
 			}
 			if err := a.viper.Unmarshal(&a.config); err != nil {
 				return fmt.Errorf("unable to decode configuration into struct: %w", err)
 			}
 
-			setVerbosity(a.config.Verbose)
+			cli.SetVerbosity(a.config.Verbose)
 			return nil
 		},
 	}
@@ -88,7 +89,7 @@ The information collected can't be used to identify a single machine. All report
 	if err := installRootCmd(&a); err != nil {
 		return nil, err
 	}
-	installConfigFlag(&a)
+	cli.InstallConfigFlag(a.cmd)
 	installCollectCmd(&a)
 	installUploadCmd(&a)
 	installConsentCmd(&a)
@@ -118,18 +119,6 @@ func installRootCmd(app *App) error {
 	}
 
 	return nil
-}
-
-// setVerbosity sets the global logging level based on the verbose flag count.
-func setVerbosity(level int) {
-	switch level {
-	case 0:
-		slog.SetLogLoggerLevel(constants.DefaultLogLevel)
-	case 1:
-		slog.SetLogLoggerLevel(slog.LevelInfo)
-	default:
-		slog.SetLogLoggerLevel(slog.LevelDebug)
-	}
 }
 
 // Run executes the command and associated process, returning an error if any.

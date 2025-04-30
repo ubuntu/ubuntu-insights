@@ -1,4 +1,5 @@
-package commands
+// Package cli provides utility functions for command line interface applications.
+package cli
 
 import (
 	"errors"
@@ -13,13 +14,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-func initViperConfig(cmdName string, cmd *cobra.Command, vip *viper.Viper) error {
-	v, err := cmd.Flags().GetCount("verbose")
-	if err != nil {
-		return fmt.Errorf("failed to get verbose flag: %w", err)
-	}
-	setVerbosity(v)
-
+// InitViperConfig initializes the Viper configuration for a command.
+func InitViperConfig(cmdName string, cmd *cobra.Command, vip *viper.Viper) error {
 	if v, err := cmd.Flags().GetString("config"); err == nil && v != "" {
 		vip.SetConfigFile(v)
 	} else {
@@ -73,8 +69,7 @@ func initViperConfig(cmdName string, cmd *cobra.Command, vip *viper.Viper) error
 	return nil
 }
 
-func installConfigFlag(a *App) *string {
-	cmd := a.cmd
-
+// InstallConfigFlag adds a config flag to the command.
+func InstallConfigFlag(cmd *cobra.Command) *string {
 	return cmd.PersistentFlags().String("config", "", "use a specific configuration file")
 }

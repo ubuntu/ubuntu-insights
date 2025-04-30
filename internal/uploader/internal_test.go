@@ -75,7 +75,7 @@ func TestUploadBadFile(t *testing.T) {
 			}
 
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusOK)
+				w.WriteHeader(http.StatusAccepted)
 			}))
 			t.Cleanup(func() { ts.Close() })
 
@@ -109,10 +109,10 @@ func TestSend(t *testing.T) {
 		wantErr bool
 	}{
 		"No Server":    {noServer: true, wantErr: true},
-		"Bad URL":      {url: "http://local host:1234", serverResponse: http.StatusOK, wantErr: true},
+		"Bad URL":      {url: "http://local host:1234", serverResponse: http.StatusAccepted, wantErr: true},
 		"Bad Response": {serverResponse: http.StatusForbidden, wantErr: true},
 
-		"Success": {serverResponse: http.StatusOK},
+		"Success": {serverResponse: http.StatusAccepted},
 	}
 
 	for name, tc := range tests {
