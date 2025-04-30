@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/config"
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/processor"
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/storage"
+	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/config"
+	storage "github.com/ubuntu/ubuntu-insights/internal/server/ingest/database"
+	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/processor"
 )
 
 func main() {

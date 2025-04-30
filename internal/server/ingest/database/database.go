@@ -1,6 +1,6 @@
-// Package storage provides the database connection and upload functionality for the ingest service.
+// Package database provides the database connection and upload functionality for the ingest service.
 // It handles the connection to a PostgreSQL database and provides methods to upload data.
-package storage
+package database
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/lib/pq"
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/config"
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/models"
+	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/config"
+	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/models"
 )
 
 var (

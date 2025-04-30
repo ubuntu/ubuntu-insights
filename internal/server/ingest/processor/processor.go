@@ -13,9 +13,9 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/config"
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/models"
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/storage"
+	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/config"
+	storage "github.com/ubuntu/ubuntu-insights/internal/server/ingest/database"
+	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/models"
 )
 
 var semverRegex = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
