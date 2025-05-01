@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/config"
-	storage "github.com/ubuntu/ubuntu-insights/internal/server/ingest/database"
+	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/database"
 	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/models"
 )
 
@@ -109,7 +109,7 @@ func processFile(file string) (*models.FileData, error) {
 // It reads each file, unmarshals the JSON data into a FileData struct,
 // and uploads the data to a PostgreSQL database.
 // After processing, it removes the file from the filesystem.
-func ProcessFiles(ctx context.Context, cfg *config.ServiceConfig) error {
+func ProcessFiles(ctx context.Context, cfg *config.ServiceConfig, db database.Manager) error {
 	files, err := getJSONFiles(cfg.InputDir)
 	if err != nil {
 		return fmt.Errorf("failed to get JSON files: %w", err)
@@ -124,7 +124,7 @@ func ProcessFiles(ctx context.Context, cfg *config.ServiceConfig) error {
 
 		fileData, err := processFile(file)
 		if err == nil {
-			if err = storage.UploadToPostgres(ctx, fileData); err == nil {
+			if err = db.Upload(ctx, fileData.AppID, fileData); err == nil {
 				slog.Info("Successfully processed and uploaded file", "file", file)
 			} else {
 				if errors.Is(err, context.Canceled) {
