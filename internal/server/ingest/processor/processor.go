@@ -13,12 +13,14 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/config"
-	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/database"
 	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/models"
 )
 
 var semverRegex = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+
+type database interface {
+	Upload(ctx context.Context, app string, data *models.FileData) error
+}
 
 func validateGeneratedTime(generated string) error {
 	parsedTime, err := time.Parse(time.RFC3339, generated)
@@ -109,8 +111,8 @@ func processFile(file string) (*models.FileData, error) {
 // It reads each file, unmarshals the JSON data into a FileData struct,
 // and uploads the data to a PostgreSQL database.
 // After processing, it removes the file from the filesystem.
-func ProcessFiles(ctx context.Context, cfg *config.ServiceConfig, db database.Manager) error {
-	files, err := getJSONFiles(cfg.InputDir)
+func ProcessFiles(ctx context.Context, dir string, db database) error {
+	files, err := getJSONFiles(dir)
 	if err != nil {
 		return fmt.Errorf("failed to get JSON files: %w", err)
 	}
