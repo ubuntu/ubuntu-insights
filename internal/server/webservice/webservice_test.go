@@ -328,7 +328,7 @@ func TestRunAfterQuitErrors(t *testing.T) {
 	}
 	require.True(t, testutils.PortOpen(t, dConf.ListenHost, dConf.ListenPort), "Server should be running on specified addr``")
 	s.Quit(false)
-	time.Sleep(500 * time.Millisecond) // Let server quit
+	testutils.WaitForPortClosed(t, dConf.ListenHost, dConf.ListenPort, 3*time.Second)
 	serverErr2 := make(chan error, 1)
 	go func() {
 		defer close(serverErr2)
