@@ -49,7 +49,7 @@ type StaticConfig struct {
 
 type dConfigManager interface {
 	Load() error
-	Watch(context.Context) error
+	Watch(context.Context) (<-chan struct{}, <-chan error, error)
 	AllowList() []string
 	BaseDir() string
 }
@@ -98,11 +98,11 @@ func (s *Server) Run() error {
 		return errors.New("server is already shutting down")
 	default:
 	}
-	watchErrCh := make(chan error, 1)
-	go func() {
-		watchErrCh <- s.cm.Watch(s.gracefulCtx)
-		close(watchErrCh)
-	}()
+
+	_, watchErr, err := s.cm.Watch(s.gracefulCtx)
+	if err != nil {
+		return fmt.Errorf("failed to start watching configuration: %v", err)
+	}
 
 	serverErr := make(chan error, 1)
 	go func() {
@@ -134,9 +134,9 @@ func (s *Server) Run() error {
 		// unlikely: ListenAndServe returned nil
 		s.cancel()
 		return nil
-	case err := <-watchErrCh:
+	case err := <-watchErr:
 		if err != nil {
-			slog.Error("Config watcher encountered error", "err", err)
+			slog.Error("Config watcher encountered unrecoverable error", "err", err)
 		}
 		errC := s.httpServer.Close()
 		s.cancel()

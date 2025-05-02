@@ -67,13 +67,15 @@ func TestLoadMissingFile(t *testing.T) {
 func TestWatchMissingFile(t *testing.T) {
 	t.Parallel()
 	cm := config.New("somewhere/nonexistent.json")
-	watchErr := testWatch(t, cm)
+	watchEvent, watchErr, err := cm.Watch(t.Context())
+	require.Error(t, err, "Expected error starting watch on missing config file")
 
 	select {
-	case err := <-watchErr:
-		require.Error(t, err, "expected error watching missing config file")
+	case <-watchErr:
+		require.Fail(t, "expected no error in watchErr channel")
+	case <-watchEvent:
+		require.Fail(t, "expected no event for missing config file")
 	case <-time.After(200 * time.Millisecond):
-		require.Fail(t, "expected error watching missing config file")
 	}
 }
 
@@ -86,7 +88,8 @@ func TestWatchConfigReloadsOnChange(t *testing.T) {
 	cm := config.New(tmpFile)
 	require.NoError(t, cm.Load(), "Setup: initial load failed")
 
-	watchErr := testWatch(t, cm)
+	watchEvent, watchErr, err := cm.Watch(t.Context())
+	require.NoError(t, err, "Setup: failed to start watch")
 
 	require.NoError(t, os.WriteFile(tmpFile, []byte(updated), 0600), "Setup: failed to write updated config")
 
@@ -100,7 +103,9 @@ func TestWatchConfigReloadsOnChange(t *testing.T) {
 	select {
 	case err := <-watchErr:
 		require.NoError(t, err, "expected no error watching config file")
+	case <-watchEvent:
 	case <-time.After(200 * time.Millisecond):
+		require.Fail(t, "expected change event")
 	}
 }
 
@@ -116,7 +121,8 @@ func TestWatchConfigRemoved(t *testing.T) {
 	l := testutils.NewMockHandler(slog.LevelDebug)
 	cm := config.New(tmpFile, config.WithLogger(slog.New(&l)))
 	require.NoError(t, cm.Load(), "Setup: initial load failed")
-	watchErr := testWatch(t, cm)
+	watchEvent, watchErr, err := cm.Watch(t.Context())
+	require.NoError(t, err, "Setup: failed to start watch")
 
 	if !l.AssertLevels(t, logs) {
 		l.OutputLogs(t)
@@ -131,9 +137,12 @@ func TestWatchConfigRemoved(t *testing.T) {
 		l.OutputLogs(t)
 	}
 
+	// Ensure that no channels are written to, as there isn't a successful reload
 	select {
 	case err := <-watchErr:
 		require.NoError(t, err, "expected no error watching config file")
+	case <-watchEvent:
+		require.Fail(t, "expected no successful change event")
 	case <-time.After(200 * time.Millisecond):
 	}
 }
@@ -151,7 +160,8 @@ func TestWatchIgnoresIrrelevantFiles(t *testing.T) {
 	l := testutils.NewMockHandler(slog.LevelDebug)
 	cm := config.New(tmpFile, config.WithLogger(slog.New(&l)))
 	require.NoError(t, cm.Load(), "Setup: initial load failed")
-	watchErr := testWatch(t, cm)
+	watchEvent, watchErr, err := cm.Watch(t.Context())
+	require.NoError(t, err, "Setup: failed to start watch")
 
 	if !l.AssertLevels(t, logs) {
 		l.OutputLogs(t)
@@ -167,6 +177,8 @@ func TestWatchIgnoresIrrelevantFiles(t *testing.T) {
 	select {
 	case err := <-watchErr:
 		require.NoError(t, err, "expected no error watching config file")
+	case <-watchEvent:
+		require.Fail(t, "expected no change event")
 	case <-time.After(200 * time.Millisecond):
 	}
 }
@@ -180,7 +192,8 @@ func TestWatchWarnsIfLoadFails(t *testing.T) {
 	l := testutils.NewMockHandler(slog.LevelInfo)
 	cm := config.New(tmpFile, config.WithLogger(slog.New(&l)))
 	require.NoError(t, cm.Load(), "Setup: initial load failed")
-	watchErr := testWatch(t, cm)
+	watchEvent, watchErr, err := cm.Watch(t.Context())
+	require.NoError(t, err, "Setup: failed to start watch")
 
 	require.NoError(t, os.WriteFile(tmpFile, []byte("invalid json"), 0600), "Setup: failed to write invalid config")
 	time.Sleep(time.Second) // let watcher reload
@@ -193,6 +206,8 @@ func TestWatchWarnsIfLoadFails(t *testing.T) {
 	select {
 	case err := <-watchErr:
 		require.NoError(t, err, "expected no error watching config file")
+	case <-watchEvent:
+		require.Fail(t, "expected no change event")
 	case <-time.After(200 * time.Millisecond):
 	}
 }
@@ -233,15 +248,4 @@ func TestConfigManagerReadWhileWrite(t *testing.T) {
 	wg.Wait()
 	require.Equal(t, "/tmp/test99", cm.BaseDir(), "Expected base_dir to be /tmp/test99")
 	require.Equal(t, []string{"foo"}, cm.AllowList(), "Expected allowList to be [foo]")
-}
-
-func testWatch(t *testing.T, cm *config.Manager) chan error {
-	t.Helper()
-	watchErr := make(chan error, 1)
-	go func() {
-		defer close(watchErr)
-		watchErr <- cm.Watch(t.Context())
-	}()
-	time.Sleep(100 * time.Millisecond) // let watcher initialize
-	return watchErr
 }

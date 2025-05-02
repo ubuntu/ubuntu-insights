@@ -216,6 +216,13 @@ func TestRunSingle(t *testing.T) {
 			}(),
 			wantErr: true,
 		},
+		"New Watcher Error": {
+			cm: testConfigManager{
+				allowList:     []string{defaultApp},
+				newWatcherErr: fmt.Errorf("requested watch error"),
+			},
+			wantErr: true,
+		},
 		"Watch Error": {
 			cm: testConfigManager{
 				allowList: []string{defaultApp},
@@ -339,29 +346,43 @@ func TestRunAfterQuitErrors(t *testing.T) {
 }
 
 type testConfigManager struct {
-	allowList   []string
-	baseDir     string
-	finishWatch bool
-	loadErr     error
-	watchErr    error
+	allowList     []string
+	baseDir       string
+	finishWatch   bool
+	loadErr       error
+	newWatcherErr error
+	watchErr      error
 }
 
 func (t testConfigManager) Load() error {
 	return t.loadErr
 }
 
-func (t testConfigManager) Watch(ctx context.Context) error {
+func (t testConfigManager) Watch(ctx context.Context) (<-chan struct{}, <-chan error, error) {
 	// Simulate watching for changes
 	if t.finishWatch {
 		<-ctx.Done()
 	}
-	if t.watchErr != nil {
-		return t.watchErr
+	if t.newWatcherErr != nil {
+		return nil, nil, t.newWatcherErr
 	}
 
-	// Block until the context is done
-	<-ctx.Done()
-	return nil
+	eventsChan := make(chan struct{})
+	errorsChan := make(chan error)
+	go func() {
+		defer close(eventsChan)
+		defer close(errorsChan)
+
+		if t.watchErr != nil {
+			errorsChan <- t.watchErr
+			return
+		}
+
+		// Block until the context is done
+		<-ctx.Done()
+	}()
+
+	return eventsChan, errorsChan, nil
 }
 
 func (t testConfigManager) AllowList() []string {
