@@ -77,11 +77,32 @@ func (db Manager) Upload(ctx context.Context, app string, data *models.TargetMod
 	}
 
 	table := pgx.Identifier{app}.Sanitize()
-	query := fmt.Sprintf(`INSERT INTO %s (generated, schema_version) VALUES ($2, $3)`, table)
+	query := fmt.Sprintf(
+		`INSERT INTO %s (
+	        entry_time, 
+            insights_version, 
+            hardware, 
+            software, 
+            platform, 
+            source_metrics,
+			optout 
+		) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		table,
+	)
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	_, err := db.dbpool.Exec(ctx, query, data.Generated, data.SchemaVersion)
+	_, err := db.dbpool.Exec(
+		ctx,
+		query,
+		time.Now(),                    // entry_time
+		data.InsightsVersion,          // insights_version
+		data.SystemInfo.Hardware,      // hardware_info
+		data.SystemInfo.Software,      // software_info
+		data.SystemInfo.Platform,      // platform_info
+		data.SystemInfo.SourceMetrics, // source_metrics
+		data.OptOut,                   // optout
+	)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			return fmt.Errorf("upload canceled: %v", err)

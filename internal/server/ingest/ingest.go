@@ -34,7 +34,7 @@ type Service struct {
 }
 
 type dbManager interface {
-	Upload(ctx context.Context, app string, data *models.FileData) error
+	Upload(ctx context.Context, app string, data *models.TargetModel) error
 	Close() error
 }
 
@@ -53,7 +53,7 @@ type options struct {
 type Options func(*options)
 
 // New creates a new ingest service with the provided database manager and connects to the database.
-func New(cm dConfigManager, dbConfig database.Config, args ...Options) (*Service, error) {
+func New(ctx context.Context, cm dConfigManager, dbConfig database.Config, args ...Options) (*Service, error) {
 	opts := options{
 		dbConnect: func(ctx context.Context, cfg database.Config) (dbManager, error) {
 			return database.Connect(ctx, cfg)
@@ -68,14 +68,14 @@ func New(cm dConfigManager, dbConfig database.Config, args ...Options) (*Service
 		return nil, fmt.Errorf("failed to load configuration: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10)
-	defer cancel()
-	db, err := opts.dbConnect(ctx, dbConfig)
+	dctx, dcancel := context.WithTimeout(ctx, 10*time.Second)
+	defer dcancel()
+	db, err := opts.dbConnect(dctx, dbConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %v", err)
 	}
 
-	ctx, cancel = context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	gCtx, gCancel := context.WithCancel(ctx)
 
 	return &Service{

@@ -94,7 +94,7 @@ func TestUpload(t *testing.T) {
 				require.NoError(t, mgr.Close(), "Setup: failed to close database connection")
 			}
 
-			err = mgr.Upload(t.Context(), "test", &models.FileData{})
+			err = mgr.Upload(t.Context(), "test", &models.TargetModel{})
 			if tc.wantErr {
 				require.Error(t, err, "Upload() error")
 				return

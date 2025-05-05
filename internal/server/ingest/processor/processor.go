@@ -19,7 +19,7 @@ import (
 var semverRegex = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
 
 type database interface {
-	Upload(ctx context.Context, app string, data *models.FileData) error
+	Upload(ctx context.Context, app string, data *models.TargetModel) error
 }
 
 func validateGeneratedTime(generated string) error {
@@ -41,35 +41,7 @@ func validateGeneratedTime(generated string) error {
 	return nil
 }
 
-func validateFile(data *models.FileData, path string) error {
-	// Validate AppID
-	if data.AppID == "" {
-		return fmt.Errorf("AppID is required")
-	}
-	parentDir := filepath.Base(filepath.Dir(path))
-	if data.AppID != parentDir {
-		return fmt.Errorf("AppID %q does not match target app %q", data.AppID, parentDir)
-	}
-
-	// Validate Generated timestamp
-	if data.Generated == "" {
-		return fmt.Errorf("timestamp is required")
-	}
-	if err := validateGeneratedTime(data.Generated); err != nil {
-		return fmt.Errorf("timestamp is invalid: %w", err)
-	}
-
-	// Validate SchemaVersion
-	if !semverRegex.MatchString(data.SchemaVersion) {
-		return fmt.Errorf("invalid schema version %q", data.SchemaVersion)
-	}
-
-	if len(data.Common) == 0 {
-		return fmt.Errorf("empty payload")
-	}
-	if len(data.AppData) == 0 {
-		return fmt.Errorf("empty payload")
-	}
+func validateFile(data *models.TargetModel, path string) error {
 
 	return nil
 }
@@ -89,13 +61,13 @@ func getJSONFiles(dir string) ([]string, error) {
 	return files, err
 }
 
-func processFile(file string) (*models.FileData, error) {
+func processFile(file string) (*models.TargetModel, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
 
-	var fileData models.FileData
+	var fileData models.TargetModel
 	if err = json.Unmarshal(data, &fileData); err != nil {
 		return nil, err
 	}
@@ -112,6 +84,7 @@ func processFile(file string) (*models.FileData, error) {
 // and uploads the data to a PostgreSQL database.
 // After processing, it removes the file from the filesystem.
 func ProcessFiles(ctx context.Context, dir string, db database) error {
+	app := filepath.Base(dir)
 	files, err := getJSONFiles(dir)
 	if err != nil {
 		return fmt.Errorf("failed to get JSON files: %w", err)
@@ -126,7 +99,7 @@ func ProcessFiles(ctx context.Context, dir string, db database) error {
 
 		fileData, err := processFile(file)
 		if err == nil {
-			if err = db.Upload(ctx, fileData.AppID, fileData); err == nil {
+			if err = db.Upload(ctx, app, fileData); err == nil {
 				slog.Info("Successfully processed and uploaded file", "file", file)
 			} else {
 				if errors.Is(err, context.Canceled) {
