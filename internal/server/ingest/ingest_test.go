@@ -2,7 +2,11 @@ package ingest_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -59,27 +63,65 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestRunExistingSingle(t *testing.T) {
+func TestRun(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		cm       mockConfigManager
-		dbConfig mockDBManager
-		options  []ingest.Options
+		cm       *mockConfigManager
+		dbConfig *mockDBManager
 
 		removeFiles []string
+		reAddFiles  bool
 
 		wantErr bool
 	}{
-		"Successful run": {
-			cm:       mockConfigManager{loadErr: nil},
-			dbConfig: mockDBManager{},
-			wantErr:  false,
+		"SingleValid runs": {
+			cm:       &mockConfigManager{allowList: []string{"SingleValid"}},
+			dbConfig: &mockDBManager{},
 		},
-		"Config load failure": {
-			cm:       mockConfigManager{loadErr: errors.New("load error")},
-			dbConfig: mockDBManager{},
+		"SingleInvalid deletes invalid": {
+			cm:       &mockConfigManager{allowList: []string{"SingleInvalid"}},
+			dbConfig: &mockDBManager{},
+		},
+		"OptOut runs": {
+			cm:       &mockConfigManager{allowList: []string{"OptOut"}},
+			dbConfig: &mockDBManager{},
+		},
+		"MultiMixed runs": {
+			cm:       &mockConfigManager{allowList: []string{"MultiMixed"}},
+			dbConfig: &mockDBManager{},
+		},
+		"All apps runs": {
+			cm:       &mockConfigManager{allowList: []string{"SingleValid", "SingleInvalid", "OptOut", "MultiMixed"}},
+			dbConfig: &mockDBManager{},
+		},
+
+		// Re-add files during run
+		"Re-add files": {
+			cm:         &mockConfigManager{allowList: []string{"MultiMixed"}},
+			dbConfig:   &mockDBManager{},
+			reAddFiles: true,
+		},
+
+		// Error cases
+		"Config watch failure errors": {
+			cm:       &mockConfigManager{watchErr: errors.New("Requested watch error")},
+			dbConfig: &mockDBManager{},
 			wantErr:  true,
+		},
+		"Delayed config watch failure errors": {
+			cm:       &mockConfigManager{delayedWatchErr: errors.New("Delayed watch error")},
+			dbConfig: &mockDBManager{},
+			wantErr:  true,
+		},
+		"DB upload failure errors": {
+			cm:       &mockConfigManager{allowList: []string{"SingleValid"}},
+			dbConfig: &mockDBManager{uploadErr: errors.New("Upload error")},
+			wantErr:  true,
+		},
+		"DB close failure errors": {
+			cm:       &mockConfigManager{allowList: []string{"SingleValid"}},
+			dbConfig: &mockDBManager{closeErr: errors.New("Close error")},
 		},
 	}
 
@@ -94,15 +136,11 @@ func TestRunExistingSingle(t *testing.T) {
 
 			opts := []ingest.Options{
 				ingest.WithDBConnect(func(ctx context.Context, cfg database.Config) (ingest.DBManager, error) {
-					return &tc.dbConfig, nil
+					return tc.dbConfig, nil
 				}),
 			}
 			s, err := ingest.New(t.Context(), tc.cm, database.Config{}, opts...)
-			if tc.wantErr {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
+			require.NoError(t, err, "Setup: Failed to create service")
 
 			runErr := make(chan error, 1)
 			go func() {
@@ -114,77 +152,225 @@ func TestRunExistingSingle(t *testing.T) {
 			}()
 
 			// Allow time for the service to start and run
-			select {
-			case err := <-runErr:
-				if tc.wantErr {
-					require.Error(t, err, "Expected error but got nil")
-					return
-				}
-				// Unexpected early close
-				require.Fail(t, "Service closed unexpectedly: %v", err)
-			case <-time.After(5 * time.Second):
+			if runWait(t, runErr, tc.wantErr, 4*time.Second) {
+				return
+			}
+
+			if tc.reAddFiles {
+				// Re-add files to the directory
+				err := testutils.CopyDir(t, filepath.Join("testdata", "fixtures"), dst)
+				require.NoError(t, err, "Setup: failed to re-copy test fixtures")
+
+				runWait(t, runErr, false, 4*time.Second)
 			}
 
 			// Simulate a graceful shutdown
-			s.Quit(false)
-			select {
-			case err := <-runErr:
-				require.NoError(t, err, "Expected no error but got: %v", err)
-			case <-time.After(3 * time.Second):
-				require.Fail(t, "Service did not close within the expected time")
-			}
-
-			// Check if the files were processed and uploaded to the database
-			remainingFiles, err := testutils.GetDirContents(t, tc.cm.BaseDir(), 4)
-			require.NoError(t, err, "Failed to get directory contents")
-
-			got := struct {
-				RemainingFiles map[string]string
-				UploadedFiles  map[string][]*models.TargetModel
-			}{
-				RemainingFiles: remainingFiles,
-				UploadedFiles:  tc.dbConfig.data,
-			}
-
-			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-			assert.Equal(t, want.RemainingFiles, got.RemainingFiles, "Remaining files do not match")
-			assert.Equal(t, want.UploadedFiles, got.UploadedFiles, "Uploaded files do not match")
+			gracefulShutdown(t, s, runErr)
+			checkRunResults(t, tc.cm, tc.dbConfig)
 		})
 	}
+}
+
+// Tests the addition of a new valid app to the allow list
+// and verifies that the app is processed correctly.
+func TestRunNewApp(t *testing.T) {
+	t.Parallel()
+
+	dst := ingest.CopyTestFixtures(t, nil)
+	cm := &mockConfigManager{
+		allowList: []string{"SingleValid"},
+		baseDir:   dst,
+
+		reloadCh: make(chan struct{}),
+		errCh:    make(chan error),
+	}
+	db := &mockDBManager{}
+
+	opts := []ingest.Options{
+		ingest.WithDBConnect(func(ctx context.Context, cfg database.Config) (ingest.DBManager, error) {
+			return db, nil
+		}),
+	}
+	s, err := ingest.New(t.Context(), cm, database.Config{}, opts...)
+	require.NoError(t, err, "Setup: Failed to create service")
+
+	runErr := make(chan error, 1)
+	go func() {
+		defer close(runErr)
+		err := s.Run()
+		if err != nil {
+			runErr <- err
+		}
+	}()
+
+	// Allow time for the service to start and run
+	runWait(t, runErr, false, 3*time.Second)
+
+	// Add MultiMixed to the allow list (send burst of signals)
+	cm.SetAllowList(append(cm.AllowList(), "MultiMixed"))
+	cm.reloadCh <- struct{}{}
+	cm.reloadCh <- struct{}{}
+	cm.reloadCh <- struct{}{}
+
+	runWait(t, runErr, false, 15*time.Second)
+
+	gracefulShutdown(t, s, runErr)
+	checkRunResults(t, cm, db)
+}
+
+// TestRunRemoveApp tests the removal of an app from the allow list
+// and verifies that the app is no longer processed.
+func TestRunRemoveApp(t *testing.T) {
+	t.Parallel()
+
+	dst := ingest.CopyTestFixtures(t, nil)
+	cm := &mockConfigManager{
+		allowList: []string{"SingleValid", "MultiMixed"},
+		baseDir:   dst,
+
+		reloadCh: make(chan struct{}),
+		errCh:    make(chan error),
+	}
+	db := &mockDBManager{}
+
+	opts := []ingest.Options{
+		ingest.WithDBConnect(func(ctx context.Context, cfg database.Config) (ingest.DBManager, error) {
+			return db, nil
+		}),
+	}
+	s, err := ingest.New(t.Context(), cm, database.Config{}, opts...)
+	require.NoError(t, err, "Setup: Failed to create service")
+
+	runErr := make(chan error, 1)
+	go func() {
+		defer close(runErr)
+		err := s.Run()
+		if err != nil {
+			runErr <- err
+		}
+	}()
+
+	// Allow time for the service to start and run
+	runWait(t, runErr, false, 3*time.Second)
+
+	// Add MultiMixed to the allow list (send burst of signals)
+	cm.SetAllowList([]string{"SingleValid"})
+	cm.reloadCh <- struct{}{}
+	cm.reloadCh <- struct{}{}
+	cm.reloadCh <- struct{}{}
+
+	runWait(t, runErr, false, 10*time.Second)
+
+	err = testutils.CopyDir(t, filepath.Join("testdata", "fixtures"), dst)
+	require.NoError(t, err, "Setup: failed to re-copy test fixtures")
+	runWait(t, runErr, false, 5*time.Second)
+
+	gracefulShutdown(t, s, runErr)
+	checkRunResults(t, cm, db)
+}
+
+func TestRunAfterQuitErrors(t *testing.T) {
+	t.Parallel()
+
+	dst := ingest.CopyTestFixtures(t, nil)
+	cm := &mockConfigManager{
+		allowList: []string{"SingleValid"},
+		baseDir:   dst,
+
+		reloadCh: make(chan struct{}),
+		errCh:    make(chan error),
+	}
+	db := &mockDBManager{}
+
+	opts := []ingest.Options{
+		ingest.WithDBConnect(func(ctx context.Context, cfg database.Config) (ingest.DBManager, error) {
+			return db, nil
+		}),
+	}
+	s, err := ingest.New(t.Context(), cm, database.Config{}, opts...)
+	require.NoError(t, err, "Setup: Failed to create service")
+	defer s.Quit(true)
+
+	runErr := make(chan error, 1)
+	go func() {
+		defer close(runErr)
+		err := s.Run()
+		if err != nil {
+			runErr <- err
+		}
+	}()
+
+	runWait(t, runErr, false, 3*time.Second)
+	gracefulShutdown(t, s, runErr)
+
+	runErr = make(chan error, 1)
+	go func() {
+		defer close(runErr)
+		err := s.Run()
+		if err != nil {
+			runErr <- err
+		}
+	}()
+	runWait(t, runErr, true, 3*time.Second)
 }
 
 type mockConfigManager struct {
 	baseDir   string
 	allowList []string
 
-	earlyClose bool
-	loadErr    error
-	watchErr   error
+	earlyClose      bool
+	loadErr         error
+	watchErr        error
+	delayedWatchErr error
+
+	reloadCh chan struct{}
+	errCh    chan error
+
+	mu sync.RWMutex // Mutex to protect access to the allowList
 }
 
-func (m mockConfigManager) Load() error {
+func (m *mockConfigManager) Load() error {
 	return m.loadErr
 }
 
-func (m mockConfigManager) Watch(ctx context.Context) (<-chan struct{}, <-chan error, error) {
+func (m *mockConfigManager) Watch(ctx context.Context) (<-chan struct{}, <-chan error, error) {
 	if m.watchErr != nil {
 		return nil, nil, m.watchErr
 	}
-	reloadCh := make(chan struct{})
-	errCh := make(chan error)
+
+	if m.reloadCh == nil {
+		m.reloadCh = make(chan struct{})
+	}
+
+	if m.errCh == nil {
+		m.errCh = make(chan error)
+	}
 
 	if m.earlyClose {
-		close(reloadCh)
-		close(errCh)
+		close(m.reloadCh)
+		close(m.errCh)
+	} else if m.delayedWatchErr != nil {
+		go func() {
+			time.Sleep(2 * time.Second)
+			m.errCh <- m.delayedWatchErr
+		}()
 	}
-	return reloadCh, errCh, nil
+	return m.reloadCh, m.errCh, nil
 }
 
-func (m mockConfigManager) AllowList() []string {
+func (m *mockConfigManager) AllowList() []string {
+	m.mu.RLock() // Lock for reading
+	defer m.mu.RUnlock()
 	return m.allowList
 }
 
-func (m mockConfigManager) BaseDir() string {
+func (m *mockConfigManager) SetAllowList(newAllowList []string) {
+	m.mu.Lock() // Lock for writing
+	defer m.mu.Unlock()
+	m.allowList = newAllowList
+}
+
+func (m *mockConfigManager) BaseDir() string {
 	return m.baseDir
 }
 
@@ -192,17 +378,19 @@ type mockDBManager struct {
 	closeErr  error
 	uploadErr error
 	data      map[string][]*models.TargetModel // Fake in-memory database
-}
-
-func newMockDBManager() *mockDBManager {
-	return &mockDBManager{
-		data: make(map[string][]*models.TargetModel),
-	}
+	mu        sync.Mutex                       // Mutex to protect access to the data map
 }
 
 func (m *mockDBManager) Upload(ctx context.Context, app string, data *models.TargetModel) error {
 	if m.uploadErr != nil {
 		return m.uploadErr
+	}
+
+	m.mu.Lock() // Lock the mutex before accessing the data map
+	defer m.mu.Unlock()
+
+	if m.data == nil {
+		m.data = make(map[string][]*models.TargetModel)
 	}
 
 	// Simulate storing the data in the fake database
@@ -212,4 +400,62 @@ func (m *mockDBManager) Upload(ctx context.Context, app string, data *models.Tar
 
 func (m *mockDBManager) Close() error {
 	return m.closeErr
+}
+
+// runWait is a helper function which waits a specified duration, unless an error signal is received.
+//
+// If an error is received, and expectErr is true, it returns true.
+func runWait(t *testing.T, runErr chan error, expectErr bool, duration time.Duration) bool {
+	t.Helper()
+
+	select {
+	case err := <-runErr:
+		if expectErr {
+			require.Error(t, err, "Expected error but got nil")
+			return true
+		}
+		// Unexpected early close
+		require.Fail(t, "Service closed unexpectedly: %v", err)
+	case <-time.After(duration):
+	}
+
+	return false
+}
+
+// gracefulShutdown is a helper function which simulates a graceful shutdown of the service.
+func gracefulShutdown(t *testing.T, s *ingest.Service, runErr chan error) {
+	t.Helper()
+
+	s.Quit(false)
+	select {
+	case err := <-runErr:
+		require.NoError(t, err, "Expected no error but got: %v", err)
+	case <-time.After(4 * time.Second):
+		require.Fail(t, "Service did not close within the expected time")
+	}
+}
+
+// checkRunResults is a helper function which checks the results of the run
+// and compares them to the expected results.
+func checkRunResults(t *testing.T, cm *mockConfigManager, db *mockDBManager) {
+	t.Helper()
+
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	remainingFiles, err := testutils.GetDirContents(t, cm.BaseDir(), 4)
+	require.NoError(t, err, "Failed to get directory contents")
+
+	results := struct {
+		RemainingFiles map[string]string
+		UploadedFiles  map[string][]*models.TargetModel
+	}{
+		RemainingFiles: remainingFiles,
+		UploadedFiles:  db.data,
+	}
+
+	got, err := json.MarshalIndent(results, "", "  ")
+	require.NoError(t, err)
+	want := testutils.LoadWithUpdateFromGolden(t, string(got))
+	assert.Equal(t, strings.ReplaceAll(want, "\r\n", "\n"), string(got), "Unexpected results after processing files")
 }

@@ -10,38 +10,31 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
-	"time"
 
 	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/models"
 )
 
-var semverRegex = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+var debianVersionRegex = regexp.MustCompile(`^(?:(\d+):)?([a-zA-Z0-9.+~-]+)(?:-([a-zA-Z0-9.+~]+))?$`)
 
 type database interface {
 	Upload(ctx context.Context, app string, data *models.TargetModel) error
 }
 
-func validateGeneratedTime(generated string) error {
-	parsedTime, err := time.Parse(time.RFC3339, generated)
-	if err != nil {
-		return fmt.Errorf("invalid time format: %w", err)
-	}
-
-	now := time.Now()
-	if parsedTime.After(now) {
-		return fmt.Errorf("timestamp is in the future")
-	}
-
-	inceptionDate := time.Date(2025, 4, 1, 0, 0, 0, 0, time.UTC)
-	if parsedTime.Before(inceptionDate) {
-		return fmt.Errorf("timestamp %q is before inception of ubuntu-insights v2 %q", generated, inceptionDate.Format(time.RFC3339))
-	}
-
-	return nil
-}
-
 func validateFile(data *models.TargetModel, path string) error {
+	if data.OptOut {
+		// Ensure everything else is empty
+		if !reflect.DeepEqual(data, &models.TargetModel{OptOut: true}) {
+			return fmt.Errorf("opt-out file %q contains unexpected data", path)
+		}
+		return nil
+	}
+
+	// Check version
+	if !debianVersionRegex.MatchString(data.InsightsVersion) {
+		return fmt.Errorf("invalid version format %q in file %q", data.InsightsVersion, path)
+	}
 
 	return nil
 }

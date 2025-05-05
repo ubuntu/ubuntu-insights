@@ -20,16 +20,16 @@ type VersionedEnvelope struct {
 // TargetModel represents the target model for the ingest service.
 // It is the current structure used before the data is inserted into the database.
 type TargetModel struct {
-	InsightsVersion string           `json:"insightsVersion"`
-	SystemInfo      TargetSystemInfo `json:"systemInfo"`
+	InsightsVersion string           `json:"insightsVersion,omitempty"`
+	SystemInfo      TargetSystemInfo `json:"systemInfo,omitzero"`
 
 	OptOut bool `json:"optOut,omitempty"`
 }
 
 // TargetSystemInfo represents the target system information for the ingest service.
 type TargetSystemInfo struct {
-	Hardware      hardware.Info   `json:"hardware"`
-	Software      software.Info   `json:"software"`
-	Platform      json.RawMessage `json:"platform"`
-	SourceMetrics json.RawMessage `json:"sourceMetrics"`
+	Hardware      hardware.Info   `json:"hardware,omitzero"`
+	Software      software.Info   `json:"software,omitzero"`
+	Platform      json.RawMessage `json:"platform,omitempty"`
+	SourceMetrics json.RawMessage `json:"sourceMetrics,omitempty"`
 }

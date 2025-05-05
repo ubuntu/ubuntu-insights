@@ -1,0 +1,217 @@
+{
+  "RemainingFiles": {
+    "OptOut/optout.json": "{\n    \"OptOut\": true\n}",
+    "SingleInvalid/invalid.json": "{\n    \"iam\": \"invalid\"\n}"
+  },
+  "UploadedFiles": {
+    "MultiMixed": [
+      {
+        "optOut": true
+      },
+      {
+        "insightsVersion": "0.0.1~ppa5",
+        "systemInfo": {
+          "hardware": {
+            "product": {
+              "family": "My Product Family",
+              "name": "My Product Name",
+              "vendor": "My Product Vendor"
+            },
+            "cpu": {
+              "name": "9 1200SX",
+              "vendor": "Authentic",
+              "architecture": "x86_64",
+              "cpus": 16,
+              "sockets": 1,
+              "coresPerSocket": 8,
+              "threadsPerCore": 2
+            },
+            "gpus": [
+              {
+                "device": "0x0294",
+                "vendor": "0x10df",
+                "driver": "gpu"
+              },
+              {
+                "device": "0x03ec",
+                "vendor": "0x1003",
+                "driver": "gpu"
+              }
+            ],
+            "memory": {
+              "size": 23247
+            },
+            "disks": [
+              {
+                "size": 1887436,
+                "type": "disk",
+                "children": [
+                  {
+                    "size": 750,
+                    "type": "part"
+                  },
+                  {
+                    "size": 260,
+                    "type": "part"
+                  },
+                  {
+                    "size": 16,
+                    "type": "part"
+                  },
+                  {
+                    "size": 1887436,
+                    "type": "part"
+                  },
+                  {
+                    "size": 869,
+                    "type": "part"
+                  },
+                  {
+                    "size": 54988,
+                    "type": "part"
+                  }
+                ]
+              }
+            ],
+            "screens": [
+              {
+                "size": "600mm x 340mm",
+                "resolution": "2560x1440",
+                "refreshRate": "143.83"
+              },
+              {
+                "size": "300mm x 190mm",
+                "resolution": "1704x1065",
+                "refreshRate": "119.91"
+              }
+            ]
+          },
+          "software": {
+            "os": {
+              "family": "linux",
+              "distribution": "Ubuntu",
+              "version": "24.04"
+            },
+            "timezone": "EDT",
+            "language": "en_US",
+            "bios": {
+              "vendor": "Bios Vendor",
+              "version": "Bios Version"
+            }
+          },
+          "platform": {
+            "desktop": {
+              "desktopEnvironment": "ubuntu:GNOME",
+              "sessionName": "ubuntu",
+              "sessionType": "wayland"
+            },
+            "proAttached": true
+          }
+        }
+      }
+    ],
+    "SingleValid": [
+      {
+        "insightsVersion": "0.0.1~ppa5",
+        "systemInfo": {
+          "hardware": {
+            "product": {
+              "family": "My Product Family",
+              "name": "My Product Name",
+              "vendor": "My Product Vendor"
+            },
+            "cpu": {
+              "name": "9 1200SX",
+              "vendor": "Authentic",
+              "architecture": "x86_64",
+              "cpus": 16,
+              "sockets": 1,
+              "coresPerSocket": 8,
+              "threadsPerCore": 2
+            },
+            "gpus": [
+              {
+                "device": "0x0294",
+                "vendor": "0x10df",
+                "driver": "gpu"
+              },
+              {
+                "device": "0x03ec",
+                "vendor": "0x1003",
+                "driver": "gpu"
+              }
+            ],
+            "memory": {
+              "size": 23247
+            },
+            "disks": [
+              {
+                "size": 1887436,
+                "type": "disk",
+                "children": [
+                  {
+                    "size": 750,
+                    "type": "part"
+                  },
+                  {
+                    "size": 260,
+                    "type": "part"
+                  },
+                  {
+                    "size": 16,
+                    "type": "part"
+                  },
+                  {
+                    "size": 1887436,
+                    "type": "part"
+                  },
+                  {
+                    "size": 869,
+                    "type": "part"
+                  },
+                  {
+                    "size": 54988,
+                    "type": "part"
+                  }
+                ]
+              }
+            ],
+            "screens": [
+              {
+                "size": "600mm x 340mm",
+                "resolution": "2560x1440",
+                "refreshRate": "143.83"
+              },
+              {
+                "size": "300mm x 190mm",
+                "resolution": "1704x1065",
+                "refreshRate": "119.91"
+              }
+            ]
+          },
+          "software": {
+            "os": {
+              "family": "linux",
+              "distribution": "Ubuntu",
+              "version": "24.04"
+            },
+            "timezone": "EDT",
+            "language": "en_US",
+            "bios": {
+              "vendor": "Bios Vendor",
+              "version": "Bios Version"
+            }
+          },
+          "platform": {
+            "desktop": {
+              "desktopEnvironment": "ubuntu:GNOME",
+              "sessionName": "ubuntu",
+              "sessionType": "wayland"
+            },
+            "proAttached": true
+          }
+        }
+      }
+    ]
+  }
+}

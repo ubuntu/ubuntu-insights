@@ -85,6 +85,9 @@ func New(ctx context.Context, cm dConfigManager, dbConfig database.Config, args 
 		cancel:         cancel,
 		gracefulCtx:    gCtx,
 		gracefulCancel: gCancel,
+
+		mu:      sync.Mutex{},
+		workers: make(map[string]context.CancelFunc),
 	}, nil
 }
 
@@ -110,14 +113,14 @@ func (s *Service) Run() error {
 	s.syncWorkers()
 
 	// Debounce timer for handling bursts of events
-	debounceDuration := 500 * time.Millisecond
+	debounceDuration := 5 * time.Second
 	debounceTimer := time.NewTimer(debounceDuration)
 	defer debounceTimer.Stop()
 
 	for {
 		select {
 		case <-s.gracefulCtx.Done():
-			slog.Info("Ingest service shutting down")
+			slog.Info("Ingest service stopped")
 			return nil
 
 		case _, ok := <-reloadEventCh:
@@ -125,7 +128,10 @@ func (s *Service) Run() error {
 				return fmt.Errorf("reloadEventCh closed unexpectedly")
 			}
 			if !debounceTimer.Stop() {
-				<-debounceTimer.C // Drain the channel if needed
+				select {
+				case <-debounceTimer.C:
+				default:
+				}
 			}
 			debounceTimer.Reset(debounceDuration)
 
@@ -133,6 +139,7 @@ func (s *Service) Run() error {
 			// Timer expired, perform the resync
 			slog.Info("Resyncing workers after configuration change")
 			s.syncWorkers()
+			slog.Debug("Completed resyncing workers")
 
 		case err, ok := <-cfgWatchErrCh:
 			if !ok {
@@ -165,25 +172,32 @@ func (s *Service) syncWorkers() {
 	}
 	// start added
 	for app := range want {
-		if _, ok := s.workers[app]; !ok {
-			ctx, cancel := context.WithCancel(s.gracefulCtx)
-			s.workers[app] = cancel
-			go s.appWorker(ctx, app)
+		if _, ok := s.workers[app]; ok {
+			continue
 		}
+
+		select {
+		case <-s.gracefulCtx.Done():
+			slog.Info("Graceful shutdown in progress, stopping app worker", "app", app)
+			return // normal shutdown
+		default:
+		}
+		ctx, cancel := context.WithCancel(s.gracefulCtx)
+		s.workers[app] = cancel
+		slog.Info("Starting app worker", "app", app)
+		go s.appWorker(ctx, app)
 	}
 }
 
 // appWorker watches & processes files for a single app until ctx is canceled.
 func (s *Service) appWorker(ctx context.Context, app string) {
 	inputDir := filepath.Join(s.cm.BaseDir(), app)
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
+		default:
 			// this will read/process/remove JSON files and call s.db.Upload(...)
 			err := processor.ProcessFiles(ctx, inputDir, s.db)
 			if err != nil {
@@ -199,6 +213,9 @@ func (s *Service) appWorker(ctx context.Context, app string) {
 
 // Quit stops the ingest service and closes the database connection.
 func (s *Service) Quit(force bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if force {
 		s.cancel()
 	} else {
@@ -208,5 +225,5 @@ func (s *Service) Quit(force bool) {
 	if s.db != nil {
 		s.db.Close()
 	}
-	slog.Info("Ingest service stopped")
+	slog.Info("Stopping Ingest service")
 }

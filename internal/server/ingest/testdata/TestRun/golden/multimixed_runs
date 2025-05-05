@@ -1,0 +1,115 @@
+{
+  "RemainingFiles": {
+    "OptOut/optout.json": "{\n    \"OptOut\": true\n}",
+    "SingleInvalid/invalid.json": "{\n    \"iam\": \"invalid\"\n}",
+    "SingleValid/valid.json": "{\n    \"insightsVersion\": \"0.0.1~ppa5\",\n    \"systemInfo\": {\n        \"hardware\": {\n            \"product\": {\n                \"family\": \"My Product Family\",\n                \"name\": \"My Product Name\",\n                \"vendor\": \"My Product Vendor\"\n            },\n            \"cpu\": {\n                \"name\": \"9 1200SX\",\n                \"vendor\": \"Authentic\",\n                \"architecture\": \"x86_64\",\n                \"cpus\": 16,\n                \"sockets\": 1,\n                \"coresPerSocket\": 8,\n                \"threadsPerCore\": 2\n            },\n            \"gpus\": [\n                {\n                    \"device\": \"0x0294\",\n                    \"vendor\": \"0x10df\",\n                    \"driver\": \"gpu\"\n                },\n                {\n                    \"device\": \"0x03ec\",\n                    \"vendor\": \"0x1003\",\n                    \"driver\": \"gpu\"\n                }\n            ],\n            \"memory\": {\n                \"size\": 23247\n            },\n            \"disks\": [\n                {\n                    \"size\": 1887436,\n                    \"type\": \"disk\",\n                    \"children\": [\n                        {\n                            \"size\": 750,\n                            \"type\": \"part\"\n                        },\n                        {\n                            \"size\": 260,\n                            \"type\": \"part\"\n                        },\n                        {\n                            \"size\": 16,\n                            \"type\": \"part\"\n                        },\n                        {\n                            \"size\": 1887436,\n                            \"type\": \"part\"\n                        },\n                        {\n                            \"size\": 869,\n                            \"type\": \"part\"\n                        },\n                        {\n                            \"size\": 54988,\n                            \"type\": \"part\"\n                        }\n                    ]\n                }\n            ],\n            \"screens\": [\n                {\n                    \"size\": \"600mm x 340mm\",\n                    \"resolution\": \"2560x1440\",\n                    \"refreshRate\": \"143.83\"\n                },\n                {\n                    \"size\": \"300mm x 190mm\",\n                    \"resolution\": \"1704x1065\",\n                    \"refreshRate\": \"119.91\"\n                }\n            ]\n        },\n        \"software\": {\n            \"os\": {\n                \"family\": \"linux\",\n                \"distribution\": \"Ubuntu\",\n                \"version\": \"24.04\"\n            },\n            \"timezone\": \"EDT\",\n            \"language\": \"en_US\",\n            \"bios\": {\n                \"vendor\": \"Bios Vendor\",\n                \"version\": \"Bios Version\"\n            }\n        },\n        \"platform\": {\n            \"desktop\": {\n                \"desktopEnvironment\": \"ubuntu:GNOME\",\n                \"sessionName\": \"ubuntu\",\n                \"sessionType\": \"wayland\"\n            },\n            \"proAttached\": true\n        }\n    }\n}"
+  },
+  "UploadedFiles": {
+    "MultiMixed": [
+      {
+        "optOut": true
+      },
+      {
+        "insightsVersion": "0.0.1~ppa5",
+        "systemInfo": {
+          "hardware": {
+            "product": {
+              "family": "My Product Family",
+              "name": "My Product Name",
+              "vendor": "My Product Vendor"
+            },
+            "cpu": {
+              "name": "9 1200SX",
+              "vendor": "Authentic",
+              "architecture": "x86_64",
+              "cpus": 16,
+              "sockets": 1,
+              "coresPerSocket": 8,
+              "threadsPerCore": 2
+            },
+            "gpus": [
+              {
+                "device": "0x0294",
+                "vendor": "0x10df",
+                "driver": "gpu"
+              },
+              {
+                "device": "0x03ec",
+                "vendor": "0x1003",
+                "driver": "gpu"
+              }
+            ],
+            "memory": {
+              "size": 23247
+            },
+            "disks": [
+              {
+                "size": 1887436,
+                "type": "disk",
+                "children": [
+                  {
+                    "size": 750,
+                    "type": "part"
+                  },
+                  {
+                    "size": 260,
+                    "type": "part"
+                  },
+                  {
+                    "size": 16,
+                    "type": "part"
+                  },
+                  {
+                    "size": 1887436,
+                    "type": "part"
+                  },
+                  {
+                    "size": 869,
+                    "type": "part"
+                  },
+                  {
+                    "size": 54988,
+                    "type": "part"
+                  }
+                ]
+              }
+            ],
+            "screens": [
+              {
+                "size": "600mm x 340mm",
+                "resolution": "2560x1440",
+                "refreshRate": "143.83"
+              },
+              {
+                "size": "300mm x 190mm",
+                "resolution": "1704x1065",
+                "refreshRate": "119.91"
+              }
+            ]
+          },
+          "software": {
+            "os": {
+              "family": "linux",
+              "distribution": "Ubuntu",
+              "version": "24.04"
+            },
+            "timezone": "EDT",
+            "language": "en_US",
+            "bios": {
+              "vendor": "Bios Vendor",
+              "version": "Bios Version"
+            }
+          },
+          "platform": {
+            "desktop": {
+              "desktopEnvironment": "ubuntu:GNOME",
+              "sessionName": "ubuntu",
+              "sessionType": "wayland"
+            },
+            "proAttached": true
+          }
+        }
+      }
+    ]
+  }
+}
