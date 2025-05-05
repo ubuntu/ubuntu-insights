@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"sync"
 	"time"
 
@@ -24,19 +25,20 @@ var semverRegex = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
 var workerCount = runtime.NumCPU()
 
 func validateGeneratedTime(generated string) error {
-	parsedTime, err := time.Parse(time.RFC3339, generated)
+	unixSec, err := strconv.ParseInt(generated, 10, 64)
 	if err != nil {
-		return fmt.Errorf("invalid time format: %w", err)
+		return fmt.Errorf("invalid unix timestamp: %w", err)
 	}
 
-	now := time.Now()
+	parsedTime := time.Unix(unixSec, 0).UTC()
+	now := time.Now().UTC()
 	if parsedTime.After(now) {
 		return fmt.Errorf("timestamp is in the future")
 	}
 
 	inceptionDate := time.Date(2025, 4, 1, 0, 0, 0, 0, time.UTC)
 	if parsedTime.Before(inceptionDate) {
-		return fmt.Errorf("timestamp %q is before inception of ubuntu-insights v2 %q", generated, inceptionDate.Format(time.RFC3339))
+		return fmt.Errorf("timestamp %q is before inception of ubuntu-insights v2 %q", parsedTime.Format(time.RFC3339), inceptionDate.Format(time.RFC3339))
 	}
 
 	return nil
