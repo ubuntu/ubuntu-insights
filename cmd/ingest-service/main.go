@@ -14,16 +14,16 @@ import (
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/storage"
 )
 
+const (
+	defaultConfigPath = "config.json"
+)
+
 func main() {
-	cfgPath := flag.String("config", "config.json", "Path to configuration file")
+	var cfgPath string
+	flag.StringVar(&cfgPath, "config", defaultConfigPath, "Path to configuration file")
 	flag.Parse()
 
-	if *cfgPath == "" {
-		slog.Error("Configuration file path is required")
-		return
-	}
-
-	cfg, err := config.Load(*cfgPath)
+	cfg, err := config.Load(cfgPath)
 	if err != nil {
 		slog.Error("Failed to load configuration", "err", err)
 		return
