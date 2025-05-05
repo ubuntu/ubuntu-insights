@@ -80,50 +80,72 @@ func (cm *Manager) Load() error {
 }
 
 // Watch starts watching the configuration file for changes.
-func (cm *Manager) Watch(ctx context.Context) error {
+//
+// It returns two channels: one for configuration changes which result in a successful load and another for unrecoverable watcher errors.
+func (cm *Manager) Watch(ctx context.Context) (changes <-chan struct{}, errors <-chan error, err error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return fmt.Errorf("failed to create watcher: %v", err)
+		return nil, nil, fmt.Errorf("failed to create watcher: %v", err)
 	}
-	defer watcher.Close()
 
 	configDir, _ := filepath.Split(cm.configPath)
 	if configDir == "" {
 		configDir = "."
 	}
 	if err := watcher.Add(configDir); err != nil {
-		return fmt.Errorf("failed to add directory %s to watcher: %v", configDir, err)
+		watcher.Close()
+		return nil, nil, fmt.Errorf("failed to add directory %s to watcher: %v", configDir, err)
 	}
 
 	cm.log.Info("Watching configuration directory", "dir", configDir)
-	for {
-		select {
-		case <-ctx.Done():
-			cm.log.Info("Configuration watcher stopped")
-			return nil
-		case event, ok := <-watcher.Events:
-			if !ok {
-				return fmt.Errorf("watcher events channel closed unexpectedly")
-			}
-			if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename) == 0 {
-				continue
-			}
+	changesCh := make(chan struct{}, 1)
+	errorsCh := make(chan error, 1)
 
-			if event.Name != cm.configPath {
-				continue
-			}
+	go func() {
+		defer close(changesCh)
+		defer close(errorsCh)
+		defer watcher.Close()
 
-			cm.log.Debug("Configuration file changed. Reloading...")
-			if err := cm.Load(); err != nil {
-				cm.log.Warn("Error reloading config", "err", err)
+		for {
+			select {
+			case <-ctx.Done():
+				cm.log.Info("Configuration watcher stopped")
+				return
+			case event, ok := <-watcher.Events:
+				if !ok {
+					errorsCh <- fmt.Errorf("watcher events channel closed unexpectedly")
+					return
+				}
+				if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename) == 0 {
+					continue
+				}
+
+				if event.Name != cm.configPath {
+					continue
+				}
+
+				cm.log.Debug("Configuration file changed. Reloading...")
+				if err := cm.Load(); err != nil {
+					cm.log.Warn("Error reloading config", "err", err)
+					continue
+				}
+
+				select {
+				case changesCh <- struct{}{}:
+				default:
+				}
+
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					errorsCh <- fmt.Errorf("watcher errors channel closed unexpectedly")
+					return
+				}
+				cm.log.Warn("Watcher error", "err", err)
 			}
-		case err, ok := <-watcher.Errors:
-			if !ok {
-				return fmt.Errorf("watcher errors channel closed unexpectedly")
-			}
-			cm.log.Warn("Watcher error", "err", err)
 		}
-	}
+	}()
+
+	return changesCh, errorsCh, nil
 }
 
 // BaseDir returns the base directory from the configuration.

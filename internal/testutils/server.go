@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net"
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -55,4 +57,18 @@ func PortOpen(t *testing.T, host string, port int) bool {
 	}
 	defer conn.Close()
 	return true
+}
+
+// WaitForPortClosed waits for a port to be closed on the specified TCP host.
+func WaitForPortClosed(t *testing.T, host string, port int, timeout time.Duration) {
+	t.Helper()
+
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if !PortOpen(t, host, port) {
+			return
+		}
+		time.Sleep(50 * time.Millisecond) // Small delay before retrying
+	}
+	assert.Fail(t, "Timeout waiting for port to close", "host: %s, port: %d", host, port)
 }
