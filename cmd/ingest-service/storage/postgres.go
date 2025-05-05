@@ -77,8 +77,8 @@ func UploadToPostgres(ctx context.Context, data *models.FileData) error {
 		return fmt.Errorf("database not initialized")
 	}
 
-	query := fmt.Sprintf(`INSERT INTO %s (generated, schema_version) VALUES ($2, $3)`, pq.QuoteIdentifier(data.AppID))
-	_, err := db.ExecContext(ctx, query, data.AppID, data.Generated, data.SchemaVersion)
+	query := fmt.Sprintf(`INSERT INTO %s (generated, schema_version) VALUES ($1, $2)`, pq.QuoteIdentifier(data.AppID))
+	_, err := db.ExecContext(ctx, query, data.Generated, data.SchemaVersion)
 
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
