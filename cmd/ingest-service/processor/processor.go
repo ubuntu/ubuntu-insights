@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
+	"sync"
 	"time"
 
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/config"
@@ -19,6 +21,7 @@ import (
 )
 
 var semverRegex = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+var workerCount = runtime.NumCPU()
 
 func validateGeneratedTime(generated string) error {
 	parsedTime, err := time.Parse(time.RFC3339, generated)
@@ -115,35 +118,80 @@ func ProcessFiles(ctx context.Context, cfg *config.ServiceConfig) error {
 		return fmt.Errorf("failed to get JSON files: %w", err)
 	}
 
-	for _, file := range files {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
+	fileCh := make(chan string)
+	var wg sync.WaitGroup
+	errCh := make(chan error, workerCount)
 
-		fileData, err := processFile(file)
-		if err == nil {
-			if err = storage.UploadToPostgres(ctx, fileData); err == nil {
-				slog.Info("Successfully processed and uploaded file", "file", file)
-			} else {
-				if errors.Is(err, context.Canceled) {
-					return err // normal shutdown
+	slog.Info("Processing files", "count", len(files))
+	slog.Info("Directory", "dir", cfg.InputDir)
+
+	// Start workers
+	for range workerCount {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for file := range fileCh {
+				select {
+				case <-ctx.Done():
+					return // stop immediately if context cancelled
+				default:
+					// continue
 				}
-				slog.Warn("Failed to upload file to PostgreSQL", "file", file, "err", err)
-				continue // Skip file removal if upload fails
+
+				slog.Info("Processing file", "file", file)
+
+				fileData, err := processFile(file)
+				if err == nil {
+					if err = storage.UploadToPostgres(ctx, fileData); err == nil {
+						slog.Info("Successfully processed and uploaded file", "file", file)
+					} else {
+						if errors.Is(err, context.Canceled) {
+							return // normal shutdown
+						}
+						slog.Warn("Failed to upload file to PostgreSQL", "file", file, "err", err)
+						errCh <- err
+						continue // Skip file removal if upload fails
+					}
+				} else {
+					slog.Warn("Failed to process file", "file", file, "err", err)
+				}
+
+				if err := os.Remove(file); err != nil {
+					slog.Warn("Failed to remove file after processing", "file", file, "err", err)
+					continue
+				}
+
+				slog.Info("Removed file after processing", "file", file)
 			}
-		} else {
-			slog.Warn("Failed to process file", "file", file, "err", err)
-		}
-
-		if err := os.Remove(file); err != nil {
-			slog.Warn("Failed to remove file after processing", "file", file, "err", err)
-			continue
-		}
-
-		slog.Info("Removed file after processing", "file", file)
+		}()
 	}
 
-	return nil
+	// Send files to workers
+	go func() {
+		defer close(fileCh)
+		for _, file := range files {
+			select {
+			case <-ctx.Done():
+				return // stop sending if context cancelled
+			case fileCh <- file:
+				// file sent
+			}
+		}
+	}()
+
+	// Wait for workers to finish
+	wg.Wait()
+	close(errCh)
+
+	// Check if any errors happened
+	var finalErr error
+	for err := range errCh {
+		if finalErr == nil {
+			finalErr = err
+		} else {
+			finalErr = fmt.Errorf("%v; %w", finalErr, err)
+		}
+	}
+
+	return finalErr
 }
