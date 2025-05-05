@@ -72,7 +72,7 @@ func Close(timeout time.Duration) error {
 }
 
 // UploadToPostgres uploads the provided FileData to the PostgreSQL database.
-func UploadToPostgres(ctx context.Context, data *models.FileData) error {
+func UploadToPostgres(ctx context.Context, data *models.DBFileData) error {
 	if db == nil {
 		return fmt.Errorf("database not initialized")
 	}

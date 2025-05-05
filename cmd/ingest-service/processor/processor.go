@@ -44,7 +44,7 @@ func validateGeneratedTime(generated string) error {
 	return nil
 }
 
-func validateFile(data *models.FileData, path string) error {
+func validateFile(data *models.RawFileData, path string) error {
 	// Validate AppID
 	if data.AppID == "" {
 		return fmt.Errorf("AppID is required")
@@ -92,22 +92,47 @@ func getJSONFiles(dir string) ([]string, error) {
 	return files, err
 }
 
-func processFile(file string) (*models.FileData, error) {
+func transformFileData(data *models.RawFileData) (*models.DBFileData, error) {
+	var dbFileData models.DBFileData
+	dbFileData.AppID = data.AppID
+
+	// Convert unix timestamp to time.Time
+	unixSec, err := strconv.ParseInt(data.Generated, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid unix timestamp: %w", err)
+	}
+	dbFileData.Generated = time.Unix(unixSec, 0).UTC()
+
+	dbFileData.SchemaVersion = data.SchemaVersion
+	dbFileData.Common = data.Common
+	dbFileData.AppData = data.AppData
+
+	return &dbFileData, nil
+}
+
+func processFile(file string) (*models.DBFileData, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
 
-	var fileData models.FileData
+	var fileData models.RawFileData
 	if err = json.Unmarshal(data, &fileData); err != nil {
 		return nil, err
 	}
 
-	if err := validateFile(&fileData, file); err != nil {
+	if err = validateFile(&fileData, file); err != nil {
 		return nil, err
 	}
 
-	return &fileData, nil
+	var dbFileData *models.DBFileData
+	dbFileData, err = transformFileData(&fileData)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return dbFileData, nil
 }
 
 // ProcessFiles processes all JSON files in the specified directory.
