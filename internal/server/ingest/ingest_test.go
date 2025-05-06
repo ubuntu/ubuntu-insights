@@ -156,12 +156,15 @@ func TestRun(t *testing.T) {
 				return
 			}
 
+			waitForUploaderToBeIdle(t, tc.dbConfig, 2*time.Second, 15*time.Second)
+
 			if tc.reAddFiles {
 				// Re-add files to the directory
 				err := testutils.CopyDir(t, filepath.Join("testdata", "fixtures"), dst)
 				require.NoError(t, err, "Setup: failed to re-copy test fixtures")
 
-				runWait(t, runErr, false, 4*time.Second)
+				waitForUploaderToBeIdle(t, tc.dbConfig, 5*time.Second, 20*time.Second)
+				runWait(t, runErr, false, 500*time.Millisecond)
 			}
 
 			// Simulate a graceful shutdown
@@ -213,6 +216,7 @@ func TestRunNewApp(t *testing.T) {
 	cm.reloadCh <- struct{}{}
 
 	runWait(t, runErr, false, 15*time.Second)
+	waitForUploaderToBeIdle(t, db, 4*time.Second, 20*time.Second)
 
 	gracefulShutdown(t, s, runErr)
 	checkRunResults(t, cm, db)
@@ -251,7 +255,8 @@ func TestRunRemoveApp(t *testing.T) {
 	}()
 
 	// Allow time for the service to start and run
-	runWait(t, runErr, false, 3*time.Second)
+	waitForUploaderToBeIdle(t, db, 2*time.Second, 20*time.Second)
+	runWait(t, runErr, false, 500*time.Millisecond)
 
 	// Add MultiMixed to the allow list (send burst of signals)
 	cm.SetAllowList([]string{"SingleValid"})
@@ -263,7 +268,8 @@ func TestRunRemoveApp(t *testing.T) {
 
 	err = testutils.CopyDir(t, filepath.Join("testdata", "fixtures"), dst)
 	require.NoError(t, err, "Setup: failed to re-copy test fixtures")
-	runWait(t, runErr, false, 5*time.Second)
+	waitForUploaderToBeIdle(t, db, 4*time.Second, 20*time.Second)
+	runWait(t, runErr, false, 500*time.Millisecond)
 
 	gracefulShutdown(t, s, runErr)
 	checkRunResults(t, cm, db)
@@ -375,10 +381,11 @@ func (m *mockConfigManager) BaseDir() string {
 }
 
 type mockDBManager struct {
-	closeErr  error
-	uploadErr error
-	data      map[string][]*models.TargetModel // Fake in-memory database
-	mu        sync.Mutex                       // Mutex to protect access to the data map
+	closeErr       error
+	uploadErr      error
+	data           map[string][]*models.TargetModel // Fake in-memory database
+	mu             sync.Mutex                       // Mutex to protect access to the data map
+	lastUploadTime time.Time                        // Time of the last upload
 }
 
 func (m *mockDBManager) Upload(ctx context.Context, app string, data *models.TargetModel) error {
@@ -395,7 +402,15 @@ func (m *mockDBManager) Upload(ctx context.Context, app string, data *models.Tar
 
 	// Simulate storing the data in the fake database
 	m.data[app] = append(m.data[app], data)
+	m.lastUploadTime = time.Now()
 	return nil
+}
+
+func (m *mockDBManager) IsUploaderActiveWithin(duration time.Duration) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return time.Since(m.lastUploadTime) <= duration
 }
 
 func (m *mockDBManager) Close() error {
@@ -458,4 +473,21 @@ func checkRunResults(t *testing.T, cm *mockConfigManager, db *mockDBManager) {
 	require.NoError(t, err)
 	want := testutils.LoadWithUpdateFromGolden(t, string(got))
 	assert.Equal(t, strings.ReplaceAll(want, "\r\n", "\n"), string(got), "Unexpected results after processing files")
+}
+
+// waitForUploaderToBeIdle is a helper function which waits for the uploader to be idle for a specified duration.
+//
+// If it does not become idle within the timeout, it fails the test.
+func waitForUploaderToBeIdle(t *testing.T, db *mockDBManager, idleDuration time.Duration, timeout time.Duration) {
+	t.Helper()
+
+	start := time.Now()
+	for time.Since(start) < timeout {
+		if !db.IsUploaderActiveWithin(idleDuration) {
+			return
+		}
+		time.Sleep(500 * time.Millisecond) // Small delay between checks
+	}
+
+	require.Fail(t, "Uploader did not become idle within the timeout")
 }
