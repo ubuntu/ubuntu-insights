@@ -78,9 +78,13 @@ func processFile(file string) (*models.TargetModel, error) {
 // After processing, it removes the file from the filesystem.
 func ProcessFiles(ctx context.Context, dir string, db database) error {
 	app := filepath.Base(dir)
+	if err := os.MkdirAll(dir, 0750); err != nil {
+		return fmt.Errorf("failed to create directory %q: %v", dir, err)
+	}
+
 	files, err := getJSONFiles(dir)
 	if err != nil {
-		return fmt.Errorf("failed to get JSON files: %w", err)
+		return fmt.Errorf("failed to get JSON files: %v", err)
 	}
 
 	for _, file := range files {
