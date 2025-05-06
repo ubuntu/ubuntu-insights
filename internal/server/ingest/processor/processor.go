@@ -33,6 +33,10 @@ func validateFile(data *models.TargetModel, path string) error {
 	}
 
 	// Check version
+	if data.InsightsVersion == "" {
+		return fmt.Errorf("missing InsightsVersion in file %q", path)
+	}
+
 	if !debianVersionRegex.MatchString(data.InsightsVersion) {
 		return fmt.Errorf("invalid version format %q in file %q", data.InsightsVersion, path)
 	}

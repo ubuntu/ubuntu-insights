@@ -1,0 +1,20 @@
+{
+  "RemainingFiles": {},
+  "ReportsCount": {
+    "darwin": {
+      "TotalReports": 0,
+      "OptOutReports": 0,
+      "OptInReports": 0
+    },
+    "linux": {
+      "TotalReports": 13,
+      "OptOutReports": 3,
+      "OptInReports": 10
+    },
+    "windows": {
+      "TotalReports": 3,
+      "OptOutReports": 3,
+      "OptInReports": 0
+    }
+  }
+}
