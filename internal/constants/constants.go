@@ -25,6 +25,9 @@ const (
 	// WebServiceCmdName is the name of the web service command.
 	WebServiceCmdName = "ubuntu-insights-webservice"
 
+	// IngestServiceCmdName is the name of the ingest service command.
+	IngestServiceCmdName = "ubuntu-insights-ingest-service"
+
 	// DefaultAppFolder is the name of the default root folder.
 	DefaultAppFolder = "ubuntu-insights"
 
