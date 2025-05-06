@@ -4,6 +4,7 @@ go 1.24.2
 
 require (
 	github.com/BurntSushi/toml v1.5.0
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.10.9
@@ -18,7 +19,6 @@ require (
 )
 
 require (
-	github.com/DATA-DOG/go-sqlmock v1.5.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
