@@ -3,7 +3,7 @@ package models
 
 import "time"
 
-// FileData represents the structure of the JSON files processed by the ingest service.
+// RawFileData represents the structure of the JSON files processed by the ingest service.
 type RawFileData struct {
 	AppID         string                 `json:"AppID"`
 	Generated     string                 `json:"Generated"`
