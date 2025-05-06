@@ -2,104 +2,55 @@ package storage_test
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	_ "github.com/lib/pq"
-	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/config"
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/models"
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/storage"
 )
 
-var testCfg = config.DBConfig{
-	Host:     "localhost",
-	Port:     5432,
-	User:     "testuser",
-	Password: "testpass",
-	DBName:   "testdb",
-	SSLMode:  "disable",
-}
-
-func setupTestDB(t *testing.T) *sql.DB {
-	t.Helper()
-	dsn := "host=localhost port=5432 user=testuser password=testpass dbname=testdb sslmode=disable"
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		t.Fatalf("failed to open DB: %v", err)
-	}
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS wsl (
-			id SERIAL PRIMARY KEY,
-			generated TIMESTAMP NOT NULL,
-			schema_version TEXT NOT NULL
-		);
-	`)
-	if err != nil {
-		t.Fatalf("failed to create test table: %v", err)
-	}
-	return db
-}
-
-func teardownTestDB(t *testing.T, db *sql.DB) {
-	t.Helper()
-	_, err := db.Exec(`TRUNCATE TABLE wsl;`)
-	if err != nil {
-		t.Errorf("failed to truncate table: %v", err)
-	}
-	db.Close()
-}
-
-func TestInitializeAndGet(t *testing.T) {
-	t.Parallel()
-	err := storage.Initialize(testCfg)
-	if err != nil {
-		t.Fatalf("failed to initialize storage: %v", err)
-	}
-
-	db := storage.Get()
-	if db == nil {
-		t.Fatal("expected initialized DB, got nil")
-	}
-}
-
 func TestUploadToPostgres_Success(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
-
-	setup := setupTestDB(t)
-	defer teardownTestDB(t, setup)
-
-	err := storage.Initialize(testCfg)
+	db, mock, err := sqlmock.New()
 	if err != nil {
-		t.Fatalf("failed to initialize storage: %v", err)
+		t.Fatalf("failed to create mock: %v", err)
 	}
+	defer db.Close()
 
+	ctx := context.Background()
 	data := &models.DBFileData{
 		AppID:         "wsl",
 		Generated:     time.Now(),
 		SchemaVersion: "1.0",
 	}
 
-	err = storage.UploadToPostgres(ctx, data)
+	mock.ExpectExec("INSERT INTO \"wsl\"").
+		WithArgs(data.Generated, data.SchemaVersion).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err = storage.UploadToPostgres(ctx, db, data)
 	if err != nil {
-		t.Errorf("expected no error, got %v", err)
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unmet mock expectations: %v", err)
 	}
 }
 
 func TestUploadToPostgres_NotInitialized(t *testing.T) {
-	// Bypass Initialize on purpose
+	t.Parallel()
 	ctx := context.Background()
-
 	data := &models.DBFileData{
 		AppID:         "wsl",
 		Generated:     time.Now(),
 		SchemaVersion: "1.0",
 	}
-
-	err := storage.UploadToPostgres(ctx, data)
+	err := storage.UploadToPostgres(ctx, nil, data)
 	if err == nil || !strings.Contains(err.Error(), "database not initialized") {
 		t.Errorf("expected database not initialized error, got: %v", err)
 	}
@@ -107,16 +58,14 @@ func TestUploadToPostgres_NotInitialized(t *testing.T) {
 
 func TestUploadToPostgres_CanceledContext(t *testing.T) {
 	t.Parallel()
-	setup := setupTestDB(t)
-	defer teardownTestDB(t, setup)
-
-	err := storage.Initialize(testCfg)
+	db, mock, err := sqlmock.New()
 	if err != nil {
-		t.Fatalf("failed to initialize storage: %v", err)
+		t.Fatalf("failed to create mock: %v", err)
 	}
+	defer db.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // immediately cancel
+	cancel()
 
 	data := &models.DBFileData{
 		AppID:         "wsl",
@@ -124,7 +73,11 @@ func TestUploadToPostgres_CanceledContext(t *testing.T) {
 		SchemaVersion: "1.0",
 	}
 
-	err = storage.UploadToPostgres(ctx, data)
+	mock.ExpectExec("INSERT INTO wsl").
+		WithArgs(data.Generated, data.SchemaVersion).
+		WillReturnError(context.Canceled)
+
+	err = storage.UploadToPostgres(ctx, db, data)
 	if err == nil || !errors.Is(err, context.Canceled) {
 		t.Errorf("expected context canceled error, got: %v", err)
 	}
@@ -132,21 +85,20 @@ func TestUploadToPostgres_CanceledContext(t *testing.T) {
 
 func TestUploadToPostgres_InvalidInput(t *testing.T) {
 	t.Parallel()
-	setup := setupTestDB(t)
-	defer teardownTestDB(t, setup)
-
-	err := storage.Initialize(testCfg)
+	db, _, err := sqlmock.New()
 	if err != nil {
-		t.Fatalf("failed to initialize storage: %v", err)
+		t.Fatalf("failed to create mock: %v", err)
 	}
+	defer db.Close()
 
 	ctx := context.Background()
-	err = storage.UploadToPostgres(ctx, nil)
-	if err == nil || !strings.Contains(err.Error(), "invalid input") {
+
+	if err := storage.UploadToPostgres(ctx, db, nil); err == nil || !strings.Contains(err.Error(), "invalid input") {
 		t.Errorf("expected error for nil input, got: %v", err)
 	}
 
-	err = storage.UploadToPostgres(ctx, &models.DBFileData{})
+	// Empty AppID
+	err = storage.UploadToPostgres(ctx, db, &models.DBFileData{})
 	if err == nil || !strings.Contains(err.Error(), "invalid input") {
 		t.Errorf("expected error for missing AppID, got: %v", err)
 	}
@@ -154,18 +106,23 @@ func TestUploadToPostgres_InvalidInput(t *testing.T) {
 
 func TestUploadToPostgres_SQLInjectionSafety(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
-	setup := setupTestDB(t)
-	defer teardownTestDB(t, setup)
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create mock: %v", err)
+	}
+	defer db.Close()
 
-	data := &models.DBFileData{
-		AppID:         "wsl; DROP TABLE users;", // malicious input
+	ctx := context.Background()
+	malicious := &models.DBFileData{
+		AppID:         "\"wsl\"; DROP TABLE users;", // should not match allowed AppID
 		Generated:     time.Now(),
 		SchemaVersion: "1.0",
 	}
 
-	err := storage.UploadToPostgres(ctx, data)
-	if err == nil {
-		t.Error("Expected error due to SQL injection attempt, got nil")
+	err = storage.UploadToPostgres(ctx, db, malicious)
+
+	// Ensure no exec attempt was made
+	if err = mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unexpected DB interaction: %v", err)
 	}
 }

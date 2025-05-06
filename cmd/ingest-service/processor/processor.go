@@ -169,7 +169,7 @@ func ProcessFiles(ctx context.Context, cfg *config.ServiceConfig, uploader stora
 
 				fileData, err := processFile(file)
 				if err == nil {
-					if err = uploader.Upload(ctx, fileData); err == nil {
+					if err = uploader.Upload(ctx, storage.Get(), fileData); err == nil {
 						slog.Info("Successfully processed and uploaded file", "file", file)
 					} else {
 						if errors.Is(err, context.Canceled) {

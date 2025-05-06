@@ -10,6 +10,6 @@ import (
 type PostgresUploader struct{}
 
 // Upload uploads the given data to PostgreSQL.
-func (p *PostgresUploader) Upload(ctx context.Context, data *models.DBFileData) error {
-	return UploadToPostgres(ctx, data)
+func (p *PostgresUploader) Upload(ctx context.Context, db DBExecutor, data *models.DBFileData) error {
+	return UploadToPostgres(ctx, db, data)
 }

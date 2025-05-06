@@ -72,9 +72,13 @@ func Close(timeout time.Duration) error {
 }
 
 // UploadToPostgres uploads the provided FileData to the PostgreSQL database.
-func UploadToPostgres(ctx context.Context, data *models.DBFileData) error {
+func UploadToPostgres(ctx context.Context, db DBExecutor, data *models.DBFileData) error {
 	if db == nil {
 		return fmt.Errorf("database not initialized")
+	}
+	
+	if data == nil || data.AppID == "" {
+		return fmt.Errorf("invalid input: data is nil or missing AppID")
 	}
 
 	query := fmt.Sprintf(`INSERT INTO %s (generated, schema_version) VALUES ($1, $2)`, pq.QuoteIdentifier(data.AppID))

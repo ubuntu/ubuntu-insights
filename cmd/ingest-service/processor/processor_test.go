@@ -15,6 +15,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/config"
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/models"
 	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/processor"
+	"github.com/ubuntu/ubuntu-insights/cmd/ingest-service/storage"
 )
 
 type mockUploader struct {
@@ -22,7 +23,7 @@ type mockUploader struct {
 	Err      error
 }
 
-func (m *mockUploader) Upload(ctx context.Context, data *models.DBFileData) error {
+func (m *mockUploader) Upload(ctx context.Context, _ storage.DBExecutor, data *models.DBFileData) error {
 	if m.Err != nil {
 		return m.Err
 	}
