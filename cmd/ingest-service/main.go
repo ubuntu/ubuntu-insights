@@ -41,6 +41,8 @@ func main() {
 		}
 	}()
 
+	uploader := &storage.PostgresUploader{}
+
 	// Setup graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
