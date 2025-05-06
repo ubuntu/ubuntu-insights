@@ -76,7 +76,7 @@ func UploadToPostgres(ctx context.Context, db DBExecutor, data *models.DBFileDat
 	if db == nil {
 		return fmt.Errorf("database not initialized")
 	}
-	
+
 	if data == nil || data.AppID == "" {
 		return fmt.Errorf("invalid input: data is nil or missing AppID")
 	}

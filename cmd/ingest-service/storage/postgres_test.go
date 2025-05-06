@@ -119,7 +119,7 @@ func TestUploadToPostgres_SQLInjectionSafety(t *testing.T) {
 		SchemaVersion: "1.0",
 	}
 
-	err = storage.UploadToPostgres(ctx, db, malicious)
+	_ = storage.UploadToPostgres(ctx, db, malicious)
 
 	// Ensure no exec attempt was made
 	if err = mock.ExpectationsWereMet(); err != nil {
