@@ -47,8 +47,18 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
+	var tickerC <-chan time.Time
+	if cfg.Interval != nil {
+		interval := time.Duration(*cfg.Interval) * time.Second
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		tickerC = ticker.C
+	} else {
+		once := make(chan time.Time, 1)
+		once <- time.Now()
+		close(once)
+		tickerC = once
+	}
 
 	slog.Info("Ingest service started")
 
@@ -65,13 +75,13 @@ func main() {
 				slog.Info("Shutdown signal received, waiting for current work to finish...")
 				return
 
-			case <-ticker.C:
+			case <-tickerC:
 				// Only process if context isn't already canceled
 				if ctx.Err() != nil {
 					return
 				}
 
-				if err := processor.ProcessFiles(ctx, cfg); err != nil {
+				if err := processor.ProcessFiles(ctx, cfg, uploader); err != nil {
 					slog.Warn("Failed to process files", "err", err)
 				}
 			}

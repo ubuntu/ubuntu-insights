@@ -22,6 +22,7 @@ type DBConfig struct {
 type ServiceConfig struct {
 	InputDir string   `json:"input_dir"`
 	DB       DBConfig `json:"db"`
+	Interval *int     `json:"interval_seconds,omitempty"`
 }
 
 // Load reads the configuration from the specified JSON file.
