@@ -7,31 +7,24 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
 // CopyFile copies a file from source to destination.
 func CopyFile(t *testing.T, src, dst string) error {
 	t.Helper()
 
-	sourceFile, err := os.Open(src)
+	data, err := os.ReadFile(src)
 	if err != nil {
 		return err
 	}
-	defer sourceFile.Close()
 
-	destinationFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer destinationFile.Close()
-
-	_, err = io.Copy(destinationFile, sourceFile)
-	return err
+	return fileutils.AtomicWrite(dst, data)
 }
 
 // CopySymlink copies a symlink from source to destination.
