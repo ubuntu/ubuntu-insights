@@ -23,7 +23,7 @@ const (
 	CmdName = "ubuntu-insights"
 
 	// WebServiceCmdName is the name of the web service command.
-	WebServiceCmdName = "ubuntu-insights-webservice"
+	WebServiceCmdName = "ubuntu-insights-web-service"
 
 	// IngestServiceCmdName is the name of the ingest service command.
 	IngestServiceCmdName = "ubuntu-insights-ingest-service"
