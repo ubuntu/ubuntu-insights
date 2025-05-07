@@ -114,6 +114,19 @@ func TestIngestService(t *testing.T) {
 					t.Errorf("Teardown: failed to stop dbContainer: %v", err)
 				}
 			}()
+			dbLogs, err := dbContainer.Container.Logs(t.Context())
+			require.NoError(t, err, "Setup: failed to get dbContainer logs")
+			go func() {
+				scanner := bufio.NewScanner(dbLogs)
+				for scanner.Scan() {
+					t.Logf("dbContainer logs: %s", scanner.Text())
+				}
+			}()
+
+			if err := dbContainer.IsReady(t, 5*time.Second); err != nil {
+				// Retry check.
+				require.NoError(t, dbContainer.IsReady(t, 10*time.Second), "Setup: dbContainer was not ready in time")
+			}
 			ApplyMigrations(t, dbContainer.DSN, filepath.Join(testutils.ProjectRoot(), "migrations"))
 
 			dst := t.TempDir()
@@ -167,7 +180,7 @@ func TestIngestService(t *testing.T) {
 			}()
 
 			// Allow it to run for a while
-			time.Sleep(7 * time.Second)
+			time.Sleep(2 * time.Second)
 
 			for _, report := range tc.postReports {
 				makeReport(t, report.reportType, report.count, filepath.Join(dst, report.app), true)

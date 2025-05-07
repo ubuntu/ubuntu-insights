@@ -2,9 +2,11 @@ package ingest_test
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/pgx" // PGX driver for golang-migrate
@@ -85,6 +87,20 @@ func StartPostgresContainer(t *testing.T) *PostgresContainer {
 // Stop stops the PostgreSQL container.
 func (pc *PostgresContainer) Stop(ctx context.Context) error {
 	return pc.Container.Terminate(ctx)
+}
+
+// IsReady checks if the PostgreSQL database is connectable within a given timeout.
+func (pc PostgresContainer) IsReady(t *testing.T, timeout time.Duration) error {
+	t.Helper()
+
+	db, err := sql.Open("pgx", pc.DSN)
+	require.NoError(t, err, "Failed to open database connection")
+	defer db.Close()
+
+	ctx, cancel := context.WithTimeout(t.Context(), timeout)
+	defer cancel()
+
+	return db.PingContext(ctx)
 }
 
 // ApplyMigrations applies migrations from the specified directory to the database using the PGX driver.
