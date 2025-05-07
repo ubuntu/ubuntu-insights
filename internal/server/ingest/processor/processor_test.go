@@ -25,6 +25,7 @@ func TestProcessFiles(t *testing.T) {
 
 		delay         time.Duration
 		skipFileCheck bool
+		earlyCancel   bool
 
 		wantErr error
 	}{
@@ -43,9 +44,9 @@ func TestProcessFiles(t *testing.T) {
 		},
 
 		// Error cases
-		"Instant contex cancellation errors": {
+		"Instant context cancellation errors": {
 			app:           "MultiMixed",
-			delay:         0,
+			earlyCancel:   true,
 			skipFileCheck: true,
 
 			wantErr: context.Canceled,
@@ -61,6 +62,10 @@ func TestProcessFiles(t *testing.T) {
 			require.NoError(t, testutils.CopyDir(t, fixtureDir, filepath.Join(dst, tc.app)), "Setup: failed to copy fixture directory")
 
 			ctx, cancel := context.WithCancel(t.Context())
+
+			if tc.earlyCancel {
+				cancel()
+			}
 
 			errCh := make(chan error, 1)
 			go func() {
