@@ -458,7 +458,7 @@ func checkRunResults(t *testing.T, cm *mockConfigManager, db *mockDBManager) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	remainingFiles, err := testutils.GetDirContents(t, cm.BaseDir(), 4)
+	remainingFiles, err := testutils.GetDirHashedContents(t, cm.BaseDir(), 4)
 	require.NoError(t, err, "Failed to get directory contents")
 
 	results := struct {

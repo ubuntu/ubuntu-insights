@@ -87,7 +87,7 @@ func TestProcessFiles(t *testing.T) {
 				return
 			}
 
-			remainingFiles, err := testutils.GetDirContents(t, dst, 4)
+			remainingFiles, err := testutils.GetDirHashedContents(t, dst, 4)
 			require.NoError(t, err, "Failed to get directory contents")
 
 			results := struct {
