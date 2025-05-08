@@ -142,14 +142,7 @@ func TestRun(t *testing.T) {
 			s, err := ingest.New(t.Context(), tc.cm, database.Config{}, opts...)
 			require.NoError(t, err, "Setup: Failed to create service")
 
-			runErr := make(chan error, 1)
-			go func() {
-				defer close(runErr)
-				err := s.Run()
-				if err != nil {
-					runErr <- err
-				}
-			}()
+			runErr := run(t, s)
 
 			// Allow time for the service to start and run
 			if runWait(t, runErr, tc.wantErr, 4*time.Second) {
@@ -197,14 +190,7 @@ func TestRunNewApp(t *testing.T) {
 	s, err := ingest.New(t.Context(), cm, database.Config{}, opts...)
 	require.NoError(t, err, "Setup: Failed to create service")
 
-	runErr := make(chan error, 1)
-	go func() {
-		defer close(runErr)
-		err := s.Run()
-		if err != nil {
-			runErr <- err
-		}
-	}()
+	runErr := run(t, s)
 
 	// Allow time for the service to start and run
 	runWait(t, runErr, false, 3*time.Second)
@@ -245,14 +231,7 @@ func TestRunRemoveApp(t *testing.T) {
 	s, err := ingest.New(t.Context(), cm, database.Config{}, opts...)
 	require.NoError(t, err, "Setup: Failed to create service")
 
-	runErr := make(chan error, 1)
-	go func() {
-		defer close(runErr)
-		err := s.Run()
-		if err != nil {
-			runErr <- err
-		}
-	}()
+	runErr := run(t, s)
 
 	// Allow time for the service to start and run
 	waitForUploaderToBeIdle(t, db, 2*time.Second, 20*time.Second)
@@ -297,14 +276,7 @@ func TestRunAfterQuitErrors(t *testing.T) {
 	require.NoError(t, err, "Setup: Failed to create service")
 	defer s.Quit(true)
 
-	runErr := make(chan error, 1)
-	go func() {
-		defer close(runErr)
-		err := s.Run()
-		if err != nil {
-			runErr <- err
-		}
-	}()
+	runErr := run(t, s)
 
 	runWait(t, runErr, false, 3*time.Second)
 	gracefulShutdown(t, s, runErr)
@@ -417,6 +389,25 @@ func (m *mockDBManager) Close() error {
 	return m.closeErr
 }
 
+// run is a helper function which runs the service in a separate goroutine
+// and returns a channel to receive any errors that occur during the run.
+//
+// The channel is closed when the run is complete.
+func run(t *testing.T, s *ingest.Service) chan error {
+	t.Helper()
+
+	runErr := make(chan error, 1)
+	go func() {
+		defer close(runErr)
+		err := s.Run()
+		if err != nil {
+			runErr <- err
+		}
+	}()
+
+	return runErr
+}
+
 // runWait is a helper function which waits a specified duration, unless an error signal is received.
 //
 // If an error is received, and expectErr is true, it returns true.
@@ -438,15 +429,29 @@ func runWait(t *testing.T, runErr chan error, expectErr bool, duration time.Dura
 }
 
 // gracefulShutdown is a helper function which simulates a graceful shutdown of the service.
+// If the service does not shutdown within 8 seconds, it fails the test.
+// If runErr receives an error during shutdown, it fails the test.
 func gracefulShutdown(t *testing.T, s *ingest.Service, runErr chan error) {
 	t.Helper()
 
-	s.Quit(false)
+	done := make(chan struct{})
+	go func() {
+		s.Quit(false)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(8 * time.Second):
+		require.Fail(t, "Service failed to shutdown gracefully within 8 seconds")
+	}
+
+	// Check for any errors during shutdown
 	select {
 	case err := <-runErr:
-		require.NoError(t, err, "Expected no error but got: %v", err)
-	case <-time.After(4 * time.Second):
-		require.Fail(t, "Service did not close within the expected time")
+		require.NoError(t, err, "Service failed to shutdown gracefully")
+	case <-time.After(2 * time.Second):
+		require.Fail(t, "Service has not returned after 2 seconds")
 	}
 }
 

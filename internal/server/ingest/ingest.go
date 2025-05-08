@@ -29,8 +29,9 @@ type Service struct {
 	gracefulCtx    context.Context
 	gracefulCancel context.CancelFunc
 
-	mu      sync.Mutex
-	workers map[string]context.CancelFunc
+	mu       sync.Mutex
+	workers  map[string]context.CancelFunc
+	workerWG sync.WaitGroup
 }
 
 type dbManager interface {
@@ -86,8 +87,9 @@ func New(ctx context.Context, cm dConfigManager, dbConfig database.Config, args 
 		gracefulCtx:    gCtx,
 		gracefulCancel: gCancel,
 
-		mu:      sync.Mutex{},
-		workers: make(map[string]context.CancelFunc),
+		mu:       sync.Mutex{},
+		workers:  make(map[string]context.CancelFunc),
+		workerWG: sync.WaitGroup{},
 	}, nil
 }
 
@@ -191,6 +193,8 @@ func (s *Service) syncWorkers() {
 
 // appWorker watches & processes files for a single app until ctx is canceled.
 func (s *Service) appWorker(ctx context.Context, app string) {
+	s.workerWG.Add(1)
+	defer s.workerWG.Done()
 	inputDir := filepath.Join(s.cm.BaseDir(), app)
 
 	for {
@@ -202,7 +206,7 @@ func (s *Service) appWorker(ctx context.Context, app string) {
 			err := processor.ProcessFiles(ctx, inputDir, s.db)
 			if err != nil {
 				if errors.Is(err, context.Canceled) {
-					slog.Info("Graceful shutdown in progress, stopping app worker", "app", app)
+					slog.Debug("App worker stopped", "app", app)
 					return // normal shutdown
 				}
 				slog.Error("Failed to process files", "app", app, "err", err)
@@ -213,18 +217,22 @@ func (s *Service) appWorker(ctx context.Context, app string) {
 }
 
 // Quit stops the ingest service and closes the database connection.
+// If force is false, it will block until all workers close.
+//
+// Safe to call multiple times.
 func (s *Service) Quit(force bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	slog.Info("Stopping Ingest service")
 	if force {
 		s.cancel()
 	} else {
 		s.gracefulCancel()
+		s.workerWG.Wait()
 	}
 
 	if s.db != nil {
 		s.db.Close()
 	}
-	slog.Info("Stopping Ingest service")
 }
