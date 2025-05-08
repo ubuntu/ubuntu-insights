@@ -206,7 +206,7 @@ func (s *Service) appWorker(ctx context.Context, app string) {
 			err := processor.ProcessFiles(ctx, inputDir, s.db)
 			if err != nil {
 				if errors.Is(err, context.Canceled) {
-					slog.Info("App worker stopped", "app", app)
+					slog.Debug("App worker stopped", "app", app)
 					return // normal shutdown
 				}
 				slog.Error("Failed to process files", "app", app, "err", err)
