@@ -4,32 +4,27 @@ package testutils
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
 )
 
 // CopyFile copies a file from source to destination.
 func CopyFile(t *testing.T, src, dst string) error {
 	t.Helper()
 
-	sourceFile, err := os.Open(src)
+	data, err := os.ReadFile(src)
 	if err != nil {
 		return err
 	}
-	defer sourceFile.Close()
 
-	destinationFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer destinationFile.Close()
-
-	_, err = io.Copy(destinationFile, sourceFile)
-	return err
+	return fileutils.AtomicWrite(dst, data)
 }
 
 // CopySymlink copies a symlink from source to destination.
@@ -111,4 +106,25 @@ func GetDirContents(t *testing.T, dir string, maxDepth uint) (map[string]string,
 	})
 
 	return files, err
+}
+
+// GetDirHashedContents is like GetDirContents but hashes the contents of the files.
+//
+// This is for situations where it is very unlikely that the contents of the files will change,
+// and we don't care about not being able to see the actual diff, and we can identify the contents in other ways,
+// such as by the filename. For those situations, hashing the contents can make the golden files much more readable.
+func GetDirHashedContents(t *testing.T, dir string, maxDepth uint) (map[string]string, error) {
+	t.Helper()
+
+	dirContents, err := GetDirContents(t, dir, maxDepth)
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range dirContents {
+		hash := sha256.Sum256([]byte(v))
+		dirContents[k] = hex.EncodeToString(hash[:])
+	}
+
+	return dirContents, nil
 }
