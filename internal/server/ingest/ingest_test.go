@@ -438,15 +438,29 @@ func runWait(t *testing.T, runErr chan error, expectErr bool, duration time.Dura
 }
 
 // gracefulShutdown is a helper function which simulates a graceful shutdown of the service.
+// If the service does not shutdown within 8 seconds, it fails the test.
+// If runErr receives an error during shutdown, it fails the test.
 func gracefulShutdown(t *testing.T, s *ingest.Service, runErr chan error) {
 	t.Helper()
 
-	s.Quit(false)
+	done := make(chan struct{})
+	go func() {
+		s.Quit(false)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(8 * time.Second):
+		require.Fail(t, "Service failed to shutdown gracefully within 8 seconds")
+	}
+
+	// Check for any errors during shutdown
 	select {
 	case err := <-runErr:
-		require.NoError(t, err, "Expected no error but got: %v", err)
-	case <-time.After(4 * time.Second):
-		require.Fail(t, "Service did not close within the expected time")
+		require.NoError(t, err, "Service failed to shutdown gracefully")
+	case <-time.After(2 * time.Second):
+		require.Fail(t, "Service has not returned aftery 2 seconds")
 	}
 }
 
