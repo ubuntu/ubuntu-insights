@@ -206,6 +206,7 @@ func (s *Service) appWorker(ctx context.Context, app string) {
 					return // normal shutdown
 				}
 				slog.Error("Failed to process files", "app", app, "err", err)
+				return
 			}
 		}
 	}

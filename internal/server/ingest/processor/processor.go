@@ -76,6 +76,8 @@ func processFile(file string) (*models.TargetModel, error) {
 // It reads each file, unmarshals the JSON data into a FileData struct,
 // and uploads the data to a PostgreSQL database.
 // After processing, it removes the file from the filesystem.
+//
+// It returns an error if a catastrophic failure occurs, excluding database errors.
 func ProcessFiles(ctx context.Context, dir string, db database) error {
 	app := filepath.Base(dir)
 	if err := os.MkdirAll(dir, 0750); err != nil {
