@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -41,11 +42,12 @@ func validateFile(data *models.TargetModel, path string) error {
 
 func getJSONFiles(dir string) ([]string, error) {
 	var files []string
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && filepath.Ext(path) == ".json" {
+
+		if d.Type().IsRegular() && filepath.Ext(path) == ".json" {
 			files = append(files, path)
 		}
 		return nil
