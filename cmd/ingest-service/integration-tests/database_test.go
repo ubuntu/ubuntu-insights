@@ -2,7 +2,6 @@ package ingest_test
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"runtime"
 	"testing"
@@ -11,6 +10,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/pgx" // PGX driver for golang-migrate
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -89,18 +89,33 @@ func (pc *PostgresContainer) Stop(ctx context.Context) error {
 	return pc.Container.Terminate(ctx)
 }
 
-// IsReady checks if the PostgreSQL database is connectable within a given timeout.
-func (pc PostgresContainer) IsReady(t *testing.T, timeout time.Duration) error {
+// IsReady checks if the PostgreSQL database is connectable.
+// It will attempt to connect to the database multiple times, each attempt being timeout long at most.
+func (pc PostgresContainer) IsReady(t *testing.T, timeout time.Duration, attempts int) error {
 	t.Helper()
 
-	db, err := sql.Open("pgx", pc.DSN)
-	require.NoError(t, err, "Failed to open database connection")
-	defer db.Close()
+	config, err := pgx.ParseConfig(pc.DSN)
+	if err != nil {
+		return fmt.Errorf("failed to parse DSN: %w", err)
+	}
 
-	ctx, cancel := context.WithTimeout(t.Context(), timeout)
-	defer cancel()
+	for i := range attempts {
+		ctx, cancel := context.WithTimeout(t.Context(), timeout)
+		conn, err := pgx.ConnectConfig(ctx, config)
+		cancel()
 
-	return db.PingContext(ctx)
+		if err != nil {
+			t.Logf("Attempt %d: failed to connect to database: %v", i+1, err)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		ctx, cancel = context.WithTimeout(t.Context(), 2*time.Second)
+		defer cancel()
+		return conn.Close(ctx)
+	}
+
+	return fmt.Errorf("database did not become ready after %d attempts: %v", attempts, err)
 }
 
 // ApplyMigrations applies migrations from the specified directory to the database using the PGX driver.

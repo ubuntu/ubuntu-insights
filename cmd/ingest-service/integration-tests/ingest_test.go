@@ -123,10 +123,7 @@ func TestIngestService(t *testing.T) {
 				}
 			}()
 
-			if err := dbContainer.IsReady(t, 5*time.Second); err != nil {
-				// Retry check.
-				require.NoError(t, dbContainer.IsReady(t, 10*time.Second), "Setup: dbContainer was not ready in time")
-			}
+			require.NoError(t, dbContainer.IsReady(t, 5*time.Second, 10), "Setup: dbContainer was not ready in time")
 			ApplyMigrations(t, dbContainer.DSN, filepath.Join(testutils.ProjectRoot(), "migrations"))
 
 			dst := t.TempDir()
