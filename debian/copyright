@@ -20,6 +20,10 @@ Files: vendor/github.com/davecgh/go-spew/*
 Copyright: 2012-2016, Dave Collins <dave@davec.name>
 License: ISC
 
+Files: vendor/github.com/docker/docker/*
+Copyright: 2012-2017 Docker, Inc.
+License: Apache-2.0
+
 Files: vendor/github.com/fsnotify/fsnotify/*
 Copyright: fsnotify Authors.
  2012, The Go Authors.
@@ -31,6 +35,10 @@ License: Expat
 
 Files: vendor/github.com/inconshreveable/mousetrap/*
 Copyright: 2022, Alan Shreve (@inconshreveable)
+License: Apache-2.0
+
+Files: vendor/github.com/moby/patternmatcher/*
+Copyright: 2012-2017 Docker, Inc.
 License: Apache-2.0
 
 Files: vendor/github.com/pelletier/go-toml/v2/*
