@@ -2,3 +2,5 @@ autostart/systemd/* usr/lib/systemd/user
 usr/share/bash-completion
 usr/share/man
 usr/share/zsh
+vendor/github.com/moby/patternmatcher/NOTICE usr/share/doc/ubuntu-insights/NOTICE.moby-patternmatcher
+vendor/github.com/docker/docker/NOTICE usr/share/doc/ubuntu-insights/NOTICE.docker
