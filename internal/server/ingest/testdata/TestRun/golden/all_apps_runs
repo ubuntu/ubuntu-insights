@@ -3,46 +3,81 @@
   "UploadedFiles": {
     "MultiMixed": [
       {
-        "optOut": true
+        "insightsVersion": "0.0.1~ppa5",
+        "collectionTime": 1747752692,
+        "systemInfo": {
+          "hardware": {
+            "hardware-field": "generic hardware information"
+          },
+          "software": {
+            "software-field": "generic software information"
+          },
+          "platform": {
+            "platform-field": "generic platform information"
+          },
+          "Extras": {
+            "extra-sysinfo": "extra-sysinfo"
+          }
+        },
+        "Extras": {
+          "extra-toplevel": {
+            "extraField": "extraValue"
+          }
+        }
       },
       {
         "insightsVersion": "0.0.1~ppa5",
         "collectionTime": 1747752692,
         "systemInfo": {
           "hardware": {
-            "product": {
-              "family": "My Product Family",
-              "name": "My Product Name",
-              "vendor": "My Product Vendor"
-            },
+            "hardware-field": "generic hardware information"
+          },
+          "software": {
+            "software-field": "generic software information"
+          },
+          "platform": {
+            "platform-field": "generic platform information"
+          },
+          "Extras": {
+            "extra-sysinfo": "extra-sysinfo"
+          }
+        }
+      },
+      {
+        "insightsVersion": "0.0.1~ppa5",
+        "collectionTime": 1747752692,
+        "systemInfo": {
+          "hardware": {
+            "hardware-field": "generic hardware information"
+          },
+          "software": {
+            "software-field": "generic software information"
+          },
+          "platform": {
+            "platform-field": "generic platform information"
+          }
+        },
+        "Extras": {
+          "extra-toplevel": {
+            "extraField": "extraValue"
+          }
+        }
+      },
+      {
+        "insightsVersion": "0.0.1~ppa5",
+        "systemInfo": {
+          "hardware": {
             "cpu": {
-              "name": "9 1200SX",
-              "vendor": "Authentic",
               "architecture": "x86_64",
-              "cpus": 16,
-              "sockets": 1,
               "coresPerSocket": 8,
-              "threadsPerCore": 2
-            },
-            "gpus": [
-              {
-                "device": "0x0294",
-                "vendor": "0x10df",
-                "driver": "gpu"
-              },
-              {
-                "device": "0x03ec",
-                "vendor": "0x1003",
-                "driver": "gpu"
-              }
-            ],
-            "memory": {
-              "size": 23247
+              "cpus": 16,
+              "name": "9 1200SX",
+              "sockets": 1,
+              "threadsPerCore": 2,
+              "vendor": "Authentic"
             },
             "disks": [
               {
-                "size": 1887436,
-                "type": "disk",
                 "children": [
                   {
                     "size": 750,
@@ -68,34 +103,162 @@
                     "size": 54988,
                     "type": "part"
                   }
-                ]
+                ],
+                "size": 1887436,
+                "type": "disk"
               }
             ],
-            "screens": [
+            "gpus": [
               {
-                "size": "600mm x 340mm",
-                "resolution": "2560x1440",
-                "refreshRate": "143.83"
+                "device": "0x0294",
+                "driver": "gpu",
+                "vendor": "0x10df"
               },
               {
-                "size": "300mm x 190mm",
+                "device": "0x03ec",
+                "driver": "gpu",
+                "vendor": "0x1003"
+              }
+            ],
+            "memory": {
+              "size": 23247
+            },
+            "product": {
+              "family": "My Product Family",
+              "name": "My Product Name",
+              "vendor": "My Product Vendor"
+            },
+            "screens": [
+              {
+                "refreshRate": "143.83",
+                "resolution": "2560x1440",
+                "size": "600mm x 340mm"
+              },
+              {
+                "refreshRate": "119.91",
                 "resolution": "1704x1065",
-                "refreshRate": "119.91"
+                "size": "300mm x 190mm"
               }
             ]
           },
           "software": {
-            "os": {
-              "family": "linux",
-              "distribution": "Ubuntu",
-              "version": "24.04"
-            },
-            "timezone": "EDT",
-            "language": "en_US",
             "bios": {
               "vendor": "Bios Vendor",
               "version": "Bios Version"
-            }
+            },
+            "language": "en_US",
+            "os": {
+              "distribution": "Ubuntu",
+              "family": "linux",
+              "version": "24.04"
+            },
+            "timezone": "EDT"
+          },
+          "platform": {
+            "desktop": {
+              "desktopEnvironment": "ubuntu:GNOME",
+              "sessionName": "ubuntu",
+              "sessionType": "wayland"
+            },
+            "proAttached": true
+          }
+        },
+        "OptOut": true
+      },
+      {
+        "OptOut": true
+      },
+      {
+        "insightsVersion": "0.0.1~ppa5",
+        "collectionTime": 1747752692,
+        "systemInfo": {
+          "hardware": {
+            "cpu": {
+              "architecture": "x86_64",
+              "coresPerSocket": 8,
+              "cpus": 16,
+              "name": "9 1200SX",
+              "sockets": 1,
+              "threadsPerCore": 2,
+              "vendor": "Authentic"
+            },
+            "disks": [
+              {
+                "children": [
+                  {
+                    "size": 750,
+                    "type": "part"
+                  },
+                  {
+                    "size": 260,
+                    "type": "part"
+                  },
+                  {
+                    "size": 16,
+                    "type": "part"
+                  },
+                  {
+                    "size": 1887436,
+                    "type": "part"
+                  },
+                  {
+                    "size": 869,
+                    "type": "part"
+                  },
+                  {
+                    "size": 54988,
+                    "type": "part"
+                  }
+                ],
+                "size": 1887436,
+                "type": "disk"
+              }
+            ],
+            "gpus": [
+              {
+                "device": "0x0294",
+                "driver": "gpu",
+                "vendor": "0x10df"
+              },
+              {
+                "device": "0x03ec",
+                "driver": "gpu",
+                "vendor": "0x1003"
+              }
+            ],
+            "memory": {
+              "size": 23247
+            },
+            "product": {
+              "family": "My Product Family",
+              "name": "My Product Name",
+              "vendor": "My Product Vendor"
+            },
+            "screens": [
+              {
+                "refreshRate": "143.83",
+                "resolution": "2560x1440",
+                "size": "600mm x 340mm"
+              },
+              {
+                "refreshRate": "119.91",
+                "resolution": "1704x1065",
+                "size": "300mm x 190mm"
+              }
+            ]
+          },
+          "software": {
+            "bios": {
+              "vendor": "Bios Vendor",
+              "version": "Bios Version"
+            },
+            "language": "en_US",
+            "os": {
+              "distribution": "Ubuntu",
+              "family": "linux",
+              "version": "24.04"
+            },
+            "timezone": "EDT"
           },
           "platform": {
             "desktop": {
@@ -110,7 +273,7 @@
     ],
     "OptOut": [
       {
-        "optOut": true
+        "OptOut": true
       }
     ],
     "SingleValid": [
@@ -119,39 +282,17 @@
         "collectionTime": 1747752692,
         "systemInfo": {
           "hardware": {
-            "product": {
-              "family": "My Product Family",
-              "name": "My Product Name",
-              "vendor": "My Product Vendor"
-            },
             "cpu": {
-              "name": "9 1200SX",
-              "vendor": "Authentic",
               "architecture": "x86_64",
-              "cpus": 16,
-              "sockets": 1,
               "coresPerSocket": 8,
-              "threadsPerCore": 2
-            },
-            "gpus": [
-              {
-                "device": "0x0294",
-                "vendor": "0x10df",
-                "driver": "gpu"
-              },
-              {
-                "device": "0x03ec",
-                "vendor": "0x1003",
-                "driver": "gpu"
-              }
-            ],
-            "memory": {
-              "size": 23247
+              "cpus": 16,
+              "name": "9 1200SX",
+              "sockets": 1,
+              "threadsPerCore": 2,
+              "vendor": "Authentic"
             },
             "disks": [
               {
-                "size": 1887436,
-                "type": "disk",
                 "children": [
                   {
                     "size": 750,
@@ -177,34 +318,56 @@
                     "size": 54988,
                     "type": "part"
                   }
-                ]
+                ],
+                "size": 1887436,
+                "type": "disk"
               }
             ],
-            "screens": [
+            "gpus": [
               {
-                "size": "600mm x 340mm",
-                "resolution": "2560x1440",
-                "refreshRate": "143.83"
+                "device": "0x0294",
+                "driver": "gpu",
+                "vendor": "0x10df"
               },
               {
-                "size": "300mm x 190mm",
+                "device": "0x03ec",
+                "driver": "gpu",
+                "vendor": "0x1003"
+              }
+            ],
+            "memory": {
+              "size": 23247
+            },
+            "product": {
+              "family": "My Product Family",
+              "name": "My Product Name",
+              "vendor": "My Product Vendor"
+            },
+            "screens": [
+              {
+                "refreshRate": "143.83",
+                "resolution": "2560x1440",
+                "size": "600mm x 340mm"
+              },
+              {
+                "refreshRate": "119.91",
                 "resolution": "1704x1065",
-                "refreshRate": "119.91"
+                "size": "300mm x 190mm"
               }
             ]
           },
           "software": {
-            "os": {
-              "family": "linux",
-              "distribution": "Ubuntu",
-              "version": "24.04"
-            },
-            "timezone": "EDT",
-            "language": "en_US",
             "bios": {
               "vendor": "Bios Vendor",
               "version": "Bios Version"
-            }
+            },
+            "language": "en_US",
+            "os": {
+              "distribution": "Ubuntu",
+              "family": "linux",
+              "version": "24.04"
+            },
+            "timezone": "EDT"
           },
           "platform": {
             "desktop": {
@@ -217,5 +380,15 @@
         }
       }
     ]
+  },
+  "InvalidFiles": {
+    "bad_json.json": "021fb596db81e6d02bf3d2586ee3981fe519f275c0ac9ca76bbcf2ebb4097d96",
+    "empty.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "extra_mixed.json": "935ef225ab33b644d937992148d57f391cd3a879e18f480797dcedd72d106741",
+    "extra_sysinfo.json": "3019752035f4572aa3c7f62cba6902c4d73b8a6bdf34d6e09814f9177279764f",
+    "extra_top_level.json": "bb7a277c191d21ef36047460695bcc2a0f5c4b8d0e6d4473f32478b9b1d1e077",
+    "invalid.json": "b6ce9737e3489feab1a4b2aa2262a4f40ee0bd88e800a4dd9cb0f972ff087616",
+    "invalid_1.json": "b6ce9737e3489feab1a4b2aa2262a4f40ee0bd88e800a4dd9cb0f972ff087616",
+    "invalid_optout.json": "2e2e9f52050d3ab9f34f6bd49586c05b900491fa39a6c520f49bfcdfb864fbb4"
   }
 }

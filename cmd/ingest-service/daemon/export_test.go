@@ -24,6 +24,14 @@ func (a *App) Config() AppConfig {
 func NewForTests(t *testing.T, conf *AppConfig, daeConf *config.Conf, args ...string) *App {
 	t.Helper()
 
+	if conf == nil {
+		conf = &AppConfig{}
+	}
+
+	if conf.InvalidDir == "" {
+		conf.InvalidDir = filepath.Join(t.TempDir(), "invalid-dir")
+	}
+
 	p := GenerateTestConfig(t, conf, daeConf)
 	argsWithConf := []string{"--config", p}
 	argsWithConf = append(argsWithConf, args...)

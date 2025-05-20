@@ -16,5 +16,6 @@
       "OptOutReports": 3,
       "OptInReports": 3
     }
-  }
+  },
+  "InvalidFiles": {}
 }

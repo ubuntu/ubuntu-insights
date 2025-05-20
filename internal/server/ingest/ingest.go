@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -17,8 +18,9 @@ import (
 
 // Service represents the ingest service that processes and uploads reports to the database.
 type Service struct {
-	cm dConfigManager
-	db dbManager
+	cm         dConfigManager
+	db         dbManager
+	invalidDir string
 
 	// This context is used to interrupt any action.
 	// It must be the parent of gracefulCtx.
@@ -54,7 +56,7 @@ type options struct {
 type Options func(*options)
 
 // New creates a new ingest service with the provided database manager and connects to the database.
-func New(ctx context.Context, cm dConfigManager, dbConfig database.Config, args ...Options) (*Service, error) {
+func New(ctx context.Context, cm dConfigManager, dbConfig database.Config, invalidDir string, args ...Options) (*Service, error) {
 	opts := options{
 		dbConnect: func(ctx context.Context, cfg database.Config) (dbManager, error) {
 			return database.Connect(ctx, cfg)
@@ -63,6 +65,14 @@ func New(ctx context.Context, cm dConfigManager, dbConfig database.Config, args 
 
 	for _, opt := range args {
 		opt(&opts)
+	}
+
+	if invalidDir == "" {
+		return nil, fmt.Errorf("invalidDir must be set")
+	}
+
+	if err := os.MkdirAll(invalidDir, 0700); err != nil {
+		return nil, fmt.Errorf("failed to create invalidDir: %v", err)
 	}
 
 	if err := cm.Load(); err != nil {
@@ -80,8 +90,10 @@ func New(ctx context.Context, cm dConfigManager, dbConfig database.Config, args 
 	gCtx, gCancel := context.WithCancel(ctx)
 
 	return &Service{
-		cm:             cm,
-		db:             db,
+		cm:         cm,
+		db:         db,
+		invalidDir: invalidDir,
+
 		ctx:            ctx,
 		cancel:         cancel,
 		gracefulCtx:    gCtx,
@@ -203,7 +215,7 @@ func (s *Service) appWorker(ctx context.Context, app string) {
 			return
 		default:
 			// this will read/process/remove JSON files and call s.db.Upload(...)
-			err := processor.ProcessFiles(ctx, inputDir, s.db)
+			err := processor.ProcessFiles(ctx, inputDir, s.db, s.invalidDir)
 			if err != nil {
 				if errors.Is(err, context.Canceled) {
 					slog.Debug("App worker stopped", "app", app)

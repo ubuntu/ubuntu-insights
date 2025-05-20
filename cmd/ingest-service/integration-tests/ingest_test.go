@@ -136,6 +136,7 @@ func TestIngestService(t *testing.T) {
 				AllowedList: tc.validApps,
 			}
 			configPath := generateTestDaemonConfig(t, daeConf)
+			invalidDir := filepath.Join(t.TempDir(), "invalid-dir")
 
 			ctx, cancel := context.WithCancel(t.Context())
 			// #nosec:G204 - we control the command arguments in tests
@@ -149,6 +150,7 @@ func TestIngestService(t *testing.T) {
 					"--db-user", dbContainer.User,
 					"--db-password", dbContainer.Password,
 					"--db-name", dbContainer.Name,
+					"--invalid-dir", invalidDir,
 					"-vv")
 
 				// Redirect command output to the pipe
@@ -192,22 +194,14 @@ func TestIngestService(t *testing.T) {
 			// Check the dirContents of data directory
 			dirContents, err := testutils.GetDirContents(t, dst, 3)
 			require.NoError(t, err, "failed to get directory contents")
-			// Remove the filenames from the map
-			remainingFiles := make(map[string][]string)
-			for path, content := range dirContents {
-				// Parse path to get the app name
-				appName := filepath.Base(filepath.Dir(path))
-				if _, ok := remainingFiles[appName]; !ok {
-					remainingFiles[appName] = make([]string, 0)
-				}
-				remainingFiles[appName] = append(remainingFiles[appName], content)
-			}
 
-			// Sort the content lists for consistency
-			for appName, content := range remainingFiles {
-				sort.Strings(content)
-				remainingFiles[appName] = content
-			}
+			// Process remaining files
+			remainingFiles := processDirectoryContents(dirContents)
+
+			// Get and process invalid files
+			invalidDirContents, err := testutils.GetDirContents(t, invalidDir, 4)
+			require.NoError(t, err, "Failed to get invalidDir contents")
+			invalidFiles := processDirectoryContents(invalidDirContents)
 
 			// Check the database for opt-out counts
 			type reportCount struct {
@@ -229,9 +223,11 @@ func TestIngestService(t *testing.T) {
 			results := struct {
 				RemainingFiles map[string][]string
 				ReportsCount   map[string]reportCount
+				InvalidFiles   map[string][]string
 			}{
 				RemainingFiles: remainingFiles,
 				ReportsCount:   reportsCounts,
+				InvalidFiles:   invalidFiles,
 			}
 
 			got, err := json.MarshalIndent(results, "", "  ")
@@ -552,4 +548,24 @@ func makeReport(t *testing.T, reportType report, count int, reportDir string, at
 			require.NoError(t, os.WriteFile(filePath, []byte(rep), 0600), "Setup: failed to write report file")
 		}
 	}
+}
+
+// processDirectoryContents takes directory contents and returns a map of app names to sorted content.
+func processDirectoryContents(dirContents map[string]string) map[string][]string {
+	processedContents := make(map[string][]string)
+	for path, content := range dirContents {
+		// Parse path to get the app name
+		appName := filepath.Base(filepath.Dir(path))
+		if _, ok := processedContents[appName]; !ok {
+			processedContents[appName] = make([]string, 0)
+		}
+		processedContents[appName] = append(processedContents[appName], content)
+	}
+
+	// Sort the content lists for consistency
+	for appName, content := range processedContents {
+		sort.Strings(content)
+		processedContents[appName] = content
+	}
+	return processedContents
 }
