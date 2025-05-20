@@ -21,6 +21,7 @@ type VersionedEnvelope struct {
 // It is the current structure used before the data is inserted into the database.
 type TargetModel struct {
 	InsightsVersion string           `json:"insightsVersion,omitempty"`
+	CollectionTime  int64            `json:"collectionTime,omitempty"`
 	SystemInfo      TargetSystemInfo `json:"systemInfo,omitzero"`
 
 	OptOut bool `json:"optOut,omitempty"`

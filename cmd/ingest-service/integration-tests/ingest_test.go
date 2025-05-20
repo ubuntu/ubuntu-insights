@@ -328,6 +328,7 @@ func makeReport(t *testing.T, reportType report, count int, reportDir string, at
 		rep = `
 {
     "insightsVersion": "0.0.1~ppa5",
+	"collectionTime": 1747752692,
     "systemInfo": {
         "hardware": {
             "product": {
@@ -437,6 +438,7 @@ func makeReport(t *testing.T, reportType report, count int, reportDir string, at
 {
     "OptOut": true,
     "insightsVersion": "0.0.1~ppa5",
+	"collectionTime": 1747752692,
     "systemInfo": {
         "hardware": {
             "product": {
