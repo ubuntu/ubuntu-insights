@@ -30,7 +30,7 @@ True/local/2501.json: |-
     {
         "id": "2501 True local"
     }
-True/local/50000.json: "{\"insightsVersion\":\"Dev\",\"systemInfo\":{\"hardware\":{},\"software\":{}},\"sourceMetrics\":{\"data_array\":[1.1,2.2,3.3],\"data_bool\":true,\"data_float\":1.1,\"data_object\":{\"key1\":\"value1\",\"key2\":\"value2\"},\"data_string\":\"string\",\"runes\":\"\U0001F525☆*: .｡. o(≧▽≦)o .｡.:*☆\U0001F525\"}}"
+True/local/50000.json: "{\"insightsVersion\":\"Dev\",\"collectionTime\":50000,\"systemInfo\":{\"hardware\":{},\"software\":{}},\"sourceMetrics\":{\"data_array\":[1.1,2.2,3.3],\"data_bool\":true,\"data_float\":1.1,\"data_object\":{\"key1\":\"value1\",\"key2\":\"value2\"},\"data_string\":\"string\",\"runes\":\"\U0001F525☆*: .｡. o(≧▽≦)o .｡.:*☆\U0001F525\"}}"
 True/local/invalid.json: "{   \n    \"id\": \"invalid True local\"\n}"
 True/uploaded/1000.json: "{   \n    \"id\": \"1000 True uploaded\",\n    \"duplicate\": true\n}"
 True/uploaded/1500.json: |-

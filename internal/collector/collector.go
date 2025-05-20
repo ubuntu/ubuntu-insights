@@ -24,6 +24,7 @@ var ErrDuplicateReport = fmt.Errorf("report already exists for this period")
 // Insights contains the insights report compiled by the collector.
 type Insights struct {
 	InsightsVersion string         `json:"insightsVersion"`
+	CollectionTime  int64          `json:"collectionTime"`
 	SysInfo         sysinfo.Info   `json:"systemInfo"`
 	SourceMetrics   map[string]any `json:"sourceMetrics,omitempty"`
 }
@@ -273,6 +274,7 @@ func (c Collector) duplicateExists() (bool, error) {
 func (c Collector) compile() (Insights, error) {
 	insights := Insights{
 		InsightsVersion: constants.Version,
+		CollectionTime:  c.time.Unix(),
 	}
 
 	// Collect system information.
