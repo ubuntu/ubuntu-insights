@@ -20,27 +20,31 @@ import (
 
 func TestNew(t *testing.T) {
 	tests := map[string]struct {
-		cm       ingest.DConfigManager
-		dbConfig database.Config
-		options  []ingest.Options
+		cm         ingest.DConfigManager
+		dbConfig   database.Config
+		invalidDir string
+		options    []ingest.Options
 
 		wantErr bool
 	}{
 		"Successful creation": {
-			cm:       &mockConfigManager{loadErr: nil},
-			dbConfig: database.Config{},
-			options:  nil,
-			wantErr:  false,
+			cm:         &mockConfigManager{loadErr: nil},
+			dbConfig:   database.Config{},
+			invalidDir: t.TempDir(),
+			wantErr:    false,
 		},
+
+		// Error cases
 		"Config load failure": {
-			cm:       &mockConfigManager{loadErr: errors.New("load error")},
-			dbConfig: database.Config{},
-			options:  nil,
-			wantErr:  true,
+			cm:         &mockConfigManager{loadErr: errors.New("load error")},
+			dbConfig:   database.Config{},
+			invalidDir: t.TempDir(),
+			wantErr:    true,
 		},
 		"Database connection failure": {
-			cm:       &mockConfigManager{loadErr: nil},
-			dbConfig: database.Config{},
+			cm:         &mockConfigManager{loadErr: nil},
+			dbConfig:   database.Config{},
+			invalidDir: t.TempDir(),
 			options: []ingest.Options{
 				ingest.WithDBConnect(func(ctx context.Context, cfg database.Config) (ingest.DBManager, error) {
 					return nil, errors.New("db connect error")
@@ -48,11 +52,23 @@ func TestNew(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		"Empty invalidDir": {
+			cm:         &mockConfigManager{loadErr: nil},
+			dbConfig:   database.Config{},
+			invalidDir: "",
+			wantErr:    true,
+		},
+		"Invalid dir invalidDir path": {
+			cm:         &mockConfigManager{loadErr: nil},
+			dbConfig:   database.Config{},
+			invalidDir: "invalid_path\x00\\CON",
+			wantErr:    true,
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			s, err := ingest.New(t.Context(), tc.cm, tc.dbConfig, tc.options...)
+			s, err := ingest.New(t.Context(), tc.cm, tc.dbConfig, tc.invalidDir, tc.options...)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
@@ -134,14 +150,7 @@ func TestRun(t *testing.T) {
 				tc.cm.baseDir = dst
 			}
 
-			opts := []ingest.Options{
-				ingest.WithDBConnect(func(ctx context.Context, cfg database.Config) (ingest.DBManager, error) {
-					return tc.dbConfig, nil
-				}),
-			}
-			s, err := ingest.New(t.Context(), tc.cm, database.Config{}, opts...)
-			require.NoError(t, err, "Setup: Failed to create service")
-
+			s, invalidDir := newIngestService(t, tc.cm, tc.dbConfig)
 			runErr := run(t, s)
 
 			// Allow time for the service to start and run
@@ -162,7 +171,7 @@ func TestRun(t *testing.T) {
 
 			// Simulate a graceful shutdown
 			gracefulShutdown(t, s, runErr)
-			checkRunResults(t, tc.cm, tc.dbConfig)
+			checkRunResults(t, tc.cm, tc.dbConfig, invalidDir)
 		})
 	}
 }
@@ -182,14 +191,7 @@ func TestRunNewApp(t *testing.T) {
 	}
 	db := &mockDBManager{}
 
-	opts := []ingest.Options{
-		ingest.WithDBConnect(func(ctx context.Context, cfg database.Config) (ingest.DBManager, error) {
-			return db, nil
-		}),
-	}
-	s, err := ingest.New(t.Context(), cm, database.Config{}, opts...)
-	require.NoError(t, err, "Setup: Failed to create service")
-
+	s, invalidDir := newIngestService(t, cm, db)
 	runErr := run(t, s)
 
 	// Allow time for the service to start and run
@@ -205,7 +207,7 @@ func TestRunNewApp(t *testing.T) {
 	waitForUploaderToBeIdle(t, db, 4*time.Second, 20*time.Second)
 
 	gracefulShutdown(t, s, runErr)
-	checkRunResults(t, cm, db)
+	checkRunResults(t, cm, db, invalidDir)
 }
 
 // TestRunRemoveApp tests the removal of an app from the allow list
@@ -223,14 +225,7 @@ func TestRunRemoveApp(t *testing.T) {
 	}
 	db := &mockDBManager{}
 
-	opts := []ingest.Options{
-		ingest.WithDBConnect(func(ctx context.Context, cfg database.Config) (ingest.DBManager, error) {
-			return db, nil
-		}),
-	}
-	s, err := ingest.New(t.Context(), cm, database.Config{}, opts...)
-	require.NoError(t, err, "Setup: Failed to create service")
-
+	s, invalidDir := newIngestService(t, cm, db)
 	runErr := run(t, s)
 
 	// Allow time for the service to start and run
@@ -245,13 +240,13 @@ func TestRunRemoveApp(t *testing.T) {
 
 	runWait(t, runErr, false, 10*time.Second)
 
-	err = testutils.CopyDir(t, filepath.Join("testdata", "fixtures"), dst)
+	err := testutils.CopyDir(t, filepath.Join("testdata", "fixtures"), dst)
 	require.NoError(t, err, "Setup: failed to re-copy test fixtures")
 	waitForUploaderToBeIdle(t, db, 4*time.Second, 20*time.Second)
 	runWait(t, runErr, false, 500*time.Millisecond)
 
 	gracefulShutdown(t, s, runErr)
-	checkRunResults(t, cm, db)
+	checkRunResults(t, cm, db, invalidDir)
 }
 
 func TestRunAfterQuitErrors(t *testing.T) {
@@ -267,13 +262,7 @@ func TestRunAfterQuitErrors(t *testing.T) {
 	}
 	db := &mockDBManager{}
 
-	opts := []ingest.Options{
-		ingest.WithDBConnect(func(ctx context.Context, cfg database.Config) (ingest.DBManager, error) {
-			return db, nil
-		}),
-	}
-	s, err := ingest.New(t.Context(), cm, database.Config{}, opts...)
-	require.NoError(t, err, "Setup: Failed to create service")
+	s, _ := newIngestService(t, cm, db)
 	defer s.Quit(true)
 
 	runErr := run(t, s)
@@ -457,7 +446,7 @@ func gracefulShutdown(t *testing.T, s *ingest.Service, runErr chan error) {
 
 // checkRunResults is a helper function which checks the results of the run
 // and compares them to the expected results.
-func checkRunResults(t *testing.T, cm *mockConfigManager, db *mockDBManager) {
+func checkRunResults(t *testing.T, cm *mockConfigManager, db *mockDBManager, invalidDir string) {
 	t.Helper()
 
 	db.mu.Lock()
@@ -466,12 +455,17 @@ func checkRunResults(t *testing.T, cm *mockConfigManager, db *mockDBManager) {
 	remainingFiles, err := testutils.GetDirHashedContents(t, cm.BaseDir(), 4)
 	require.NoError(t, err, "Failed to get directory contents")
 
+	invalidFiles, err := testutils.GetDirHashedContents(t, invalidDir, 4)
+	require.NoError(t, err, "Failed to get invalidDir contents")
+
 	results := struct {
 		RemainingFiles map[string]string
 		UploadedFiles  map[string][]*models.TargetModel
+		InvalidFiles   map[string]string
 	}{
 		RemainingFiles: remainingFiles,
 		UploadedFiles:  db.data,
+		InvalidFiles:   invalidFiles,
 	}
 
 	got, err := json.MarshalIndent(results, "", "  ")
@@ -495,4 +489,19 @@ func waitForUploaderToBeIdle(t *testing.T, db *mockDBManager, idleDuration time.
 	}
 
 	require.Fail(t, "Uploader did not become idle within the timeout")
+}
+
+// newIngestService is a helper function which creates a new ingest service for testing purposes.
+func newIngestService(t *testing.T, cm *mockConfigManager, db *mockDBManager) (s *ingest.Service, invalidDir string) {
+	t.Helper()
+	invalidDir = t.TempDir()
+	opts := []ingest.Options{
+		ingest.WithDBConnect(func(ctx context.Context, cfg database.Config) (ingest.DBManager, error) {
+			return db, nil
+		}),
+	}
+	s, err := ingest.New(t.Context(), cm, database.Config{}, invalidDir, opts...)
+	require.NoError(t, err, "Setup: Failed to create service")
+
+	return s, invalidDir
 }

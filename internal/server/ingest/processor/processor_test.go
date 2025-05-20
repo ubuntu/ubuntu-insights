@@ -35,7 +35,7 @@ func TestProcessFiles(t *testing.T) {
 			delay: 5 * time.Second,
 		},
 
-		"Upload errors do not remove files": {
+		"Upload errors do not remove processed files": {
 			app: "MultiMixed",
 			db: mockDBManager{
 				uploadErr: errors.New("requested upload error"),
@@ -62,30 +62,26 @@ func TestProcessFiles(t *testing.T) {
 			require.NoError(t, testutils.CopyDir(t, fixtureDir, filepath.Join(dst, tc.app)), "Setup: failed to copy fixture directory")
 
 			ctx, cancel := context.WithCancel(t.Context())
+			t.Cleanup(func() {
+				cancel()
+			})
 
 			if tc.earlyCancel {
 				cancel()
 			}
-
+			invalidFilesDir := filepath.Join(t.TempDir(), "invalid-files")
 			errCh := make(chan error, 1)
 			go func() {
 				defer close(errCh)
-				errCh <- processor.ProcessFiles(ctx, filepath.Join(dst, tc.app), &tc.db)
+				errCh <- processor.ProcessFiles(ctx, filepath.Join(dst, tc.app), &tc.db, invalidFilesDir)
 			}()
 
-			time.Sleep(tc.delay)
-			cancel()
-
-			select {
-			case err := <-errCh:
-				if tc.wantErr != nil {
-					require.Error(t, err)
-					require.ErrorIs(t, err, tc.wantErr)
-				} else {
-					require.NoError(t, err)
-				}
-			case <-time.After(3 * time.Second):
-				require.Fail(t, "timeout waiting for processFiles to finish")
+			err := <-errCh
+			if tc.wantErr != nil {
+				require.Error(t, err)
+				require.ErrorIs(t, err, tc.wantErr)
+			} else {
+				require.NoError(t, err)
 			}
 
 			if tc.skipFileCheck {
@@ -95,12 +91,17 @@ func TestProcessFiles(t *testing.T) {
 			remainingFiles, err := testutils.GetDirHashedContents(t, dst, 4)
 			require.NoError(t, err, "Failed to get directory contents")
 
+			invalidFiles, err := testutils.GetDirHashedContents(t, invalidFilesDir, 4)
+			require.NoError(t, err, "Failed to get invalid directory contents")
+
 			results := struct {
 				RemainingFiles map[string]string
 				UploadedFiles  map[string][]*models.TargetModel
+				InvalidFiles   map[string]string
 			}{
 				RemainingFiles: remainingFiles,
 				UploadedFiles:  tc.db.data,
+				InvalidFiles:   invalidFiles,
 			}
 
 			got, err := json.MarshalIndent(results, "", "  ")

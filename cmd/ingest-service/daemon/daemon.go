@@ -32,6 +32,7 @@ type App struct {
 type appConfig struct {
 	Verbosity  int
 	DBconfig   database.Config
+	InvalidDir string // Path to the directory where invalid or partially invalid reports are stored for manual review
 	ConfigPath string
 }
 
@@ -94,11 +95,18 @@ func installRootCmd(app *App) error {
 	cmd.PersistentFlags().StringVarP(&app.config.DBconfig.DBName, "db-name", "d", "", "Database name")
 	cmd.PersistentFlags().StringVarP(&app.config.DBconfig.SSLMode, "db-sslmode", "s", "", "Database SSL mode")
 
+	cmd.PersistentFlags().StringVarP(&app.config.InvalidDir, "invalid-dir", "i", filepath.Join("invalid-reports"), "Path to the directory where invalid or partially invalid reports are stored for manual review")
+
 	cmd.PersistentFlags().StringVarP(&app.config.ConfigPath, "daemon-config", "c", "", "Path to the configuration file")
 
-	err := cmd.MarkPersistentFlagFilename("daemon-config")
+	err := cmd.MarkPersistentFlagDirname("invalid-dir")
 	if err != nil {
-		return fmt.Errorf("failed to mark daemon-config flag as filename: %w", err)
+		return fmt.Errorf("failed to mark invalid-dir flag as directory: %v", err)
+	}
+
+	err = cmd.MarkPersistentFlagFilename("daemon-config")
+	if err != nil {
+		return fmt.Errorf("failed to mark daemon-config flag as filename: %v", err)
 	}
 
 	return nil
@@ -146,7 +154,7 @@ func (a *App) run() (err error) {
 		return fmt.Errorf("failed to get absolute path for config file: %v", err)
 	}
 	cm := config.New(a.config.ConfigPath)
-	a.daemon, err = ingest.New(context.Background(), cm, a.config.DBconfig)
+	a.daemon, err = ingest.New(context.Background(), cm, a.config.DBconfig, a.config.InvalidDir)
 	close(a.ready)
 	if err != nil {
 		return fmt.Errorf("failed to create server: %v", err)

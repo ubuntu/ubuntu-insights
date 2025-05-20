@@ -56,14 +56,17 @@ func TestUpload(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
+		data       *models.TargetModel
 		earlyClose bool
 		execErr    error
 
 		wantErr bool
 	}{
-		"successful exec": {
-			execErr: nil,
-			wantErr: false,
+		"successful exec": {},
+		"opt-out successful exec": {
+			data: &models.TargetModel{
+				OptOut: true,
+			},
 		},
 
 		// Error cases
@@ -72,7 +75,6 @@ func TestUpload(t *testing.T) {
 			wantErr: true,
 		},
 		"errors if pool is nil or closed": {
-			execErr:    nil,
 			earlyClose: true,
 			wantErr:    true,
 		},
@@ -94,7 +96,11 @@ func TestUpload(t *testing.T) {
 				require.NoError(t, mgr.Close(), "Setup: failed to close database connection")
 			}
 
-			err = mgr.Upload(t.Context(), "test", &models.TargetModel{})
+			if tc.data == nil {
+				tc.data = &models.TargetModel{}
+			}
+
+			err = mgr.Upload(t.Context(), "test", tc.data)
 			if tc.wantErr {
 				require.Error(t, err, "Upload() error")
 				return
