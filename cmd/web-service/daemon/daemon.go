@@ -65,6 +65,7 @@ func New() (*App, error) {
 		},
 	}
 	a.viper = viper.New()
+	a.cmd.CompletionOptions.HiddenDefaultCmd = true
 
 	if err := installRootCmd(&a); err != nil {
 		return nil, err

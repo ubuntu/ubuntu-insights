@@ -85,6 +85,7 @@ The information collected can't be used to identify a single machine. All report
 		},
 	}
 	a.viper = viper.New()
+	a.cmd.CompletionOptions.HiddenDefaultCmd = true
 
 	if err := installRootCmd(&a); err != nil {
 		return nil, err
