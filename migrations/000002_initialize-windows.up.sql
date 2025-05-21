@@ -2,6 +2,7 @@ CREATE TABLE windows (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     entry_time TIMESTAMP NOT NULL,
     insights_version TEXT,
+    collection_time TIMESTAMP,
     hardware JSONB,
     software JSONB,
     platform JSONB,

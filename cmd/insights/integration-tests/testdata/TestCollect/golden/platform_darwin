@@ -72,4 +72,4 @@ Unknown-A/local/invalid.json: |-
     }
 Unknown-A/uploaded/1000.json: "{   \n    \"id\": \"1000 Unknown-A uploaded\",\n    \"duplicate\": true\n}"
 Unknown-A/uploaded/1500.json: "{   \n    \"id\": \"1500 Unknown-A uploaded\",\n    \"only in uploaded\": true\n}"
-darwin/local/50000.json: '{"insightsVersion":"Dev","systemInfo":{"hardware":{},"software":{}}}'
+darwin/local/50000.json: '{"insightsVersion":"Dev","collectionTime":50000,"systemInfo":{"hardware":{},"software":{}}}'

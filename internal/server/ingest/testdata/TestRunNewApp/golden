@@ -10,6 +10,7 @@
       },
       {
         "insightsVersion": "0.0.1~ppa5",
+        "collectionTime": 1747752692,
         "systemInfo": {
           "hardware": {
             "product": {
@@ -113,6 +114,7 @@
     "SingleValid": [
       {
         "insightsVersion": "0.0.1~ppa5",
+        "collectionTime": 1747752692,
         "systemInfo": {
           "hardware": {
             "product": {
