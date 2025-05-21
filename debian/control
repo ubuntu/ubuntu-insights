@@ -19,7 +19,7 @@ Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
          libwayland-client0,
-Built-Using: ${misc:Built-Using}
+Built-Using: ${misc:Built-Using},
 Description: Ubuntu metrics reporting service
  Ubuntu Insights, a user transparent, open, 
  platform-agnostic and cross application solution for reporting
