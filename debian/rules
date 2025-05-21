@@ -15,7 +15,7 @@ ifeq ($(strip $(shell ./debian/prepare-source.sh)),)
 	@echo "Vendoring probably failed"
 	exit 1
 endif
-	dh $@ --builddirectory=$(BUILDDIR) --buildsystem=golang
+	dh $@ --builddirectory=$(BUILDDIR) --buildsystem=golang --with=golang
 
 override_dh_auto_install:
 	mv $(BUILDDIR)/bin/insights $(BUILDDIR)/bin/ubuntu-insights
