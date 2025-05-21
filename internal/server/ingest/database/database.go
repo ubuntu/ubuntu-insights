@@ -79,13 +79,13 @@ func (db Manager) Upload(ctx context.Context, app string, data *models.TargetMod
 	table := pgx.Identifier{app}.Sanitize()
 	query := fmt.Sprintf(
 		`INSERT INTO %s (
-	        entry_time, 
-            insights_version, 
+			entry_time, 
+			insights_version, 
 			collection_time,
-            hardware, 
-            software, 
-            platform, 
-            source_metrics,
+			hardware, 
+			software, 
+			platform, 
+			source_metrics,
 			optout 
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		table,
