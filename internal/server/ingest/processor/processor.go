@@ -166,10 +166,8 @@ func postProcess(file string, err error, invalidDir string) {
 	if err := os.Rename(file, newPath); err != nil {
 		slog.Warn("Failed to move invalid file", "file", file, "newPath", newPath, "err", err)
 
-		if !os.IsNotExist(err) {
-			if err := os.Remove(file); err != nil {
-				slog.Warn("Failed to remove invalid file", "file", file, "err", err)
-			}
+		if err := os.Remove(file); err != nil {
+			slog.Warn("Failed remove unmovable invalid file", "file", file, "err", err)
 		}
 		return
 	}
