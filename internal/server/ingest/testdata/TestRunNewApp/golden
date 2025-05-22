@@ -68,6 +68,21 @@
       },
       {
         "insightsVersion": "0.0.1~ppa5",
+        "collectionTime": 123,
+        "systemInfo": {
+          "hardware": {
+            "hardware-field": "generic hardware information"
+          },
+          "software": {
+            "software-field": "generic software information"
+          },
+          "platform": {
+            "platform-field": "generic platform information"
+          }
+        }
+      },
+      {
+        "insightsVersion": "0.0.1~ppa5",
         "systemInfo": {
           "hardware": {
             "cpu": {
@@ -386,6 +401,7 @@
     "extra_sysinfo.json": "3019752035f4572aa3c7f62cba6902c4d73b8a6bdf34d6e09814f9177279764f",
     "extra_top_level.json": "bb7a277c191d21ef36047460695bcc2a0f5c4b8d0e6d4473f32478b9b1d1e077",
     "invalid_1.json": "b6ce9737e3489feab1a4b2aa2262a4f40ee0bd88e800a4dd9cb0f972ff087616",
-    "invalid_optout.json": "2e2e9f52050d3ab9f34f6bd49586c05b900491fa39a6c520f49bfcdfb864fbb4"
+    "invalid_optout.json": "2e2e9f52050d3ab9f34f6bd49586c05b900491fa39a6c520f49bfcdfb864fbb4",
+    "string_collectionTime.json": "e55d3cc42bd05b67f164f5f50bca4bc9744c7c8ac15302b856cae433e2d78ddb"
   }
 }
