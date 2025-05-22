@@ -165,7 +165,7 @@ func TestRun(t *testing.T) {
 				err := testutils.CopyDir(t, filepath.Join("testdata", "fixtures"), dst)
 				require.NoError(t, err, "Setup: failed to re-copy test fixtures")
 
-				waitForUploaderToBeIdle(t, tc.dbConfig, 5*time.Second, 20*time.Second)
+				waitForUploaderToBeIdle(t, tc.dbConfig, 8*time.Second, 20*time.Second)
 				runWait(t, runErr, false, 500*time.Millisecond)
 			}
 

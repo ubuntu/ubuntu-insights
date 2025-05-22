@@ -1,0 +1,15 @@
+{
+    "insightsVersion": "0.0.1~ppa5",
+    "collectionTime": "This is a string, not a number",
+    "systemInfo": {
+        "hardware": {
+            "hardware-field": "generic hardware information"
+        },
+        "software": {
+            "software-field": "generic software information"
+        },
+        "platform": {
+            "platform-field": "generic platform information"
+        }
+    }
+}
