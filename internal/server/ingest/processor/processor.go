@@ -12,13 +12,10 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"regexp"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/models"
 )
-
-var debianVersionRegex = regexp.MustCompile(`^(?:(\d+):)?([a-zA-Z0-9.+~-]+)(?:-([a-zA-Z0-9.+~]+))?$`)
 
 var (
 	errInvalidJSON = errors.New("json file is invalid and could not be parsed")
@@ -53,15 +50,6 @@ func validateFile(data *models.TargetModel, path string) error {
 		reflect.DeepEqual(data.SystemInfo, models.TargetSystemInfo{}) &&
 		data.SourceMetrics == nil {
 		return errNoValidData
-	}
-
-	// Check version
-	if data.InsightsVersion == "" {
-		return fmt.Errorf("missing InsightsVersion in file %q", path)
-	}
-
-	if !debianVersionRegex.MatchString(data.InsightsVersion) {
-		return fmt.Errorf("invalid version format %q in file %q", data.InsightsVersion, path)
 	}
 
 	// Check no extra data
