@@ -21,16 +21,15 @@ Depends: ${misc:Depends},
          libwayland-client0,
 Built-Using: ${misc:Built-Using},
 Description: Ubuntu metrics reporting service
- Ubuntu Insights, a user transparent, open, 
+ Ubuntu Insights, a user transparent, open,
  platform-agnostic and cross application solution for reporting
  hardware information and other collected metrics.
  .
- Ubuntu Insight is designed to show you exactly what is being sent, and
- allow you to acknowledge and control your own data. The information 
+ Ubuntu Insights is designed to show you exactly what is being sent, and
+ allow you to acknowledge and control your own data. The information
  can't be used to identify a single machine, and is cached for local viewing
  before being sent to the server.
  .
  This is designed to be a full replacement for Ubuntu Report.
  .
  This package contains the command line tool and systemd service triggers.
-
