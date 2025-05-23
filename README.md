@@ -153,6 +153,7 @@ Global Flags:
 ```json
 {
   "insightsVersion": "Dev",
+  "collectionTime": 1748013676,
   "systemInfo": {
     "hardware": {
       "product": {
@@ -218,14 +219,14 @@ Global Flags:
       ],
       "screens": [
         {
+          "physicalResolution": "2560x1440",
           "size": "600mm x 340mm",
-          "resolution": "2560x1440",
-          "refreshRate": "143.83"
+          "refreshRate": "143.85"
         },
         {
+          "physicalResolution": "2560x1600",
           "size": "300mm x 190mm",
-          "resolution": "1704x1065",
-          "refreshRate": "119.91"
+          "refreshRate": "120.00"
         }
       ]
     },
@@ -233,7 +234,7 @@ Global Flags:
       "os": {
         "family": "linux",
         "distribution": "Ubuntu",
-        "version": "24.04"
+        "version": "25.04"
       },
       "timezone": "EDT",
       "language": "en_US",
