@@ -259,6 +259,7 @@ Global Flags:
 ```json
 {
   "insightsVersion": "Dev",
+  "collectionTime": 1748012492,
   "systemInfo": {
     "hardware": {
       "cpu": {
@@ -300,18 +301,18 @@ Global Flags:
       "os": {
         "family": "linux",
         "distribution": "Ubuntu",
-        "version": "24.04"
+        "version": "25.04"
       },
       "timezone": "EDT",
-      "language": "C"
+      "language": "en_GB"
     },
     "platform": {
       "wsl": {
         "subsystemVersion": 2,
         "systemd": "used",
         "interop": "enabled",
-        "version": "2.4.11.0",
-        "kernelVersion": "5.15.167.4-microsoft-standard-WSL2"
+        "version": "2.5.7.0",
+        "kernelVersion": "6.6.87.1-microsoft-standard-WSL2"
       },
       "proAttached": true
     }
