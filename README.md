@@ -332,7 +332,7 @@ Global Flags:
 This is an [open source](LICENSE) project, and we warmly welcome community contributions, suggestions, and constructive feedback. If you're interested in contributing, please take a look at our [Contribution guidelines](CONTRIBUTING.md) first.
 
 - To report an issue, please file a bug report against our repository, using a bug template.
-- For suggestions and constructive feedback, report a feature request, using the proposed template.
+- For suggestions and constructive feedback, open a feature request issue using the proposed template.
 
 ## Get in touch
 
