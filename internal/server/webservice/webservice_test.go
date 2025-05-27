@@ -86,6 +86,7 @@ func TestServeMulti(t *testing.T) {
 	case err := <-runErr:
 		require.NoError(t, err, "Setup: Run should not fail")
 	case <-time.After(1 * time.Second):
+		waitServerReady(t, s)
 	}
 
 	tests := map[string]struct {
@@ -268,6 +269,8 @@ func TestRunSingle(t *testing.T) {
 				}
 				require.NoError(t, err, "Run should not fail")
 			case <-time.After(1 * time.Second):
+				require.False(t, tc.wantErr, "Expected Run to fail with error, but it did not")
+				waitServerReady(t, s)
 			}
 
 			req, err := http.NewRequest(tc.method, "http://"+s.Addr()+tc.path, bytes.NewReader(tc.body))
@@ -310,6 +313,7 @@ func TestRunAfterQuitErrors(t *testing.T) {
 	case err := <-serverErr:
 		require.Fail(t, "Server should not have errored", err)
 	case <-time.After(1 * time.Second):
+		waitServerReady(t, s)
 	}
 	require.True(t, testutils.PortOpen(t, dConf.ListenHost, dConf.ListenPort), "Server should be running on specified addr``")
 	s.Quit(false)
@@ -417,7 +421,28 @@ func newAndRun(t *testing.T, cm *testConfigManager, daemonConfig *webservice.Sta
 		defer close(runErr)
 		runErr <- s.Run()
 	}()
-	time.Sleep(100 * time.Millisecond)
 
 	return s, runErr
+}
+
+func waitServerReady(t *testing.T, s *webservice.Server) {
+	t.Helper()
+
+	const (
+		timeout  = 5 * time.Second
+		interval = 50 * time.Millisecond
+	)
+
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		resp, err := http.Get("http://" + s.Addr() + "/version")
+		if err == nil && resp.StatusCode == http.StatusOK {
+			resp.Body.Close()
+			return
+		}
+
+		time.Sleep(interval)
+	}
+
+	require.True(t, time.Now().Before(deadline), "Setup: Server did not become ready in time")
 }
