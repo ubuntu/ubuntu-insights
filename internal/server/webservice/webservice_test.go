@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -30,6 +30,8 @@ var defaultDaemonConfig = &webservice.StaticConfig{
 
 	ListenHost: "localhost",
 }
+
+var muPortAcquire = sync.Mutex{}
 
 func TestNew(t *testing.T) {
 	t.Parallel()
@@ -77,18 +79,15 @@ func TestServeMulti(t *testing.T) {
 	const defaultApp = "goodapp"
 	dConf := *defaultDaemonConfig
 	cm := &testConfigManager{allowList: []string{defaultApp}}
-	s := newForTest(t, cm, &dConf)
 
-	t.Cleanup(func() {
-		s.Quit(true)
-	})
-	go func() {
-		err := s.Run()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			t.Errorf("Server error: %v", err)
-		}
-	}()
-	time.Sleep(100 * time.Millisecond)
+	s, runErr := newAndRun(t, cm, &dConf)
+
+	select {
+	case err := <-runErr:
+		require.NoError(t, err, "Setup: Run should not fail")
+	case <-time.After(1 * time.Second):
+	}
+
 	tests := map[string]struct {
 		method      string
 		path        string
@@ -259,15 +258,7 @@ func TestRunSingle(t *testing.T) {
 				tc.cm.allowList = []string{defaultApp}
 			}
 
-			s := newForTest(t, &tc.cm, &tc.dConf)
-			defer s.Quit(false)
-
-			runErr := make(chan error, 1)
-			go func() {
-				defer close(runErr)
-				runErr <- s.Run()
-			}()
-			time.Sleep(100 * time.Millisecond)
+			s, runErr := newAndRun(t, &tc.cm, &tc.dConf)
 
 			select {
 			case err := <-runErr:
@@ -312,14 +303,8 @@ func TestRunAfterQuitErrors(t *testing.T) {
 
 	dConf := *defaultDaemonConfig
 	cm := &testConfigManager{allowList: []string{}}
-	s := newForTest(t, cm, &dConf)
-	defer s.Quit(true)
 
-	serverErr := make(chan error, 1)
-	go func() {
-		defer close(serverErr)
-		serverErr <- s.Run()
-	}()
+	s, serverErr := newAndRun(t, cm, &dConf)
 
 	select {
 	case err := <-serverErr:
@@ -414,4 +399,25 @@ func newForTest(t *testing.T, cm *testConfigManager, daemonConfig *webservice.St
 	s, err := webservice.New(t.Context(), cm, *daemonConfig)
 	require.NoError(t, err, "Setup: failed to create server")
 	return s
+}
+
+func newAndRun(t *testing.T, cm *testConfigManager, daemonConfig *webservice.StaticConfig) (*webservice.Server, chan error) {
+	t.Helper()
+
+	muPortAcquire.Lock()
+	defer muPortAcquire.Unlock()
+
+	s := newForTest(t, cm, daemonConfig)
+	t.Cleanup(func() {
+		s.Quit(true)
+	})
+
+	runErr := make(chan error, 1)
+	go func() {
+		defer close(runErr)
+		runErr <- s.Run()
+	}()
+	time.Sleep(100 * time.Millisecond)
+
+	return s, runErr
 }
