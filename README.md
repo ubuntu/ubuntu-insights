@@ -13,9 +13,9 @@
 [![Code coverage][codecov-image]][codecov-url]
 [![Go Report Card][goreport-image]][goreport-url]
 
-This is the code repository for **Ubuntu Insights**, a user transparent, open, platform-agnostic and cross application solution for reporting hardware information and other collected metrics.
+This is the code repository for **Ubuntu Insights**, a transparent, user-friendly, open, platform-agnostic, and cross-application solution for reporting hardware information and other collected metrics.
 
-Ubuntu Insight is designed to show you exactly what is being sent, and allow you to acknowledge and control your own data. The code in this repository is designed to mainly be invoked by a controlling application, but a command-line tool is also provided.
+Ubuntu Insights is designed to show you exactly what is being sent, and allow you to acknowledge and control your own data. The code in this repository is designed to mainly be invoked by a controlling application, but a command-line tool is also provided.
 
 This is designed to be a full replacement for Ubuntu Report.
 
@@ -109,7 +109,7 @@ If source is provided, then the source-metrics-path should be provided as well.
 ```
 Flags:
   -d, --dry-run       perform a dry-run where a report is collected, but not written to disk
-  -f, --force         force a collection, override the report if there are any conflicts (doesn't ignore consent)
+  -f, --force         force a collection, override the report if there are any conflicts (consent is still respected)
   -h, --help          help for collect
   -p, --period uint   the minimum period between 2 collection periods for validation purposes in seconds (default 1)
 
@@ -332,7 +332,7 @@ Global Flags:
 This is an [open source](LICENSE) project, and we warmly welcome community contributions, suggestions, and constructive feedback. If you're interested in contributing, please take a look at our [Contribution guidelines](CONTRIBUTING.md) first.
 
 - To report an issue, please file a bug report against our repository, using a bug template.
-- For suggestions and constructive feedback, report a feature request bug report, using the proposed template.
+- For suggestions and constructive feedback, open a feature request issue using the proposed template.
 
 ## Get in touch
 
