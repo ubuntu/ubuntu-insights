@@ -23,9 +23,8 @@ func TestProcessFiles(t *testing.T) {
 		app string
 		db  mockDBManager
 
-		delay         time.Duration
-		skipFileCheck bool
-		earlyCancel   bool
+		delay       time.Duration
+		earlyCancel bool
 
 		wantErr error
 	}{
@@ -35,7 +34,7 @@ func TestProcessFiles(t *testing.T) {
 			delay: 5 * time.Second,
 		},
 
-		"Upload errors do not remove files": {
+		"Upload errors do not remove processed files": {
 			app: "MultiMixed",
 			db: mockDBManager{
 				uploadErr: errors.New("requested upload error"),
@@ -45,9 +44,8 @@ func TestProcessFiles(t *testing.T) {
 
 		// Error cases
 		"Instant context cancellation errors": {
-			app:           "MultiMixed",
-			earlyCancel:   true,
-			skipFileCheck: true,
+			app:         "MultiMixed",
+			earlyCancel: true,
 
 			wantErr: context.Canceled,
 		},
@@ -62,45 +60,47 @@ func TestProcessFiles(t *testing.T) {
 			require.NoError(t, testutils.CopyDir(t, fixtureDir, filepath.Join(dst, tc.app)), "Setup: failed to copy fixture directory")
 
 			ctx, cancel := context.WithCancel(t.Context())
+			t.Cleanup(func() {
+				cancel()
+			})
 
 			if tc.earlyCancel {
 				cancel()
 			}
-
+			invalidFilesDir := filepath.Join(t.TempDir(), "invalid-files")
 			errCh := make(chan error, 1)
 			go func() {
 				defer close(errCh)
-				errCh <- processor.ProcessFiles(ctx, filepath.Join(dst, tc.app), &tc.db)
+				errCh <- processor.ProcessFiles(ctx, filepath.Join(dst, tc.app), &tc.db, invalidFilesDir)
 			}()
 
-			time.Sleep(tc.delay)
-			cancel()
-
+			var err error
 			select {
-			case err := <-errCh:
-				if tc.wantErr != nil {
-					require.Error(t, err)
-					require.ErrorIs(t, err, tc.wantErr)
-				} else {
-					require.NoError(t, err)
-				}
-			case <-time.After(3 * time.Second):
-				require.Fail(t, "timeout waiting for processFiles to finish")
+			case err = <-errCh:
+			case <-time.After(45 * time.Second):
+				require.Fail(t, "Test timed out waiting for processing to finish")
 			}
 
-			if tc.skipFileCheck {
+			if tc.wantErr != nil {
+				require.ErrorIs(t, err, tc.wantErr)
 				return
 			}
+			require.NoError(t, err)
 
 			remainingFiles, err := testutils.GetDirHashedContents(t, dst, 4)
 			require.NoError(t, err, "Failed to get directory contents")
 
+			invalidFiles, err := testutils.GetDirHashedContents(t, invalidFilesDir, 4)
+			require.NoError(t, err, "Failed to get invalid directory contents")
+
 			results := struct {
 				RemainingFiles map[string]string
 				UploadedFiles  map[string][]*models.TargetModel
+				InvalidFiles   map[string]string
 			}{
 				RemainingFiles: remainingFiles,
 				UploadedFiles:  tc.db.data,
+				InvalidFiles:   invalidFiles,
 			}
 
 			got, err := json.MarshalIndent(results, "", "  ")
