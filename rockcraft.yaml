@@ -1,0 +1,59 @@
+name: ubuntu-insights-services
+
+base: ubuntu@24.04
+version: "0.17" # just for humans. Semantic versioning is recommended
+license: GPL-3.0
+summary: Service for ubuntu-insights # 79 char long summary
+description: |
+    Ubuntu Insights services used for accepting HTTP requests with insights reports from clients, validating them, and inserting them into a
+    database. This service is part of the Ubuntu Insights project, a transparent, user-friendly, open,
+    platform-agnostic, and cross-application solution for reporting hardware information and other collected metrics.
+# the platforms this rock should be built on and run on.
+# you can check your architecture with `dpkg --print-architecture`
+platforms:
+    amd64:
+
+services:
+    web-service:
+        override: replace
+        command: web-service
+        startup: disabled
+    ingest-service:
+        override: replace
+        command: ingest-service
+        startup: disabled
+
+run-user: _daemon_ # setting a non-root user for the rock
+
+parts:
+    web-service:
+        plugin: go
+        source: .
+        source-subdir: cmd/web-service
+        build-snaps:
+            - go/1.24/stable
+        stage: 
+            - bin/web-service
+
+    ingest-service:
+        plugin: go
+        source: .
+        source-subdir: cmd/ingest-service
+        build-snaps:
+            - go/1.24/stable
+        stage:
+            - bin/ingest-service
+
+    migrations:
+        plugin: dump
+        source: .
+        source-subdir: migrations
+        organize:
+            "*": usr/share/insights/migrations/
+        stage:
+            - usr/share/insights/migrations/*
+
+    golang-migrate:
+        plugin: dump
+        source: https://github.com/golang-migrate/migrate/releases/download/v4.18.3/migrate.linux-amd64.deb
+        source-type: deb
