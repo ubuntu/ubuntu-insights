@@ -1,0 +1,46 @@
+name: ubuntu-insights-services
+# see https://documentation.ubuntu.com/rockcraft/en/1.11.0/explanation/bases/
+# for more information about bases and using 'bare' bases for chiselled rocks
+base: bare # as an alternative, a ubuntu base can be used
+build-base: ubuntu@24.04 # build-base is required when the base is bare
+version: "0.1" # just for humans. Semantic versioning is recommended
+summary: Service for ubuntu-insights # 79 char long summary
+description: |
+  Ubuntu Insights services used for accepting HTTP requests with insights reports from clients, validating them, and inserting them into a
+  database. This service is part of the Ubuntu Insights project, a transparent, user-friendly, open,
+  platform-agnostic, and cross-application solution for reporting hardware information and other collected metrics.
+# the platforms this rock should be built on and run on.
+# you can check your architecture with `dpkg --print-architecture`
+platforms:
+  amd64:
+
+# to ensure the go-framework extension functions properly, your Go project
+# should have a go.mod file. Check the parts section for the selection of
+# the default binary.
+# see https://documentation.ubuntu.com/rockcraft/en/1.11.0/reference/extensions/go-framework
+# for more information.
+# +-- my_charm
+# |   |-- go.mod
+# |   |-- migrate.sh
+
+# uncomment the sections you need and adjust according to your requirements.
+parts:
+  ubuntu-insights-web-service:
+    plugin: go
+    source: .
+    build-snaps:
+      - go/1.24/stable
+    override-build: |
+      go build -o ${CRAFT_PART_INSTALL}/ubuntu-insights-web-service ./cmd/web-service
+    organize:
+      ubuntu-insights-web-service: bin/ubuntu-insights-web-service
+
+  ubuntu-insights-ingest-service:
+    plugin: go
+    source: .
+    build-snaps:
+      - go/1.24/stable
+    override-build: |
+      go build -o ${CRAFT_PART_INSTALL}/ubuntu-insights-ingest-service ./cmd/ingest-service
+    organize:
+      ubuntu-insights-ingest-service: bin/ubuntu-insights-ingest-service
