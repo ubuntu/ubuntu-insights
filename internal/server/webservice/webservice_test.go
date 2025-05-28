@@ -80,14 +80,7 @@ func TestServeMulti(t *testing.T) {
 	dConf := *defaultDaemonConfig
 	cm := &testConfigManager{allowList: []string{defaultApp}}
 
-	s, runErr := newAndRun(t, cm, &dConf)
-
-	select {
-	case err := <-runErr:
-		require.NoError(t, err, "Setup: Run should not fail")
-	case <-time.After(1 * time.Second):
-		waitServerReady(t, s)
-	}
+	s := createServerAndWaitReady(t, cm, &dConf, false)
 
 	tests := map[string]struct {
 		method      string
@@ -259,18 +252,9 @@ func TestRunSingle(t *testing.T) {
 				tc.cm.allowList = []string{defaultApp}
 			}
 
-			s, runErr := newAndRun(t, &tc.cm, &tc.dConf)
-
-			select {
-			case err := <-runErr:
-				if tc.wantErr {
-					require.Error(t, err, "Run should fail")
-					return
-				}
-				require.NoError(t, err, "Run should not fail")
-			case <-time.After(1 * time.Second):
-				require.False(t, tc.wantErr, "Expected Run to fail with error, but it did not")
-				waitServerReady(t, s)
+			s := createServerAndWaitReady(t, &tc.cm, &tc.dConf, tc.wantErr)
+			if tc.wantErr {
+				return // If we expect an error and createServerAndWaitReady returns, we can stop here
 			}
 
 			req, err := http.NewRequest(tc.method, "http://"+s.Addr()+tc.path, bytes.NewReader(tc.body))
@@ -307,17 +291,11 @@ func TestRunAfterQuitErrors(t *testing.T) {
 	dConf := *defaultDaemonConfig
 	cm := &testConfigManager{allowList: []string{}}
 
-	s, serverErr := newAndRun(t, cm, &dConf)
+	s := createServerAndWaitReady(t, cm, &dConf, false)
 
-	select {
-	case err := <-serverErr:
-		require.Fail(t, "Server should not have errored", err)
-	case <-time.After(1 * time.Second):
-		waitServerReady(t, s)
-	}
-	require.True(t, testutils.PortOpen(t, dConf.ListenHost, dConf.ListenPort), "Server should be running on specified addr``")
 	s.Quit(false)
 	testutils.WaitForPortClosed(t, dConf.ListenHost, dConf.ListenPort, 3*time.Second)
+
 	serverErr2 := make(chan error, 1)
 	go func() {
 		defer close(serverErr2)
@@ -405,7 +383,11 @@ func newForTest(t *testing.T, cm *testConfigManager, daemonConfig *webservice.St
 	return s
 }
 
-func newAndRun(t *testing.T, cm *testConfigManager, daemonConfig *webservice.StaticConfig) (*webservice.Server, chan error) {
+// createServerAndWaitReady initializes and starts a webservice server for testing.
+// It waits for the server to be ready and returns the server instance.
+// If expectErr is true, it expects the server to fail to start and returns the server instance anyway.
+// If expectErr is false, it ensures the server starts successfully and is ready to accept requests.
+func createServerAndWaitReady(t *testing.T, cm *testConfigManager, daemonConfig *webservice.StaticConfig, expectErr bool) *webservice.Server {
 	t.Helper()
 
 	muPortAcquire.Lock()
@@ -422,7 +404,21 @@ func newAndRun(t *testing.T, cm *testConfigManager, daemonConfig *webservice.Sta
 		runErr <- s.Run()
 	}()
 
-	return s, runErr
+	select {
+	case err := <-runErr:
+		if expectErr {
+			require.Error(t, err, "Run should fail")
+			return s
+		}
+		require.NoError(t, err, "Run should not fail")
+	case <-time.After(1 * time.Second):
+		require.False(t, expectErr, "Expected Run to fail with error, but it did not")
+		waitServerReady(t, s)
+	}
+
+	require.True(t, testutils.PortOpen(t, daemonConfig.ListenHost, daemonConfig.ListenPort), "Server should be running on specified address")
+
+	return s
 }
 
 func waitServerReady(t *testing.T, s *webservice.Server) {
