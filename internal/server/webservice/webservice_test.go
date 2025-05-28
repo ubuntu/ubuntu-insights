@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -30,6 +30,8 @@ var defaultDaemonConfig = &webservice.StaticConfig{
 
 	ListenHost: "localhost",
 }
+
+var muPortAcquire = sync.Mutex{}
 
 func TestNew(t *testing.T) {
 	t.Parallel()
@@ -77,18 +79,9 @@ func TestServeMulti(t *testing.T) {
 	const defaultApp = "goodapp"
 	dConf := *defaultDaemonConfig
 	cm := &testConfigManager{allowList: []string{defaultApp}}
-	s := newForTest(t, cm, &dConf)
 
-	t.Cleanup(func() {
-		s.Quit(true)
-	})
-	go func() {
-		err := s.Run()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			t.Errorf("Server error: %v", err)
-		}
-	}()
-	time.Sleep(100 * time.Millisecond)
+	s := createServerAndWaitReady(t, cm, &dConf, false)
+
 	tests := map[string]struct {
 		method      string
 		path        string
@@ -259,24 +252,9 @@ func TestRunSingle(t *testing.T) {
 				tc.cm.allowList = []string{defaultApp}
 			}
 
-			s := newForTest(t, &tc.cm, &tc.dConf)
-			defer s.Quit(false)
-
-			runErr := make(chan error, 1)
-			go func() {
-				defer close(runErr)
-				runErr <- s.Run()
-			}()
-			time.Sleep(100 * time.Millisecond)
-
-			select {
-			case err := <-runErr:
-				if tc.wantErr {
-					require.Error(t, err, "Run should fail")
-					return
-				}
-				require.NoError(t, err, "Run should not fail")
-			case <-time.After(1 * time.Second):
+			s := createServerAndWaitReady(t, &tc.cm, &tc.dConf, tc.wantErr)
+			if tc.wantErr {
+				return // If we expect an error and createServerAndWaitReady returns, we can stop here
 			}
 
 			req, err := http.NewRequest(tc.method, "http://"+s.Addr()+tc.path, bytes.NewReader(tc.body))
@@ -312,23 +290,12 @@ func TestRunAfterQuitErrors(t *testing.T) {
 
 	dConf := *defaultDaemonConfig
 	cm := &testConfigManager{allowList: []string{}}
-	s := newForTest(t, cm, &dConf)
-	defer s.Quit(true)
 
-	serverErr := make(chan error, 1)
-	go func() {
-		defer close(serverErr)
-		serverErr <- s.Run()
-	}()
+	s := createServerAndWaitReady(t, cm, &dConf, false)
 
-	select {
-	case err := <-serverErr:
-		require.Fail(t, "Server should not have errored", err)
-	case <-time.After(1 * time.Second):
-	}
-	require.True(t, testutils.PortOpen(t, dConf.ListenHost, dConf.ListenPort), "Server should be running on specified addr``")
 	s.Quit(false)
 	testutils.WaitForPortClosed(t, dConf.ListenHost, dConf.ListenPort, 3*time.Second)
+
 	serverErr2 := make(chan error, 1)
 	go func() {
 		defer close(serverErr2)
@@ -414,4 +381,64 @@ func newForTest(t *testing.T, cm *testConfigManager, daemonConfig *webservice.St
 	s, err := webservice.New(t.Context(), cm, *daemonConfig)
 	require.NoError(t, err, "Setup: failed to create server")
 	return s
+}
+
+// createServerAndWaitReady initializes and starts a webservice server for testing.
+// It waits for the server to be ready and returns the server instance.
+// If expectErr is true, it expects the server to fail to start and returns the server instance anyway.
+// If expectErr is false, it ensures the server starts successfully and is ready to accept requests.
+func createServerAndWaitReady(t *testing.T, cm *testConfigManager, daemonConfig *webservice.StaticConfig, expectErr bool) *webservice.Server {
+	t.Helper()
+
+	muPortAcquire.Lock()
+	defer muPortAcquire.Unlock()
+
+	s := newForTest(t, cm, daemonConfig)
+	t.Cleanup(func() {
+		s.Quit(true)
+	})
+
+	runErr := make(chan error, 1)
+	go func() {
+		defer close(runErr)
+		runErr <- s.Run()
+	}()
+
+	select {
+	case err := <-runErr:
+		if expectErr {
+			require.Error(t, err, "Run should fail")
+			return s
+		}
+		require.NoError(t, err, "Run should not fail")
+	case <-time.After(1 * time.Second):
+		require.False(t, expectErr, "Expected Run to fail with error, but it did not")
+		waitServerReady(t, s)
+	}
+
+	require.True(t, testutils.PortOpen(t, daemonConfig.ListenHost, daemonConfig.ListenPort), "Server should be running on specified address")
+
+	return s
+}
+
+func waitServerReady(t *testing.T, s *webservice.Server) {
+	t.Helper()
+
+	const (
+		timeout  = 5 * time.Second
+		interval = 50 * time.Millisecond
+	)
+
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		resp, err := http.Get("http://" + s.Addr() + "/version")
+		if err == nil && resp.StatusCode == http.StatusOK {
+			resp.Body.Close()
+			return
+		}
+
+		time.Sleep(interval)
+	}
+
+	require.True(t, time.Now().Before(deadline), "Setup: Server did not become ready in time")
 }
