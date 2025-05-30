@@ -1,0 +1,82 @@
+# This file configures Charmcraft.
+# See https://juju.is/docs/sdk/charmcraft-config for guidance.
+
+name: ubuntu-insights-services-k8s
+
+type: charm
+
+base: ubuntu@24.04
+
+# the platforms this charm should be built on and run on.
+# you can check your architecture with `dpkg --print-architecture`
+platforms:
+  amd64:
+
+# (Required)
+summary: Server services for ubuntu-insights.
+
+# (Required)
+description: |
+  Ubuntu Insights services used for accepting HTTP requests with insights reports from clients, validating them, and inserting them into a
+  database. This service is part of the Ubuntu Insights project, a transparent, user-friendly, open,
+  platform-agnostic, and cross-application solution for reporting hardware information and other collected metrics.
+
+links:
+  source:
+    - https://github.com/ubuntu/ubuntu-insights
+
+assumes:
+  - juju >= 3.1
+  - k8s-api
+
+parts:
+  charm:
+    plugin: python
+    source: .
+    python-requirements:
+      - ops
+
+requires:
+  database:
+    interface: postgresql_client
+    limit: 1
+
+storage: 
+  reports-cache:
+    type: filesystem
+    location: /var/lib/ubuntu-insights/
+    read-only: false
+
+containers:
+  ubuntu-insights:
+    resource: ubuntu-insights-image
+    mounts:
+      - storage: reports-cache
+        location: /var/lib/ubuntu-insights/
+
+resources:
+  ubuntu-insights-image:
+    type: oci-image
+    description: The Ubuntu Insights services OCI image.
+
+config:
+  options:
+    # Web service configuration
+    web-port:
+      type: int
+      default: 8080
+      description: The port on which the web service will listen for HTTP requests.
+    web-host:
+      type: string
+      default:
+        description: The host on which the web service will listen for HTTP requests.
+    web-apps:
+      type: string
+      default: "linux, windows, darwin"
+      description: Comma-separated list of applications for which the web service will accept reports.
+    
+    # Ingest service configuration
+    ingest-apps:
+      type: string
+      default: "linux, windows, darwin"
+      description: Comma-separated list of applications for which the service will accept reports.
