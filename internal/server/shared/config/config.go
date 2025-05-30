@@ -15,13 +15,11 @@ import (
 
 // Provider is an interface that defines methods to access configuration values.
 type Provider interface {
-	BaseDir() string
 	AllowList() []string
 }
 
 // Conf represents the configuration structure.
 type Conf struct {
-	BaseDir     string   `json:"base_dir"`
 	AllowedList []string `json:"allowList"`
 }
 
@@ -146,13 +144,6 @@ func (cm *Manager) Watch(ctx context.Context) (changes <-chan struct{}, errors <
 	}()
 
 	return changesCh, errorsCh, nil
-}
-
-// BaseDir returns the base directory from the configuration.
-func (cm *Manager) BaseDir() string {
-	cm.lock.RLock()
-	defer cm.lock.RUnlock()
-	return cm.config.BaseDir
 }
 
 // AllowList returns the allow list from the configuration.

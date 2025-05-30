@@ -20,6 +20,7 @@ import (
 type Service struct {
 	cm         dConfigManager
 	db         dbManager
+	reportsDir string
 	invalidDir string
 
 	// This context is used to interrupt any action.
@@ -36,6 +37,12 @@ type Service struct {
 	workerWG sync.WaitGroup
 }
 
+// StaticConfig holds the static configuration for the service.
+type StaticConfig struct {
+	ReportsDir string
+	InvalidDir string
+}
+
 type dbManager interface {
 	Upload(ctx context.Context, app string, data *models.TargetModel) error
 	Close() error
@@ -45,7 +52,6 @@ type dConfigManager interface {
 	Load() error
 	Watch(context.Context) (<-chan struct{}, <-chan error, error)
 	AllowList() []string
-	BaseDir() string
 }
 
 type options struct {
@@ -56,7 +62,7 @@ type options struct {
 type Options func(*options)
 
 // New creates a new ingest service with the provided database manager and connects to the database.
-func New(ctx context.Context, cm dConfigManager, dbConfig database.Config, invalidDir string, args ...Options) (*Service, error) {
+func New(ctx context.Context, cm dConfigManager, dbConfig database.Config, sc StaticConfig, args ...Options) (*Service, error) {
 	opts := options{
 		dbConnect: func(ctx context.Context, cfg database.Config) (dbManager, error) {
 			return database.Connect(ctx, cfg)
@@ -67,12 +73,24 @@ func New(ctx context.Context, cm dConfigManager, dbConfig database.Config, inval
 		opt(&opts)
 	}
 
-	if invalidDir == "" {
+	if sc.ReportsDir == "" {
+		return nil, fmt.Errorf("reportsDir must be set")
+	}
+
+	if sc.InvalidDir == "" {
 		return nil, fmt.Errorf("invalidDir must be set")
 	}
 
-	if err := os.MkdirAll(invalidDir, 0700); err != nil {
+	if sc.InvalidDir == sc.ReportsDir {
+		return nil, fmt.Errorf("invalidDir cannot be the same as reportsDir")
+	}
+
+	if err := os.MkdirAll(sc.InvalidDir, 0700); err != nil {
 		return nil, fmt.Errorf("failed to create invalidDir: %v", err)
+	}
+
+	if err := os.MkdirAll(sc.ReportsDir, 0700); err != nil {
+		return nil, fmt.Errorf("failed to create reportsDir: %v", err)
 	}
 
 	if err := cm.Load(); err != nil {
@@ -92,7 +110,8 @@ func New(ctx context.Context, cm dConfigManager, dbConfig database.Config, inval
 	return &Service{
 		cm:         cm,
 		db:         db,
-		invalidDir: invalidDir,
+		reportsDir: sc.ReportsDir,
+		invalidDir: sc.InvalidDir,
 
 		ctx:            ctx,
 		cancel:         cancel,
@@ -207,7 +226,7 @@ func (s *Service) syncWorkers() {
 func (s *Service) appWorker(ctx context.Context, app string) {
 	s.workerWG.Add(1)
 	defer s.workerWG.Done()
-	inputDir := filepath.Join(s.cm.BaseDir(), app)
+	inputDir := filepath.Join(s.reportsDir, app)
 
 	for {
 		select {

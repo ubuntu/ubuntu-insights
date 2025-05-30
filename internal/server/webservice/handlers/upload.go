@@ -20,13 +20,15 @@ import (
 // Upload is a handler for uploading JSON files.
 type Upload struct {
 	config        config.Provider
+	reportsDir    string
 	maxUploadSize int64
 }
 
 // NewUpload creates a new Upload handler.
-func NewUpload(cfg config.Provider, maxUploadSize int64) *Upload {
+func NewUpload(cfg config.Provider, reportsDir string, maxUploadSize int64) *Upload {
 	return &Upload{
 		config:        cfg,
+		reportsDir:    reportsDir,
 		maxUploadSize: maxUploadSize,
 	}
 }
@@ -67,7 +69,7 @@ func (h *Upload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	targetDir := filepath.Join(h.config.BaseDir(), app)
+	targetDir := filepath.Join(h.reportsDir, app)
 	if err := os.MkdirAll(targetDir, 0750); err != nil {
 		http.Error(w, "Error creating directory", http.StatusInternalServerError)
 		slog.Error("Error creating directory", "req_id", reqID, "app", app, "target", targetDir, "err", err)

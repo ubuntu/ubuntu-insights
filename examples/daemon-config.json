@@ -1,4 +1,3 @@
 {
-  "base_dir": "/var/lib/ubuntu-insights-server",
   "allowlist": ["linux", "windows", "darwin"]
 }

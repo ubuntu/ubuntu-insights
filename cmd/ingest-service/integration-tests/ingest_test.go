@@ -132,7 +132,6 @@ func TestIngestService(t *testing.T) {
 			}
 
 			daeConf := &config.Conf{
-				BaseDir:     dst,
 				AllowedList: tc.validApps,
 			}
 			configPath := generateTestDaemonConfig(t, daeConf)
@@ -150,6 +149,7 @@ func TestIngestService(t *testing.T) {
 					"--db-user", dbContainer.User,
 					"--db-password", dbContainer.Password,
 					"--db-name", dbContainer.Name,
+					"--reports-dir", dst,
 					"--invalid-dir", invalidDir,
 					"-vv")
 

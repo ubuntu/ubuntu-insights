@@ -62,6 +62,18 @@ const (
 	DefaultMinAge = 604800
 )
 
+// Service constants.
+const (
+	// DefaultServiceFolder is the name of the default root folder for services.
+	DefaultServiceFolder = "ubuntu-insights-services"
+
+	// DefaultServiceReportsFolder is the name of the default reports folder for services.
+	DefaultServiceReportsFolder = "reports"
+
+	// DefaultServiceInvalidReportsFolder is the name of the default invalid reports folder for services.
+	DefaultServiceInvalidReportsFolder = "invalid-reports"
+)
+
 var (
 	// DefaultConfigPath is the default app user configuration path. It's overridden when imported.
 	DefaultConfigPath = DefaultAppFolder
@@ -71,7 +83,25 @@ var (
 	OptOutJSON = struct{ OptOut bool }{true}
 )
 
+// Service variables.
+var (
+	// DefaultServiceDataDir is the default data directory for services.
+	DefaultServiceDataDir = DefaultServiceFolder
+
+	// DefaultServiceReportsDir is the default reports directory for services.
+	DefaultServiceReportsDir = filepath.Join(DefaultServiceDataDir, DefaultServiceReportsFolder)
+
+	// DefaultServiceInvalidReportsDir is the default invalid reports directory for services.
+	DefaultServiceInvalidReportsDir = filepath.Join(DefaultServiceDataDir, DefaultServiceInvalidReportsFolder)
+)
+
 func init() {
+	DefaultServiceDataDir = filepath.Join("/var/lib", DefaultServiceFolder)
+	defer func() {
+		DefaultServiceReportsDir = filepath.Join(DefaultServiceDataDir, DefaultServiceReportsFolder)
+		DefaultServiceInvalidReportsDir = filepath.Join(DefaultServiceDataDir, DefaultServiceInvalidReportsFolder)
+	}()
+
 	// This is to ensure that the man pages which include the default values
 	// are not generated with the home path at time of generation.
 	if manGeneration == "true" {
@@ -91,4 +121,8 @@ func init() {
 
 	DefaultConfigPath = filepath.Join(userConfigDir, DefaultConfigPath)
 	DefaultCachePath = filepath.Join(userCacheDir, DefaultCachePath)
+
+	if runtime.GOOS != "linux" {
+		DefaultServiceDataDir = filepath.Join(userCacheDir, DefaultServiceFolder)
+	}
 }

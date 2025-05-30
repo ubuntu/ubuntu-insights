@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/server/ingest"
 	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/database"
 	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/models"
@@ -20,31 +21,40 @@ import (
 
 func TestNew(t *testing.T) {
 	tests := map[string]struct {
-		cm         ingest.DConfigManager
-		dbConfig   database.Config
-		invalidDir string
-		options    []ingest.Options
+		cm       ingest.DConfigManager
+		dbConfig database.Config
+		sc       ingest.StaticConfig
+		options  []ingest.Options
 
 		wantErr bool
 	}{
 		"Successful creation": {
-			cm:         &mockConfigManager{loadErr: nil},
-			dbConfig:   database.Config{},
-			invalidDir: t.TempDir(),
-			wantErr:    false,
+			cm:       &mockConfigManager{loadErr: nil},
+			dbConfig: database.Config{},
+			sc: ingest.StaticConfig{
+				ReportsDir: t.TempDir(),
+				InvalidDir: t.TempDir(),
+			},
+			wantErr: false,
 		},
 
 		// Error cases
 		"Config load failure": {
-			cm:         &mockConfigManager{loadErr: errors.New("load error")},
-			dbConfig:   database.Config{},
-			invalidDir: t.TempDir(),
-			wantErr:    true,
+			cm:       &mockConfigManager{loadErr: errors.New("load error")},
+			dbConfig: database.Config{},
+			sc: ingest.StaticConfig{
+				ReportsDir: t.TempDir(),
+				InvalidDir: t.TempDir(),
+			},
+			wantErr: true,
 		},
 		"Database connection failure": {
-			cm:         &mockConfigManager{loadErr: nil},
-			dbConfig:   database.Config{},
-			invalidDir: t.TempDir(),
+			cm:       &mockConfigManager{loadErr: nil},
+			dbConfig: database.Config{},
+			sc: ingest.StaticConfig{
+				ReportsDir: t.TempDir(),
+				InvalidDir: t.TempDir(),
+			},
 			options: []ingest.Options{
 				ingest.WithDBConnect(func(ctx context.Context, cfg database.Config) (ingest.DBManager, error) {
 					return nil, errors.New("db connect error")
@@ -53,22 +63,56 @@ func TestNew(t *testing.T) {
 			wantErr: true,
 		},
 		"Empty invalidDir": {
-			cm:         &mockConfigManager{loadErr: nil},
-			dbConfig:   database.Config{},
-			invalidDir: "",
-			wantErr:    true,
+			cm:       &mockConfigManager{loadErr: nil},
+			dbConfig: database.Config{},
+			sc: ingest.StaticConfig{
+				ReportsDir: t.TempDir(),
+			},
+			wantErr: true,
+		},
+		"Empty reportsDir": {
+			cm:       &mockConfigManager{loadErr: nil},
+			dbConfig: database.Config{},
+			sc: ingest.StaticConfig{
+				InvalidDir: t.TempDir(),
+			},
+			wantErr: true,
+		},
+		"Invalid dir reportsDir path": {
+			cm:       &mockConfigManager{loadErr: nil},
+			dbConfig: database.Config{},
+			sc: ingest.StaticConfig{
+				ReportsDir: "invalid_path\x00\\CON",
+				InvalidDir: t.TempDir(),
+			},
+			wantErr: true,
 		},
 		"Invalid dir invalidDir path": {
-			cm:         &mockConfigManager{loadErr: nil},
-			dbConfig:   database.Config{},
-			invalidDir: "invalid_path\x00\\CON",
-			wantErr:    true,
+			cm:       &mockConfigManager{loadErr: nil},
+			dbConfig: database.Config{},
+			sc: ingest.StaticConfig{
+				ReportsDir: t.TempDir(),
+				InvalidDir: "invalid_path\x00\\CON",
+			},
+			wantErr: true,
+		},
+		"Equal reportsDir and invalidDir": {
+			cm:       &mockConfigManager{loadErr: nil},
+			dbConfig: database.Config{},
+			sc: func() ingest.StaticConfig {
+				tempDir := t.TempDir()
+				return ingest.StaticConfig{
+					ReportsDir: tempDir,
+					InvalidDir: tempDir,
+				}
+			}(),
+			wantErr: true,
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			s, err := ingest.New(t.Context(), tc.cm, tc.dbConfig, tc.invalidDir, tc.options...)
+			s, err := ingest.New(t.Context(), tc.cm, tc.dbConfig, tc.sc, tc.options...)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
@@ -145,12 +189,8 @@ func TestRun(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			dst := ingest.CopyTestFixtures(t, tc.removeFiles)
-			if tc.cm.baseDir == "" {
-				tc.cm.baseDir = dst
-			}
-
-			s, invalidDir := newIngestService(t, tc.cm, tc.dbConfig)
+			sc := &ingest.StaticConfig{ReportsDir: ingest.CopyTestFixtures(t, tc.removeFiles)}
+			s := newIngestService(t, tc.cm, tc.dbConfig, sc)
 			runErr := run(t, s)
 
 			// Allow time for the service to start and run
@@ -162,7 +202,7 @@ func TestRun(t *testing.T) {
 
 			if tc.reAddFiles {
 				// Re-add files to the directory
-				err := testutils.CopyDir(t, filepath.Join("testdata", "fixtures"), dst)
+				err := testutils.CopyDir(t, filepath.Join("testdata", "fixtures"), sc.ReportsDir)
 				require.NoError(t, err, "Setup: failed to re-copy test fixtures")
 
 				waitForUploaderToBeIdle(t, tc.dbConfig, 8*time.Second, 20*time.Second)
@@ -171,7 +211,7 @@ func TestRun(t *testing.T) {
 
 			// Simulate a graceful shutdown
 			gracefulShutdown(t, s, runErr)
-			checkRunResults(t, tc.cm, tc.dbConfig, invalidDir)
+			checkRunResults(t, tc.dbConfig, *sc)
 		})
 	}
 }
@@ -181,17 +221,16 @@ func TestRun(t *testing.T) {
 func TestRunNewApp(t *testing.T) {
 	t.Parallel()
 
-	dst := ingest.CopyTestFixtures(t, nil)
 	cm := &mockConfigManager{
 		allowList: []string{"SingleValid"},
-		baseDir:   dst,
 
 		reloadCh: make(chan struct{}),
 		errCh:    make(chan error),
 	}
 	db := &mockDBManager{}
+	sc := &ingest.StaticConfig{ReportsDir: ingest.CopyTestFixtures(t, nil)}
 
-	s, invalidDir := newIngestService(t, cm, db)
+	s := newIngestService(t, cm, db, sc)
 	runErr := run(t, s)
 
 	// Allow time for the service to start and run
@@ -207,7 +246,7 @@ func TestRunNewApp(t *testing.T) {
 	waitForUploaderToBeIdle(t, db, 4*time.Second, 20*time.Second)
 
 	gracefulShutdown(t, s, runErr)
-	checkRunResults(t, cm, db, invalidDir)
+	checkRunResults(t, db, *sc)
 }
 
 // TestRunRemoveApp tests the removal of an app from the allow list
@@ -215,17 +254,16 @@ func TestRunNewApp(t *testing.T) {
 func TestRunRemoveApp(t *testing.T) {
 	t.Parallel()
 
-	dst := ingest.CopyTestFixtures(t, nil)
 	cm := &mockConfigManager{
 		allowList: []string{"SingleValid", "MultiMixed"},
-		baseDir:   dst,
 
 		reloadCh: make(chan struct{}),
 		errCh:    make(chan error),
 	}
 	db := &mockDBManager{}
+	sc := &ingest.StaticConfig{ReportsDir: ingest.CopyTestFixtures(t, nil)}
 
-	s, invalidDir := newIngestService(t, cm, db)
+	s := newIngestService(t, cm, db, sc)
 	runErr := run(t, s)
 
 	// Allow time for the service to start and run
@@ -240,29 +278,26 @@ func TestRunRemoveApp(t *testing.T) {
 
 	runWait(t, runErr, false, 10*time.Second)
 
-	err := testutils.CopyDir(t, filepath.Join("testdata", "fixtures"), dst)
+	err := testutils.CopyDir(t, filepath.Join("testdata", "fixtures"), sc.ReportsDir)
 	require.NoError(t, err, "Setup: failed to re-copy test fixtures")
 	waitForUploaderToBeIdle(t, db, 4*time.Second, 20*time.Second)
 	runWait(t, runErr, false, 500*time.Millisecond)
 
 	gracefulShutdown(t, s, runErr)
-	checkRunResults(t, cm, db, invalidDir)
+	checkRunResults(t, db, *sc)
 }
 
 func TestRunAfterQuitErrors(t *testing.T) {
 	t.Parallel()
 
-	dst := ingest.CopyTestFixtures(t, nil)
 	cm := &mockConfigManager{
 		allowList: []string{"SingleValid"},
-		baseDir:   dst,
 
 		reloadCh: make(chan struct{}),
 		errCh:    make(chan error),
 	}
 	db := &mockDBManager{}
-
-	s, _ := newIngestService(t, cm, db)
+	s := newIngestService(t, cm, db, &ingest.StaticConfig{ReportsDir: ingest.CopyTestFixtures(t, nil)})
 	defer s.Quit(true)
 
 	runErr := run(t, s)
@@ -282,7 +317,6 @@ func TestRunAfterQuitErrors(t *testing.T) {
 }
 
 type mockConfigManager struct {
-	baseDir   string
 	allowList []string
 
 	earlyClose      bool
@@ -335,10 +369,6 @@ func (m *mockConfigManager) SetAllowList(newAllowList []string) {
 	m.mu.Lock() // Lock for writing
 	defer m.mu.Unlock()
 	m.allowList = newAllowList
-}
-
-func (m *mockConfigManager) BaseDir() string {
-	return m.baseDir
 }
 
 type mockDBManager struct {
@@ -446,16 +476,16 @@ func gracefulShutdown(t *testing.T, s *ingest.Service, runErr chan error) {
 
 // checkRunResults is a helper function which checks the results of the run
 // and compares them to the expected results.
-func checkRunResults(t *testing.T, cm *mockConfigManager, db *mockDBManager, invalidDir string) {
+func checkRunResults(t *testing.T, db *mockDBManager, sc ingest.StaticConfig) {
 	t.Helper()
 
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	remainingFiles, err := testutils.GetDirHashedContents(t, cm.BaseDir(), 4)
+	remainingFiles, err := testutils.GetDirHashedContents(t, sc.ReportsDir, 4)
 	require.NoError(t, err, "Failed to get directory contents")
 
-	invalidFiles, err := testutils.GetDirHashedContents(t, invalidDir, 4)
+	invalidFiles, err := testutils.GetDirHashedContents(t, sc.InvalidDir, 4)
 	require.NoError(t, err, "Failed to get invalidDir contents")
 
 	results := struct {
@@ -492,16 +522,20 @@ func waitForUploaderToBeIdle(t *testing.T, db *mockDBManager, idleDuration time.
 }
 
 // newIngestService is a helper function which creates a new ingest service for testing purposes.
-func newIngestService(t *testing.T, cm *mockConfigManager, db *mockDBManager) (s *ingest.Service, invalidDir string) {
+func newIngestService(t *testing.T, cm *mockConfigManager, db *mockDBManager, sc *ingest.StaticConfig) (s *ingest.Service) {
 	t.Helper()
-	invalidDir = t.TempDir()
+
+	if sc.InvalidDir == "" {
+		sc.InvalidDir = filepath.Join(t.TempDir(), constants.DefaultServiceInvalidReportsFolder)
+	}
+
 	opts := []ingest.Options{
 		ingest.WithDBConnect(func(ctx context.Context, cfg database.Config) (ingest.DBManager, error) {
 			return db, nil
 		}),
 	}
-	s, err := ingest.New(t.Context(), cm, database.Config{}, invalidDir, opts...)
+	s, err := ingest.New(t.Context(), cm, database.Config{}, *sc, opts...)
 	require.NoError(t, err, "Setup: Failed to create service")
 
-	return s, invalidDir
+	return s
 }

@@ -54,11 +54,11 @@ func TestNew(t *testing.T) {
 
 			daemonConfig := webservice.StaticConfig{
 				ConfigPath: webservice.GenerateTestDaemonConfig(t, &config.Conf{}),
+				ReportsDir: t.TempDir(),
 			}
 
 			cm := &testConfigManager{
 				allowList: []string{"test"},
-				baseDir:   t.TempDir(),
 				loadErr:   tc.cmLoadErr,
 			}
 
@@ -144,10 +144,10 @@ func TestServeMulti(t *testing.T) {
 			assert.Equal(t, tc.wantStatus, resp.StatusCode, "status")
 			if tc.checkFile {
 				app := tc.path[len("/upload/"):]
-				files, err := os.ReadDir(filepath.Join(cm.baseDir, app))
+				files, err := os.ReadDir(filepath.Join(dConf.ReportsDir, app))
 				require.NoError(t, err)
 				assert.Len(t, files, 1, "one file created")
-				data, err := os.ReadFile(filepath.Join(cm.baseDir, app, files[0].Name()))
+				data, err := os.ReadFile(filepath.Join(dConf.ReportsDir, app, files[0].Name()))
 				assert.NoError(t, err)
 
 				var got map[string]any
@@ -270,7 +270,7 @@ func TestRunSingle(t *testing.T) {
 			// Check files and file content, ignore uuid name
 			if tc.wantStatus == http.StatusAccepted {
 				app := filepath.Base(tc.path)
-				contents, err := testutils.GetDirContents(t, filepath.Join(tc.cm.baseDir, app), 3)
+				contents, err := testutils.GetDirContents(t, filepath.Join(tc.dConf.ReportsDir, app), 3)
 				require.NoError(t, err)
 				assert.Len(t, contents, 1, "one file created")
 				var got string
@@ -314,7 +314,6 @@ func TestRunAfterQuitErrors(t *testing.T) {
 
 type testConfigManager struct {
 	allowList     []string
-	baseDir       string
 	finishWatch   bool
 	loadErr       error
 	newWatcherErr error
@@ -356,15 +355,11 @@ func (t testConfigManager) AllowList() []string {
 	return t.allowList
 }
 
-func (t testConfigManager) BaseDir() string {
-	return t.baseDir
-}
-
 func newForTest(t *testing.T, cm *testConfigManager, daemonConfig *webservice.StaticConfig) *webservice.Server {
 	t.Helper()
 
-	if cm.baseDir == "" {
-		cm.baseDir = t.TempDir()
+	if daemonConfig.ReportsDir == "" {
+		daemonConfig.ReportsDir = t.TempDir()
 	}
 
 	if daemonConfig.ListenPort == 0 {
@@ -373,7 +368,6 @@ func newForTest(t *testing.T, cm *testConfigManager, daemonConfig *webservice.St
 
 	if daemonConfig.ConfigPath == "" {
 		daemonConfig.ConfigPath = webservice.GenerateTestDaemonConfig(t, &config.Conf{
-			BaseDir:     cm.BaseDir(),
 			AllowedList: cm.AllowList(),
 		})
 	}
