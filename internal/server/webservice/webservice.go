@@ -33,6 +33,7 @@ type Server struct {
 // StaticConfig holds the static configuration for the server.
 type StaticConfig struct {
 	ConfigPath string
+	ReportsDir string
 
 	ReadTimeout    time.Duration
 	WriteTimeout   time.Duration
@@ -51,7 +52,6 @@ type dConfigManager interface {
 	Load() error
 	Watch(context.Context) (<-chan struct{}, <-chan error, error)
 	AllowList() []string
-	BaseDir() string
 }
 
 // New creates a new Server instance with the given http.Server and config.ConfigManager.
@@ -72,7 +72,7 @@ func New(ctx context.Context, cm dConfigManager, sc StaticConfig) (*Server, erro
 		gracefulCtx:    gCtx,
 		gracefulCancel: gCancel}
 
-	uploadHandler := handlers.NewUpload(cm, int64(sc.MaxUploadBytes))
+	uploadHandler := handlers.NewUpload(cm, sc.ReportsDir, int64(sc.MaxUploadBytes))
 	mux := http.NewServeMux()
 	mux.Handle("POST /upload/{app}", s.ipLimiter.RateLimitMiddleware(uploadHandler))
 	mux.Handle("GET /version", http.HandlerFunc(handlers.VersionHandler))

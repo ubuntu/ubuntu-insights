@@ -67,9 +67,7 @@ func New() (*App, error) {
 	a.viper = viper.New()
 	a.cmd.CompletionOptions.HiddenDefaultCmd = true
 
-	if err := installRootCmd(&a); err != nil {
-		return nil, err
-	}
+	installRootCmd(&a)
 	cli.InstallConfigFlag(a.cmd)
 
 	if err := a.viper.BindPFlags(a.cmd.PersistentFlags()); err != nil {
@@ -81,11 +79,13 @@ func New() (*App, error) {
 	return &a, nil
 }
 
-func installRootCmd(app *App) error {
+func installRootCmd(app *App) {
 	cmd := app.cmd
 
 	defaultConf := webservice.StaticConfig{
-		ConfigPath:     "config.json",
+		ConfigPath: "config.json",
+		ReportsDir: constants.DefaultServiceReportsDir,
+
 		ReadTimeout:    5 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		RequestTimeout: 3 * time.Second,
@@ -102,6 +102,8 @@ func installRootCmd(app *App) error {
 
 	// Daemon flags
 	cmd.PersistentFlags().StringVar(&app.config.Daemon.ConfigPath, "daemon-config", defaultConf.ConfigPath, "Path to the configuration file")
+	cmd.PersistentFlags().StringVar(&app.config.Daemon.ReportsDir, "reports-dir", defaultConf.ReportsDir, "Directory to store reports")
+
 	cmd.PersistentFlags().DurationVar(&app.config.Daemon.ReadTimeout, "read-timeout", defaultConf.ReadTimeout, "Read timeout for HTTP server")
 	cmd.PersistentFlags().DurationVar(&app.config.Daemon.WriteTimeout, "write-timeout", defaultConf.WriteTimeout, "Write timeout for HTTP server")
 	cmd.PersistentFlags().DurationVar(&app.config.Daemon.RequestTimeout, "request-timeout", defaultConf.RequestTimeout, "Request timeout for HTTP server")
@@ -116,10 +118,15 @@ func installRootCmd(app *App) error {
 
 	err := cmd.MarkPersistentFlagFilename("daemon-config")
 	if err != nil {
-		return fmt.Errorf("failed to mark daemon-config flag as filename: %w", err)
+		// This should never happen.
+		panic(fmt.Sprintf("failed to mark daemon-config flag as filename: %v", err))
 	}
 
-	return nil
+	err = cmd.MarkPersistentFlagDirname("reports-dir")
+	if err != nil {
+		// This should never happen.
+		panic(fmt.Sprintf("failed to mark reports-dir flag as required: %v", err))
+	}
 }
 
 // Run executes the command and associated process, returning an error if any.

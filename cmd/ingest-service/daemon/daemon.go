@@ -32,7 +32,7 @@ type App struct {
 type appConfig struct {
 	Verbosity  int
 	DBconfig   database.Config
-	InvalidDir string // Path to the directory where invalid or partially invalid reports are stored for manual review
+	Daemon     ingest.StaticConfig // Configuration for the ingest service
 	ConfigPath string
 }
 
@@ -69,9 +69,7 @@ func New() (*App, error) {
 	a.viper = viper.New()
 	a.cmd.CompletionOptions.HiddenDefaultCmd = true
 
-	if err := installRootCmd(&a); err != nil {
-		return nil, err
-	}
+	installRootCmd(&a)
 	cli.InstallConfigFlag(a.cmd)
 
 	if err := a.viper.BindPFlags(a.cmd.PersistentFlags()); err != nil {
@@ -83,34 +81,40 @@ func New() (*App, error) {
 	return &a, nil
 }
 
-func installRootCmd(app *App) error {
+func installRootCmd(app *App) {
 	cmd := app.cmd
+
+	defaultConf := ingest.StaticConfig{
+		ReportsDir: constants.DefaultServiceReportsDir,
+		InvalidDir: constants.DefaultServiceInvalidReportsDir,
+	}
 
 	cmd.PersistentFlags().CountVarP(&app.config.Verbosity, "verbose", "v", "issue INFO (-v), DEBUG (-vv)")
 
 	// Daemon flags
 	cmd.PersistentFlags().StringVar(&app.config.DBconfig.Host, "db-host", "", "Database host")
-	cmd.PersistentFlags().IntVarP(&app.config.DBconfig.Port, "db-port", "p", 0, "Database port")
+	cmd.PersistentFlags().IntVarP(&app.config.DBconfig.Port, "db-port", "p", 5432, "Database port")
 	cmd.PersistentFlags().StringVarP(&app.config.DBconfig.User, "db-user", "u", "", "Database user")
 	cmd.PersistentFlags().StringVarP(&app.config.DBconfig.Password, "db-password", "P", "", "Database password")
-	cmd.PersistentFlags().StringVarP(&app.config.DBconfig.DBName, "db-name", "d", "", "Database name")
+	cmd.PersistentFlags().StringVarP(&app.config.DBconfig.DBName, "db-name", "n", "", "Database name")
 	cmd.PersistentFlags().StringVarP(&app.config.DBconfig.SSLMode, "db-sslmode", "s", "", "Database SSL mode")
 
-	cmd.PersistentFlags().StringVarP(&app.config.InvalidDir, "invalid-dir", "i", filepath.Join("invalid-reports"), "Path to the directory where invalid or partially invalid reports are stored for manual review")
+	cmd.PersistentFlags().StringVar(&app.config.Daemon.ReportsDir, "reports-dir", defaultConf.ReportsDir, "Directory to read reports from")
+	cmd.PersistentFlags().StringVar(&app.config.Daemon.InvalidDir, "invalid-dir", defaultConf.InvalidDir, "Directory where invalid or partially invalid reports are stored for manual review")
 
 	cmd.PersistentFlags().StringVarP(&app.config.ConfigPath, "daemon-config", "c", "", "Path to the configuration file")
 
-	err := cmd.MarkPersistentFlagDirname("invalid-dir")
-	if err != nil {
-		return fmt.Errorf("failed to mark invalid-dir flag as directory: %v", err)
+	if err := cmd.MarkPersistentFlagDirname("reports-dir"); err != nil {
+		panic(fmt.Errorf("failed to mark reports-dir flag as directory: %w", err))
 	}
 
-	err = cmd.MarkPersistentFlagFilename("daemon-config")
-	if err != nil {
-		return fmt.Errorf("failed to mark daemon-config flag as filename: %v", err)
+	if err := cmd.MarkPersistentFlagDirname("invalid-dir"); err != nil {
+		panic(fmt.Sprintf("failed to mark invalid-dir flag as directory: %v", err))
 	}
 
-	return nil
+	if err := cmd.MarkPersistentFlagFilename("daemon-config"); err != nil {
+		panic(fmt.Sprintf("failed to mark daemon-config flag as filename: %v", err))
+	}
 }
 
 // Run executes the command and associated process, returning an error if any.
@@ -155,7 +159,7 @@ func (a *App) run() (err error) {
 		return fmt.Errorf("failed to get absolute path for config file: %v", err)
 	}
 	cm := config.New(a.config.ConfigPath)
-	a.daemon, err = ingest.New(context.Background(), cm, a.config.DBconfig, a.config.InvalidDir)
+	a.daemon, err = ingest.New(context.Background(), cm, a.config.DBconfig, a.config.Daemon)
 	close(a.ready)
 	if err != nil {
 		return fmt.Errorf("failed to create server: %v", err)

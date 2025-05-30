@@ -15,12 +15,7 @@ import (
 )
 
 type mockConfigManager struct {
-	baseDir     string
 	allowedList []string
-}
-
-func (m *mockConfigManager) BaseDir() string {
-	return m.baseDir
 }
 
 func (m *mockConfigManager) AllowList() []string {
@@ -48,15 +43,14 @@ func TestNew(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			bd := t.TempDir()
+			rd := t.TempDir()
 			mockConfig := &mockConfigManager{
-				baseDir:     bd,
 				allowedList: tc.apps,
 			}
 
-			handler := handlers.NewUpload(mockConfig, 1<<10)
+			handler := handlers.NewUpload(mockConfig, rd, 1<<10)
 			assert.NotNil(t, handler)
-			assert.Equal(t, bd, mockConfig.BaseDir())
+			assert.Equal(t, rd, handler.ReportsDir())
 			assert.Equal(t, tc.apps, mockConfig.AllowList())
 		})
 	}
@@ -122,7 +116,6 @@ func TestUpload(t *testing.T) {
 			t.Parallel()
 
 			mockConfig := &mockConfigManager{
-				baseDir:     t.TempDir(),
 				allowedList: []string{defaultApp},
 			}
 
@@ -136,14 +129,14 @@ func TestUpload(t *testing.T) {
 				tc.expectedCode = http.StatusAccepted
 			}
 
-			handler := handlers.NewUpload(mockConfig, tc.maxUploadSize)
+			handler := handlers.NewUpload(mockConfig, t.TempDir(), tc.maxUploadSize)
 
 			rr := httptest.NewRecorder()
 			tc.request.Method = tc.method
 			handler.ServeHTTP(rr, tc.request)
 
 			assert.Equal(t, tc.expectedCode, rr.Code, "Expected status code")
-			contents, err := testutils.GetDirContents(t, mockConfig.BaseDir(), 3)
+			contents, err := testutils.GetDirContents(t, handler.ReportsDir(), 3)
 			require.NoError(t, err, "Failed to get directory contents")
 
 			// Remove uuid from filename
