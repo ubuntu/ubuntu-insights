@@ -27,7 +27,6 @@ func createTempConfigFile(t *testing.T, content string) string {
 func TestLoadValidConfig(t *testing.T) {
 	t.Parallel()
 	content := `{
-		"base_dir": "/tmp/data",
 		"allowList": ["foo", "bar"]
 	}`
 	tmpFile := createTempConfigFile(t, content)
@@ -35,10 +34,6 @@ func TestLoadValidConfig(t *testing.T) {
 	cm := config.New(tmpFile)
 	if err := cm.Load(); err != nil {
 		t.Fatalf("expected no error loading config, got %v", err)
-	}
-
-	if got := cm.BaseDir(); got != "/tmp/data" {
-		t.Errorf("expected base_dir /tmp/data, got %s", got)
 	}
 
 	expected := []string{"foo", "bar"}
@@ -50,7 +45,6 @@ func TestLoadValidConfig(t *testing.T) {
 func TestLoadInvalidJSON(t *testing.T) {
 	t.Parallel()
 	content := `{
-		"base_dir": "/tmp/data",
 		"allowList": ["foo", "bar"]` // Missing closing brace
 	tmpFile := createTempConfigFile(t, content)
 
@@ -81,8 +75,8 @@ func TestWatchMissingFile(t *testing.T) {
 
 func TestWatchConfigReloadsOnChange(t *testing.T) {
 	t.Parallel()
-	initial := `{"base_dir": "/tmp/initial", "allowList": ["alpha"]}`
-	updated := `{"base_dir": "/tmp/updated", "allowList": ["beta"]}`
+	initial := `{"allowList": ["alpha"]}`
+	updated := `{"allowList": ["beta"]}`
 	tmpFile := createTempConfigFile(t, initial)
 
 	cm := config.New(tmpFile)
@@ -95,7 +89,6 @@ func TestWatchConfigReloadsOnChange(t *testing.T) {
 
 	time.Sleep(time.Second) // let watcher reload
 
-	assert.Equal(t, "/tmp/updated", cm.BaseDir(), "expected base_dir to be updated")
 	if got := cm.AllowList(); !reflect.DeepEqual(got, []string{"beta"}) {
 		t.Errorf("expected allowList [beta], got %v", got)
 	}
@@ -115,7 +108,7 @@ func TestWatchConfigRemoved(t *testing.T) {
 		slog.LevelInfo: 2,
 	}
 
-	initial := `{"base_dir": "/tmp/initial", "allowList": ["alpha"]}`
+	initial := `{"allowList": ["alpha"]}`
 	tmpFile := createTempConfigFile(t, initial)
 
 	l := testutils.NewMockHandler(slog.LevelDebug)
@@ -153,7 +146,7 @@ func TestWatchIgnoresIrrelevantFiles(t *testing.T) {
 		slog.LevelInfo: 2,
 	}
 
-	initial := `{"base_dir": "/tmp/initial", "allowList": ["alpha"]}`
+	initial := `{"allowList": ["alpha"]}`
 	tmpFile := createTempConfigFile(t, initial)
 	irrelevantFile := filepath.Join(filepath.Dir(tmpFile), "irrelevant.txt")
 
@@ -186,7 +179,7 @@ func TestWatchIgnoresIrrelevantFiles(t *testing.T) {
 func TestWatchWarnsIfLoadFails(t *testing.T) {
 	t.Parallel()
 
-	initial := `{"base_dir": "/tmp/initial", "allowList": ["alpha"]}`
+	initial := `{"allowList": ["alpha"]}`
 	tmpFile := createTempConfigFile(t, initial)
 
 	l := testutils.NewMockHandler(slog.LevelInfo)
@@ -217,7 +210,7 @@ func TestConfigManagerReadWhileWrite(t *testing.T) {
 	tmpFile := createTempConfigFile(t, content)
 
 	cm := config.New(tmpFile)
-	err := os.WriteFile(tmpFile, []byte(`{"base_dir":"/tmp/test","allowList":["foo"]}`), 0600)
+	err := os.WriteFile(tmpFile, []byte(`{"allowList":["foo"]}`), 0600)
 	require.NoError(t, err, "Setup: Failed to write initial config")
 	require.NoError(t, cm.Load(), "Setup: Failed to load initial config")
 
@@ -230,7 +223,7 @@ func TestConfigManagerReadWhileWrite(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for i := range writeCount {
-			_ = os.WriteFile(tmpFile, fmt.Appendf(nil, `{"base_dir":"/tmp/test%d","allowList":["foo"]}`, i), 0600)
+			_ = os.WriteFile(tmpFile, fmt.Appendf(nil, `{"allowList":["foo", "foo%d"]}`, i), 0600)
 			_ = cm.Load()
 		}
 	}()
@@ -240,12 +233,10 @@ func TestConfigManagerReadWhileWrite(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_ = cm.BaseDir()
 			_ = cm.AllowList()
 		}()
 	}
 
 	wg.Wait()
-	require.Equal(t, "/tmp/test99", cm.BaseDir(), "Expected base_dir to be /tmp/test99")
-	require.Equal(t, []string{"foo"}, cm.AllowList(), "Expected allowList to be [foo]")
+	require.Equal(t, []string{"foo", "foo99"}, cm.AllowList(), "Expected allowList to be [foo, foo99]")
 }

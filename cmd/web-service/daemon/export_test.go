@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/server/shared/config"
 	"gopkg.in/yaml.v3"
 )
@@ -62,6 +63,10 @@ func GenerateTestConfig(t *testing.T, origConf *AppConfig, daeConf *config.Conf)
 
 	if conf.Daemon.ConfigPath == "" {
 		conf.Daemon.ConfigPath = GenerateTestDaemonConfig(t, daeConf)
+	}
+
+	if conf.Daemon.ReportsDir == "" {
+		conf.Daemon.ReportsDir = filepath.Join(t.TempDir(), constants.DefaultServiceReportsFolder)
 	}
 
 	d, err := yaml.Marshal(conf)
