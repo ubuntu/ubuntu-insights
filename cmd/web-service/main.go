@@ -63,7 +63,7 @@ func installSignalHandler(a app) func() {
 			default:
 				// channel was closed: we exited
 				if !ok {
-					slog.Warn("Signal channel closed")
+					slog.Debug("Signal channel closed")
 					return
 				}
 			}
