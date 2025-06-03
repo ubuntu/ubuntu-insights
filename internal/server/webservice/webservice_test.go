@@ -26,7 +26,7 @@ var defaultDaemonConfig = &webservice.StaticConfig{
 	MaxHeaderBytes: 1 << 13, // 8 KB
 	MaxUploadBytes: 1 << 17, // 128 KB
 	RateLimitPS:    0.1,
-	BurstLimit:     3,
+	BurstLimit:     5,
 
 	ListenHost: "localhost",
 }
@@ -78,7 +78,7 @@ func TestServeMulti(t *testing.T) {
 	t.Parallel()
 	const defaultApp = "goodapp"
 	dConf := *defaultDaemonConfig
-	cm := &testConfigManager{allowList: []string{defaultApp}}
+	cm := &testConfigManager{allowList: []string{defaultApp, "ubuntu-report/distribution/desktop/version"}}
 
 	s := createServerAndWaitReady(t, cm, &dConf, false)
 
@@ -88,7 +88,7 @@ func TestServeMulti(t *testing.T) {
 		contentType string
 		body        []byte
 		wantStatus  int
-		checkFile   bool
+		checkDir    string
 	}{
 		"Version": {
 			method:     http.MethodGet,
@@ -124,8 +124,16 @@ func TestServeMulti(t *testing.T) {
 			path:        "/upload/goodapp",
 			contentType: "application/json",
 			body:        []byte(`{"foo":"bar"}`),
+			checkDir:    defaultApp,
 			wantStatus:  http.StatusAccepted,
-			checkFile:   true,
+		},
+		"Ubuntu Report backwards compatibility": {
+			method:      http.MethodPost,
+			path:        "/distribution/desktop/version",
+			contentType: "application/json",
+			body:        []byte(`{"foo":"bar"}`),
+			checkDir:    "ubuntu-report/distribution/desktop/version",
+			wantStatus:  http.StatusOK,
 		},
 	}
 	client := &http.Client{}
@@ -141,13 +149,12 @@ func TestServeMulti(t *testing.T) {
 			require.NoError(t, err)
 			defer resp.Body.Close()
 
-			assert.Equal(t, tc.wantStatus, resp.StatusCode, "status")
-			if tc.checkFile {
-				app := tc.path[len("/upload/"):]
-				files, err := os.ReadDir(filepath.Join(dConf.ReportsDir, app))
+			assert.Equal(t, tc.wantStatus, resp.StatusCode, "Unexpected status response")
+			if tc.checkDir != "" {
+				files, err := os.ReadDir(filepath.Join(dConf.ReportsDir, tc.checkDir))
 				require.NoError(t, err)
 				assert.Len(t, files, 1, "one file created")
-				data, err := os.ReadFile(filepath.Join(dConf.ReportsDir, app, files[0].Name()))
+				data, err := os.ReadFile(filepath.Join(dConf.ReportsDir, tc.checkDir, files[0].Name()))
 				assert.NoError(t, err)
 
 				var got map[string]any
