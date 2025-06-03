@@ -25,8 +25,6 @@ var defaultDaemonConfig = &webservice.StaticConfig{
 	RequestTimeout: 3 * time.Second,
 	MaxHeaderBytes: 1 << 13, // 8 KB
 	MaxUploadBytes: 1 << 17, // 128 KB
-	RateLimitPS:    0.1,
-	BurstLimit:     5,
 
 	ListenHost: "localhost",
 }
