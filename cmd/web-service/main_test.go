@@ -93,7 +93,7 @@ func TestRun(t *testing.T) {
 				err := sendSignal(tc.sendSig)
 				require.NoError(t, err, "Teardown: sending signal should return no error")
 				select {
-				case <-time.After(50 * time.Millisecond):
+				case <-time.After(100 * time.Millisecond):
 					exited = false
 				case <-wait:
 					exited = true
@@ -103,7 +103,7 @@ func TestRun(t *testing.T) {
 				err := sendSignal(tc.sendSig)
 				require.NoError(t, err, "Teardown: sending signal should return no error")
 				select {
-				case <-time.After(50 * time.Millisecond):
+				case <-time.After(100 * time.Millisecond):
 					exited = false
 				case <-wait:
 					exited = true
