@@ -172,15 +172,28 @@ func TestRunSingle(t *testing.T) {
 		path        string
 		contentType string
 		body        []byte
-		wantStatus  int
-		wantErr     bool
+
+		checkDir   string
+		wantStatus int
+		wantErr    bool
 	}{
 		"Version": {
 			method:     http.MethodGet,
 			path:       "/version",
 			wantStatus: http.StatusOK,
 		},
-		"Basic Upload": {},
+		"Basic Upload": {checkDir: defaultApp},
+		"Ubuntu Report backwards compatibility": {
+			method:      http.MethodPost,
+			path:        "/distribution/desktop/version",
+			contentType: "application/json",
+			cm: testConfigManager{
+				allowList: []string{defaultApp,
+					"ubuntu-report/distribution/desktop/version"},
+			},
+			checkDir:   "ubuntu-report/distribution/desktop/version",
+			wantStatus: http.StatusOK,
+		},
 
 		// Bad Requests
 		"Bad App StatusForbidden": {
@@ -198,6 +211,16 @@ func TestRunSingle(t *testing.T) {
 		"Bad Path StatusNotFound": {
 			path:       "/unknown-path",
 			wantStatus: http.StatusNotFound,
+		},
+		"Bad legacy path StatusNotFound": {
+			method:      http.MethodPost,
+			path:        "/distribution/desktop/badapp",
+			contentType: "application/json",
+			cm: testConfigManager{
+				allowList: []string{defaultApp,
+					"ubuntu-report/distribution/desktop/version"},
+			},
+			wantStatus: http.StatusForbidden,
 		},
 
 		// Bad Server Configurations
@@ -268,9 +291,8 @@ func TestRunSingle(t *testing.T) {
 			assert.Equal(t, tc.wantStatus, resp.StatusCode, "status")
 
 			// Check files and file content, ignore uuid name
-			if tc.wantStatus == http.StatusAccepted {
-				app := filepath.Base(tc.path)
-				contents, err := testutils.GetDirContents(t, filepath.Join(tc.dConf.ReportsDir, app), 3)
+			if tc.checkDir != "" {
+				contents, err := testutils.GetDirContents(t, filepath.Join(tc.dConf.ReportsDir, tc.checkDir), 3)
 				require.NoError(t, err)
 				assert.Len(t, contents, 1, "one file created")
 				var got string
