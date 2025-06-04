@@ -12,12 +12,12 @@
     "MultiMixed/string_collectionTime.json": "e55d3cc42bd05b67f164f5f50bca4bc9744c7c8ac15302b856cae433e2d78ddb",
     "MultiMixed/valid_1.json": "d78f87d37258faf6b9994671421a2cf9e5c2e6b0f9f451f3109d75f5d6e51ad9",
     "OptOut/optout.json": "9251f31b5ffab65ca8786db577eee66e1467f1fc20f5243e8f91c1a510c444af",
-    "SingleValid/valid.json": "d78f87d37258faf6b9994671421a2cf9e5c2e6b0f9f451f3109d75f5d6e51ad9",
-    "ubuntu-report/distribution/desktop/version/basic.json": "c9442a5e7975272706c366e8a579ce2680144e95e1a12d07048f25e84c29f952",
-    "ubuntu-report/distribution/desktop/version/optout.json": "9251f31b5ffab65ca8786db577eee66e1467f1fc20f5243e8f91c1a510c444af"
+    "SingleInvalid/invalid.json": "b6ce9737e3489feab1a4b2aa2262a4f40ee0bd88e800a4dd9cb0f972ff087616",
+    "SingleValid/valid.json": "d78f87d37258faf6b9994671421a2cf9e5c2e6b0f9f451f3109d75f5d6e51ad9"
   },
   "UploadedFiles": null,
   "InvalidFiles": {
-    "invalid.json": "b6ce9737e3489feab1a4b2aa2262a4f40ee0bd88e800a4dd9cb0f972ff087616"
+    "basic.json": "c9442a5e7975272706c366e8a579ce2680144e95e1a12d07048f25e84c29f952",
+    "optout.json": "9251f31b5ffab65ca8786db577eee66e1467f1fc20f5243e8f91c1a510c444af"
   }
 }

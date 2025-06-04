@@ -72,6 +72,9 @@ const (
 
 	// DefaultServiceInvalidReportsFolder is the name of the default invalid reports folder for services.
 	DefaultServiceInvalidReportsFolder = "invalid-reports"
+
+	// LegacyReportTag is the tag used to indicate legacy ubuntu report files.
+	LegacyReportTag = "ubuntu-report"
 )
 
 var (

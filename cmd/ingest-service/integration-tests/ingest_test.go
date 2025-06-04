@@ -101,6 +101,17 @@ func TestIngestService(t *testing.T) {
 				{app: "darwin", reportType: validV1, count: 3},
 			},
 		},
+		"Legacy ubuntu report apps": {
+			validApps: []string{"linux", "windows", "darwin", "ubuntu-report/distribution/desktop/version"},
+			preReports: []reports{
+				{app: "ubuntu-report/distribution/desktop/version", reportType: ubuntuReport, count: 3},
+				{app: "ubuntu-report/distribution/desktop/version", reportType: validOptOut, count: 3},
+			},
+			postReports: []reports{
+				{app: "ubuntu-report/distribution/desktop/version", reportType: ubuntuReport, count: 2},
+				{app: "ubuntu-report/distribution/desktop/version", reportType: validOptOut, count: 1},
+			},
+		},
 	}
 
 	for name, tc := range tests {
@@ -310,6 +321,7 @@ const (
 	validV1
 	validOptOut
 	invalidOptOut
+	ubuntuReport
 )
 
 func makeReport(t *testing.T, reportType report, count int, reportDir string, atomicWrite bool) {
@@ -533,6 +545,89 @@ func makeReport(t *testing.T, reportType report, count int, reportDir string, at
             "proAttached": true
         }
     }
+}`
+	case ubuntuReport:
+		rep = `
+{
+  "Version": "18.04",
+  "OEM": {
+    "Vendor": "Vendor Name",
+    "Product": "4287CTO"
+  },
+  "BIOS": {
+    "Vendor": "Vendor Name",
+    "Version": "8DET52WW (1.27)"
+  },
+  "CPU": {
+    "OpMode": "32-bit, 64-bit",
+    "CPUs": "8",
+    "Threads": "2",
+    "Cores": "4",
+    "Sockets": "1",
+    "Vendor": "Genuine",
+    "Family": "6",
+    "Model": "158",
+    "Stepping": "10",
+    "Name": "Intius Corus i5-8300H CPU @ 2.30GHz",
+    "Virtualization": "VT-x"
+  },
+  "Arch": "amd64",
+  "GPU": [
+    {
+      "Vendor": "8086",
+      "Model": "0126"
+    }
+  ],
+  "RAM": 8,
+  "Disks": [
+    240.1,
+    500.1
+  ],
+  "Partitions": [
+    229.2,
+    479.7
+  ],
+  "Screens": [
+    {
+      "Size": "277mmx156mm",
+      "Resolution": "1366x768",
+      "Frequency": "60.02"
+    },
+    {
+      "Resolution": "1920x1080",
+      "Frequency": "60.00"
+    }
+  ],
+  "Autologin": false,
+  "LivePatch": true,
+  "Session": {
+    "DE": "ubuntu:GNOME",
+    "Name": "ubuntu",
+    "Type": "x11"
+  },
+  "Language": "fr_FR",
+  "Timezone": "Europe/Paris",
+  "Install": {
+    "Media": "Ubuntu 18.04 LTS \"Bionic Beaver\" - Alpha amd64 (20180305)",
+    "Type": "GTK",
+    "PartitionMethod": "use_device",
+    "DownloadUpdates": true,
+    "Language": "fr",
+    "Minimal": false,
+    "RestrictedAddons": false,
+    "Stages": {
+      "0": "language",
+      "3": "language",
+      "10": "console_setup",
+      "15": "prepare",
+      "25": "partman",
+      "27": "start_install",
+      "37": "timezone",
+      "49": "usersetup",
+      "57": "user_done",
+      "829": "done"
+    }
+  }
 }`
 	}
 

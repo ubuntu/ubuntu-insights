@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -226,7 +225,6 @@ func (s *Service) syncWorkers() {
 func (s *Service) appWorker(ctx context.Context, app string) {
 	s.workerWG.Add(1)
 	defer s.workerWG.Done()
-	inputDir := filepath.Join(s.reportsDir, app)
 
 	for {
 		select {
@@ -234,7 +232,7 @@ func (s *Service) appWorker(ctx context.Context, app string) {
 			return
 		default:
 			// this will read/process/remove JSON files and call s.db.Upload(...)
-			err := processor.ProcessFiles(ctx, inputDir, s.db, s.invalidDir)
+			err := processor.ProcessFiles(ctx, s.reportsDir, app, s.db, s.invalidDir)
 			if err != nil {
 				if errors.Is(err, context.Canceled) {
 					slog.Debug("App worker stopped", "app", app)

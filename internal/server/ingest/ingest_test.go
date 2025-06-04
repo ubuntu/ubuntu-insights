@@ -155,6 +155,10 @@ func TestRun(t *testing.T) {
 			cm:       &mockConfigManager{allowList: []string{"SingleValid", "SingleInvalid", "OptOut", "MultiMixed"}},
 			dbConfig: &mockDBManager{},
 		},
+		"Legacy ubuntu report runs": {
+			cm:       &mockConfigManager{allowList: []string{"ubuntu-report/distribution/desktop/version"}},
+			dbConfig: &mockDBManager{},
+		},
 
 		// Re-add files during run
 		"Re-add files": {
