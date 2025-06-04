@@ -2,25 +2,12 @@ package handlers_test
 
 import (
 	"bytes"
-	"mime/multipart"
 	"net/http"
-	"net/http/httptest"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/internal/server/webservice/handlers"
-	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
-
-type mockConfigManager struct {
-	allowedList []string
-}
-
-func (m *mockConfigManager) AllowList() []string {
-	return m.allowedList
-}
 
 func TestNew(t *testing.T) {
 	t.Parallel()
@@ -66,48 +53,40 @@ func TestUpload(t *testing.T) {
 		maxUploadSize int64
 
 		expectedCode int
-		expectNoFile bool
 	}{
 		"Valid Upload": {
-			request: createRequest(t, defaultApp, []byte(`{"foo": "bar"}`)),
+			request: insightsRequest(t, defaultApp, []byte(`{"foo": "bar"}`)),
 		},
 		"Disallowed App": {
-			request:      createRequest(t, "unknown-app", []byte(`{"foo": "bar"}`)),
+			request:      insightsRequest(t, "unknown-app", []byte(`{"foo": "bar"}`)),
 			expectedCode: http.StatusForbidden,
-			expectNoFile: true,
 		},
 		"Empty App Name": {
-			request:      createRequest(t, "", []byte(`{"foo": "bar"}`)),
+			request:      insightsRequest(t, "", []byte(`{"foo": "bar"}`)),
 			expectedCode: http.StatusForbidden,
-			expectNoFile: true,
 		},
 		"Body Missing File": {
-			request:      missingFileRequest(t, defaultApp),
+			request:      missingFileInsightsRequest(t, defaultApp),
 			expectedCode: http.StatusBadRequest,
-			expectNoFile: true,
 		},
 		"Invalid Method - GET": {
-			request:      createRequest(t, defaultApp, []byte(`{"foo": "bar"}`)),
+			request:      insightsRequest(t, defaultApp, []byte(`{"foo": "bar"}`)),
 			method:       http.MethodGet,
 			expectedCode: http.StatusMethodNotAllowed,
-			expectNoFile: true,
 		},
 		"Invalid Method - PUT": {
-			request:      createRequest(t, defaultApp, []byte(`{"foo": "bar"}`)),
+			request:      insightsRequest(t, defaultApp, []byte(`{"foo": "bar"}`)),
 			method:       http.MethodPut,
 			expectedCode: http.StatusMethodNotAllowed,
-			expectNoFile: true,
 		},
 		"File too large": {
-			request:       createRequest(t, defaultApp, bytes.Repeat([]byte("a"), 1<<20)), // 1 MB
-			maxUploadSize: 1 << 10,                                                        // 1 KB
+			request:       insightsRequest(t, defaultApp, bytes.Repeat([]byte("a"), 1<<20)), // 1 MB
+			maxUploadSize: 1 << 10,                                                          // 1 KB
 			expectedCode:  http.StatusBadRequest,
-			expectNoFile:  true,
 		},
 		"Invalid JSON": {
-			request:      createRequest(t, defaultApp, []byte(`{"foo": "bar",}`)),
+			request:      insightsRequest(t, defaultApp, []byte(`{"foo": "bar",}`)),
 			expectedCode: http.StatusBadRequest,
-			expectNoFile: true,
 		},
 	}
 
@@ -130,47 +109,25 @@ func TestUpload(t *testing.T) {
 			}
 
 			handler := handlers.NewUpload(mockConfig, t.TempDir(), tc.maxUploadSize)
-
-			rr := httptest.NewRecorder()
 			tc.request.Method = tc.method
-			handler.ServeHTTP(rr, tc.request)
 
-			assert.Equal(t, tc.expectedCode, rr.Code, "Expected status code")
-			contents, err := testutils.GetDirContents(t, handler.ReportsDir(), 3)
-			require.NoError(t, err, "Failed to get directory contents")
-
-			// Remove uuid from filename
-			got := make(map[string][]string)
-			for _, file := range contents {
-				dir := filepath.Dir(file)
-				got[dir] = append(got[dir], file)
-			}
-
-			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-			assert.Equal(t, want, got, "Directory contents do not match golden file")
+			runUploadTestCase(t, handler, tc.request, tc.expectedCode, handler.ReportsDir())
 		})
 	}
 }
 
-func createRequest(t *testing.T, app string, data []byte) *http.Request {
+func insightsRequest(t *testing.T, app string, data []byte) *http.Request {
 	t.Helper()
 
-	body := bytes.NewReader(data)
-	req := httptest.NewRequest(http.MethodPost, "/upload/"+app, body)
-	req.Header.Set("Content-Type", "application/json")
+	req := createRequest(t, "/upload/"+app, data)
 	req.SetPathValue("app", app)
 	return req
 }
 
-func missingFileRequest(t *testing.T, app string) *http.Request {
+func missingFileInsightsRequest(t *testing.T, app string) *http.Request {
 	t.Helper()
-	var b bytes.Buffer
-	w := multipart.NewWriter(&b)
-	require.NoError(t, w.WriteField("not_a_file", "oops"), "Setup: failed to write field")
-	w.Close()
 
-	req := httptest.NewRequest(http.MethodPost, "/upload/"+app, &b)
-	req.Header.Set("Content-Type", "application/json")
+	req := missingFileRequest(t, "/upload/"+app)
 	req.SetPathValue("app", app)
 	return req
 }

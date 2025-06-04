@@ -73,8 +73,10 @@ func New(ctx context.Context, cm dConfigManager, sc StaticConfig) (*Server, erro
 		gracefulCancel: gCancel}
 
 	uploadHandler := handlers.NewUpload(cm, sc.ReportsDir, int64(sc.MaxUploadBytes))
+	legacyUploadHandler := handlers.NewLegacyReport(cm, sc.ReportsDir, int64(sc.MaxUploadBytes))
 	mux := http.NewServeMux()
 	mux.Handle("POST /upload/{app}", s.ipLimiter.RateLimitMiddleware(uploadHandler))
+	mux.Handle("POST /{distribution}/desktop/{version}", s.ipLimiter.RateLimitMiddleware(legacyUploadHandler))
 	mux.Handle("GET /version", http.HandlerFunc(handlers.VersionHandler))
 
 	s.httpServer = &http.Server{
