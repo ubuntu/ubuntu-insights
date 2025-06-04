@@ -34,6 +34,11 @@ func TestProcessFiles(t *testing.T) {
 			delay: 5 * time.Second,
 		},
 
+		"Legacy ubuntu report files process as expected": {
+			app:   "ubuntu-report/distribution/desktop/version",
+			delay: 5 * time.Second,
+		},
+
 		"Upload errors do not remove processed files": {
 			app: "MultiMixed",
 			db: mockDBManager{
@@ -71,7 +76,7 @@ func TestProcessFiles(t *testing.T) {
 			errCh := make(chan error, 1)
 			go func() {
 				defer close(errCh)
-				errCh <- processor.ProcessFiles(ctx, filepath.Join(dst, tc.app), &tc.db, invalidFilesDir)
+				errCh <- processor.ProcessFiles(ctx, dst, tc.app, &tc.db, invalidFilesDir)
 			}()
 
 			var err error

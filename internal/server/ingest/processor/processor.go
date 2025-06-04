@@ -12,14 +12,17 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/models"
 )
 
 var (
-	errInvalidJSON = errors.New("json file is invalid and could not be parsed")
-	errNoValidData = errors.New("report file has no valid data")
+	errInvalidJSON  = errors.New("json file is invalid and could not be parsed")
+	errNoValidData  = errors.New("report file has no valid data")
+	errLegacyReport = errors.New("legacy ubuntu report format, treating as invalid")
 )
 
 type database interface {
@@ -35,7 +38,14 @@ func (e *validateFileError) Error() string                 { return e.Err.Error(
 func (e *validateFileError) Unwrap() error                 { return e.Err }
 func (e *validateFileError) FileData() *models.TargetModel { return e.Data }
 
-func validateFile(data *models.TargetModel, path string) error {
+func validateFile(data *models.TargetModel, path, app string) (err error) {
+	// Tag legacy reports for special processing
+	defer func() {
+		if isLegacy(app) {
+			err = errors.Join(err, errLegacyReport)
+		}
+	}()
+
 	if data.OptOut {
 		// Ensure everything else is empty
 		if !reflect.DeepEqual(data, &models.TargetModel{OptOut: true}) {
@@ -80,7 +90,7 @@ func getJSONFiles(dir string) ([]string, error) {
 	return files, err
 }
 
-func processFile(file string) (*models.TargetModel, error) {
+func processFile(file, app string) (*models.TargetModel, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
@@ -127,11 +137,17 @@ func processFile(file string) (*models.TargetModel, error) {
 		return nil, errors.Join(errInvalidJSON, errors.New("failed to convert result to TargetModel"))
 	}
 
-	if err := validateFile(fileData, file); err != nil {
+	if err := validateFile(fileData, file, app); err != nil {
 		return nil, &validateFileError{Data: fileData, Err: err}
 	}
 
 	return fileData, nil
+}
+
+func isLegacy(app string) bool {
+	app = filepath.ToSlash(app)
+	parts := strings.SplitN(app, "/", 2)
+	return parts[0] == constants.LegacyReportTag
 }
 
 // postProcess is a helper function to handle post-processing of processed files.
@@ -168,8 +184,8 @@ func postProcess(file string, err error, invalidDir string) {
 // After processing, it removes the file from the filesystem.
 //
 // It returns an error if a catastrophic failure occurs, excluding database errors.
-func ProcessFiles(ctx context.Context, dir string, db database, invalidDir string) error {
-	app := filepath.Base(dir)
+func ProcessFiles(ctx context.Context, baseDir, app string, db database, invalidDir string) error {
+	dir := filepath.Join(baseDir, app)
 	if err := os.MkdirAll(dir, 0750); err != nil {
 		return fmt.Errorf("failed to create directory %q: %v", dir, err)
 	}
@@ -190,9 +206,11 @@ func ProcessFiles(ctx context.Context, dir string, db database, invalidDir strin
 		default:
 		}
 
-		fileData, err := processFile(file)
+		fileData, err := processFile(file, app)
 		var vfe *validateFileError
 		switch {
+		case errors.Is(err, errLegacyReport):
+			// Treat as invalid
 		case errors.Is(err, errNoValidData):
 			slog.Warn("File has no valid data", "file", file, "err", err)
 		case errors.As(err, &vfe):
