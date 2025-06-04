@@ -76,7 +76,7 @@ func TestServeMulti(t *testing.T) {
 	t.Parallel()
 	const defaultApp = "goodapp"
 	dConf := *defaultDaemonConfig
-	cm := &testConfigManager{allowList: []string{defaultApp, "ubuntu-report/distribution/desktop/version"}}
+	cm := &testConfigManager{allowList: []string{defaultApp, "ubuntu-report/distribution"}}
 
 	s := createServerAndWaitReady(t, cm, &dConf, false)
 
@@ -194,7 +194,7 @@ func TestRunSingle(t *testing.T) {
 			contentType: "application/json",
 			cm: testConfigManager{
 				allowList: []string{defaultApp,
-					"ubuntu-report/distribution/desktop/version"},
+					"ubuntu-report/distribution"},
 			},
 			checkDir:   "ubuntu-report/distribution/desktop/version",
 			wantStatus: http.StatusOK,

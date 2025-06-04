@@ -37,5 +37,5 @@ func (h *Upload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	slog.Info("Request recv'd", "req_id", reqID, "app", app)
-	h.jsonHandler.serveHTTP(w, r, reqID, app)
+	h.jsonHandler.serveHTTP(w, r, reqID, app, app)
 }

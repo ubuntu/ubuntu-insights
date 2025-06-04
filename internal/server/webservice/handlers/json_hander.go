@@ -21,16 +21,16 @@ type jsonHandler struct {
 	successStatus int
 }
 
-func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID string, app string) {
+func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID, allowListKey, saveDir string) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	allowed := slices.Contains(h.config.AllowList(), app)
+	allowed := slices.Contains(h.config.AllowList(), allowListKey)
 	if !allowed {
 		http.Error(w, "Invalid application name in URL", http.StatusForbidden)
-		slog.Error("Invalid application name in URL", "req_id", reqID, "app", app)
+		slog.Error("Invalid application name in URL", "req_id", reqID, "app", allowListKey)
 		return
 	}
 
@@ -38,19 +38,19 @@ func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID st
 	jsonData, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Failed to read request body", http.StatusBadRequest)
-		slog.Error("Error reading the file", "req_id", reqID, "app", app, "err", err)
+		slog.Error("Error reading the file", "req_id", reqID, "app", allowListKey, "err", err)
 		return
 	}
 	if !json.Valid(jsonData) {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		slog.Error("Invalid JSON in uploaded file", "req_id", reqID, "app", app)
+		slog.Error("Invalid JSON in uploaded file", "req_id", reqID, "app", allowListKey)
 		return
 	}
 
-	targetDir := filepath.Join(h.reportsDir, app)
+	targetDir := filepath.Join(h.reportsDir, saveDir)
 	if err := os.MkdirAll(targetDir, 0750); err != nil {
 		http.Error(w, "Error creating directory", http.StatusInternalServerError)
-		slog.Error("Error creating directory", "req_id", reqID, "app", app, "target", targetDir, "err", err)
+		slog.Error("Error creating directory", "req_id", reqID, "app", allowListKey, "target", targetDir, "err", err)
 		return
 	}
 
@@ -59,10 +59,10 @@ func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID st
 
 	if err := fileutils.AtomicWrite(targetPath, jsonData); err != nil {
 		http.Error(w, "Error saving file", http.StatusInternalServerError)
-		slog.Error("Error saving file", "req_id", reqID, "app", app, "target", targetPath, "err", err)
+		slog.Error("Error saving file", "req_id", reqID, "app", allowListKey, "target", targetPath, "err", err)
 		return
 	}
 
-	slog.Info("File successfully uploaded", "req_id", reqID, "app", app, "target", targetPath)
+	slog.Info("File successfully uploaded", "req_id", reqID, "app", allowListKey, "target", targetPath)
 	w.WriteHeader(h.successStatus)
 }

@@ -68,10 +68,6 @@ func TestLegacyReportUpload(t *testing.T) {
 			request:      reportRequest(t, "", defaultVersion, []byte(`{"foo": "bar"}`)),
 			expectedCode: http.StatusForbidden,
 		},
-		"Disallowed Version": {
-			request:      reportRequest(t, defaultDistribution, "unknown-version", []byte(`{"foo": "bar"}`)),
-			expectedCode: http.StatusForbidden,
-		},
 		"Empty Version Name": {
 			request:      reportRequest(t, defaultDistribution, "", []byte(`{"foo": "bar"}`)),
 			expectedCode: http.StatusForbidden,
@@ -106,7 +102,7 @@ func TestLegacyReportUpload(t *testing.T) {
 			t.Parallel()
 
 			mockConfig := &mockConfigManager{
-				allowedList: []string{"ubuntu-report/" + defaultDistribution + "/desktop/" + defaultVersion},
+				allowedList: []string{"ubuntu-report/" + defaultDistribution},
 			}
 
 			if tc.method == "" {
