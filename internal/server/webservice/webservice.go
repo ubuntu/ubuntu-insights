@@ -10,13 +10,10 @@ import (
 	"time"
 
 	"github.com/ubuntu/ubuntu-insights/internal/server/webservice/handlers"
-	"github.com/ubuntu/ubuntu-insights/internal/server/webservice/middleware"
-	"golang.org/x/time/rate"
 )
 
 // Server is a struct that holds the HTTP server and its configuration.
 type Server struct {
-	ipLimiter  *middleware.IPLimiter
 	httpServer *http.Server
 	cm         dConfigManager
 
@@ -41,9 +38,6 @@ type StaticConfig struct {
 	MaxHeaderBytes int
 	MaxUploadBytes int
 
-	RateLimitPS float64
-	BurstLimit  int
-
 	ListenHost string
 	ListenPort int
 }
@@ -64,10 +58,9 @@ func New(ctx context.Context, cm dConfigManager, sc StaticConfig) (*Server, erro
 	gCtx, gCancel := context.WithCancel(ctx)
 
 	s := Server{
-		ipLimiter: middleware.New(rate.Limit(sc.RateLimitPS), sc.BurstLimit),
-		cm:        cm,
-		ctx:       ctx,
-		cancel:    cancel,
+		cm:     cm,
+		ctx:    ctx,
+		cancel: cancel,
 
 		gracefulCtx:    gCtx,
 		gracefulCancel: gCancel}
@@ -75,8 +68,8 @@ func New(ctx context.Context, cm dConfigManager, sc StaticConfig) (*Server, erro
 	uploadHandler := handlers.NewUpload(cm, sc.ReportsDir, int64(sc.MaxUploadBytes))
 	legacyUploadHandler := handlers.NewLegacyReport(cm, sc.ReportsDir, int64(sc.MaxUploadBytes))
 	mux := http.NewServeMux()
-	mux.Handle("POST /upload/{app}", s.ipLimiter.RateLimitMiddleware(uploadHandler))
-	mux.Handle("POST /{distribution}/desktop/{version}", s.ipLimiter.RateLimitMiddleware(legacyUploadHandler))
+	mux.Handle("POST /upload/{app}", uploadHandler)
+	mux.Handle("POST /{distribution}/desktop/{version}", legacyUploadHandler)
 	mux.Handle("GET /version", http.HandlerFunc(handlers.VersionHandler))
 
 	s.httpServer = &http.Server{
