@@ -1,0 +1,35 @@
+name: Validate debian/copyright
+
+env:
+  apt_deps: "licenserecon"
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "*"
+    paths:
+      - "debian/copyright"
+      - "go.mod"
+  pull_request:
+    paths:
+      - "debian/copyright"
+      - "go.mod"
+
+jobs:
+  run-lrc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y ${{ env.apt_deps }}
+      - name: Vendor Go modules
+        run: |
+          go mod vendor
+      - name: Run lrc
+        run: |
+          lrc
