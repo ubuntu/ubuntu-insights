@@ -73,10 +73,11 @@ func TestProcessFiles(t *testing.T) {
 				cancel()
 			}
 			invalidFilesDir := filepath.Join(t.TempDir(), "invalid-files")
+			p := processor.New(dst, invalidFilesDir, &tc.db)
 			errCh := make(chan error, 1)
 			go func() {
 				defer close(errCh)
-				errCh <- processor.ProcessFiles(ctx, dst, tc.app, &tc.db, invalidFilesDir)
+				errCh <- p.Process(ctx, tc.app)
 			}()
 
 			var err error

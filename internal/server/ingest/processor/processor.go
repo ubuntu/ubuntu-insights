@@ -20,36 +20,104 @@ import (
 )
 
 var (
-	errInvalidJSON  = errors.New("json file is invalid and could not be parsed")
-	errNoValidData  = errors.New("report file has no valid data")
-	errLegacyReport = errors.New("legacy ubuntu report format, treating as invalid")
+	errInvalidJSON      = errors.New("json file is invalid and could not be parsed")
+	errInvalidModel     = errors.New("file data does not match expected model structure")
+	errNoValidData      = errors.New("report file has no valid data")
+	errUnexpectedFields = errors.New("file contains unexpected fields")
 )
 
 type database interface {
 	Upload(ctx context.Context, app string, data *models.TargetModel) error
 }
 
-type validateFileError struct {
-	Data *models.TargetModel
-	Err  error
+// Processor is responsible for processing reports.
+type Processor struct {
+	baseDir    string
+	invalidDir string
+	db         database
 }
 
-func (e *validateFileError) Error() string                 { return e.Err.Error() }
-func (e *validateFileError) Unwrap() error                 { return e.Err }
-func (e *validateFileError) FileData() *models.TargetModel { return e.Data }
+// New creates a new Processor instance.
+func New(baseDir, invalidDir string, db database) *Processor {
+	return &Processor{
+		baseDir:    baseDir,
+		invalidDir: invalidDir,
+		db:         db,
+	}
+}
 
-func validateFile(data *models.TargetModel, path, app string) (err error) {
-	// Tag legacy reports for special processing
-	defer func() {
-		if isLegacy(app) {
-			err = errors.Join(err, errLegacyReport)
+// Process processes all JSON files in the specified directory, looking within the `baseDir/app` directory.
+// It reads each file, unmarshals the JSON data into a FileData struct,
+// and uploads the data to a PostgreSQL database.
+// After processing, it removes the file from the filesystem.
+//
+// It returns an error if a catastrophic failure occurs, excluding database errors.
+func (p Processor) Process(ctx context.Context, app string) error {
+	dir := filepath.Join(p.baseDir, app)
+	if err := os.MkdirAll(dir, 0750); err != nil {
+		return fmt.Errorf("failed to create directory %q: %v", dir, err)
+	}
+
+	if err := os.MkdirAll(p.invalidDir, 0750); err != nil {
+		return fmt.Errorf("failed to create invalid directory %q: %v", p.invalidDir, err)
+	}
+
+	files, err := getJSONFiles(dir)
+	if err != nil {
+		return fmt.Errorf("failed to get JSON files: %v", err)
+	}
+
+	isLegacy := isLegacy(app)
+	for _, file := range files {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
 		}
-	}()
 
+		if isLegacy {
+			// For legacy reports, for now don't attempt to upload the report TODO: database handling for legacy reports
+			postProcess(file, errors.Join(fmt.Errorf("legacy report, skipping upload")), p.invalidDir)
+			slog.Info("Finished processing legacy file", "file", file)
+			continue
+		}
+
+		pResult, err := processFile(file)
+		if err != nil {
+			slog.Warn("Failed to process file", "file", file, "err", err)
+			postProcess(file, err, p.invalidDir)
+			continue // Skip to the next file if processing fails
+		}
+
+		switch {
+		case errors.Is(pResult.errors, errUnexpectedFields):
+			slog.Warn("Failed to fully process file", "file", file, "err", pResult.errors)
+			fallthrough // Continue with upload for data we were able to process
+		case pResult.errors == nil:
+			if uErr := p.db.Upload(ctx, app, pResult.report); uErr != nil {
+				if errors.Is(uErr, context.Canceled) {
+					return err // normal shutdown
+				}
+				slog.Warn("Failed to upload file to PostgreSQL", "file", file, "err", uErr)
+				continue // Skip file removal if upload fails
+			}
+			slog.Info("Successfully processed and uploaded file", "file", file)
+		case pResult.errors != nil:
+			slog.Warn("File processed with errors, skipping upload", "file", file, "err", pResult.errors)
+		}
+
+		postProcess(file, pResult.errors, p.invalidDir)
+		slog.Info("Finished processing file", "file", file)
+	}
+
+	return nil
+}
+
+func validateReport(data *models.TargetModel) (err error) {
 	if data.OptOut {
 		// Ensure everything else is empty
 		if !reflect.DeepEqual(data, &models.TargetModel{OptOut: true}) {
-			return fmt.Errorf("opt-out file %q contains unexpected data", path)
+			return errors.Join(errUnexpectedFields, fmt.Errorf("opt-out file contains unexpected data"))
 		}
 		return nil
 	}
@@ -64,11 +132,11 @@ func validateFile(data *models.TargetModel, path, app string) (err error) {
 
 	// Check no extra data
 	if data.Extras != nil {
-		return fmt.Errorf("unexpected Extras field in file %q", path)
+		return errors.Join(errUnexpectedFields, fmt.Errorf("unexpected Extras field"))
 	}
 
 	if data.SystemInfo.Extras != nil {
-		return fmt.Errorf("unexpected SystemInfo.Extras field in file %q", path)
+		return errors.Join(errUnexpectedFields, fmt.Errorf("unexpected SystemInfo.Extras field"))
 	}
 
 	return nil
@@ -90,7 +158,13 @@ func getJSONFiles(dir string) ([]string, error) {
 	return files, err
 }
 
-func processFile(file, app string) (*models.TargetModel, error) {
+type processResult struct {
+	jsonData map[string]any
+	report   *models.TargetModel
+	errors   error
+}
+
+func processFile(file string) (*processResult, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
@@ -98,8 +172,9 @@ func processFile(file, app string) (*models.TargetModel, error) {
 
 	var jsonData map[string]any
 	if err = json.Unmarshal(data, &jsonData); err != nil {
-		return nil, errors.Join(errInvalidJSON, err)
+		return &processResult{errors: errors.Join(errInvalidJSON, err)}, nil
 	}
+	result := &processResult{jsonData: jsonData}
 
 	config := &mapstructure.DecoderConfig{
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
@@ -124,24 +199,24 @@ func processFile(file, app string) (*models.TargetModel, error) {
 
 	decoder, err := mapstructure.NewDecoder(config)
 	if err != nil {
-		return nil, errors.Join(errInvalidJSON, err)
+		return nil, fmt.Errorf("failed to create decoder: %v", err)
 	}
 
 	if err = decoder.Decode(jsonData); err != nil {
-		return nil, errors.Join(errInvalidJSON, err)
+		result.errors = errors.Join(errInvalidJSON, err)
+		return result, nil
 	}
 
 	// Replace the unchecked type assertion with a checked one
-	fileData, ok := config.Result.(*models.TargetModel)
+	report, ok := config.Result.(*models.TargetModel)
 	if !ok {
-		return nil, errors.Join(errInvalidJSON, errors.New("failed to convert result to TargetModel"))
+		result.errors = errInvalidModel
+		return result, nil
 	}
+	result.report = report
 
-	if err := validateFile(fileData, file, app); err != nil {
-		return nil, &validateFileError{Data: fileData, Err: err}
-	}
-
-	return fileData, nil
+	result.errors = validateReport(report)
+	return result, nil
 }
 
 func isLegacy(app string) bool {
@@ -176,65 +251,4 @@ func postProcess(file string, err error, invalidDir string) {
 		return
 	}
 	slog.Debug("Moved invalid file to invalid directory", "file", file, "newPath", newPath)
-}
-
-// ProcessFiles processes all JSON files in the specified directory.
-// It reads each file, unmarshals the JSON data into a FileData struct,
-// and uploads the data to a PostgreSQL database.
-// After processing, it removes the file from the filesystem.
-//
-// It returns an error if a catastrophic failure occurs, excluding database errors.
-func ProcessFiles(ctx context.Context, baseDir, app string, db database, invalidDir string) error {
-	dir := filepath.Join(baseDir, app)
-	if err := os.MkdirAll(dir, 0750); err != nil {
-		return fmt.Errorf("failed to create directory %q: %v", dir, err)
-	}
-
-	if err := os.MkdirAll(invalidDir, 0750); err != nil {
-		return fmt.Errorf("failed to create invalid directory %q: %v", invalidDir, err)
-	}
-
-	files, err := getJSONFiles(dir)
-	if err != nil {
-		return fmt.Errorf("failed to get JSON files: %v", err)
-	}
-
-	for _, file := range files {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		fileData, err := processFile(file, app)
-		var vfe *validateFileError
-		switch {
-		case errors.Is(err, errLegacyReport):
-			// Treat as invalid
-		case errors.Is(err, errNoValidData):
-			slog.Warn("File has no valid data", "file", file, "err", err)
-		case errors.As(err, &vfe):
-			slog.Warn("Failed to fully process file", "file", file, "err", err)
-			fileData = vfe.FileData()
-			fallthrough // Continue with upload for data we were able to process
-		case err == nil:
-			if uErr := db.Upload(ctx, app, fileData); uErr != nil {
-				if errors.Is(uErr, context.Canceled) {
-					return err // normal shutdown
-				}
-				slog.Warn("Failed to upload file to PostgreSQL", "file", file, "err", uErr)
-				continue // Skip file removal if upload fails
-			}
-			slog.Info("Successfully processed and uploaded file", "file", file)
-		case errors.Is(err, errInvalidJSON):
-			fallthrough
-		default:
-			slog.Warn("Failed to process file", "file", file, "err", err)
-		}
-
-		postProcess(file, err, invalidDir)
-		slog.Info("Finished processing file", "file", file)
-	}
-
-	return nil
 }
