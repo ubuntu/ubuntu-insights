@@ -38,6 +38,80 @@ func (e *validateFileError) Error() string                 { return e.Err.Error(
 func (e *validateFileError) Unwrap() error                 { return e.Err }
 func (e *validateFileError) FileData() *models.TargetModel { return e.Data }
 
+// Processor is responsible for processing reports.
+type Processor struct {
+	baseDir    string
+	invalidDir string
+	db         database
+}
+
+// New creates a new Processor instance.
+func New(baseDir, invalidDir string, db database) *Processor {
+	return &Processor{
+		baseDir:    baseDir,
+		invalidDir: invalidDir,
+		db:         db,
+	}
+}
+
+// Process processes all reports for a given application.
+//
+// It looks for files within `baseDir/app` directory.
+func (p Processor) Process(ctx context.Context, app string) error {
+	dir := filepath.Join(p.baseDir, app)
+	if err := os.MkdirAll(dir, 0750); err != nil {
+		return fmt.Errorf("failed to create directory %q: %v", dir, err)
+	}
+
+	if err := os.MkdirAll(p.invalidDir, 0750); err != nil {
+		return fmt.Errorf("failed to create invalid directory %q: %v", p.invalidDir, err)
+	}
+
+	files, err := getJSONFiles(dir)
+	if err != nil {
+		return fmt.Errorf("failed to get JSON files: %v", err)
+	}
+
+	for _, file := range files {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		fileData, err := processFile(file, app)
+		var vfe *validateFileError
+		switch {
+		case errors.Is(err, errLegacyReport):
+			// Treat as invalid
+		case errors.Is(err, errNoValidData):
+			slog.Warn("File has no valid data", "file", file, "err", err)
+		case errors.As(err, &vfe):
+			slog.Warn("Failed to fully process file", "file", file, "err", err)
+			fileData = vfe.FileData()
+			fallthrough // Continue with upload for data we were able to process
+		case err == nil:
+			if uErr := p.db.Upload(ctx, app, fileData); uErr != nil {
+				if errors.Is(uErr, context.Canceled) {
+					return err // normal shutdown
+				}
+				slog.Warn("Failed to upload file to PostgreSQL", "file", file, "err", uErr)
+				continue // Skip file removal if upload fails
+			}
+			slog.Info("Successfully processed and uploaded file", "file", file)
+		case errors.Is(err, errInvalidJSON):
+			fallthrough
+		default:
+			slog.Warn("Failed to process file", "file", file, "err", err)
+		}
+
+		postProcess(file, err, p.invalidDir)
+		slog.Info("Finished processing file", "file", file)
+	}
+
+	return nil
+}
+
 func validateFile(data *models.TargetModel, path, app string) (err error) {
 	// Tag legacy reports for special processing
 	defer func() {
