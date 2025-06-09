@@ -1,8 +1,105 @@
 {
   "RemainingFiles": {},
   "UploadedFiles": null,
+  "UploadedLegacyFiles": {
+    "ubuntu-report/distribution/desktop/version": [
+      {
+        "Fields": {
+          "Arch": "amd64",
+          "Autologin": false,
+          "BIOS": {
+            "Vendor": "Vendor Name",
+            "Version": "8DET52WW (1.27)"
+          },
+          "CPU": {
+            "CPUs": "8",
+            "Cores": "4",
+            "Family": "6",
+            "Model": "158",
+            "Name": "Intius Corus i5-8300H CPU @ 2.30GHz",
+            "OpMode": "32-bit, 64-bit",
+            "Sockets": "1",
+            "Stepping": "10",
+            "Threads": "2",
+            "Vendor": "Genuine",
+            "Virtualization": "VT-x"
+          },
+          "Disks": [
+            240.1,
+            500.1
+          ],
+          "GPU": [
+            {
+              "Model": "0126",
+              "Vendor": "8086"
+            }
+          ],
+          "Install": {
+            "DownloadUpdates": true,
+            "Language": "fr",
+            "Media": "Ubuntu 18.04 LTS \"Bionic Beaver\" - Alpha amd64 (20180305)",
+            "Minimal": false,
+            "PartitionMethod": "use_device",
+            "RestrictedAddons": false,
+            "Stages": {
+              "0": "language",
+              "10": "console_setup",
+              "15": "prepare",
+              "25": "partman",
+              "27": "start_install",
+              "3": "language",
+              "37": "timezone",
+              "49": "usersetup",
+              "57": "user_done",
+              "829": "done"
+            },
+            "Type": "GTK"
+          },
+          "Language": "fr_FR",
+          "LivePatch": true,
+          "OEM": {
+            "Product": "4287CTO",
+            "Vendor": "Vendor Name"
+          },
+          "Partitions": [
+            229.2,
+            479.7
+          ],
+          "RAM": 8,
+          "Screens": [
+            {
+              "Frequency": "60.02",
+              "Resolution": "1366x768",
+              "Size": "277mmx156mm"
+            },
+            {
+              "Frequency": "60.00",
+              "Resolution": "1920x1080"
+            }
+          ],
+          "Session": {
+            "DE": "ubuntu:GNOME",
+            "Name": "ubuntu",
+            "Type": "x11"
+          },
+          "Timezone": "Europe/Paris",
+          "Version": "18.04"
+        }
+      },
+      {
+        "OptOut": true,
+        "Fields": {
+          "ExtraField": "This is invalid!"
+        }
+      },
+      {
+        "OptOut": true
+      }
+    ]
+  },
   "InvalidFiles": {
-    "basic.json": "c9442a5e7975272706c366e8a579ce2680144e95e1a12d07048f25e84c29f952",
-    "optout.json": "9251f31b5ffab65ca8786db577eee66e1467f1fc20f5243e8f91c1a510c444af"
+    "ur_empty.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "ur_invalid.json": "3faabbb97b49518a0898ee96f228bce057622ac97cd7d4ce013ad6eebf8b3b4c",
+    "ur_invalid_optout.json": "5b1babf699731b25a001079ba63dd8c7d28979478e6ab33844c149c6cc48fd5e"
   }
 }

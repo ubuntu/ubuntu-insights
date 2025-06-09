@@ -152,7 +152,8 @@ func TestRun(t *testing.T) {
 			dbConfig: &mockDBManager{},
 		},
 		"All apps runs": {
-			cm:       &mockConfigManager{allowList: []string{"SingleValid", "SingleInvalid", "OptOut", "MultiMixed"}},
+			cm: &mockConfigManager{allowList: []string{"SingleValid", "SingleInvalid", "OptOut", "MultiMixed",
+				"ubuntu-report/distribution/desktop/version"}},
 			dbConfig: &mockDBManager{},
 		},
 		"Legacy ubuntu report runs": {
@@ -378,12 +379,13 @@ func (m *mockConfigManager) SetAllowList(newAllowList []string) {
 type mockDBManager struct {
 	closeErr       error
 	uploadErr      error
-	data           map[string][]*models.TargetModel // Fake in-memory database
-	mu             sync.Mutex                       // Mutex to protect access to the data map
-	lastUploadTime time.Time                        // Time of the last upload
+	reports        map[string][]*models.TargetModel       // Fake in-memory database
+	legacyReports  map[string][]*models.LegacyTargetModel // Fake in-memory legacy reports
+	mu             sync.Mutex                             // Mutex to protect access to the data map
+	lastUploadTime time.Time                              // Time of the last upload
 }
 
-func (m *mockDBManager) Upload(ctx context.Context, app string, data *models.TargetModel) error {
+func (m *mockDBManager) Upload(ctx context.Context, app string, report *models.TargetModel) error {
 	if m.uploadErr != nil {
 		return m.uploadErr
 	}
@@ -391,12 +393,31 @@ func (m *mockDBManager) Upload(ctx context.Context, app string, data *models.Tar
 	m.mu.Lock() // Lock the mutex before accessing the data map
 	defer m.mu.Unlock()
 
-	if m.data == nil {
-		m.data = make(map[string][]*models.TargetModel)
+	if m.reports == nil {
+		m.reports = make(map[string][]*models.TargetModel)
 	}
 
 	// Simulate storing the data in the fake database
-	m.data[app] = append(m.data[app], data)
+	m.reports[app] = append(m.reports[app], report)
+	m.lastUploadTime = time.Now()
+	return nil
+}
+
+func (m *mockDBManager) UploadLegacy(ctx context.Context, distribution, version string, report *models.LegacyTargetModel) error {
+	if m.uploadErr != nil {
+		return m.uploadErr
+	}
+
+	m.mu.Lock() // Lock the mutex before accessing the legacyReports map
+	defer m.mu.Unlock()
+
+	if m.legacyReports == nil {
+		m.legacyReports = make(map[string][]*models.LegacyTargetModel)
+	}
+
+	// Simulate storing the legacy report in the fake database
+	key := constants.LegacyReportTag + "/" + distribution + "/desktop/" + version
+	m.legacyReports[key] = append(m.legacyReports[key], report)
 	m.lastUploadTime = time.Now()
 	return nil
 }
@@ -493,13 +514,15 @@ func checkRunResults(t *testing.T, db *mockDBManager, sc ingest.StaticConfig) {
 	require.NoError(t, err, "Failed to get invalidDir contents")
 
 	results := struct {
-		RemainingFiles map[string]string
-		UploadedFiles  map[string][]*models.TargetModel
-		InvalidFiles   map[string]string
+		RemainingFiles      map[string]string
+		UploadedFiles       map[string][]*models.TargetModel
+		UploadedLegacyFiles map[string][]*models.LegacyTargetModel
+		InvalidFiles        map[string]string
 	}{
-		RemainingFiles: remainingFiles,
-		UploadedFiles:  db.data,
-		InvalidFiles:   invalidFiles,
+		RemainingFiles:      remainingFiles,
+		UploadedFiles:       db.reports,
+		UploadedLegacyFiles: db.legacyReports,
+		InvalidFiles:        invalidFiles,
 	}
 
 	got, err := json.MarshalIndent(results, "", "  ")

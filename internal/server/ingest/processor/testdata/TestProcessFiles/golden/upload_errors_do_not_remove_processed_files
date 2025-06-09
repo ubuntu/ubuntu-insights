@@ -9,6 +9,7 @@
     "MultiMixed/valid_1.json": "d78f87d37258faf6b9994671421a2cf9e5c2e6b0f9f451f3109d75f5d6e51ad9"
   },
   "UploadedFiles": null,
+  "UploadedLegacyFiles": null,
   "InvalidFiles": {
     "bad_json.json": "021fb596db81e6d02bf3d2586ee3981fe519f275c0ac9ca76bbcf2ebb4097d96",
     "empty.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",

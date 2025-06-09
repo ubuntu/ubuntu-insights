@@ -44,6 +44,7 @@ type StaticConfig struct {
 
 type dbManager interface {
 	Upload(ctx context.Context, app string, data *models.TargetModel) error
+	UploadLegacy(ctx context.Context, distribution, version string, report *models.LegacyTargetModel) error
 	Close() error
 }
 

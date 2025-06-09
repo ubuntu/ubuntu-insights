@@ -41,7 +41,7 @@ func TestIngestService(t *testing.T) {
 		preReports  []reports // Reports to be created before starting the daemon
 		postReports []reports // Reports to be created after starting the daemon
 	}{
-		"Prexisting reports only": {
+		"Preexisting reports only": {
 			validApps: []string{"linux", "windows"},
 			preReports: []reports{
 				{app: "linux", reportType: validV1, count: 5},
@@ -50,7 +50,7 @@ func TestIngestService(t *testing.T) {
 				{app: "linux", reportType: empty, count: 1},
 			},
 		},
-		"Prexisting and new reports": {
+		"Preexisting and new reports": {
 			validApps: []string{"linux", "windows"},
 			preReports: []reports{
 				{app: "linux", reportType: validV1, count: 5},
@@ -106,8 +106,12 @@ func TestIngestService(t *testing.T) {
 			preReports: []reports{
 				{app: "ubuntu-report/distribution/desktop/version", reportType: ubuntuReport, count: 3},
 				{app: "ubuntu-report/distribution/desktop/version", reportType: validOptOut, count: 3},
+				{app: "ubuntu-report/distribution/desktop/version", reportType: invalidOptOut, count: 2},
+				{app: "ubuntu-report/distribution/desktop/version", reportType: empty, count: 1},
 			},
 			postReports: []reports{
+				{app: "ubuntu-report/distribution/desktop/unknown-version", reportType: ubuntuReport, count: 1},
+				{app: "ubuntu-report/unknown-distribution/desktop/version", reportType: ubuntuReport, count: 1},
 				{app: "ubuntu-report/distribution/desktop/version", reportType: ubuntuReport, count: 2},
 				{app: "ubuntu-report/distribution/desktop/version", reportType: validOptOut, count: 1},
 			},
