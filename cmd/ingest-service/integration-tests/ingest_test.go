@@ -233,6 +233,12 @@ func TestIngestService(t *testing.T) {
 					OptOutReports: optOutReports,
 					OptInReports:  optInReports,
 				}
+
+				fields := []string{"insights_version", "collection_time", "hardware", "software", "platform", "source_metrics"}
+				if app == "ubuntu_report" {
+					fields = []string{"report"}
+				}
+				validateOptOutEntries(t, dbContainer.DSN, app, fields...)
 			}
 
 			results := struct {
@@ -316,6 +322,47 @@ func checkOptOutCounts(t *testing.T, dsn string, tableName string) (totalReports
 	require.NoError(t, err, "failed to execute query")
 
 	return totalReports, optOutReports, optInReports
+}
+
+// validateOptOutEntries checks that the opt-out field consistency is maintained in the specified table.
+// For opt-out reports all fields listed should be NULL, while for opt-in reports,
+// at least one of the fields should be NOT NULL.
+func validateOptOutEntries(t *testing.T, dsn, tableName string, fields ...string) {
+	t.Helper()
+
+	conn, err := pgx.Connect(t.Context(), dsn)
+	require.NoError(t, err, "failed to connect to the database")
+	defer func() {
+		require.NoError(t, conn.Close(t.Context()), "failed to close the database connection")
+	}()
+
+	// Build SQL for checking violations
+	// For optout=true: any field is NOT NULL
+	optOutChecks := make([]string, len(fields))
+	// For optout=false: all fields are NULL
+	optInChecks := make([]string, len(fields))
+	for i, f := range fields {
+		optOutChecks[i] = f + " IS NOT NULL"
+		optInChecks[i] = f + " IS NULL"
+	}
+
+	optOutQuery := `
+        SELECT COUNT(*) FROM ` + tableName + `
+        WHERE optout = true AND (` + strings.Join(optOutChecks, " OR ") + `)
+    `
+	optInQuery := `
+        SELECT COUNT(*) FROM ` + tableName + `
+        WHERE optout = false AND (` + strings.Join(optInChecks, " AND ") + `)
+    `
+
+	var optOutViolations, optInViolations int
+	err = conn.QueryRow(t.Context(), optOutQuery).Scan(&optOutViolations)
+	require.NoError(t, err, "failed to execute opt-out query")
+	assert.Equal(t, 0, optOutViolations, "Opt-out reports should not have any consistency violations")
+
+	err = conn.QueryRow(t.Context(), optInQuery).Scan(&optInViolations)
+	require.NoError(t, err, "failed to execute opt-in query")
+	assert.Equal(t, 0, optInViolations, "Opt-in reports should not have any consistency violations")
 }
 
 type report int
