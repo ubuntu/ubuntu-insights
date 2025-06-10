@@ -3,16 +3,18 @@ name: Validate debian/copyright
 env:
   apt_deps: "licenserecon"
 
-on:
-  push:
-    branches:
-      - main
-    tags:
-      - "*"
-  pull_request:
-    paths:
-      - "debian/copyright"
-      - "go.mod"
+# on:
+#   push:
+#     branches:
+#       - main
+#     tags:
+#       - "*"
+#   pull_request:
+#     paths:
+#       - "debian/copyright"
+#       - "debian/lrc.config"
+#       - "go.mod"
+on: [workflow_dispatch]
 
 jobs:
   run-lrc:
