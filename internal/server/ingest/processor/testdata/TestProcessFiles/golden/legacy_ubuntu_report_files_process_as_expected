@@ -99,7 +99,6 @@
   },
   "InvalidFiles": {
     "ur_empty.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-    "ur_invalid.json": "3faabbb97b49518a0898ee96f228bce057622ac97cd7d4ce013ad6eebf8b3b4c",
-    "ur_invalid_optout.json": "5b1babf699731b25a001079ba63dd8c7d28979478e6ab33844c149c6cc48fd5e"
+    "ur_invalid.json": "3faabbb97b49518a0898ee96f228bce057622ac97cd7d4ce013ad6eebf8b3b4c"
   }
 }
