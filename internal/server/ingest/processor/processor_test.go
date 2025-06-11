@@ -2,10 +2,9 @@ package processor_test
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -175,8 +174,6 @@ func (m *mockDBManager) UploadInvalid(ctx context.Context, id, app, rawReport st
 		return errors.New("invalid UUID provided")
 	}
 
-	rawReport = strings.ReplaceAll(rawReport, "\r\n", "\n") // Fix for Windows line endings
-	reportHash := sha256.Sum256([]byte(rawReport))
-	m.invalidReports[app] = append(m.invalidReports[app], hex.EncodeToString(reportHash[:]))
+	m.invalidReports[app] = append(m.invalidReports[app], fmt.Sprint(testutils.HashString(rawReport)))
 	return nil
 }

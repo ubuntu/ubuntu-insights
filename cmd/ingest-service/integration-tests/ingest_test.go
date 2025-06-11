@@ -3,9 +3,8 @@ package ingest_test
 import (
 	"bufio"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -418,10 +417,9 @@ func queryInvalidReports(t *testing.T, dsn string) []invalidReportEntry {
 	for rows.Next() {
 		var appName, rawReport string
 		require.NoError(t, rows.Scan(&appName, &rawReport), "failed to scan row")
-		hash := sha256.Sum256([]byte(rawReport))
 		entries = append(entries, invalidReportEntry{
 			AppName:   appName,
-			RawReport: hex.EncodeToString(hash[:]),
+			RawReport: fmt.Sprint(testutils.HashString(rawReport)),
 		})
 	}
 	require.NoError(t, rows.Err(), "error occurred during rows iteration")

@@ -25,11 +25,11 @@
   "InvalidReports": [
     {
       "AppName": "linux",
-      "RawReport": "a93cb6bdde853f07aadefefaa04ed912913f465f91c924b4c7b408367f39a559"
+      "RawReport": "2146110750"
     },
     {
       "AppName": "ubuntu-report/distribution/desktop/version",
-      "RawReport": "a93cb6bdde853f07aadefefaa04ed912913f465f91c924b4c7b408367f39a559"
+      "RawReport": "2146110750"
     }
   ]
 }

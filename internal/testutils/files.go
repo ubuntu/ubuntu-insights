@@ -4,12 +4,12 @@ package testutils
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
+	"hash/crc32"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ubuntu/ubuntu-insights/internal/fileutils"
@@ -122,9 +122,14 @@ func GetDirHashedContents(t *testing.T, dir string, maxDepth uint) (map[string]s
 	}
 
 	for k, v := range dirContents {
-		hash := sha256.Sum256([]byte(v))
-		dirContents[k] = hex.EncodeToString(hash[:])
+		dirContents[k] = fmt.Sprint(HashString(v))
 	}
 
 	return dirContents, nil
+}
+
+// HashString returns the crc32 checksum of a string, removing any Windows line endings before hashing.
+func HashString(s string) uint32 {
+	s = strings.ReplaceAll(s, "\r\n", "\n") // Normalize line endings
+	return crc32.ChecksumIEEE([]byte(s))
 }
