@@ -260,10 +260,24 @@ func parseLegacyApp(app string) (distribution, version string) {
 }
 
 // uploadInvalid reads the invalid file and uploads its content to the database as a string.
+// It skips empty files or files that contain only whitespace, returning nil in those cases.
 func (p Processor) uploadInvalid(ctx context.Context, file, id, app string) error {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return fmt.Errorf("failed to re-read invalid file %q: %v", file, err)
+	}
+
+	if len(data) == 0 || strings.TrimSpace(string(data)) == "" {
+		slog.Info("Skipping upload of empty invalid file", "file", file)
+		return nil // Skip empty files
+	}
+
+	var jsonFile = make(map[string]any)
+	if err := json.Unmarshal(data, &jsonFile); err == nil {
+		if len(jsonFile) == 0 {
+			slog.Info("Skipping upload of empty JSON file", "file", file)
+			return nil // Skip empty JSON files
+		}
 	}
 
 	return p.db.UploadInvalid(ctx, id, app, string(data))
