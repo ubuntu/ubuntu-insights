@@ -137,10 +137,7 @@ func processAndUpload[T models.TargetModels](
 
 func validateReport(data *models.TargetModel) (err error) {
 	if data.OptOut {
-		// Ensure everything else is empty
-		if !reflect.DeepEqual(data, &models.TargetModel{OptOut: true}) {
-			return errors.Join(errUnexpectedFields, fmt.Errorf("opt-out file contains unexpected data"))
-		}
+		// Even if other fields are present, treat this as a valid file and discard it fully later.
 		return nil
 	}
 
@@ -166,10 +163,7 @@ func validateReport(data *models.TargetModel) (err error) {
 
 func validateLegacyReport(data *models.LegacyTargetModel) error {
 	if data.OptOut {
-		// Ensure everything else is empty
-		if !reflect.DeepEqual(data, &models.LegacyTargetModel{OptOut: true}) {
-			return errors.Join(errUnexpectedFields, fmt.Errorf("opt-out file contains unexpected data"))
-		}
+		// Even if other fields are present, treat this as a valid file and discard it fully later.
 		return nil
 	}
 
