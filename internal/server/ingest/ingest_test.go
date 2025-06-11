@@ -2,10 +2,9 @@ package ingest_test
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -395,9 +394,7 @@ func (m *mockDBManager) UploadInvalid(ctx context.Context, id, app, rawReport st
 	}
 
 	// Simulate storing the invalid report in the fake database
-	rawReport = strings.ReplaceAll(rawReport, "\r\n", "\n") // Fix for Windows line endings
-	reportHash := sha256.Sum256([]byte(rawReport))
-	m.invalidReports[app] = append(m.invalidReports[app], hex.EncodeToString(reportHash[:]))
+	m.invalidReports[app] = append(m.invalidReports[app], fmt.Sprint(testutils.HashString(rawReport)))
 	m.lastUploadTime = time.Now()
 	return nil
 }
