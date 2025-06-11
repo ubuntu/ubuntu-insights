@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/server/shared/config"
 )
 
@@ -47,7 +48,7 @@ func (h *LegacyReport) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app := "ubuntu-report/" + distribution + "/desktop/" + version
+	app := constants.LegacyReportTag + "/" + distribution + "/desktop/" + version
 	slog.Info("Request recv'd", "req_id", reqID, "app", app)
 	h.jsonHandler.serveHTTP(w, r, reqID, app)
 }

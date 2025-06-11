@@ -110,6 +110,63 @@ func TestUpload(t *testing.T) {
 	}
 }
 
+func TestUploadLegacy(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		report     *models.LegacyTargetModel
+		earlyClose bool
+		execErr    error
+
+		wantErr bool
+	}{
+		"successful exec": {},
+		"opt-out successful exec": {
+			report: &models.LegacyTargetModel{
+				OptOut: true,
+			},
+		},
+
+		// Error cases
+		"exec error": {
+			execErr: fmt.Errorf("error requested by test"),
+			wantErr: true,
+		},
+		"errors if pool is nil or closed": {
+			earlyClose: true,
+			wantErr:    true,
+		}}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			dbPool := mockDBPool{
+				execErr: tc.execErr,
+			}
+
+			mgr, err := database.Connect(t.Context(), database.Config{}, database.WithNewPool(mockNewDBPool(t, dbPool)))
+			require.NoError(t, err, "Setup: Connect() error")
+			defer mgr.Close()
+
+			if tc.earlyClose {
+				require.NoError(t, mgr.Close(), "Setup: failed to close database connection")
+			}
+
+			if tc.report == nil {
+				tc.report = &models.LegacyTargetModel{}
+			}
+
+			err = mgr.UploadLegacy(t.Context(), "test-distribution", "test-version", tc.report)
+			if tc.wantErr {
+				require.Error(t, err, "Expected error on UploadLegacy() but got none")
+				return
+			}
+			require.NoError(t, err, "Unexpected error on UploadLegacy()")
+		})
+	}
+}
+
 func TestClose(t *testing.T) {
 	t.Parallel()
 

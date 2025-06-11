@@ -68,36 +68,24 @@ func Connect(ctx context.Context, cfg Config, args ...Options) (*Manager, error)
 	return &Manager{dbpool: dbpool}, nil
 }
 
-// Upload uploads the provided FileData to the PostgreSQL database.
-//
-// Times out after 10 seconds if the upload is not completed.
-func (db Manager) Upload(ctx context.Context, app string, data *models.TargetModel) error {
-	if db.dbpool == nil {
-		return fmt.Errorf("database not initialized")
-	}
-
-	var err error
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	table := pgx.Identifier{app}.Sanitize()
-
-	switch data.OptOut {
-	case true:
-		query := fmt.Sprintf(
-			`INSERT INTO %s (
-				entry_time,
-				optout
-			) VALUES ($1, $2)`,
-			table,
-		)
-		_, err = db.dbpool.Exec(
-			ctx,
-			query,
-			time.Now(),  // entry_time
-			data.OptOut, // optout
-		)
-	case false:
+// Upload uploads the provided TargetModel to the PostgreSQL database.
+func (db Manager) Upload(ctx context.Context, app string, report *models.TargetModel) error {
+	return db.upload(ctx, app, func(ctx context.Context, table string) (pgconn.CommandTag, error) {
+		if report.OptOut {
+			query := fmt.Sprintf(
+				`INSERT INTO %s (
+					entry_time,
+					optout
+				) VALUES ($1, $2)`,
+				table,
+			)
+			return db.dbpool.Exec(
+				ctx,
+				query,
+				time.Now(),    // entry_time
+				report.OptOut, // optout
+			)
+		}
 		query := fmt.Sprintf(
 			`INSERT INTO %s (
 				entry_time, 
@@ -112,20 +100,77 @@ func (db Manager) Upload(ctx context.Context, app string, data *models.TargetMod
 			table,
 		)
 
-		_, err = db.dbpool.Exec(
+		return db.dbpool.Exec(
 			ctx,
 			query,
-			time.Now(),                        // entry_time
-			data.InsightsVersion,              // insights_version
-			time.Unix(data.CollectionTime, 0), // collection_time
-			data.SystemInfo.Hardware,          // hardware_info
-			data.SystemInfo.Software,          // software_info
-			data.SystemInfo.Platform,          // platform_info
-			data.SourceMetrics,                // source_metrics
-			data.OptOut,                       // optout
+			time.Now(),                          // entry_time
+			report.InsightsVersion,              // insights_version
+			time.Unix(report.CollectionTime, 0), // collection_time
+			report.SystemInfo.Hardware,          // hardware_info
+			report.SystemInfo.Software,          // software_info
+			report.SystemInfo.Platform,          // platform_info
+			report.SourceMetrics,                // source_metrics
+			report.OptOut,                       // optout
 		)
+	})
+}
+
+// UploadLegacy uploads the provided legacy report to the PostgreSQL database.
+func (db Manager) UploadLegacy(ctx context.Context, distribution, version string, report *models.LegacyTargetModel) error {
+	const table = "ubuntu_report"
+
+	return db.upload(ctx, table, func(ctx context.Context, table string) (pgconn.CommandTag, error) {
+		if report.OptOut {
+			query := fmt.Sprintf(
+				`INSERT INTO %s (
+					entry_time,
+					distribution,
+					version,
+					optout
+				) VALUES ($1, $2, $3, $4)`,
+				table,
+			)
+
+			return db.dbpool.Exec(ctx, query,
+				time.Now(),    // entry_time
+				distribution,  // distribution
+				version,       // version
+				report.OptOut, // optout
+			)
+		}
+
+		query := fmt.Sprintf(
+			`INSERT INTO %s (
+					entry_time, 
+					distribution,
+					version, 
+					report,
+					optout
+				) VALUES ($1, $2, $3, $4, $5)`,
+			table,
+		)
+
+		return db.dbpool.Exec(ctx, query,
+			time.Now(),    // entry_time
+			distribution,  // distribution
+			version,       // version
+			report,        // report
+			report.OptOut, // optout
+		)
+	})
+}
+
+func (db Manager) upload(ctx context.Context, table string, execFn func(context.Context, string) (pgconn.CommandTag, error)) error {
+	if db.dbpool == nil {
+		return fmt.Errorf("database not initialized")
 	}
 
+	table = pgx.Identifier{table}.Sanitize()
+
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	_, err := execFn(ctx, table)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			return fmt.Errorf("upload canceled: %v", err)

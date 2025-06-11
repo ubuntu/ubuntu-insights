@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -45,6 +44,7 @@ type StaticConfig struct {
 
 type dbManager interface {
 	Upload(ctx context.Context, app string, data *models.TargetModel) error
+	UploadLegacy(ctx context.Context, distribution, version string, report *models.LegacyTargetModel) error
 	Close() error
 }
 
@@ -226,7 +226,6 @@ func (s *Service) syncWorkers() {
 func (s *Service) appWorker(ctx context.Context, app string) {
 	s.workerWG.Add(1)
 	defer s.workerWG.Done()
-	inputDir := filepath.Join(s.reportsDir, app)
 
 	for {
 		select {
@@ -234,8 +233,8 @@ func (s *Service) appWorker(ctx context.Context, app string) {
 			return
 		default:
 			// this will read/process/remove JSON files and call s.db.Upload(...)
-			err := processor.ProcessFiles(ctx, inputDir, s.db, s.invalidDir)
-			if err != nil {
+			p := processor.New(s.reportsDir, s.invalidDir, s.db)
+			if err := p.Process(ctx, app); err != nil {
 				if errors.Is(err, context.Canceled) {
 					slog.Debug("App worker stopped", "app", app)
 					return // normal shutdown

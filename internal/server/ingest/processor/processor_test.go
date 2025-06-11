@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/models"
 	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/processor"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
@@ -31,6 +32,11 @@ func TestProcessFiles(t *testing.T) {
 		"Mixed files process as expected": {
 			app: "MultiMixed",
 
+			delay: 5 * time.Second,
+		},
+
+		"Legacy ubuntu report files process as expected": {
+			app:   "ubuntu-report/distribution/desktop/version",
 			delay: 5 * time.Second,
 		},
 
@@ -68,10 +74,11 @@ func TestProcessFiles(t *testing.T) {
 				cancel()
 			}
 			invalidFilesDir := filepath.Join(t.TempDir(), "invalid-files")
+			p := processor.New(dst, invalidFilesDir, &tc.db)
 			errCh := make(chan error, 1)
 			go func() {
 				defer close(errCh)
-				errCh <- processor.ProcessFiles(ctx, filepath.Join(dst, tc.app), &tc.db, invalidFilesDir)
+				errCh <- p.Process(ctx, tc.app)
 			}()
 
 			var err error
@@ -94,13 +101,15 @@ func TestProcessFiles(t *testing.T) {
 			require.NoError(t, err, "Failed to get invalid directory contents")
 
 			results := struct {
-				RemainingFiles map[string]string
-				UploadedFiles  map[string][]*models.TargetModel
-				InvalidFiles   map[string]string
+				RemainingFiles      map[string]string
+				UploadedFiles       map[string][]*models.TargetModel
+				UploadedLegacyFiles map[string][]*models.LegacyTargetModel
+				InvalidFiles        map[string]string
 			}{
-				RemainingFiles: remainingFiles,
-				UploadedFiles:  tc.db.data,
-				InvalidFiles:   invalidFiles,
+				RemainingFiles:      remainingFiles,
+				UploadedFiles:       tc.db.reports,
+				UploadedLegacyFiles: tc.db.legacyReports,
+				InvalidFiles:        invalidFiles,
 			}
 
 			got, err := json.MarshalIndent(results, "", "  ")
@@ -112,20 +121,36 @@ func TestProcessFiles(t *testing.T) {
 }
 
 type mockDBManager struct {
-	uploadErr error
-	data      map[string][]*models.TargetModel // Fake in-memory database
+	uploadErr     error
+	reports       map[string][]*models.TargetModel       // Fake in-memory database
+	legacyReports map[string][]*models.LegacyTargetModel // Fake in-memory legacy reports
 }
 
-func (m *mockDBManager) Upload(ctx context.Context, app string, data *models.TargetModel) error {
+func (m *mockDBManager) Upload(ctx context.Context, app string, report *models.TargetModel) error {
 	if m.uploadErr != nil {
 		return m.uploadErr
 	}
 
-	if m.data == nil {
-		m.data = make(map[string][]*models.TargetModel)
+	if m.reports == nil {
+		m.reports = make(map[string][]*models.TargetModel)
 	}
 
 	// Simulate storing the data in the fake database
-	m.data[app] = append(m.data[app], data)
+	m.reports[app] = append(m.reports[app], report)
+	return nil
+}
+
+func (m *mockDBManager) UploadLegacy(ctx context.Context, distribution, version string, report *models.LegacyTargetModel) error {
+	if m.uploadErr != nil {
+		return m.uploadErr
+	}
+
+	if m.legacyReports == nil {
+		m.legacyReports = make(map[string][]*models.LegacyTargetModel)
+	}
+
+	// Simulate storing the legacy report in the fake database
+	key := constants.LegacyReportTag + "/" + distribution + "/desktop/" + version
+	m.legacyReports[key] = append(m.legacyReports[key], report)
 	return nil
 }

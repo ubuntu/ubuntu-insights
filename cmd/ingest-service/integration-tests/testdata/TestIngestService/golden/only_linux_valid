@@ -22,6 +22,11 @@
       "OptOutReports": 7,
       "OptInReports": 5
     },
+    "ubuntu_report": {
+      "TotalReports": 0,
+      "OptOutReports": 0,
+      "OptInReports": 0
+    },
     "windows": {
       "TotalReports": 0,
       "OptOutReports": 0,
