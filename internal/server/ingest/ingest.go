@@ -20,7 +20,6 @@ type Service struct {
 	cm         dConfigManager
 	db         dbManager
 	reportsDir string
-	invalidDir string
 
 	// This context is used to interrupt any action.
 	// It must be the parent of gracefulCtx.
@@ -39,12 +38,12 @@ type Service struct {
 // StaticConfig holds the static configuration for the service.
 type StaticConfig struct {
 	ReportsDir string
-	InvalidDir string
 }
 
 type dbManager interface {
 	Upload(ctx context.Context, app string, data *models.TargetModel) error
 	UploadLegacy(ctx context.Context, distribution, version string, report *models.LegacyTargetModel) error
+	UploadInvalid(ctx context.Context, id, app, rawReport string) error
 	Close() error
 }
 
@@ -77,18 +76,6 @@ func New(ctx context.Context, cm dConfigManager, dbConfig database.Config, sc St
 		return nil, fmt.Errorf("reportsDir must be set")
 	}
 
-	if sc.InvalidDir == "" {
-		return nil, fmt.Errorf("invalidDir must be set")
-	}
-
-	if sc.InvalidDir == sc.ReportsDir {
-		return nil, fmt.Errorf("invalidDir cannot be the same as reportsDir")
-	}
-
-	if err := os.MkdirAll(sc.InvalidDir, 0700); err != nil {
-		return nil, fmt.Errorf("failed to create invalidDir: %v", err)
-	}
-
 	if err := os.MkdirAll(sc.ReportsDir, 0700); err != nil {
 		return nil, fmt.Errorf("failed to create reportsDir: %v", err)
 	}
@@ -111,7 +98,6 @@ func New(ctx context.Context, cm dConfigManager, dbConfig database.Config, sc St
 		cm:         cm,
 		db:         db,
 		reportsDir: sc.ReportsDir,
-		invalidDir: sc.InvalidDir,
 
 		ctx:            ctx,
 		cancel:         cancel,
@@ -233,7 +219,7 @@ func (s *Service) appWorker(ctx context.Context, app string) {
 			return
 		default:
 			// this will read/process/remove JSON files and call s.db.Upload(...)
-			p := processor.New(s.reportsDir, s.invalidDir, s.db)
+			p := processor.New(s.reportsDir, s.db)
 			if err := p.Process(ctx, app); err != nil {
 				if errors.Is(err, context.Canceled) {
 					slog.Debug("App worker stopped", "app", app)

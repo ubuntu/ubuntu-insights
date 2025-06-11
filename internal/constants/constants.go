@@ -70,9 +70,6 @@ const (
 	// DefaultServiceReportsFolder is the name of the default reports folder for services.
 	DefaultServiceReportsFolder = "reports"
 
-	// DefaultServiceInvalidReportsFolder is the name of the default invalid reports folder for services.
-	DefaultServiceInvalidReportsFolder = "invalid-reports"
-
 	// LegacyReportTag is the tag used to indicate legacy ubuntu report files.
 	LegacyReportTag = "ubuntu-report"
 )
@@ -93,16 +90,12 @@ var (
 
 	// DefaultServiceReportsDir is the default reports directory for services.
 	DefaultServiceReportsDir = filepath.Join(DefaultServiceDataDir, DefaultServiceReportsFolder)
-
-	// DefaultServiceInvalidReportsDir is the default invalid reports directory for services.
-	DefaultServiceInvalidReportsDir = filepath.Join(DefaultServiceDataDir, DefaultServiceInvalidReportsFolder)
 )
 
 func init() {
 	DefaultServiceDataDir = filepath.Join("/var/lib", DefaultServiceFolder)
 	defer func() {
 		DefaultServiceReportsDir = filepath.Join(DefaultServiceDataDir, DefaultServiceReportsFolder)
-		DefaultServiceInvalidReportsDir = filepath.Join(DefaultServiceDataDir, DefaultServiceInvalidReportsFolder)
 	}()
 
 	// This is to ensure that the man pages which include the default values

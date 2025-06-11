@@ -3,6 +3,8 @@ package ingest_test
 import (
 	"bufio"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"os"
@@ -150,7 +152,6 @@ func TestIngestService(t *testing.T) {
 				AllowedList: tc.validApps,
 			}
 			configPath := generateTestDaemonConfig(t, daeConf)
-			invalidDir := filepath.Join(t.TempDir(), "invalid-dir")
 
 			ctx, cancel := context.WithCancel(t.Context())
 			// #nosec:G204 - we control the command arguments in tests
@@ -165,7 +166,6 @@ func TestIngestService(t *testing.T) {
 					"--db-password", dbContainer.Password,
 					"--db-name", dbContainer.Name,
 					"--reports-dir", dst,
-					"--invalid-dir", invalidDir,
 					"-vv")
 
 				// Redirect command output to the pipe
@@ -213,11 +213,6 @@ func TestIngestService(t *testing.T) {
 			// Process remaining files
 			remainingFiles := processDirectoryContents(dirContents)
 
-			// Get and process invalid files
-			invalidDirContents, err := testutils.GetDirContents(t, invalidDir, 4)
-			require.NoError(t, err, "Failed to get invalidDir contents")
-			invalidFiles := processDirectoryContents(invalidDirContents)
-
 			// Check the database for opt-out counts
 			type reportCount struct {
 				TotalReports  int
@@ -226,7 +221,7 @@ func TestIngestService(t *testing.T) {
 			}
 
 			reportsCounts := make(map[string]reportCount)
-			for _, app := range listTables(t, dbContainer.DSN) {
+			for _, app := range listTables(t, dbContainer.DSN, "schema_migrations", "invalid_reports") {
 				totalReports, optOutReports, optInReports := checkOptOutCounts(t, dbContainer.DSN, app)
 				reportsCounts[app] = reportCount{
 					TotalReports:  totalReports,
@@ -241,14 +236,16 @@ func TestIngestService(t *testing.T) {
 				validateOptOutEntries(t, dbContainer.DSN, app, fields...)
 			}
 
+			invalidReports := queryInvalidReports(t, dbContainer.DSN)
+
 			results := struct {
 				RemainingFiles map[string][]string
 				ReportsCount   map[string]reportCount
-				InvalidFiles   map[string][]string
+				InvalidReports []invalidReportEntry
 			}{
 				RemainingFiles: remainingFiles,
 				ReportsCount:   reportsCounts,
-				InvalidFiles:   invalidFiles,
+				InvalidReports: invalidReports,
 			}
 
 			got, err := json.MarshalIndent(results, "", "  ")
@@ -271,8 +268,14 @@ func generateTestDaemonConfig(t *testing.T, daeConf *config.Conf) string {
 	return daeConfPath
 }
 
-func listTables(t *testing.T, dsn string) []string {
+// listTables lists all the tables, excluding a blacklist.
+func listTables(t *testing.T, dsn string, blacklist ...string) []string {
 	t.Helper()
+
+	blacklistMap := make(map[string]bool)
+	for _, table := range blacklist {
+		blacklistMap[table] = true
+	}
 
 	conn, err := pgx.Connect(t.Context(), dsn)
 	require.NoError(t, err, "failed to connect to the database")
@@ -284,8 +287,7 @@ func listTables(t *testing.T, dsn string) []string {
         SELECT table_name
         FROM information_schema.tables
         WHERE table_schema = 'public'
-          AND table_type = 'BASE TABLE'
-          AND table_name NOT IN ('schema_migrations');`
+          AND table_type = 'BASE TABLE';`
 
 	rows, err := conn.Query(t.Context(), query)
 	require.NoError(t, err, "failed to execute query")
@@ -294,7 +296,9 @@ func listTables(t *testing.T, dsn string) []string {
 	for rows.Next() {
 		var tableName string
 		require.NoError(t, rows.Scan(&tableName), "failed to scan table name")
-		tables = append(tables, tableName)
+		if !blacklistMap[tableName] {
+			tables = append(tables, tableName)
+		}
 	}
 
 	require.NoError(t, rows.Err(), "error occurred during rows iteration")
@@ -363,6 +367,45 @@ func validateOptOutEntries(t *testing.T, dsn, tableName string, fields ...string
 	err = conn.QueryRow(t.Context(), optInQuery).Scan(&optInViolations)
 	require.NoError(t, err, "failed to execute opt-in query")
 	assert.Equal(t, 0, optInViolations, "Opt-in reports should not have any consistency violations")
+}
+
+type invalidReportEntry struct {
+	AppName   string
+	RawReport string
+}
+
+// getInvalidReports queries the invalid_reports table and returns a sorted list of entries
+// including the app_name and a hash of raw_report.
+func queryInvalidReports(t *testing.T, dsn string) []invalidReportEntry {
+	t.Helper()
+
+	conn, err := pgx.Connect(t.Context(), dsn)
+	require.NoError(t, err, "failed to connect to the database")
+	defer func() {
+		require.NoError(t, conn.Close(t.Context()), "failed to close the database connection")
+	}()
+
+	query := `
+		SELECT app_name, raw_report
+		FROM invalid_reports
+		ORDER BY app_name, raw_report;
+	`
+	rows, err := conn.Query(t.Context(), query)
+	require.NoError(t, err, "failed to execute query")
+
+	var entries []invalidReportEntry
+	for rows.Next() {
+		var appName, rawReport string
+		require.NoError(t, rows.Scan(&appName, &rawReport), "failed to scan row")
+		hash := sha256.Sum256([]byte(rawReport))
+		entries = append(entries, invalidReportEntry{
+			AppName:   appName,
+			RawReport: hex.EncodeToString(hash[:]),
+		})
+	}
+	require.NoError(t, rows.Err(), "error occurred during rows iteration")
+
+	return entries
 }
 
 type report int

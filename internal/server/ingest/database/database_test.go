@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/require"
@@ -163,6 +164,62 @@ func TestUploadLegacy(t *testing.T) {
 				return
 			}
 			require.NoError(t, err, "Unexpected error on UploadLegacy()")
+		})
+	}
+}
+
+func TestUploadInvalid(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		id         string
+		app        string
+		rawReport  string
+		earlyClose bool
+		execErr    error
+
+		wantErr bool
+	}{
+		"successful exec": {
+			id:        uuid.NewString(),
+			app:       "test-app",
+			rawReport: "raw report data",
+		},
+		"empty exec": {},
+
+		// Error cases
+		"exec error": {
+			execErr: fmt.Errorf("error requested by test"),
+			wantErr: true,
+		},
+		"errors if pool is nil or closed": {
+			earlyClose: true,
+			wantErr:    true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			dbPool := mockDBPool{
+				execErr: tc.execErr,
+			}
+
+			mgr, err := database.Connect(t.Context(), database.Config{}, database.WithNewPool(mockNewDBPool(t, dbPool)))
+			require.NoError(t, err, "Setup: Connect() error")
+			defer mgr.Close()
+
+			if tc.earlyClose {
+				require.NoError(t, mgr.Close(), "Setup: failed to close database connection")
+			}
+
+			err = mgr.UploadInvalid(t.Context(), tc.id, tc.app, tc.rawReport)
+			if tc.wantErr {
+				require.Error(t, err, "UploadInvalid() error")
+				return
+			}
+			require.NoError(t, err, "UploadInvalid() error")
 		})
 	}
 }

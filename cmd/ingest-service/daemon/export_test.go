@@ -32,10 +32,6 @@ func NewForTests(t *testing.T, conf *AppConfig, daeConf *config.Conf, args ...st
 		conf.Daemon.ReportsDir = filepath.Join(t.TempDir(), "reports")
 	}
 
-	if conf.Daemon.InvalidDir == "" {
-		conf.Daemon.InvalidDir = filepath.Join(t.TempDir(), "invalid-dir")
-	}
-
 	p := GenerateTestConfig(t, conf, daeConf)
 	argsWithConf := []string{"--config", p}
 	argsWithConf = append(argsWithConf, args...)

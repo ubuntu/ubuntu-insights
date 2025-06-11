@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
+	"github.com/google/uuid"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/models"
 )
@@ -29,21 +30,20 @@ var (
 type database interface {
 	Upload(ctx context.Context, app string, report *models.TargetModel) error
 	UploadLegacy(ctx context.Context, distribution, version string, report *models.LegacyTargetModel) error
+	UploadInvalid(ctx context.Context, id, app, rawReport string) error
 }
 
 // Processor is responsible for processing reports.
 type Processor struct {
-	baseDir    string
-	invalidDir string
-	db         database
+	baseDir string
+	db      database
 }
 
 // New creates a new Processor instance.
-func New(baseDir, invalidDir string, db database) *Processor {
+func New(baseDir string, db database) *Processor {
 	return &Processor{
-		baseDir:    baseDir,
-		invalidDir: invalidDir,
-		db:         db,
+		baseDir: baseDir,
+		db:      db,
 	}
 }
 
@@ -59,10 +59,6 @@ func (p Processor) Process(ctx context.Context, app string) error {
 		return fmt.Errorf("failed to create directory %q: %v", dir, err)
 	}
 
-	if err := os.MkdirAll(p.invalidDir, 0750); err != nil {
-		return fmt.Errorf("failed to create invalid directory %q: %v", p.invalidDir, err)
-	}
-
 	files, err := getJSONFiles(dir)
 	if err != nil {
 		return fmt.Errorf("failed to get JSON files: %v", err)
@@ -75,6 +71,8 @@ func (p Processor) Process(ctx context.Context, app string) error {
 			return ctx.Err()
 		default:
 		}
+
+		reportID := getReportID(file)
 
 		var procErr error
 		if legacyApp {
@@ -100,7 +98,17 @@ func (p Processor) Process(ctx context.Context, app string) error {
 			continue // If upload fails, skip postProcessing
 		}
 
-		postProcess(file, procErr, p.invalidDir)
+		if procErr != nil {
+			if err := p.uploadInvalid(ctx, file, reportID, app); err != nil {
+				slog.Warn("Failed to upload invalid report", "file", file, "err", err)
+				// Continue with post-processing and removal of the file
+			}
+		}
+
+		if err := os.Remove(file); err != nil {
+			slog.Warn("Failed to remove file after processing", "file", file, "err", err)
+		}
+
 		slog.Info("Finished processing file", "file", file)
 	}
 
@@ -191,6 +199,20 @@ func getJSONFiles(dir string) ([]string, error) {
 	return files, err
 }
 
+// getReportID extracts the report ID from the file path.
+// If the file name does not contain a valid UUID, it logs a warning and generates a new UUID.
+func getReportID(file string) string {
+	reportID := filepath.Base(file)
+	reportID = strings.TrimSuffix(reportID, filepath.Ext(reportID))
+
+	if err := uuid.Validate(reportID); err != nil {
+		reportID = uuid.NewString()
+		slog.Warn("Report has invalid UUID, generating a new one", "file", file, "UUID", reportID, "err", err)
+	}
+
+	return reportID
+}
+
 // processFile reads a JSON file, unmarshals it into the specified target model type.
 // It returns the target model or an error if the file is invalid or does not match the expected structure.
 func processFile[T models.TargetModels](file string) (*T, error) {
@@ -237,32 +259,14 @@ func parseLegacyApp(app string) (distribution, version string) {
 	return matches[1], matches[2]
 }
 
-// postProcess is a helper function to handle post-processing of processed files.
-//
-// Files which are successfully processed and uploaded to the database without any validation errors
-// are removed from the filesystem.
-// Files which are invalid or have validation errors, even if they were partially added to the database,
-// are moved to a separate invalid directory for further inspection.
-//
-// The function expects invalidDir to be a valid directory path where invalid files will be moved.
-func postProcess(file string, err error, invalidDir string) {
-	if err == nil {
-		if err := os.Remove(file); err != nil {
-			slog.Warn("Failed to remove file after processing", "file", file, "err", err)
-		}
-		return
+// uploadInvalid reads the invalid file and uploads its content to the database as a string.
+func (p Processor) uploadInvalid(ctx context.Context, file, id, app string) error {
+	data, err := os.ReadFile(file)
+	if err != nil {
+		return fmt.Errorf("failed to re-read invalid file %q: %v", file, err)
 	}
 
-	newPath := filepath.Join(invalidDir, filepath.Base(file))
-	if err := os.Rename(file, newPath); err != nil {
-		slog.Warn("Failed to move invalid file", "file", file, "newPath", newPath, "err", err)
-
-		if err := os.Remove(file); err != nil {
-			slog.Warn("Failed remove unmovable invalid file", "file", file, "err", err)
-		}
-		return
-	}
-	slog.Debug("Moved invalid file to invalid directory", "file", file, "newPath", newPath)
+	return p.db.UploadInvalid(ctx, id, app, string(data))
 }
 
 func getDecoderConfig(target any) *mapstructure.DecoderConfig {
