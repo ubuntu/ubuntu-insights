@@ -110,12 +110,33 @@ func TestIngestService(t *testing.T) {
 				{app: "ubuntu-report/distribution/desktop/version", reportType: validOptOut, count: 3},
 				{app: "ubuntu-report/distribution/desktop/version", reportType: invalidOptOut, count: 2},
 				{app: "ubuntu-report/distribution/desktop/version", reportType: empty, count: 1},
+				{app: "ubuntu-report/distribution/desktop/bad-version", reportType: ubuntuReport, count: 1},
 			},
 			postReports: []reports{
 				{app: "ubuntu-report/distribution/desktop/unknown-version", reportType: ubuntuReport, count: 1},
 				{app: "ubuntu-report/unknown-distribution/desktop/version", reportType: ubuntuReport, count: 1},
 				{app: "ubuntu-report/distribution/desktop/version", reportType: ubuntuReport, count: 2},
 				{app: "ubuntu-report/distribution/desktop/version", reportType: validOptOut, count: 1},
+				{app: "ubuntu-report/distribution/desktop/version", reportType: validV1, count: 1, delayAfter: 2},
+			},
+		},
+		"Reports with unexpected fields": {
+			validApps: []string{"linux", "windows", "darwin", "ubuntu-report/distribution/desktop/version"},
+			preReports: []reports{
+				{app: "linux", reportType: validV1, count: 1},
+				{app: "linux", reportType: invalidV1ExtraRoot, count: 1},
+				{app: "linux", reportType: invalidV1ExtraSysInfo, count: 1},
+				{app: "linux", reportType: invalidV1ExtraFields, count: 1},
+				{app: "ubuntu-report/distribution/desktop/version", reportType: invalidOptOut, count: 1},
+				{app: "windows", reportType: invalidOptOut, count: 1},
+			},
+		},
+		"Reports with invalid JSON": {
+			validApps: []string{"linux", "windows", "darwin", "ubuntu-report/distribution/desktop/version"},
+			preReports: []reports{
+				{app: "linux", reportType: validV1, count: 1},
+				{app: "linux", reportType: invalidJSON, count: 1},
+				{app: "ubuntu-report/distribution/desktop/version", reportType: invalidJSON, count: 1},
 			},
 		},
 	}
@@ -414,6 +435,10 @@ const (
 	empty report = iota
 	validV1
 	validOptOut
+	invalidJSON
+	invalidV1ExtraRoot
+	invalidV1ExtraSysInfo
+	invalidV1ExtraFields
 	invalidOptOut
 	ubuntuReport
 )
@@ -535,6 +560,325 @@ func makeReport(t *testing.T, reportType report, count int, reportDir string, at
 {
     "OptOut": true
 }`
+	case invalidJSON:
+		rep = `{
+this is invalid JSON`
+	case invalidV1ExtraRoot:
+		rep = `
+		{
+			"insightsVersion": "0.0.1~ppa5",
+			"collectionTime": 1747752692,
+			"systemInfo": {
+				"hardware": {
+					"product": {
+						"family": "My Product Family",
+						"name": "My Product Name",
+						"vendor": "My Product Vendor"
+					},
+					"cpu": {
+						"name": "9 1200SX",
+						"vendor": "Authentic",
+						"architecture": "x86_64",
+						"cpus": 16,
+						"sockets": 1,
+						"coresPerSocket": 8,
+						"threadsPerCore": 2
+					},
+					"gpus": [
+						{
+							"device": "0x0294",
+							"vendor": "0x10df",
+							"driver": "gpu"
+						},
+						{
+							"device": "0x03ec",
+							"vendor": "0x1003",
+							"driver": "gpu"
+						}
+					],
+					"memory": {
+						"size": 23247
+					},
+					"disks": [
+						{
+							"size": 1887436,
+							"type": "disk",
+							"children": [
+								{
+									"size": 750,
+									"type": "part"
+								},
+								{
+									"size": 260,
+									"type": "part"
+								},
+								{
+									"size": 16,
+									"type": "part"
+								},
+								{
+									"size": 1887436,
+									"type": "part"
+								},
+								{
+									"size": 869,
+									"type": "part"
+								},
+								{
+									"size": 54988,
+									"type": "part"
+								}
+							]
+						}
+					],
+					"screens": [
+						{
+							"size": "600mm x 340mm",
+							"resolution": "2560x1440",
+							"refreshRate": "143.83"
+						},
+						{
+							"size": "300mm x 190mm",
+							"resolution": "1704x1065",
+							"refreshRate": "119.91"
+						}
+					]
+				},
+				"software": {
+					"os": {
+						"family": "linux",
+						"distribution": "Ubuntu",
+						"version": "24.04"
+					},
+					"timezone": "EDT",
+					"language": "en_US",
+					"bios": {
+						"vendor": "Bios Vendor",
+						"version": "Bios Version"
+					}
+				},
+				"platform": {
+					"desktop": {
+						"desktopEnvironment": "ubuntu:GNOME",
+						"sessionName": "ubuntu",
+						"sessionType": "wayland"
+					},
+					"proAttached": true
+				}
+			},
+			"extraRoot": "This is an extra root field that should not be here"
+		}`
+	case invalidV1ExtraSysInfo:
+		rep = `
+		{
+			"insightsVersion": "0.0.1~ppa5",
+			"collectionTime": 1747752692,
+			"systemInfo": {
+				"hardware": {
+					"product": {
+						"family": "My Product Family",
+						"name": "My Product Name",
+						"vendor": "My Product Vendor"
+					},
+					"cpu": {
+						"name": "9 1200SX",
+						"vendor": "Authentic",
+						"architecture": "x86_64",
+						"cpus": 16,
+						"sockets": 1,
+						"coresPerSocket": 8,
+						"threadsPerCore": 2
+					},
+					"gpus": [
+						{
+							"device": "0x0294",
+							"vendor": "0x10df",
+							"driver": "gpu"
+						},
+						{
+							"device": "0x03ec",
+							"vendor": "0x1003",
+							"driver": "gpu"
+						}
+					],
+					"memory": {
+						"size": 23247
+					},
+					"disks": [
+						{
+							"size": 1887436,
+							"type": "disk",
+							"children": [
+								{
+									"size": 750,
+									"type": "part"
+								},
+								{
+									"size": 260,
+									"type": "part"
+								},
+								{
+									"size": 16,
+									"type": "part"
+								},
+								{
+									"size": 1887436,
+									"type": "part"
+								},
+								{
+									"size": 869,
+									"type": "part"
+								},
+								{
+									"size": 54988,
+									"type": "part"
+								}
+							]
+						}
+					],
+					"screens": [
+						{
+							"size": "600mm x 340mm",
+							"resolution": "2560x1440",
+							"refreshRate": "143.83"
+						},
+						{
+							"size": "300mm x 190mm",
+							"resolution": "1704x1065",
+							"refreshRate": "119.91"
+						}
+					]
+				},
+				"software": {
+					"os": {
+						"family": "linux",
+						"distribution": "Ubuntu",
+						"version": "24.04"
+					},
+					"timezone": "EDT",
+					"language": "en_US",
+					"bios": {
+						"vendor": "Bios Vendor",
+						"version": "Bios Version"
+					}
+				},
+				"platform": {
+					"desktop": {
+						"desktopEnvironment": "ubuntu:GNOME",
+						"sessionName": "ubuntu",
+						"sessionType": "wayland"
+					},
+					"proAttached": true
+				},
+				"extraSysInfo": "This is an extra sysInfo field that should not be here"
+			}
+		}`
+	case invalidV1ExtraFields:
+		rep = `
+		{
+			"insightsVersion": "0.0.1~ppa5",
+			"collectionTime": 1747752692,
+			"systemInfo": {
+				"hardware": {
+					"product": {
+						"family": "My Product Family",
+						"name": "My Product Name",
+						"vendor": "My Product Vendor"
+					},
+					"cpu": {
+						"name": "9 1200SX",
+						"vendor": "Authentic",
+						"architecture": "x86_64",
+						"cpus": 16,
+						"sockets": 1,
+						"coresPerSocket": 8,
+						"threadsPerCore": 2
+					},
+					"gpus": [
+						{
+							"device": "0x0294",
+							"vendor": "0x10df",
+							"driver": "gpu"
+						},
+						{
+							"device": "0x03ec",
+							"vendor": "0x1003",
+							"driver": "gpu"
+						}
+					],
+					"memory": {
+						"size": 23247
+					},
+					"disks": [
+						{
+							"size": 1887436,
+							"type": "disk",
+							"children": [
+								{
+									"size": 750,
+									"type": "part"
+								},
+								{
+									"size": 260,
+									"type": "part"
+								},
+								{
+									"size": 16,
+									"type": "part"
+								},
+								{
+									"size": 1887436,
+									"type": "part"
+								},
+								{
+									"size": 869,
+									"type": "part"
+								},
+								{
+									"size": 54988,
+									"type": "part"
+								}
+							]
+						}
+					],
+					"screens": [
+						{
+							"size": "600mm x 340mm",
+							"resolution": "2560x1440",
+							"refreshRate": "143.83"
+						},
+						{
+							"size": "300mm x 190mm",
+							"resolution": "1704x1065",
+							"refreshRate": "119.91"
+						}
+					]
+				},
+				"software": {
+					"os": {
+						"family": "linux",
+						"distribution": "Ubuntu",
+						"version": "24.04"
+					},
+					"timezone": "EDT",
+					"language": "en_US",
+					"bios": {
+						"vendor": "Bios Vendor",
+						"version": "Bios Version"
+					}
+				},
+				"platform": {
+					"desktop": {
+						"desktopEnvironment": "ubuntu:GNOME",
+						"sessionName": "ubuntu",
+						"sessionType": "wayland"
+					},
+					"proAttached": true
+				},
+				"extraField1": "This is an extra field that should not be here",
+			},
+			"extraField2": "This is another extra field that should not be here"
+		}`
 	case invalidOptOut:
 		rep = `
 {

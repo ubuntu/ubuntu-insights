@@ -1,5 +1,8 @@
 {
   "RemainingFiles": {
+    "bad-version": [
+      "\n{\n  \"Version\": \"18.04\",\n  \"OEM\": {\n    \"Vendor\": \"Vendor Name\",\n    \"Product\": \"4287CTO\"\n  },\n  \"BIOS\": {\n    \"Vendor\": \"Vendor Name\",\n    \"Version\": \"8DET52WW (1.27)\"\n  },\n  \"CPU\": {\n    \"OpMode\": \"32-bit, 64-bit\",\n    \"CPUs\": \"8\",\n    \"Threads\": \"2\",\n    \"Cores\": \"4\",\n    \"Sockets\": \"1\",\n    \"Vendor\": \"Genuine\",\n    \"Family\": \"6\",\n    \"Model\": \"158\",\n    \"Stepping\": \"10\",\n    \"Name\": \"Intius Corus i5-8300H CPU @ 2.30GHz\",\n    \"Virtualization\": \"VT-x\"\n  },\n  \"Arch\": \"amd64\",\n  \"GPU\": [\n    {\n      \"Vendor\": \"8086\",\n      \"Model\": \"0126\"\n    }\n  ],\n  \"RAM\": 8,\n  \"Disks\": [\n    240.1,\n    500.1\n  ],\n  \"Partitions\": [\n    229.2,\n    479.7\n  ],\n  \"Screens\": [\n    {\n      \"Size\": \"277mmx156mm\",\n      \"Resolution\": \"1366x768\",\n      \"Frequency\": \"60.02\"\n    },\n    {\n      \"Resolution\": \"1920x1080\",\n      \"Frequency\": \"60.00\"\n    }\n  ],\n  \"Autologin\": false,\n  \"LivePatch\": true,\n  \"Session\": {\n    \"DE\": \"ubuntu:GNOME\",\n    \"Name\": \"ubuntu\",\n    \"Type\": \"x11\"\n  },\n  \"Language\": \"fr_FR\",\n  \"Timezone\": \"Europe/Paris\",\n  \"Install\": {\n    \"Media\": \"Ubuntu 18.04 LTS \\\"Bionic Beaver\\\" - Alpha amd64 (20180305)\",\n    \"Type\": \"GTK\",\n    \"PartitionMethod\": \"use_device\",\n    \"DownloadUpdates\": true,\n    \"Language\": \"fr\",\n    \"Minimal\": false,\n    \"RestrictedAddons\": false,\n    \"Stages\": {\n      \"0\": \"language\",\n      \"3\": \"language\",\n      \"10\": \"console_setup\",\n      \"15\": \"prepare\",\n      \"25\": \"partman\",\n      \"27\": \"start_install\",\n      \"37\": \"timezone\",\n      \"49\": \"usersetup\",\n      \"57\": \"user_done\",\n      \"829\": \"done\"\n    }\n  }\n}"
+    ],
     "unknown-version": [
       "\n{\n  \"Version\": \"18.04\",\n  \"OEM\": {\n    \"Vendor\": \"Vendor Name\",\n    \"Product\": \"4287CTO\"\n  },\n  \"BIOS\": {\n    \"Vendor\": \"Vendor Name\",\n    \"Version\": \"8DET52WW (1.27)\"\n  },\n  \"CPU\": {\n    \"OpMode\": \"32-bit, 64-bit\",\n    \"CPUs\": \"8\",\n    \"Threads\": \"2\",\n    \"Cores\": \"4\",\n    \"Sockets\": \"1\",\n    \"Vendor\": \"Genuine\",\n    \"Family\": \"6\",\n    \"Model\": \"158\",\n    \"Stepping\": \"10\",\n    \"Name\": \"Intius Corus i5-8300H CPU @ 2.30GHz\",\n    \"Virtualization\": \"VT-x\"\n  },\n  \"Arch\": \"amd64\",\n  \"GPU\": [\n    {\n      \"Vendor\": \"8086\",\n      \"Model\": \"0126\"\n    }\n  ],\n  \"RAM\": 8,\n  \"Disks\": [\n    240.1,\n    500.1\n  ],\n  \"Partitions\": [\n    229.2,\n    479.7\n  ],\n  \"Screens\": [\n    {\n      \"Size\": \"277mmx156mm\",\n      \"Resolution\": \"1366x768\",\n      \"Frequency\": \"60.02\"\n    },\n    {\n      \"Resolution\": \"1920x1080\",\n      \"Frequency\": \"60.00\"\n    }\n  ],\n  \"Autologin\": false,\n  \"LivePatch\": true,\n  \"Session\": {\n    \"DE\": \"ubuntu:GNOME\",\n    \"Name\": \"ubuntu\",\n    \"Type\": \"x11\"\n  },\n  \"Language\": \"fr_FR\",\n  \"Timezone\": \"Europe/Paris\",\n  \"Install\": {\n    \"Media\": \"Ubuntu 18.04 LTS \\\"Bionic Beaver\\\" - Alpha amd64 (20180305)\",\n    \"Type\": \"GTK\",\n    \"PartitionMethod\": \"use_device\",\n    \"DownloadUpdates\": true,\n    \"Language\": \"fr\",\n    \"Minimal\": false,\n    \"RestrictedAddons\": false,\n    \"Stages\": {\n      \"0\": \"language\",\n      \"3\": \"language\",\n      \"10\": \"console_setup\",\n      \"15\": \"prepare\",\n      \"25\": \"partman\",\n      \"27\": \"start_install\",\n      \"37\": \"timezone\",\n      \"49\": \"usersetup\",\n      \"57\": \"user_done\",\n      \"829\": \"done\"\n    }\n  }\n}"
     ],
@@ -19,9 +22,9 @@
       "OptInReports": 0
     },
     "ubuntu_report": {
-      "TotalReports": 11,
+      "TotalReports": 12,
       "OptOutReports": 6,
-      "OptInReports": 5
+      "OptInReports": 6
     },
     "windows": {
       "TotalReports": 0,
