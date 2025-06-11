@@ -1,6 +1,6 @@
 module github.com/ubuntu/ubuntu-insights/tools
 
-go 1.24.2
+go 1.24.4
 
 require github.com/golangci/golangci-lint v1.64.8
 
