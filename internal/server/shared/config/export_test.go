@@ -8,3 +8,9 @@ func WithLogger(l *slog.Logger) Options {
 		o.Logger = l
 	}
 }
+
+// GetReservedNames returns a map of reserved names that the configuration
+// manager will filter from the allow list.
+func GetReservedNames() map[string]struct{} {
+	return reservedNames
+}

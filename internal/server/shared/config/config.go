@@ -13,6 +13,11 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+var reservedNames = map[string]struct{}{
+	"ubuntu_report":     {},
+	"schema_migrations": {},
+}
+
 // Provider is an interface that defines methods to access configuration values.
 type Provider interface {
 	AllowList() []string
@@ -56,6 +61,7 @@ func New(path string, args ...Options) *Manager {
 }
 
 // Load reads the configuration from the specified file and updates the internal state.
+// It filters out any reserved names from the allow list, logging a warning for each reserved name found.
 func (cm *Manager) Load() error {
 	file, err := os.Open(cm.configPath)
 	if err != nil {
@@ -68,6 +74,8 @@ func (cm *Manager) Load() error {
 	if err := decoder.Decode(&newConfig); err != nil {
 		return fmt.Errorf("decoding config JSON: %w", err)
 	}
+
+	newConfig.AllowedList = cm.filterAllowList(newConfig.AllowedList)
 
 	cm.lock.Lock()
 	cm.config = newConfig
@@ -151,4 +159,17 @@ func (cm *Manager) AllowList() []string {
 	cm.lock.RLock()
 	defer cm.lock.RUnlock()
 	return cm.config.AllowedList
+}
+
+// filterAllowList filters out reserved names from the allow list.
+func (cm *Manager) filterAllowList(allowList []string) []string {
+	filteredAllowList := make([]string, 0, len(allowList))
+	for _, name := range allowList {
+		if _, reserved := reservedNames[name]; reserved {
+			cm.log.Warn("Reserved name in allow list, ignoring", "name", name)
+			continue
+		}
+		filteredAllowList = append(filteredAllowList, name)
+	}
+	return filteredAllowList
 }
