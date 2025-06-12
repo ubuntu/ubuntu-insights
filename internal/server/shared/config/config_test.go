@@ -58,6 +58,27 @@ func TestLoadMissingFile(t *testing.T) {
 	require.Error(t, cm.Load(), "expected error loading missing config file")
 }
 
+func TestLoadIgnoresReservedNames(t *testing.T) {
+	t.Parallel()
+	content := `{
+		"allowList": ["foo"`
+
+	for reservedName := range config.GetReservedNames() {
+		content += fmt.Sprintf(`, "%s"`, reservedName)
+	}
+	content += `]
+	}`
+
+	tmpFile := createTempConfigFile(t, content)
+
+	cm := config.New(tmpFile)
+	require.NoError(t, cm.Load(), "expected no error loading config with reserved names")
+
+	expected := []string{"foo"} // Reserved names should be ignored
+	got := cm.AllowList()
+	assert.Equal(t, expected, got, "expected allowList to ignore reserved names")
+}
+
 func TestWatchMissingFile(t *testing.T) {
 	t.Parallel()
 	cm := config.New("somewhere/nonexistent.json")
@@ -202,6 +223,38 @@ func TestWatchWarnsIfLoadFails(t *testing.T) {
 	case <-watchEvent:
 		require.Fail(t, "expected no change event")
 	case <-time.After(200 * time.Millisecond):
+	}
+}
+
+func TestWatchIgnoresReservedNames(t *testing.T) {
+	t.Parallel()
+
+	tmpFile := createTempConfigFile(t, `{"allowList": ["beta"]}`)
+
+	l := testutils.NewMockHandler(slog.LevelDebug)
+	cm := config.New(tmpFile, config.WithLogger(slog.New(&l)))
+	watchEvent, watchErr, err := cm.Watch(t.Context())
+	require.NoError(t, err, "Setup: failed to start watch")
+
+	updated := `{"allowList": ["alpha"`
+	for reservedName := range config.GetReservedNames() {
+		updated += fmt.Sprintf(`, "%s"`, reservedName)
+	}
+	updated += `]}`
+
+	require.NoError(t, os.WriteFile(tmpFile, []byte(updated), 0600), "Setup: failed to write updated config with reserved names")
+	time.Sleep(time.Second) // let watcher reload
+
+	if got := cm.AllowList(); !reflect.DeepEqual(got, []string{"alpha"}) {
+		t.Errorf("expected allowList [beta], got %v", got)
+	}
+
+	select {
+	case err := <-watchErr:
+		require.NoError(t, err, "expected no error watching config file")
+	case <-watchEvent:
+	case <-time.After(200 * time.Millisecond):
+		require.Fail(t, "expected change event")
 	}
 }
 
