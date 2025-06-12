@@ -46,12 +46,20 @@ func init() {
 		collectortestutils.SetTimeProvider(MockTimeProvider{CurrentTime: t})
 	}
 
-	if initial_retry_period := os.Getenv("UBUNTU_INSIGHTS_INTEGRATIONTESTS_INITIAL_RETRY_PERIOD"); initial_retry_period != "" {
-		irp, err := time.ParseDuration(initial_retry_period)
+	if base_retry_period := os.Getenv("UBUNTU_INSIGHTS_INTEGRATIONTESTS_BASE_RETRY_PERIOD"); base_retry_period != "" {
+		irp, err := time.ParseDuration(base_retry_period)
 		if err != nil {
-			panic(fmt.Sprintf("failed to parse UBUNTU_INSIGHTS_INTEGRATIONTESTS_INITIAL_RETRY_PERIOD: %v", err))
+			panic(fmt.Sprintf("failed to parse UBUNTU_INSIGHTS_INTEGRATIONTESTS_BASE_RETRY_PERIOD: %v", err))
 		}
-		uploadertestutils.SetInitialRetryPeriod(irp)
+		uploadertestutils.SetBaseRetryPeriod(irp)
+	}
+
+	if max_attempts := os.Getenv("UBUNTU_INSIGHTS_INTEGRATIONTESTS_MAX_ATTEMPTS"); max_attempts != "" {
+		ma, err := strconv.ParseInt(max_attempts, 10, 64)
+		if err != nil {
+			panic(fmt.Sprintf("failed to parse UBUNTU_INSIGHTS_INTEGRATIONTESTS_MAX_ATTEMPTS: %v", err))
+		}
+		uploadertestutils.SetMaxAttempts(int(ma))
 	}
 
 	if report_timeout := os.Getenv("UBUNTU_INSIGHTS_INTEGRATIONTESTS_MAX_RETRY_PERIOD"); report_timeout != "" {
