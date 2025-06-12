@@ -38,6 +38,13 @@ func WithInitialRetryPeriod(d time.Duration) Options {
 	}
 }
 
+// WithMaxAttempts sets the maximum number of attempts for the uploader for exponential backoff retries.
+func WithMaxAttempts(n int) Options {
+	return func(o *options) {
+		o.maxAttempts = n
+	}
+}
+
 // WithResponseTimeout sets the response timeout for the uploader when waiting for a response from the server.
 func WithResponseTimeout(d time.Duration) Options {
 	return func(o *options) {

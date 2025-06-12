@@ -119,21 +119,23 @@ func (um Uploader) Upload(source string, force bool) error {
 
 // BackoffUpload behaves like Upload, but if there are any send errors, it will retry the upload after a backoff period.
 // The backoff period starts at 30 seconds, and doubles with each retry, up to the configured report timeout (default 30 minutes).
-// If the report timeout is surpassed, the upload will stop.
+// If the maximum number of attempts is reached, it will stop retrying and return the last error.
 func (um Uploader) BackoffUpload(source string, force bool) (err error) {
 	um.log.Debug("Uploading reports with backoff")
 
 	wait := um.initialRetryPeriod
+	attempts := 0
 	for {
 		err = um.Upload(source, force)
 		if !errors.Is(err, ErrSendFailure) {
 			break
 		}
-		wait *= 2
-		if wait > um.maxRetryPeriod {
-			um.log.Warn("Report timeout reached, stopping upload")
+		attempts++
+		if attempts > um.maxAttempts {
+			um.log.Warn("Maximum upload attempts reached, giving up", "attempts", attempts)
 			break
 		}
+		wait *= 2
 		um.log.Warn("Failed to send report, retrying upload after backoff period", "seconds", wait.Seconds(), "error", err)
 		time.Sleep(wait)
 	}
