@@ -22,3 +22,7 @@ build/
 _build/
 generated
 vendor
+*.rock
+
+# Python virtual environments
+.venv*
