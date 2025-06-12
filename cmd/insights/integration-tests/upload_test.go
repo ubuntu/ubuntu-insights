@@ -26,9 +26,10 @@ func TestUpload(t *testing.T) {
 	t.Parallel()
 
 	const (
-		initialRetryPeriod = 1 * time.Second
-		maxRetryPeriod     = 4 * time.Second
-		responseTimeout    = 2 * time.Second
+		baseRetryPeriod = 100 * time.Millisecond
+		maxRetryPeriod  = 4 * time.Second
+		maxAttempts     = 4
+		responseTimeout = 2 * time.Second
 	)
 
 	tests := map[string]struct {
@@ -571,8 +572,9 @@ func TestUpload(t *testing.T) {
 			cmd.Args = append(cmd.Args, "--insights-dir", paths.reports)
 			cmd.Env = append(cmd.Env, os.Environ()...)
 			cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_SERVER_URL="+server)
-			cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_INITIAL_RETRY_PERIOD="+initialRetryPeriod.String())
+			cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_BASE_RETRY_PERIOD="+baseRetryPeriod.String())
 			cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_MAX_RETRY_PERIOD="+maxRetryPeriod.String())
+			cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_MAX_ATTEMPTS="+fmt.Sprint(maxAttempts))
 			cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_RESPONSE_TIMEOUT="+responseTimeout.String())
 			if tc.maxReports != 0 {
 				cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_MAX_REPORTS="+fmt.Sprint(tc.maxReports))

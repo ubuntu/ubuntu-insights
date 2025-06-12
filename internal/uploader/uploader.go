@@ -29,33 +29,43 @@ type Uploader struct {
 	dryRun   bool
 	cacheDir string
 
-	baseServerURL      string
-	maxReports         uint
-	timeProvider       timeProvider
-	initialRetryPeriod time.Duration // initialRetryPeriod is the initial wait period between retries.
-	maxRetryPeriod     time.Duration // maxRetryPeriod is the maximum wait period between retries.
-	responseTimeout    time.Duration // responseTimeout is the timeout for the HTTP request.
+	baseServerURL string
+	maxReports    uint
+	timeProvider  timeProvider
+
+	baseRetryPeriod time.Duration // initialRetryPeriod is the initial wait period between retries.
+	maxRetryPeriod  time.Duration // maxRetryPeriod is the maximum wait period between retries.
+	maxAttempts     int           // maxRetries is the maximum number of retry attempts before giving up.
+
+	responseTimeout time.Duration // responseTimeout is the timeout for the HTTP request.
 
 	log *slog.Logger
 }
 
 type options struct {
 	// Private members exported for tests.
-	baseServerURL      string
-	maxReports         uint
-	timeProvider       timeProvider
-	initialRetryPeriod time.Duration
-	maxRetryPeriod     time.Duration
-	responseTimeout    time.Duration
+	baseServerURL string
+	maxReports    uint
+	timeProvider  timeProvider
+
+	baseRetryPeriod time.Duration
+	maxRetryPeriod  time.Duration
+	maxAttempts     int
+
+	responseTimeout time.Duration
 }
 
 var defaultOptions = options{
-	baseServerURL:      "https://metrics.ubuntu.com",
-	maxReports:         constants.MaxReports,
-	timeProvider:       realTimeProvider{},
-	initialRetryPeriod: 30 * time.Second,
-	maxRetryPeriod:     30 * time.Minute,
-	responseTimeout:    10 * time.Second,
+	baseServerURL: "https://metrics.ubuntu.com",
+	maxReports:    constants.MaxReports,
+	timeProvider:  realTimeProvider{},
+
+	// Approximately 5 hours before giving up.
+	baseRetryPeriod: 30 * time.Second,
+	maxRetryPeriod:  30 * time.Minute,
+	maxAttempts:     15,
+
+	responseTimeout: 10 * time.Second,
 }
 
 // Config represents the uploader specific data needed to upload.
@@ -109,11 +119,14 @@ func New(l *slog.Logger, cm Consent, cachePath string, minAge uint, dryRun bool,
 		timeProvider: opts.timeProvider,
 		cacheDir:     cachePath,
 
-		baseServerURL:      opts.baseServerURL,
-		maxReports:         opts.maxReports,
-		initialRetryPeriod: opts.initialRetryPeriod,
-		maxRetryPeriod:     opts.maxRetryPeriod,
-		responseTimeout:    opts.responseTimeout,
+		baseServerURL: opts.baseServerURL,
+		maxReports:    opts.maxReports,
+
+		baseRetryPeriod: opts.baseRetryPeriod,
+		maxRetryPeriod:  opts.maxRetryPeriod,
+		maxAttempts:     opts.maxAttempts,
+
+		responseTimeout: opts.responseTimeout,
 
 		log: l,
 	}, nil

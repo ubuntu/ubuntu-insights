@@ -31,10 +31,17 @@ func WithMaxRetryPeriod(d time.Duration) Options {
 	}
 }
 
-// WithInitialRetryPeriod sets the initial retry period for the uploader, for exponential backoff retries.
-func WithInitialRetryPeriod(d time.Duration) Options {
+// WithBaseRetryPeriod sets the initial retry period for the uploader, for exponential backoff retries.
+func WithBaseRetryPeriod(d time.Duration) Options {
 	return func(o *options) {
-		o.initialRetryPeriod = d
+		o.baseRetryPeriod = d
+	}
+}
+
+// WithMaxAttempts sets the maximum number of attempts for the uploader for exponential backoff retries.
+func WithMaxAttempts(n int) Options {
+	return func(o *options) {
+		o.maxAttempts = n
 	}
 }
 
