@@ -2,6 +2,8 @@ package processor_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"path/filepath"
@@ -9,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
@@ -16,6 +19,8 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/processor"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
+
+var testFixutresDir = filepath.Join("..", "testdata", "fixtures")
 
 func TestProcessFiles(t *testing.T) {
 	t.Parallel()
@@ -61,7 +66,7 @@ func TestProcessFiles(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			fixtureDir := filepath.Join("..", "testdata", "fixtures", tc.app)
+			fixtureDir := filepath.Join(testFixutresDir, tc.app)
 			dst := t.TempDir()
 			require.NoError(t, testutils.CopyDir(t, fixtureDir, filepath.Join(dst, tc.app)), "Setup: failed to copy fixture directory")
 
@@ -73,8 +78,7 @@ func TestProcessFiles(t *testing.T) {
 			if tc.earlyCancel {
 				cancel()
 			}
-			invalidFilesDir := filepath.Join(t.TempDir(), "invalid-files")
-			p := processor.New(dst, invalidFilesDir, &tc.db)
+			p := processor.New(dst, &tc.db)
 			errCh := make(chan error, 1)
 			go func() {
 				defer close(errCh)
@@ -97,19 +101,21 @@ func TestProcessFiles(t *testing.T) {
 			remainingFiles, err := testutils.GetDirHashedContents(t, dst, 4)
 			require.NoError(t, err, "Failed to get directory contents")
 
-			invalidFiles, err := testutils.GetDirHashedContents(t, invalidFilesDir, 4)
-			require.NoError(t, err, "Failed to get invalid directory contents")
+			referenceHashes, err := testutils.GetDirHashedContents(t, filepath.Join(testFixutresDir, tc.app), 3)
+			require.NoError(t, err, "Failed to get reference directory contents")
 
 			results := struct {
 				RemainingFiles      map[string]string
 				UploadedFiles       map[string][]*models.TargetModel
 				UploadedLegacyFiles map[string][]*models.LegacyTargetModel
-				InvalidFiles        map[string]string
+				InvalidReports      map[string][]string
+				ReferenceHashes     map[string]string
 			}{
 				RemainingFiles:      remainingFiles,
 				UploadedFiles:       tc.db.reports,
 				UploadedLegacyFiles: tc.db.legacyReports,
-				InvalidFiles:        invalidFiles,
+				InvalidReports:      tc.db.invalidReports,
+				ReferenceHashes:     referenceHashes,
 			}
 
 			got, err := json.MarshalIndent(results, "", "  ")
@@ -121,9 +127,10 @@ func TestProcessFiles(t *testing.T) {
 }
 
 type mockDBManager struct {
-	uploadErr     error
-	reports       map[string][]*models.TargetModel       // Fake in-memory database
-	legacyReports map[string][]*models.LegacyTargetModel // Fake in-memory legacy reports
+	uploadErr      error
+	reports        map[string][]*models.TargetModel       // Fake in-memory database
+	legacyReports  map[string][]*models.LegacyTargetModel // Fake in-memory legacy reports
+	invalidReports map[string][]string                    // Fake in-memory invalid reports
 }
 
 func (m *mockDBManager) Upload(ctx context.Context, app string, report *models.TargetModel) error {
@@ -152,5 +159,24 @@ func (m *mockDBManager) UploadLegacy(ctx context.Context, distribution, version 
 	// Simulate storing the legacy report in the fake database
 	key := constants.LegacyReportTag + "/" + distribution + "/desktop/" + version
 	m.legacyReports[key] = append(m.legacyReports[key], report)
+	return nil
+}
+
+func (m *mockDBManager) UploadInvalid(ctx context.Context, id, app, rawReport string) error {
+	if m.uploadErr != nil {
+		return m.uploadErr
+	}
+
+	if m.invalidReports == nil {
+		m.invalidReports = make(map[string][]string)
+	}
+
+	if err := uuid.Validate(id); err != nil {
+		return errors.New("invalid UUID provided")
+	}
+
+	rawReport = strings.ReplaceAll(rawReport, "\r\n", "\n") // Fix for Windows line endings
+	reportHash := sha256.Sum256([]byte(rawReport))
+	m.invalidReports[app] = append(m.invalidReports[app], hex.EncodeToString(reportHash[:]))
 	return nil
 }

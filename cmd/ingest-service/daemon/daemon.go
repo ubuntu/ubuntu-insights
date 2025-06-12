@@ -86,7 +86,6 @@ func installRootCmd(app *App) {
 
 	defaultConf := ingest.StaticConfig{
 		ReportsDir: constants.DefaultServiceReportsDir,
-		InvalidDir: constants.DefaultServiceInvalidReportsDir,
 	}
 
 	cmd.PersistentFlags().CountVarP(&app.config.Verbosity, "verbose", "v", "issue INFO (-v), DEBUG (-vv)")
@@ -100,16 +99,11 @@ func installRootCmd(app *App) {
 	cmd.PersistentFlags().StringVarP(&app.config.DBconfig.SSLMode, "db-sslmode", "s", "", "Database SSL mode")
 
 	cmd.PersistentFlags().StringVar(&app.config.Daemon.ReportsDir, "reports-dir", defaultConf.ReportsDir, "Directory to read reports from")
-	cmd.PersistentFlags().StringVar(&app.config.Daemon.InvalidDir, "invalid-dir", defaultConf.InvalidDir, "Directory where invalid or partially invalid reports are stored for manual review")
 
 	cmd.PersistentFlags().StringVarP(&app.config.ConfigPath, "daemon-config", "c", "", "Path to the configuration file")
 
 	if err := cmd.MarkPersistentFlagDirname("reports-dir"); err != nil {
 		panic(fmt.Errorf("failed to mark reports-dir flag as directory: %w", err))
-	}
-
-	if err := cmd.MarkPersistentFlagDirname("invalid-dir"); err != nil {
-		panic(fmt.Sprintf("failed to mark invalid-dir flag as directory: %v", err))
 	}
 
 	if err := cmd.MarkPersistentFlagFilename("daemon-config"); err != nil {

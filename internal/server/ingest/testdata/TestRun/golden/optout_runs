@@ -1,7 +1,8 @@
 {
   "RemainingFiles": {
     "MultiMixed/bad_json.json": "021fb596db81e6d02bf3d2586ee3981fe519f275c0ac9ca76bbcf2ebb4097d96",
-    "MultiMixed/empty.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "MultiMixed/empty.json": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "MultiMixed/empty_json.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
     "MultiMixed/extra_mixed.json": "935ef225ab33b644d937992148d57f391cd3a879e18f480797dcedd72d106741",
     "MultiMixed/extra_sysinfo.json": "3019752035f4572aa3c7f62cba6902c4d73b8a6bdf34d6e09814f9177279764f",
     "MultiMixed/extra_top_level.json": "bb7a277c191d21ef36047460695bcc2a0f5c4b8d0e6d4473f32478b9b1d1e077",
@@ -13,8 +14,9 @@
     "MultiMixed/valid_1.json": "d78f87d37258faf6b9994671421a2cf9e5c2e6b0f9f451f3109d75f5d6e51ad9",
     "SingleInvalid/invalid.json": "b6ce9737e3489feab1a4b2aa2262a4f40ee0bd88e800a4dd9cb0f972ff087616",
     "SingleValid/valid.json": "d78f87d37258faf6b9994671421a2cf9e5c2e6b0f9f451f3109d75f5d6e51ad9",
+    "ubuntu-report/distribution/desktop/version/empty.json": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "ubuntu-report/distribution/desktop/version/ur_basic.json": "c9442a5e7975272706c366e8a579ce2680144e95e1a12d07048f25e84c29f952",
-    "ubuntu-report/distribution/desktop/version/ur_empty.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "ubuntu-report/distribution/desktop/version/ur_empty_json.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
     "ubuntu-report/distribution/desktop/version/ur_invalid.json": "3faabbb97b49518a0898ee96f228bce057622ac97cd7d4ce013ad6eebf8b3b4c",
     "ubuntu-report/distribution/desktop/version/ur_invalid_optout.json": "5b1babf699731b25a001079ba63dd8c7d28979478e6ab33844c149c6cc48fd5e",
     "ubuntu-report/distribution/desktop/version/ur_optout.json": "9251f31b5ffab65ca8786db577eee66e1467f1fc20f5243e8f91c1a510c444af"
@@ -27,5 +29,28 @@
     ]
   },
   "UploadedLegacyFiles": null,
-  "InvalidFiles": {}
+  "InvalidFiles": null,
+  "ReferenceHashes": {
+    "MultiMixed/bad_json.json": "021fb596db81e6d02bf3d2586ee3981fe519f275c0ac9ca76bbcf2ebb4097d96",
+    "MultiMixed/empty.json": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "MultiMixed/empty_json.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "MultiMixed/extra_mixed.json": "935ef225ab33b644d937992148d57f391cd3a879e18f480797dcedd72d106741",
+    "MultiMixed/extra_sysinfo.json": "3019752035f4572aa3c7f62cba6902c4d73b8a6bdf34d6e09814f9177279764f",
+    "MultiMixed/extra_top_level.json": "bb7a277c191d21ef36047460695bcc2a0f5c4b8d0e6d4473f32478b9b1d1e077",
+    "MultiMixed/float_collectionTime.json": "0fc9e0866aa761d5f52697bb03fb6b11ea37c33ad04d2629d44ac8790803c118",
+    "MultiMixed/invalid_1.json": "b6ce9737e3489feab1a4b2aa2262a4f40ee0bd88e800a4dd9cb0f972ff087616",
+    "MultiMixed/invalid_optout.json": "2e2e9f52050d3ab9f34f6bd49586c05b900491fa39a6c520f49bfcdfb864fbb4",
+    "MultiMixed/optout.json": "9251f31b5ffab65ca8786db577eee66e1467f1fc20f5243e8f91c1a510c444af",
+    "MultiMixed/string_collectionTime.json": "e55d3cc42bd05b67f164f5f50bca4bc9744c7c8ac15302b856cae433e2d78ddb",
+    "MultiMixed/valid_1.json": "d78f87d37258faf6b9994671421a2cf9e5c2e6b0f9f451f3109d75f5d6e51ad9",
+    "OptOut/optout.json": "9251f31b5ffab65ca8786db577eee66e1467f1fc20f5243e8f91c1a510c444af",
+    "SingleInvalid/invalid.json": "b6ce9737e3489feab1a4b2aa2262a4f40ee0bd88e800a4dd9cb0f972ff087616",
+    "SingleValid/valid.json": "d78f87d37258faf6b9994671421a2cf9e5c2e6b0f9f451f3109d75f5d6e51ad9",
+    "ubuntu-report/distribution/desktop/version/empty.json": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "ubuntu-report/distribution/desktop/version/ur_basic.json": "c9442a5e7975272706c366e8a579ce2680144e95e1a12d07048f25e84c29f952",
+    "ubuntu-report/distribution/desktop/version/ur_empty_json.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "ubuntu-report/distribution/desktop/version/ur_invalid.json": "3faabbb97b49518a0898ee96f228bce057622ac97cd7d4ce013ad6eebf8b3b4c",
+    "ubuntu-report/distribution/desktop/version/ur_invalid_optout.json": "5b1babf699731b25a001079ba63dd8c7d28979478e6ab33844c149c6cc48fd5e",
+    "ubuntu-report/distribution/desktop/version/ur_optout.json": "9251f31b5ffab65ca8786db577eee66e1467f1fc20f5243e8f91c1a510c444af"
+  }
 }

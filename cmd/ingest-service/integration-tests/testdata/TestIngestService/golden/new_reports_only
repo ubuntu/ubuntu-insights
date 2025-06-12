@@ -22,9 +22,5 @@
       "OptInReports": 0
     }
   },
-  "InvalidFiles": {
-    ".": [
-      "{}"
-    ]
-  }
+  "InvalidReports": null
 }

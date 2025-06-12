@@ -160,6 +160,30 @@ func (db Manager) UploadLegacy(ctx context.Context, distribution, version string
 	})
 }
 
+// UploadInvalid uploads the invalid report to the invalid_reports table as a string.
+func (db Manager) UploadInvalid(ctx context.Context, id, app, rawReport string) error {
+	const table = "invalid_reports"
+
+	return db.upload(ctx, table, func(ctx context.Context, table string) (pgconn.CommandTag, error) {
+		query := fmt.Sprintf(
+			`INSERT INTO %s (
+				report_id,
+				entry_time,
+				app_name,
+				raw_report
+			) VALUES ($1, $2, $3, $4)`,
+			table,
+		)
+
+		return db.dbpool.Exec(ctx, query,
+			id,         // report_id
+			time.Now(), // entry_time
+			app,        // app
+			rawReport,  // raw_report
+		)
+	})
+}
+
 func (db Manager) upload(ctx context.Context, table string, execFn func(context.Context, string) (pgconn.CommandTag, error)) error {
 	if db.dbpool == nil {
 		return fmt.Errorf("database not initialized")

@@ -1,0 +1,35 @@
+{
+  "RemainingFiles": {},
+  "ReportsCount": {
+    "darwin": {
+      "TotalReports": 0,
+      "OptOutReports": 0,
+      "OptInReports": 0
+    },
+    "linux": {
+      "TotalReports": 1,
+      "OptOutReports": 0,
+      "OptInReports": 1
+    },
+    "ubuntu_report": {
+      "TotalReports": 0,
+      "OptOutReports": 0,
+      "OptInReports": 0
+    },
+    "windows": {
+      "TotalReports": 0,
+      "OptOutReports": 0,
+      "OptInReports": 0
+    }
+  },
+  "InvalidReports": [
+    {
+      "AppName": "linux",
+      "RawReport": "a93cb6bdde853f07aadefefaa04ed912913f465f91c924b4c7b408367f39a559"
+    },
+    {
+      "AppName": "ubuntu-report/distribution/desktop/version",
+      "RawReport": "a93cb6bdde853f07aadefefaa04ed912913f465f91c924b4c7b408367f39a559"
+    }
+  ]
+}
