@@ -33,9 +33,9 @@ type Uploader struct {
 	maxReports    uint
 	timeProvider  timeProvider
 
-	initialRetryPeriod time.Duration // initialRetryPeriod is the initial wait period between retries.
-	maxRetryPeriod     time.Duration // maxRetryPeriod is the maximum wait period between retries.
-	maxAttempts        int           // maxRetries is the maximum number of retry attempts before giving up.
+	baseRetryPeriod time.Duration // initialRetryPeriod is the initial wait period between retries.
+	maxRetryPeriod  time.Duration // maxRetryPeriod is the maximum wait period between retries.
+	maxAttempts     int           // maxRetries is the maximum number of retry attempts before giving up.
 
 	responseTimeout time.Duration // responseTimeout is the timeout for the HTTP request.
 
@@ -48,9 +48,9 @@ type options struct {
 	maxReports    uint
 	timeProvider  timeProvider
 
-	initialRetryPeriod time.Duration
-	maxRetryPeriod     time.Duration
-	maxAttempts        int
+	baseRetryPeriod time.Duration
+	maxRetryPeriod  time.Duration
+	maxAttempts     int
 
 	responseTimeout time.Duration
 }
@@ -61,9 +61,9 @@ var defaultOptions = options{
 	timeProvider:  realTimeProvider{},
 
 	// Approximately 5 hours before giving up.
-	initialRetryPeriod: 30 * time.Second,
-	maxRetryPeriod:     30 * time.Minute,
-	maxAttempts:        15,
+	baseRetryPeriod: 30 * time.Second,
+	maxRetryPeriod:  30 * time.Minute,
+	maxAttempts:     15,
 
 	responseTimeout: 10 * time.Second,
 }
@@ -122,9 +122,9 @@ func New(l *slog.Logger, cm Consent, cachePath string, minAge uint, dryRun bool,
 		baseServerURL: opts.baseServerURL,
 		maxReports:    opts.maxReports,
 
-		initialRetryPeriod: opts.initialRetryPeriod,
-		maxRetryPeriod:     opts.maxRetryPeriod,
-		maxAttempts:        opts.maxAttempts,
+		baseRetryPeriod: opts.baseRetryPeriod,
+		maxRetryPeriod:  opts.maxRetryPeriod,
+		maxAttempts:     opts.maxAttempts,
 
 		responseTimeout: opts.responseTimeout,
 

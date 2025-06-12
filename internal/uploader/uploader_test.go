@@ -278,7 +278,7 @@ func TestBackoffUpload(t *testing.T) {
 			mgr, err := uploader.New(slog.Default(), tc.consent, dir, tc.minAge, tc.dryRun,
 				uploader.WithBaseServerURL(url),
 				uploader.WithTimeProvider(uploader.MockTimeProvider{CurrentTime: mockTime}),
-				uploader.WithInitialRetryPeriod(100*time.Millisecond),
+				uploader.WithBaseRetryPeriod(100*time.Millisecond),
 				uploader.WithMaxRetryPeriod(4*time.Second),
 				uploader.WithResponseTimeout(2*time.Second),
 				uploader.WithMaxAttempts(4))
