@@ -14,6 +14,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/internal/server/ingest"
 	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/database"
+	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/processor"
 	"github.com/ubuntu/ubuntu-insights/internal/server/shared/config"
 )
 
@@ -32,7 +33,7 @@ type App struct {
 type appConfig struct {
 	Verbosity  int
 	DBconfig   database.Config
-	Daemon     ingest.StaticConfig // Configuration for the ingest service
+	ReportsDir string // Base directory for reports
 	ConfigPath string
 }
 
@@ -84,10 +85,6 @@ func New() (*App, error) {
 func installRootCmd(app *App) {
 	cmd := app.cmd
 
-	defaultConf := ingest.StaticConfig{
-		ReportsDir: constants.DefaultServiceReportsDir,
-	}
-
 	cmd.PersistentFlags().CountVarP(&app.config.Verbosity, "verbose", "v", "issue INFO (-v), DEBUG (-vv)")
 
 	// Daemon flags
@@ -98,7 +95,7 @@ func installRootCmd(app *App) {
 	cmd.PersistentFlags().StringVarP(&app.config.DBconfig.DBName, "db-name", "n", "", "Database name")
 	cmd.PersistentFlags().StringVarP(&app.config.DBconfig.SSLMode, "db-sslmode", "s", "", "Database SSL mode")
 
-	cmd.PersistentFlags().StringVar(&app.config.Daemon.ReportsDir, "reports-dir", defaultConf.ReportsDir, "Directory to read reports from")
+	cmd.PersistentFlags().StringVar(&app.config.ReportsDir, "reports-dir", constants.DefaultServiceReportsDir, "Base directory to read reports from")
 
 	cmd.PersistentFlags().StringVarP(&app.config.ConfigPath, "daemon-config", "c", "", "Path to the configuration file")
 
@@ -153,11 +150,18 @@ func (a *App) run() (err error) {
 		return fmt.Errorf("failed to get absolute path for config file: %v", err)
 	}
 	cm := config.New(a.config.ConfigPath)
-	a.daemon, err = ingest.New(context.Background(), cm, a.config.DBconfig, a.config.Daemon)
-	close(a.ready)
+	db, err := database.Connect(context.Background(), a.config.DBconfig)
 	if err != nil {
-		return fmt.Errorf("failed to create server: %v", err)
+		return fmt.Errorf("failed to connect to database: %v", err)
 	}
+
+	proc, err := processor.New(a.config.ReportsDir, db)
+	if err != nil {
+		return fmt.Errorf("failed to create report processor: %v", err)
+	}
+
+	a.daemon = ingest.New(context.Background(), cm, proc)
+	close(a.ready)
 
 	return a.daemon.Run()
 }
