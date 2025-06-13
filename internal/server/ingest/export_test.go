@@ -1,27 +1,18 @@
 package ingest
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/database"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
 type (
-	DBManager      = dbManager
 	DConfigManager = dConfigManager
+	DProcessor     = dProcessor
 )
-
-// WithDBConnect sets the database connection function for the ingest service.
-func WithDBConnect(dbConnect func(ctx context.Context, cfg database.Config) (DBManager, error)) Options {
-	return func(o *options) {
-		o.dbConnect = dbConnect
-	}
-}
 
 // CopyTestFixtures copies test fixtures to a temporary directory for testing.
 func CopyTestFixtures(t *testing.T, removeFiles []string) string {
@@ -37,4 +28,16 @@ func CopyTestFixtures(t *testing.T, removeFiles []string) string {
 	}
 
 	return dst
+}
+
+// WorkerNames returns the app names of active workers.
+func (s *Service) WorkerNames() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	names := make([]string, 0, len(s.workers))
+	for name := range s.workers {
+		names = append(names, name)
+	}
+	return names
 }

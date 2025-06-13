@@ -35,26 +35,34 @@ type database interface {
 
 // Processor is responsible for processing reports.
 type Processor struct {
-	baseDir string
-	db      database
+	reportsDir string
+	db         database
 }
 
 // New creates a new Processor instance.
-func New(baseDir string, db database) *Processor {
-	return &Processor{
-		baseDir: baseDir,
-		db:      db,
+func New(reportsDir string, db database) (*Processor, error) {
+	if reportsDir == "" {
+		return nil, fmt.Errorf("reportsDir must be set")
 	}
+
+	if err := os.MkdirAll(reportsDir, 0700); err != nil {
+		return nil, fmt.Errorf("failed to create reportsDir: %v", err)
+	}
+
+	return &Processor{
+		reportsDir: reportsDir,
+		db:         db,
+	}, nil
 }
 
-// Process processes all JSON files in the specified directory, looking within the `baseDir/app` directory.
+// Process processes all JSON files in the specified directory, looking within the `reportsDir/app` directory.
 // It reads each file, unmarshals the JSON data into a FileData struct,
 // and uploads the data to a PostgreSQL database.
 // After processing, it removes the file from the filesystem.
 //
 // It returns an error if a catastrophic failure occurs, excluding database errors.
 func (p Processor) Process(ctx context.Context, app string) error {
-	dir := filepath.Join(p.baseDir, app)
+	dir := filepath.Join(p.reportsDir, app)
 	if err := os.MkdirAll(dir, 0750); err != nil {
 		return fmt.Errorf("failed to create directory %q: %v", dir, err)
 	}

@@ -6,20 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"sync"
 	"time"
-
-	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/database"
-	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/models"
-	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/processor"
 )
 
 // Service represents the ingest service that processes and uploads reports to the database.
 type Service struct {
-	cm         dConfigManager
-	db         dbManager
-	reportsDir string
+	cm   dConfigManager
+	proc dProcessor
 
 	// This context is used to interrupt any action.
 	// It must be the parent of gracefulCtx.
@@ -35,69 +29,23 @@ type Service struct {
 	workerWG sync.WaitGroup
 }
 
-// StaticConfig holds the static configuration for the service.
-type StaticConfig struct {
-	ReportsDir string
-}
-
-type dbManager interface {
-	Upload(ctx context.Context, app string, data *models.TargetModel) error
-	UploadLegacy(ctx context.Context, distribution, version string, report *models.LegacyTargetModel) error
-	UploadInvalid(ctx context.Context, id, app, rawReport string) error
-	Close() error
-}
-
 type dConfigManager interface {
-	Load() error
 	Watch(context.Context) (<-chan struct{}, <-chan error, error)
 	AllowList() []string
 }
 
-type options struct {
-	dbConnect func(ctx context.Context, cfg database.Config) (dbManager, error)
+type dProcessor interface {
+	Process(ctx context.Context, app string) error
 }
 
-// Options is a function that modifies the options for the ingest service.
-type Options func(*options)
-
-// New creates a new ingest service with the provided database manager and connects to the database.
-func New(ctx context.Context, cm dConfigManager, dbConfig database.Config, sc StaticConfig, args ...Options) (*Service, error) {
-	opts := options{
-		dbConnect: func(ctx context.Context, cfg database.Config) (dbManager, error) {
-			return database.Connect(ctx, cfg)
-		},
-	}
-
-	for _, opt := range args {
-		opt(&opts)
-	}
-
-	if sc.ReportsDir == "" {
-		return nil, fmt.Errorf("reportsDir must be set")
-	}
-
-	if err := os.MkdirAll(sc.ReportsDir, 0700); err != nil {
-		return nil, fmt.Errorf("failed to create reportsDir: %v", err)
-	}
-
-	if err := cm.Load(); err != nil {
-		return nil, fmt.Errorf("failed to load configuration: %v", err)
-	}
-
-	dctx, dcancel := context.WithTimeout(ctx, 10*time.Second)
-	defer dcancel()
-	db, err := opts.dbConnect(dctx, dbConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %v", err)
-	}
-
+// New creates a new ingest service with the provided config manager and processor.
+func New(ctx context.Context, cm dConfigManager, proc dProcessor) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	gCtx, gCancel := context.WithCancel(ctx)
 
 	return &Service{
-		cm:         cm,
-		db:         db,
-		reportsDir: sc.ReportsDir,
+		cm:   cm,
+		proc: proc,
 
 		ctx:            ctx,
 		cancel:         cancel,
@@ -107,7 +55,7 @@ func New(ctx context.Context, cm dConfigManager, dbConfig database.Config, sc St
 		mu:       sync.Mutex{},
 		workers:  make(map[string]context.CancelFunc),
 		workerWG: sync.WaitGroup{},
-	}, nil
+	}
 }
 
 // Run starts the ingest service.
@@ -219,8 +167,7 @@ func (s *Service) appWorker(ctx context.Context, app string) {
 			return
 		default:
 			// this will read/process/remove JSON files and call s.db.Upload(...)
-			p := processor.New(s.reportsDir, s.db)
-			if err := p.Process(ctx, app); err != nil {
+			if err := s.proc.Process(ctx, app); err != nil {
 				if errors.Is(err, context.Canceled) {
 					slog.Debug("App worker stopped", "app", app)
 					return // normal shutdown
@@ -232,7 +179,7 @@ func (s *Service) appWorker(ctx context.Context, app string) {
 	}
 }
 
-// Quit stops the ingest service and closes the database connection.
+// Quit stops the ingest service.
 // If force is false, it will block until all workers close.
 //
 // Safe to call multiple times.
@@ -246,9 +193,5 @@ func (s *Service) Quit(force bool) {
 	} else {
 		s.gracefulCancel()
 		s.workerWG.Wait()
-	}
-
-	if s.db != nil {
-		s.db.Close()
 	}
 }

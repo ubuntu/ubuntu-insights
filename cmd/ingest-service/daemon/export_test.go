@@ -28,8 +28,8 @@ func NewForTests(t *testing.T, conf *AppConfig, daeConf *config.Conf, args ...st
 		conf = &AppConfig{}
 	}
 
-	if conf.Daemon.ReportsDir == "" {
-		conf.Daemon.ReportsDir = filepath.Join(t.TempDir(), "reports")
+	if conf.ReportsDir == "" {
+		conf.ReportsDir = filepath.Join(t.TempDir(), "reports")
 	}
 
 	p := GenerateTestConfig(t, conf, daeConf)
