@@ -19,7 +19,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
-var testFixutresDir = filepath.Join("..", "testdata", "fixtures")
+var testFixutresDir = filepath.Join("testdata", "fixtures")
 
 func TestNew(t *testing.T) {
 	t.Parallel()
