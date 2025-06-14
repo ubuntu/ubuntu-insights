@@ -85,15 +85,17 @@ func TestProcessFiles(t *testing.T) {
 			delay: 5 * time.Second,
 		},
 
+		// Error cases
 		"Upload errors do not remove processed files": {
 			app: "MultiMixed",
 			db: mockDBManager{
 				uploadErr: errors.New("requested upload error"),
 			},
 			delay: 5 * time.Second,
+
+			wantErr: processor.ErrDatabaseErrors,
 		},
 
-		// Error cases
 		"Instant context cancellation errors": {
 			app:         "MultiMixed",
 			earlyCancel: true,

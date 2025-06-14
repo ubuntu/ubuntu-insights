@@ -21,6 +21,10 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/models"
 )
 
+// ErrDatabaseErrors is returned when significant database errors occur during processing.
+// It indicates more than a set threshold of report upload attempts have failed due to database issues.
+var ErrDatabaseErrors = errors.New("database errors during processing surpassed threshold")
+
 var (
 	errNoValidData      = errors.New("report file has no valid data")
 	errUnexpectedFields = errors.New("file contains unexpected fields")
@@ -60,8 +64,10 @@ func New(reportsDir string, db database) (*Processor, error) {
 // and uploads the data to a PostgreSQL database.
 // After processing, it removes the file from the filesystem.
 //
-// It returns an error if a catastrophic failure occurs, excluding database errors.
-func (p Processor) Process(ctx context.Context, app string) error {
+// It returns an error if a catastrophic failure occurs, or if the number of failed uploads exceeds a threshold.
+func (p Processor) Process(ctx context.Context, app string) (err error) {
+	const minimumSuccessRate = 0.85
+
 	dir := filepath.Join(p.reportsDir, app)
 	if err := os.MkdirAll(dir, 0750); err != nil {
 		return fmt.Errorf("failed to create directory %q: %v", dir, err)
@@ -72,6 +78,16 @@ func (p Processor) Process(ctx context.Context, app string) error {
 		return fmt.Errorf("failed to get JSON files: %v", err)
 	}
 
+	var (
+		attemptCount = 0
+		failureCount = 0
+	)
+	defer func() {
+		// Check if over threshold of uploads failed
+		if attemptCount > 0 && float64(failureCount)/float64(attemptCount) > (1-minimumSuccessRate) {
+			err = errors.Join(ErrDatabaseErrors, err)
+		}
+	}()
 	legacyApp := isLegacy(app)
 	for _, file := range files {
 		select {
@@ -102,14 +118,25 @@ func (p Processor) Process(ctx context.Context, app string) error {
 			)
 		}
 
+		if procErr == nil || errors.Is(procErr, errUnexpectedFields) || errors.Is(procErr, errUploadFailed) {
+			attemptCount++
+		}
+
 		if errors.Is(procErr, errUploadFailed) {
+			failureCount++
 			continue // If upload fails, skip postProcessing
 		}
 
 		if procErr != nil {
-			if err := p.uploadInvalid(ctx, file, reportID, app); err != nil {
+			uploadAttempted, err := p.uploadInvalid(ctx, file, reportID, app)
+			if err != nil {
 				slog.Warn("Failed to upload invalid report", "file", file, "err", err)
-				// Continue with post-processing and removal of the file
+			}
+			if uploadAttempted {
+				attemptCount++
+				if err != nil {
+					failureCount++
+				}
 			}
 		}
 
@@ -123,6 +150,10 @@ func (p Processor) Process(ctx context.Context, app string) error {
 	return nil
 }
 
+// processAndUpload processes a file, validates the report, and uploads it to the database.
+//
+// If upload fails, it returns errUploadFailed.
+// If any error other than errUnexpectedFields or errUploadFailed is returned, upload was not attempted.
 func processAndUpload[T models.TargetModels](
 	file string,
 	validate func(*T) error,
@@ -269,26 +300,31 @@ func parseLegacyApp(app string) (distribution, version string) {
 
 // uploadInvalid reads the invalid file and uploads its content to the database as a string.
 // It skips empty files or files that contain only whitespace, returning nil in those cases.
-func (p Processor) uploadInvalid(ctx context.Context, file, id, app string) error {
+//
+// If an upload was attempted, even if it failed, it returns true. Otherwise, it returns false.
+func (p Processor) uploadInvalid(ctx context.Context, file, id, app string) (bool, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
-		return fmt.Errorf("failed to re-read invalid file %q: %v", file, err)
+		return false, fmt.Errorf("failed to re-read invalid file %q: %v", file, err)
 	}
 
 	if len(data) == 0 || strings.TrimSpace(string(data)) == "" {
 		slog.Info("Skipping upload of empty invalid file", "file", file)
-		return nil // Skip empty files
+		return false, nil // Skip empty files
 	}
 
 	var jsonFile = make(map[string]any)
 	if err := json.Unmarshal(data, &jsonFile); err == nil {
 		if len(jsonFile) == 0 {
 			slog.Info("Skipping upload of empty JSON file", "file", file)
-			return nil // Skip empty JSON files
+			return false, nil // Skip empty JSON files
 		}
 	}
 
-	return p.db.UploadInvalid(ctx, id, app, string(data))
+	if err := p.db.UploadInvalid(ctx, id, app, string(data)); err != nil {
+		return true, errors.Join(errUploadFailed, err)
+	}
+	return true, nil
 }
 
 func getDecoderConfig(target any) *mapstructure.DecoderConfig {

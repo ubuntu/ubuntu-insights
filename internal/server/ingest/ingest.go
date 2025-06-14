@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -161,20 +162,36 @@ func (s *Service) appWorker(ctx context.Context, app string) {
 	s.workerWG.Add(1)
 	defer s.workerWG.Done()
 
+	baseBackoff := 5 * time.Second
+	maxBackoff := 30 * time.Second
+	backoff := baseBackoff
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
 			// this will read/process/remove JSON files and call s.db.Upload(...)
-			if err := s.proc.Process(ctx, app); err != nil {
-				if errors.Is(err, context.Canceled) {
-					slog.Debug("App worker stopped", "app", app)
-					return // normal shutdown
-				}
-				slog.Error("Failed to process files", "app", app, "err", err)
-				return
+			err := s.proc.Process(ctx, app)
+			if err == nil {
+				backoff = baseBackoff
+				continue
 			}
+			if errors.Is(err, context.Canceled) {
+				slog.Debug("App worker stopped", "app", app)
+				return // normal shutdown
+			}
+
+			// #nosec:G404 We don't need cryptographic randomness.
+			sleep := time.Duration(rand.Int63n(int64(backoff)))
+			select {
+			case <-time.After(sleep):
+			case <-ctx.Done():
+				slog.Debug("App worker stopped during backoff", "app", app)
+				return // normal shutdown
+			}
+
+			backoff = min(backoff*2, maxBackoff)
 		}
 	}
 }
