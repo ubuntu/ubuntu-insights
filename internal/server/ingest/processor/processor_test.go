@@ -19,7 +19,48 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
-var testFixutresDir = filepath.Join("..", "testdata", "fixtures")
+var testFixutresDir = filepath.Join("testdata", "fixtures")
+
+func TestNew(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		baseDir string
+		wantErr bool
+	}{
+		"Valid base directory": {
+			baseDir: t.TempDir(),
+		},
+		"Valid non-existent base directory": {
+			baseDir: filepath.Join(t.TempDir(), "non-existent"),
+		},
+
+		// Error cases
+		"Empty base directory": {
+			baseDir: "",
+			wantErr: true,
+		},
+		"Invalid base directory": {
+			baseDir: string([]byte{0}),
+			wantErr: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			p, err := processor.New(tc.baseDir, nil)
+
+			if tc.wantErr {
+				require.Error(t, err, "Expected error for test case: %s", name)
+				return
+			}
+			require.NoError(t, err, "Unexpected error for test case: %s", name)
+			require.NotNil(t, p, "Processor should not be nil for test case: %s", name)
+		})
+	}
+}
 
 func TestProcessFiles(t *testing.T) {
 	t.Parallel()
@@ -77,14 +118,14 @@ func TestProcessFiles(t *testing.T) {
 			if tc.earlyCancel {
 				cancel()
 			}
-			p := processor.New(dst, &tc.db)
+			p, err := processor.New(dst, &tc.db)
+			require.NoError(t, err, "Setup: Failed to create processor")
 			errCh := make(chan error, 1)
 			go func() {
 				defer close(errCh)
 				errCh <- p.Process(ctx, tc.app)
 			}()
 
-			var err error
 			select {
 			case err = <-errCh:
 			case <-time.After(45 * time.Second):

@@ -107,6 +107,11 @@ func (cm *Manager) Watch(ctx context.Context) (changes <-chan struct{}, errors <
 	changesCh := make(chan struct{}, 1)
 	errorsCh := make(chan error, 1)
 
+	// Initial load of the configuration
+	if err := cm.Load(); err != nil {
+		cm.log.Warn("Error loading initial config", "err", err)
+	}
+
 	go func() {
 		defer close(changesCh)
 		defer close(errorsCh)

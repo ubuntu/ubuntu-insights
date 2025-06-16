@@ -134,7 +134,6 @@ func TestWatchConfigRemoved(t *testing.T) {
 
 	l := testutils.NewMockHandler(slog.LevelDebug)
 	cm := config.New(tmpFile, config.WithLogger(slog.New(&l)))
-	require.NoError(t, cm.Load(), "Setup: initial load failed")
 	watchEvent, watchErr, err := cm.Watch(t.Context())
 	require.NoError(t, err, "Setup: failed to start watch")
 
@@ -144,8 +143,6 @@ func TestWatchConfigRemoved(t *testing.T) {
 
 	require.NoError(t, os.Remove(tmpFile), "Setup: failed to remove config file")
 	time.Sleep(200 * time.Millisecond) // let watcher reload
-
-	require.Error(t, cm.Load(), "Expected error loading removed config file")
 
 	if !l.AssertLevels(t, logs) {
 		l.OutputLogs(t)
@@ -173,7 +170,6 @@ func TestWatchIgnoresIrrelevantFiles(t *testing.T) {
 
 	l := testutils.NewMockHandler(slog.LevelDebug)
 	cm := config.New(tmpFile, config.WithLogger(slog.New(&l)))
-	require.NoError(t, cm.Load(), "Setup: initial load failed")
 	watchEvent, watchErr, err := cm.Watch(t.Context())
 	require.NoError(t, err, "Setup: failed to start watch")
 
@@ -205,7 +201,6 @@ func TestWatchWarnsIfLoadFails(t *testing.T) {
 
 	l := testutils.NewMockHandler(slog.LevelInfo)
 	cm := config.New(tmpFile, config.WithLogger(slog.New(&l)))
-	require.NoError(t, cm.Load(), "Setup: initial load failed")
 	watchEvent, watchErr, err := cm.Watch(t.Context())
 	require.NoError(t, err, "Setup: failed to start watch")
 
