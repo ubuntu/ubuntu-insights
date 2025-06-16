@@ -2,6 +2,8 @@ package ingest_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"path/filepath"
@@ -10,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/internal/constants"
@@ -18,6 +21,8 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/server/ingest/models"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
+
+var testFixturesDir = filepath.Join("testdata", "fixtures")
 
 func TestNew(t *testing.T) {
 	tests := map[string]struct {
@@ -33,7 +38,6 @@ func TestNew(t *testing.T) {
 			dbConfig: database.Config{},
 			sc: ingest.StaticConfig{
 				ReportsDir: t.TempDir(),
-				InvalidDir: t.TempDir(),
 			},
 			wantErr: false,
 		},
@@ -44,7 +48,6 @@ func TestNew(t *testing.T) {
 			dbConfig: database.Config{},
 			sc: ingest.StaticConfig{
 				ReportsDir: t.TempDir(),
-				InvalidDir: t.TempDir(),
 			},
 			wantErr: true,
 		},
@@ -53,59 +56,12 @@ func TestNew(t *testing.T) {
 			dbConfig: database.Config{},
 			sc: ingest.StaticConfig{
 				ReportsDir: t.TempDir(),
-				InvalidDir: t.TempDir(),
 			},
 			options: []ingest.Options{
 				ingest.WithDBConnect(func(ctx context.Context, cfg database.Config) (ingest.DBManager, error) {
 					return nil, errors.New("db connect error")
 				}),
 			},
-			wantErr: true,
-		},
-		"Empty invalidDir": {
-			cm:       &mockConfigManager{loadErr: nil},
-			dbConfig: database.Config{},
-			sc: ingest.StaticConfig{
-				ReportsDir: t.TempDir(),
-			},
-			wantErr: true,
-		},
-		"Empty reportsDir": {
-			cm:       &mockConfigManager{loadErr: nil},
-			dbConfig: database.Config{},
-			sc: ingest.StaticConfig{
-				InvalidDir: t.TempDir(),
-			},
-			wantErr: true,
-		},
-		"Invalid dir reportsDir path": {
-			cm:       &mockConfigManager{loadErr: nil},
-			dbConfig: database.Config{},
-			sc: ingest.StaticConfig{
-				ReportsDir: "invalid_path\x00\\CON",
-				InvalidDir: t.TempDir(),
-			},
-			wantErr: true,
-		},
-		"Invalid dir invalidDir path": {
-			cm:       &mockConfigManager{loadErr: nil},
-			dbConfig: database.Config{},
-			sc: ingest.StaticConfig{
-				ReportsDir: t.TempDir(),
-				InvalidDir: "invalid_path\x00\\CON",
-			},
-			wantErr: true,
-		},
-		"Equal reportsDir and invalidDir": {
-			cm:       &mockConfigManager{loadErr: nil},
-			dbConfig: database.Config{},
-			sc: func() ingest.StaticConfig {
-				tempDir := t.TempDir()
-				return ingest.StaticConfig{
-					ReportsDir: tempDir,
-					InvalidDir: tempDir,
-				}
-			}(),
 			wantErr: true,
 		},
 	}
@@ -207,7 +163,7 @@ func TestRun(t *testing.T) {
 
 			if tc.reAddFiles {
 				// Re-add files to the directory
-				err := testutils.CopyDir(t, filepath.Join("testdata", "fixtures"), sc.ReportsDir)
+				err := testutils.CopyDir(t, testFixturesDir, sc.ReportsDir)
 				require.NoError(t, err, "Setup: failed to re-copy test fixtures")
 
 				waitForUploaderToBeIdle(t, tc.dbConfig, 8*time.Second, 20*time.Second)
@@ -283,7 +239,7 @@ func TestRunRemoveApp(t *testing.T) {
 
 	runWait(t, runErr, false, 10*time.Second)
 
-	err := testutils.CopyDir(t, filepath.Join("testdata", "fixtures"), sc.ReportsDir)
+	err := testutils.CopyDir(t, testFixturesDir, sc.ReportsDir)
 	require.NoError(t, err, "Setup: failed to re-copy test fixtures")
 	waitForUploaderToBeIdle(t, db, 4*time.Second, 20*time.Second)
 	runWait(t, runErr, false, 500*time.Millisecond)
@@ -381,6 +337,7 @@ type mockDBManager struct {
 	uploadErr      error
 	reports        map[string][]*models.TargetModel       // Fake in-memory database
 	legacyReports  map[string][]*models.LegacyTargetModel // Fake in-memory legacy reports
+	invalidReports map[string][]string                    // Fake in-memory invalid reports
 	mu             sync.Mutex                             // Mutex to protect access to the data map
 	lastUploadTime time.Time                              // Time of the last upload
 }
@@ -418,6 +375,29 @@ func (m *mockDBManager) UploadLegacy(ctx context.Context, distribution, version 
 	// Simulate storing the legacy report in the fake database
 	key := constants.LegacyReportTag + "/" + distribution + "/desktop/" + version
 	m.legacyReports[key] = append(m.legacyReports[key], report)
+	m.lastUploadTime = time.Now()
+	return nil
+}
+
+func (m *mockDBManager) UploadInvalid(ctx context.Context, id, app, rawReport string) error {
+	if m.uploadErr != nil {
+		return m.uploadErr
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.invalidReports == nil {
+		m.invalidReports = make(map[string][]string)
+	}
+
+	if err := uuid.Validate(id); err != nil {
+		return errors.New("invalid UUID format")
+	}
+
+	// Simulate storing the invalid report in the fake database
+	rawReport = strings.ReplaceAll(rawReport, "\r\n", "\n") // Fix for Windows line endings
+	reportHash := sha256.Sum256([]byte(rawReport))
+	m.invalidReports[app] = append(m.invalidReports[app], hex.EncodeToString(reportHash[:]))
 	m.lastUploadTime = time.Now()
 	return nil
 }
@@ -510,19 +490,21 @@ func checkRunResults(t *testing.T, db *mockDBManager, sc ingest.StaticConfig) {
 	remainingFiles, err := testutils.GetDirHashedContents(t, sc.ReportsDir, 4)
 	require.NoError(t, err, "Failed to get directory contents")
 
-	invalidFiles, err := testutils.GetDirHashedContents(t, sc.InvalidDir, 4)
-	require.NoError(t, err, "Failed to get invalidDir contents")
+	referenceHashes, err := testutils.GetDirHashedContents(t, testFixturesDir, 4)
+	require.NoError(t, err, "Failed to get reference directory contents")
 
 	results := struct {
 		RemainingFiles      map[string]string
 		UploadedFiles       map[string][]*models.TargetModel
 		UploadedLegacyFiles map[string][]*models.LegacyTargetModel
-		InvalidFiles        map[string]string
+		InvalidFiles        map[string][]string
+		ReferenceHashes     map[string]string
 	}{
 		RemainingFiles:      remainingFiles,
 		UploadedFiles:       db.reports,
 		UploadedLegacyFiles: db.legacyReports,
-		InvalidFiles:        invalidFiles,
+		InvalidFiles:        db.invalidReports,
+		ReferenceHashes:     referenceHashes,
 	}
 
 	got, err := json.MarshalIndent(results, "", "  ")
@@ -551,10 +533,6 @@ func waitForUploaderToBeIdle(t *testing.T, db *mockDBManager, idleDuration time.
 // newIngestService is a helper function which creates a new ingest service for testing purposes.
 func newIngestService(t *testing.T, cm *mockConfigManager, db *mockDBManager, sc *ingest.StaticConfig) (s *ingest.Service) {
 	t.Helper()
-
-	if sc.InvalidDir == "" {
-		sc.InvalidDir = filepath.Join(t.TempDir(), constants.DefaultServiceInvalidReportsFolder)
-	}
 
 	opts := []ingest.Options{
 		ingest.WithDBConnect(func(ctx context.Context, cfg database.Config) (ingest.DBManager, error) {

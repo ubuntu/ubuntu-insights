@@ -3,6 +3,8 @@ package ingest_test
 import (
 	"bufio"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"os"
@@ -108,12 +110,33 @@ func TestIngestService(t *testing.T) {
 				{app: "ubuntu-report/distribution/desktop/version", reportType: validOptOut, count: 3},
 				{app: "ubuntu-report/distribution/desktop/version", reportType: invalidOptOut, count: 2},
 				{app: "ubuntu-report/distribution/desktop/version", reportType: empty, count: 1},
+				{app: "ubuntu-report/distribution/desktop/bad-version", reportType: ubuntuReport, count: 1},
 			},
 			postReports: []reports{
 				{app: "ubuntu-report/distribution/desktop/unknown-version", reportType: ubuntuReport, count: 1},
 				{app: "ubuntu-report/unknown-distribution/desktop/version", reportType: ubuntuReport, count: 1},
 				{app: "ubuntu-report/distribution/desktop/version", reportType: ubuntuReport, count: 2},
 				{app: "ubuntu-report/distribution/desktop/version", reportType: validOptOut, count: 1},
+				{app: "ubuntu-report/distribution/desktop/version", reportType: validV1, count: 1, delayAfter: 2},
+			},
+		},
+		"Reports with unexpected fields": {
+			validApps: []string{"linux", "windows", "darwin", "ubuntu-report/distribution/desktop/version"},
+			preReports: []reports{
+				{app: "linux", reportType: validV1, count: 1},
+				{app: "linux", reportType: invalidV1ExtraRoot, count: 1},
+				{app: "linux", reportType: invalidV1ExtraSysInfo, count: 1},
+				{app: "linux", reportType: invalidV1ExtraFields, count: 1},
+				{app: "ubuntu-report/distribution/desktop/version", reportType: invalidOptOut, count: 1},
+				{app: "windows", reportType: invalidOptOut, count: 1},
+			},
+		},
+		"Reports with invalid JSON": {
+			validApps: []string{"linux", "windows", "darwin", "ubuntu-report/distribution/desktop/version"},
+			preReports: []reports{
+				{app: "linux", reportType: validV1, count: 1},
+				{app: "linux", reportType: invalidJSON, count: 1},
+				{app: "ubuntu-report/distribution/desktop/version", reportType: invalidJSON, count: 1},
 			},
 		},
 	}
@@ -150,7 +173,6 @@ func TestIngestService(t *testing.T) {
 				AllowedList: tc.validApps,
 			}
 			configPath := generateTestDaemonConfig(t, daeConf)
-			invalidDir := filepath.Join(t.TempDir(), "invalid-dir")
 
 			ctx, cancel := context.WithCancel(t.Context())
 			// #nosec:G204 - we control the command arguments in tests
@@ -165,7 +187,6 @@ func TestIngestService(t *testing.T) {
 					"--db-password", dbContainer.Password,
 					"--db-name", dbContainer.Name,
 					"--reports-dir", dst,
-					"--invalid-dir", invalidDir,
 					"-vv")
 
 				// Redirect command output to the pipe
@@ -213,11 +234,6 @@ func TestIngestService(t *testing.T) {
 			// Process remaining files
 			remainingFiles := processDirectoryContents(dirContents)
 
-			// Get and process invalid files
-			invalidDirContents, err := testutils.GetDirContents(t, invalidDir, 4)
-			require.NoError(t, err, "Failed to get invalidDir contents")
-			invalidFiles := processDirectoryContents(invalidDirContents)
-
 			// Check the database for opt-out counts
 			type reportCount struct {
 				TotalReports  int
@@ -226,7 +242,7 @@ func TestIngestService(t *testing.T) {
 			}
 
 			reportsCounts := make(map[string]reportCount)
-			for _, app := range listTables(t, dbContainer.DSN) {
+			for _, app := range listTables(t, dbContainer.DSN, "schema_migrations", "invalid_reports") {
 				totalReports, optOutReports, optInReports := checkOptOutCounts(t, dbContainer.DSN, app)
 				reportsCounts[app] = reportCount{
 					TotalReports:  totalReports,
@@ -241,14 +257,16 @@ func TestIngestService(t *testing.T) {
 				validateOptOutEntries(t, dbContainer.DSN, app, fields...)
 			}
 
+			invalidReports := queryInvalidReports(t, dbContainer.DSN)
+
 			results := struct {
 				RemainingFiles map[string][]string
 				ReportsCount   map[string]reportCount
-				InvalidFiles   map[string][]string
+				InvalidReports []invalidReportEntry
 			}{
 				RemainingFiles: remainingFiles,
 				ReportsCount:   reportsCounts,
-				InvalidFiles:   invalidFiles,
+				InvalidReports: invalidReports,
 			}
 
 			got, err := json.MarshalIndent(results, "", "  ")
@@ -271,8 +289,14 @@ func generateTestDaemonConfig(t *testing.T, daeConf *config.Conf) string {
 	return daeConfPath
 }
 
-func listTables(t *testing.T, dsn string) []string {
+// listTables lists all the tables, excluding a blacklist.
+func listTables(t *testing.T, dsn string, blacklist ...string) []string {
 	t.Helper()
+
+	blacklistMap := make(map[string]bool)
+	for _, table := range blacklist {
+		blacklistMap[table] = true
+	}
 
 	conn, err := pgx.Connect(t.Context(), dsn)
 	require.NoError(t, err, "failed to connect to the database")
@@ -284,8 +308,7 @@ func listTables(t *testing.T, dsn string) []string {
         SELECT table_name
         FROM information_schema.tables
         WHERE table_schema = 'public'
-          AND table_type = 'BASE TABLE'
-          AND table_name NOT IN ('schema_migrations');`
+          AND table_type = 'BASE TABLE';`
 
 	rows, err := conn.Query(t.Context(), query)
 	require.NoError(t, err, "failed to execute query")
@@ -294,7 +317,9 @@ func listTables(t *testing.T, dsn string) []string {
 	for rows.Next() {
 		var tableName string
 		require.NoError(t, rows.Scan(&tableName), "failed to scan table name")
-		tables = append(tables, tableName)
+		if !blacklistMap[tableName] {
+			tables = append(tables, tableName)
+		}
 	}
 
 	require.NoError(t, rows.Err(), "error occurred during rows iteration")
@@ -365,12 +390,55 @@ func validateOptOutEntries(t *testing.T, dsn, tableName string, fields ...string
 	assert.Equal(t, 0, optInViolations, "Opt-in reports should not have any consistency violations")
 }
 
+type invalidReportEntry struct {
+	AppName   string
+	RawReport string
+}
+
+// getInvalidReports queries the invalid_reports table and returns a sorted list of entries
+// including the app_name and a hash of raw_report.
+func queryInvalidReports(t *testing.T, dsn string) []invalidReportEntry {
+	t.Helper()
+
+	conn, err := pgx.Connect(t.Context(), dsn)
+	require.NoError(t, err, "failed to connect to the database")
+	defer func() {
+		require.NoError(t, conn.Close(t.Context()), "failed to close the database connection")
+	}()
+
+	query := `
+		SELECT app_name, raw_report
+		FROM invalid_reports
+		ORDER BY app_name, raw_report;
+	`
+	rows, err := conn.Query(t.Context(), query)
+	require.NoError(t, err, "failed to execute query")
+
+	var entries []invalidReportEntry
+	for rows.Next() {
+		var appName, rawReport string
+		require.NoError(t, rows.Scan(&appName, &rawReport), "failed to scan row")
+		hash := sha256.Sum256([]byte(rawReport))
+		entries = append(entries, invalidReportEntry{
+			AppName:   appName,
+			RawReport: hex.EncodeToString(hash[:]),
+		})
+	}
+	require.NoError(t, rows.Err(), "error occurred during rows iteration")
+
+	return entries
+}
+
 type report int
 
 const (
 	empty report = iota
 	validV1
 	validOptOut
+	invalidJSON
+	invalidV1ExtraRoot
+	invalidV1ExtraSysInfo
+	invalidV1ExtraFields
 	invalidOptOut
 	ubuntuReport
 )
@@ -492,6 +560,325 @@ func makeReport(t *testing.T, reportType report, count int, reportDir string, at
 {
     "OptOut": true
 }`
+	case invalidJSON:
+		rep = `{
+this is invalid JSON`
+	case invalidV1ExtraRoot:
+		rep = `
+		{
+			"insightsVersion": "0.0.1~ppa5",
+			"collectionTime": 1747752692,
+			"systemInfo": {
+				"hardware": {
+					"product": {
+						"family": "My Product Family",
+						"name": "My Product Name",
+						"vendor": "My Product Vendor"
+					},
+					"cpu": {
+						"name": "9 1200SX",
+						"vendor": "Authentic",
+						"architecture": "x86_64",
+						"cpus": 16,
+						"sockets": 1,
+						"coresPerSocket": 8,
+						"threadsPerCore": 2
+					},
+					"gpus": [
+						{
+							"device": "0x0294",
+							"vendor": "0x10df",
+							"driver": "gpu"
+						},
+						{
+							"device": "0x03ec",
+							"vendor": "0x1003",
+							"driver": "gpu"
+						}
+					],
+					"memory": {
+						"size": 23247
+					},
+					"disks": [
+						{
+							"size": 1887436,
+							"type": "disk",
+							"children": [
+								{
+									"size": 750,
+									"type": "part"
+								},
+								{
+									"size": 260,
+									"type": "part"
+								},
+								{
+									"size": 16,
+									"type": "part"
+								},
+								{
+									"size": 1887436,
+									"type": "part"
+								},
+								{
+									"size": 869,
+									"type": "part"
+								},
+								{
+									"size": 54988,
+									"type": "part"
+								}
+							]
+						}
+					],
+					"screens": [
+						{
+							"size": "600mm x 340mm",
+							"resolution": "2560x1440",
+							"refreshRate": "143.83"
+						},
+						{
+							"size": "300mm x 190mm",
+							"resolution": "1704x1065",
+							"refreshRate": "119.91"
+						}
+					]
+				},
+				"software": {
+					"os": {
+						"family": "linux",
+						"distribution": "Ubuntu",
+						"version": "24.04"
+					},
+					"timezone": "EDT",
+					"language": "en_US",
+					"bios": {
+						"vendor": "Bios Vendor",
+						"version": "Bios Version"
+					}
+				},
+				"platform": {
+					"desktop": {
+						"desktopEnvironment": "ubuntu:GNOME",
+						"sessionName": "ubuntu",
+						"sessionType": "wayland"
+					},
+					"proAttached": true
+				}
+			},
+			"extraRoot": "This is an extra root field that should not be here"
+		}`
+	case invalidV1ExtraSysInfo:
+		rep = `
+		{
+			"insightsVersion": "0.0.1~ppa5",
+			"collectionTime": 1747752692,
+			"systemInfo": {
+				"hardware": {
+					"product": {
+						"family": "My Product Family",
+						"name": "My Product Name",
+						"vendor": "My Product Vendor"
+					},
+					"cpu": {
+						"name": "9 1200SX",
+						"vendor": "Authentic",
+						"architecture": "x86_64",
+						"cpus": 16,
+						"sockets": 1,
+						"coresPerSocket": 8,
+						"threadsPerCore": 2
+					},
+					"gpus": [
+						{
+							"device": "0x0294",
+							"vendor": "0x10df",
+							"driver": "gpu"
+						},
+						{
+							"device": "0x03ec",
+							"vendor": "0x1003",
+							"driver": "gpu"
+						}
+					],
+					"memory": {
+						"size": 23247
+					},
+					"disks": [
+						{
+							"size": 1887436,
+							"type": "disk",
+							"children": [
+								{
+									"size": 750,
+									"type": "part"
+								},
+								{
+									"size": 260,
+									"type": "part"
+								},
+								{
+									"size": 16,
+									"type": "part"
+								},
+								{
+									"size": 1887436,
+									"type": "part"
+								},
+								{
+									"size": 869,
+									"type": "part"
+								},
+								{
+									"size": 54988,
+									"type": "part"
+								}
+							]
+						}
+					],
+					"screens": [
+						{
+							"size": "600mm x 340mm",
+							"resolution": "2560x1440",
+							"refreshRate": "143.83"
+						},
+						{
+							"size": "300mm x 190mm",
+							"resolution": "1704x1065",
+							"refreshRate": "119.91"
+						}
+					]
+				},
+				"software": {
+					"os": {
+						"family": "linux",
+						"distribution": "Ubuntu",
+						"version": "24.04"
+					},
+					"timezone": "EDT",
+					"language": "en_US",
+					"bios": {
+						"vendor": "Bios Vendor",
+						"version": "Bios Version"
+					}
+				},
+				"platform": {
+					"desktop": {
+						"desktopEnvironment": "ubuntu:GNOME",
+						"sessionName": "ubuntu",
+						"sessionType": "wayland"
+					},
+					"proAttached": true
+				},
+				"extraSysInfo": "This is an extra sysInfo field that should not be here"
+			}
+		}`
+	case invalidV1ExtraFields:
+		rep = `
+		{
+			"insightsVersion": "0.0.1~ppa5",
+			"collectionTime": 1747752692,
+			"systemInfo": {
+				"hardware": {
+					"product": {
+						"family": "My Product Family",
+						"name": "My Product Name",
+						"vendor": "My Product Vendor"
+					},
+					"cpu": {
+						"name": "9 1200SX",
+						"vendor": "Authentic",
+						"architecture": "x86_64",
+						"cpus": 16,
+						"sockets": 1,
+						"coresPerSocket": 8,
+						"threadsPerCore": 2
+					},
+					"gpus": [
+						{
+							"device": "0x0294",
+							"vendor": "0x10df",
+							"driver": "gpu"
+						},
+						{
+							"device": "0x03ec",
+							"vendor": "0x1003",
+							"driver": "gpu"
+						}
+					],
+					"memory": {
+						"size": 23247
+					},
+					"disks": [
+						{
+							"size": 1887436,
+							"type": "disk",
+							"children": [
+								{
+									"size": 750,
+									"type": "part"
+								},
+								{
+									"size": 260,
+									"type": "part"
+								},
+								{
+									"size": 16,
+									"type": "part"
+								},
+								{
+									"size": 1887436,
+									"type": "part"
+								},
+								{
+									"size": 869,
+									"type": "part"
+								},
+								{
+									"size": 54988,
+									"type": "part"
+								}
+							]
+						}
+					],
+					"screens": [
+						{
+							"size": "600mm x 340mm",
+							"resolution": "2560x1440",
+							"refreshRate": "143.83"
+						},
+						{
+							"size": "300mm x 190mm",
+							"resolution": "1704x1065",
+							"refreshRate": "119.91"
+						}
+					]
+				},
+				"software": {
+					"os": {
+						"family": "linux",
+						"distribution": "Ubuntu",
+						"version": "24.04"
+					},
+					"timezone": "EDT",
+					"language": "en_US",
+					"bios": {
+						"vendor": "Bios Vendor",
+						"version": "Bios Version"
+					}
+				},
+				"platform": {
+					"desktop": {
+						"desktopEnvironment": "ubuntu:GNOME",
+						"sessionName": "ubuntu",
+						"sessionType": "wayland"
+					},
+					"proAttached": true
+				},
+				"extraField1": "This is an extra field that should not be here",
+			},
+			"extraField2": "This is another extra field that should not be here"
+		}`
 	case invalidOptOut:
 		rep = `
 {
