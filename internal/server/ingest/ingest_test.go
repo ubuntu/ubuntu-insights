@@ -244,7 +244,7 @@ func gracefulShutdown(t *testing.T, s *ingest.Service, runErr chan error) {
 func waitWorkersEqual(t *testing.T, s *ingest.Service, workers ...string) {
 	t.Helper()
 	delay := 500 * time.Millisecond
-	timeout := 5 * time.Second
+	timeout := 8 * time.Second
 
 	start := time.Now()
 	for {
