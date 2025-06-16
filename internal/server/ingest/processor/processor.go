@@ -32,8 +32,8 @@ var (
 )
 
 type database interface {
-	Upload(ctx context.Context, app string, report *models.TargetModel) error
-	UploadLegacy(ctx context.Context, distribution, version string, report *models.LegacyTargetModel) error
+	Upload(ctx context.Context, id, app string, report *models.TargetModel) error
+	UploadLegacy(ctx context.Context, id, distribution, version string, report *models.LegacyTargetModel) error
 	UploadInvalid(ctx context.Context, id, app, rawReport string) error
 }
 
@@ -105,7 +105,7 @@ func (p Processor) Process(ctx context.Context, app string) (err error) {
 				file,
 				validateLegacyReport,
 				func(report *models.LegacyTargetModel) error {
-					return p.db.UploadLegacy(ctx, distribution, version, report)
+					return p.db.UploadLegacy(ctx, reportID, distribution, version, report)
 				},
 			)
 		} else {
@@ -113,7 +113,7 @@ func (p Processor) Process(ctx context.Context, app string) (err error) {
 				file,
 				validateReport,
 				func(report *models.TargetModel) error {
-					return p.db.Upload(ctx, app, report)
+					return p.db.Upload(ctx, reportID, app, report)
 				},
 			)
 		}
@@ -130,7 +130,7 @@ func (p Processor) Process(ctx context.Context, app string) (err error) {
 		if procErr != nil {
 			uploadAttempted, err := p.uploadInvalid(ctx, file, reportID, app)
 			if err != nil {
-				slog.Warn("Failed to upload invalid report", "file", file, "err", err)
+				slog.Warn("Failed to upload invalid report", "file", file, "id", reportID, "err", err)
 			}
 			if uploadAttempted {
 				attemptCount++
@@ -141,10 +141,10 @@ func (p Processor) Process(ctx context.Context, app string) (err error) {
 		}
 
 		if err := os.Remove(file); err != nil {
-			slog.Warn("Failed to remove file after processing", "file", file, "err", err)
+			slog.Warn("Failed to remove file after processing", "file", file, "id", reportID, "err", err)
 		}
 
-		slog.Info("Finished processing file", "file", file)
+		slog.Info("Finished processing file", "file", file, "id", reportID)
 	}
 
 	return nil
