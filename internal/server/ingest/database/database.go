@@ -69,25 +69,28 @@ func Connect(ctx context.Context, cfg Config, args ...Options) (*Manager, error)
 }
 
 // Upload uploads the provided TargetModel to the PostgreSQL database.
-func (db Manager) Upload(ctx context.Context, app string, report *models.TargetModel) error {
+func (db Manager) Upload(ctx context.Context, id, app string, report *models.TargetModel) error {
 	return db.upload(ctx, app, func(ctx context.Context, table string) (pgconn.CommandTag, error) {
 		if report.OptOut {
 			query := fmt.Sprintf(
 				`INSERT INTO %s (
+					report_id,
 					entry_time,
 					optout
-				) VALUES ($1, $2)`,
+				) VALUES ($1, $2, $3)`,
 				table,
 			)
 			return db.dbpool.Exec(
 				ctx,
 				query,
+				id,            // report_id
 				time.Now(),    // entry_time
 				report.OptOut, // optout
 			)
 		}
 		query := fmt.Sprintf(
 			`INSERT INTO %s (
+				report_id,
 				entry_time, 
 				insights_version, 
 				collection_time,
@@ -96,13 +99,14 @@ func (db Manager) Upload(ctx context.Context, app string, report *models.TargetM
 				platform, 
 				source_metrics,
 				optout 
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 			table,
 		)
 
 		return db.dbpool.Exec(
 			ctx,
 			query,
+			id,                                  // report_id
 			time.Now(),                          // entry_time
 			report.InsightsVersion,              // insights_version
 			time.Unix(report.CollectionTime, 0), // collection_time
@@ -116,22 +120,24 @@ func (db Manager) Upload(ctx context.Context, app string, report *models.TargetM
 }
 
 // UploadLegacy uploads the provided legacy report to the PostgreSQL database.
-func (db Manager) UploadLegacy(ctx context.Context, distribution, version string, report *models.LegacyTargetModel) error {
+func (db Manager) UploadLegacy(ctx context.Context, id, distribution, version string, report *models.LegacyTargetModel) error {
 	const table = "ubuntu_report"
 
 	return db.upload(ctx, table, func(ctx context.Context, table string) (pgconn.CommandTag, error) {
 		if report.OptOut {
 			query := fmt.Sprintf(
 				`INSERT INTO %s (
+					report_id,
 					entry_time,
 					distribution,
 					version,
 					optout
-				) VALUES ($1, $2, $3, $4)`,
+				) VALUES ($1, $2, $3, $4, $5)`,
 				table,
 			)
 
 			return db.dbpool.Exec(ctx, query,
+				id,            // report_id
 				time.Now(),    // entry_time
 				distribution,  // distribution
 				version,       // version
@@ -141,16 +147,18 @@ func (db Manager) UploadLegacy(ctx context.Context, distribution, version string
 
 		query := fmt.Sprintf(
 			`INSERT INTO %s (
+					report_id,
 					entry_time, 
 					distribution,
 					version, 
 					report,
 					optout
-				) VALUES ($1, $2, $3, $4, $5)`,
+				) VALUES ($1, $2, $3, $4, $5, $6)`,
 			table,
 		)
 
 		return db.dbpool.Exec(ctx, query,
+			id,            // report_id
 			time.Now(),    // entry_time
 			distribution,  // distribution
 			version,       // version

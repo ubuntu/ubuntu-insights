@@ -57,13 +57,14 @@ func TestUpload(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
+		id         string
 		data       *models.TargetModel
 		earlyClose bool
 		execErr    error
 
 		wantErr bool
 	}{
-		"successful exec": {},
+		"successful exec": {id: uuid.NewString()},
 		"opt-out successful exec": {
 			data: &models.TargetModel{
 				OptOut: true,
@@ -101,7 +102,7 @@ func TestUpload(t *testing.T) {
 				tc.data = &models.TargetModel{}
 			}
 
-			err = mgr.Upload(t.Context(), "test", tc.data)
+			err = mgr.Upload(t.Context(), tc.id, "test", tc.data)
 			if tc.wantErr {
 				require.Error(t, err, "Upload() error")
 				return
@@ -115,13 +116,14 @@ func TestUploadLegacy(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
+		id         string
 		report     *models.LegacyTargetModel
 		earlyClose bool
 		execErr    error
 
 		wantErr bool
 	}{
-		"successful exec": {},
+		"successful exec": {id: uuid.NewString()},
 		"opt-out successful exec": {
 			report: &models.LegacyTargetModel{
 				OptOut: true,
@@ -158,7 +160,7 @@ func TestUploadLegacy(t *testing.T) {
 				tc.report = &models.LegacyTargetModel{}
 			}
 
-			err = mgr.UploadLegacy(t.Context(), "test-distribution", "test-version", tc.report)
+			err = mgr.UploadLegacy(t.Context(), tc.id, "test-distribution", "test-version", tc.report)
 			if tc.wantErr {
 				require.Error(t, err, "Expected error on UploadLegacy() but got none")
 				return

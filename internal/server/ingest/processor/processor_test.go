@@ -175,7 +175,7 @@ type mockDBManager struct {
 	invalidReports map[string][]string                    // Fake in-memory invalid reports
 }
 
-func (m *mockDBManager) Upload(ctx context.Context, app string, report *models.TargetModel) error {
+func (m *mockDBManager) Upload(ctx context.Context, id, app string, report *models.TargetModel) error {
 	if m.uploadErr != nil {
 		return m.uploadErr
 	}
@@ -184,18 +184,26 @@ func (m *mockDBManager) Upload(ctx context.Context, app string, report *models.T
 		m.reports = make(map[string][]*models.TargetModel)
 	}
 
+	if err := uuid.Validate(id); err != nil {
+		return errors.New("invalid UUID provided")
+	}
+
 	// Simulate storing the data in the fake database
 	m.reports[app] = append(m.reports[app], report)
 	return nil
 }
 
-func (m *mockDBManager) UploadLegacy(ctx context.Context, distribution, version string, report *models.LegacyTargetModel) error {
+func (m *mockDBManager) UploadLegacy(ctx context.Context, id, distribution, version string, report *models.LegacyTargetModel) error {
 	if m.uploadErr != nil {
 		return m.uploadErr
 	}
 
 	if m.legacyReports == nil {
 		m.legacyReports = make(map[string][]*models.LegacyTargetModel)
+	}
+
+	if err := uuid.Validate(id); err != nil {
+		return errors.New("invalid UUID provided")
 	}
 
 	// Simulate storing the legacy report in the fake database
