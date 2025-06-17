@@ -22,7 +22,7 @@ import (
 
 var (
 	// ErrInvalidPeriod is returned when a function requiring a period, received an invalid, period that isn't a non-negative integer.
-	ErrInvalidPeriod = errors.New("invalid period, period should be a positive integer")
+	ErrInvalidPeriod = errors.New("invalid period, period should be a non-negative integer")
 
 	// ErrInvalidReportExt is returned when a report file has an invalid extension.
 	ErrInvalidReportExt = errors.New("invalid report file extension")
@@ -131,10 +131,16 @@ func getReportTime(path string) (int64, error) {
 }
 
 // GetPeriodStart returns the start of the period window for a given period in seconds.
+// If period is 0, it returns the current time as a Unix timestamp.
 func GetPeriodStart(period int, t time.Time) (int64, error) {
-	if period <= 0 {
+	if period < 0 {
 		return 0, ErrInvalidPeriod
 	}
+
+	if period == 0 {
+		return t.Unix(), nil // If period is 0, return the current time as
+	}
+
 	return t.Unix() - (t.Unix() % int64(period)), nil
 }
 
@@ -143,7 +149,13 @@ func GetPeriodStart(period int, t time.Time) (int64, error) {
 // If no report is found, an empty report is returned.
 //
 // For example, given reports 1 and 7, with time 2 and period 7, the function will return the path for report 1.
+//
+// If period is 0, it returns nothing as the window does not encompass anything.
 func GetForPeriod(l *slog.Logger, dir string, t time.Time, period int) (Report, error) {
+	if period == 0 {
+		return Report{}, nil // If period is 0, return an empty report.
+	}
+
 	periodStart, err := GetPeriodStart(period, t)
 	if err != nil {
 		return Report{}, err
@@ -191,13 +203,18 @@ func GetForPeriod(l *slog.Logger, dir string, t time.Time, period int) (Report, 
 // GetPerPeriod returns the latest report within each period window for a given directory.
 // The key of the map is the start of the period window, and the value is a Report object.
 //
-// If period is 1, then all reports in the dir are returned.
+// If period is 0, then no reports are returned.
 func GetPerPeriod(l *slog.Logger, dir string, period int) (map[int64]Report, error) {
-	if period <= 0 {
+	if period < 0 {
 		return nil, ErrInvalidPeriod
 	}
 
 	reports := make(map[int64]Report)
+
+	if period == 0 {
+		return reports, nil // If period is 0, return an empty map.
+	}
+
 	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return fmt.Errorf("failed to access path: %v", err)

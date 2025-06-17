@@ -129,9 +129,11 @@ func TestCompile(t *testing.T) {
 		config   collector.Config
 		dryRun   bool
 		force    bool
-		sysInfo  collector.SysInfo
-		noDir    bool
-		wantErr  bool
+
+		time    int64
+		sysInfo collector.SysInfo
+		noDir   bool
+		wantErr bool
 	}{
 		"Basic": {
 			config: collector.Config{
@@ -166,12 +168,12 @@ func TestCompile(t *testing.T) {
 			consentM: cTrue,
 			force:    true,
 		},
-		"Period 0": {
+		"Period 0 ignores duplicates": {
 			config: collector.Config{
 				Period: 0,
 			},
 			consentM: cTrue,
-			wantErr:  true,
+			time:     5,
 		},
 		"Non-existent source metrics file": {
 			config: collector.Config{
@@ -207,9 +209,10 @@ func TestCompile(t *testing.T) {
 		},
 		"Duplicate report": {
 			config: collector.Config{
-				Period: 20,
+				Period: 1,
 			},
 			consentM: cTrue,
+			time:     5,
 			wantErr:  true,
 		},
 		"SysInfo Collect Error": {
@@ -237,8 +240,12 @@ func TestCompile(t *testing.T) {
 				tc.sysInfo = testSysInfo{info: sysinfo.Info{}, err: nil}
 			}
 
+			if tc.time == 0 {
+				tc.time = mockTime
+			}
+
 			opts := []collector.Options{
-				collector.WithTimeProvider(MockTimeProvider{CurrentTime: mockTime}),
+				collector.WithTimeProvider(MockTimeProvider{CurrentTime: tc.time}),
 				collector.WithSysInfo(func(l *slog.Logger, opts ...sysinfo.Options) collector.SysInfo {
 					return tc.sysInfo
 				}),
