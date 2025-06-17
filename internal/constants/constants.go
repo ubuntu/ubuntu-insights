@@ -56,7 +56,7 @@ const (
 	DefaultCollectSource = runtime.GOOS
 
 	// DefaultPeriod is the default value for the collector's period.
-	DefaultPeriod = 1
+	DefaultPeriod = 0
 
 	// DefaultMinAge is the default value for the uploader's min-age.
 	DefaultMinAge = 604800
