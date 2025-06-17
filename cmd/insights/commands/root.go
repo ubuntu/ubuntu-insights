@@ -14,7 +14,7 @@ import (
 )
 
 type newUploader func(l *slog.Logger, cm uploader.Consent, cachePath string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error)
-type newCollector func(l *slog.Logger, cm collector.Consent, cachePath, source string, period uint, dryRun bool, args ...collector.Options) (collector.Collector, error)
+type newCollector func(l *slog.Logger, cm collector.Consent, c collector.Config, args ...collector.Options) (collector.Collector, error)
 
 // App represents the application.
 type App struct {
@@ -27,7 +27,13 @@ type App struct {
 		insightsDir string
 
 		Upload  uploader.Config
-		Collect collector.Config
+		Collect struct {
+			Source            string
+			SourceMetricsPath string
+			Period            uint
+			Force             bool
+			DryRun            bool
+		}
 
 		Consent struct {
 			Sources []string

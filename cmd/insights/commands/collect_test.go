@@ -7,13 +7,13 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/cmd/insights/commands"
 	"github.com/ubuntu/ubuntu-insights/internal/collector"
+	"github.com/ubuntu/ubuntu-insights/internal/consent"
 	"github.com/ubuntu/ubuntu-insights/internal/testutils"
 )
 
@@ -21,26 +21,21 @@ func TestCollect(t *testing.T) {
 	t.Parallel()
 
 	overflowInt := big.NewInt(math.MaxInt)
-	overflowInt.Add(overflowInt, big.NewInt(1))
+	overflowInt.Mul(overflowInt, overflowInt)
 
 	tests := map[string]struct {
 		args []string
 
 		consentDir      string
 		noGlobalConsent bool
-		platformSource  bool
 
 		wantErr      bool
 		wantUsageErr bool
 	}{
 		"Collect Basic": {
-			args:           []string{"collect"},
-			platformSource: true,
-		}, "Collect Source no Metrics": {
-			args:         []string{"collect", "source"},
-			wantErr:      true,
-			wantUsageErr: true,
-		}, "Collect source normal": {
+			args: []string{"collect"},
+		},
+		"Collect source normal": {
 			args: []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json")},
 		}, "Collect source normal, period": {
 			args: []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "--period=10"},
@@ -50,7 +45,28 @@ func TestCollect(t *testing.T) {
 			args: []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "--period=10", "--dry-run"},
 		}, "Collect source normal, period, dry-run, force": {
 			args: []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "--period=10", "--dry-run", "--force"},
-		}, "Collect source dir": {
+		}, "Collect dry run, verbose 1": {
+			args: []string{"collect", "--dry-run", "-v"},
+		}, "Collect dry run, verbose 2": {
+			args: []string{"collect", "--dry-run", "-vv"},
+		}, "Collect False-consent source": {
+			args: []string{"collect", "False", filepath.Join("testdata", "source_metrics", "normal.json")},
+		}, "Collect Bad-File-consent source": {
+			args: []string{"collect", "Bad-File", filepath.Join("testdata", "source_metrics", "normal.json")},
+		},
+
+		"Exit 0 when no consent files": {
+			args:            []string{"collect", "Unknown", filepath.Join("testdata", "source_metrics", "normal.json")},
+			noGlobalConsent: true,
+		},
+
+		// Error cases
+		"Collect Source no Metrics": {
+			args:         []string{"collect", "source"},
+			wantErr:      true,
+			wantUsageErr: true,
+		},
+		"Collect source dir": {
 			args:         []string{"collect", "source", filepath.Join("testdata", "source_metrics")},
 			wantErr:      true,
 			wantUsageErr: true,
@@ -58,9 +74,6 @@ func TestCollect(t *testing.T) {
 			args:         []string{"collect", "source", "invalid-path"},
 			wantErr:      true,
 			wantUsageErr: true,
-		}, "Collect source invalid JSON": {
-			args:    []string{"collect", "source", filepath.Join("testdata", "source_metrics", "invalid.json")},
-			wantErr: true,
 		}, "Collect bad flag": {
 			args:         []string{"collect", "--bad-flag"},
 			wantErr:      true,
@@ -74,32 +87,13 @@ func TestCollect(t *testing.T) {
 			wantErr:      true,
 			wantUsageErr: true,
 		}, "Collect period overflow": {
-			args:           []string{"collect", fmt.Sprintf("--period=%s", overflowInt.String())},
-			platformSource: true,
-			wantErr:        true,
-		}, "Collect dry run, verbose 1": {
-			args:           []string{"collect", "--dry-run", "-v"},
-			platformSource: true,
-		}, "Collect dry run, verbose 2": {
-			args:           []string{"collect", "--dry-run", "-vv"},
-			platformSource: true,
-		}, "Collect False-consent source": {
-			args: []string{"collect", "False", filepath.Join("testdata", "source_metrics", "normal.json")},
-		}, "Collect Bad-File-consent source": {
-			args: []string{"collect", "Bad-File", filepath.Join("testdata", "source_metrics", "normal.json")},
-		}, "Collect Bad-File consent global source": {
-			args:       []string{"collect", "Bad-File", filepath.Join("testdata", "source_metrics", "normal.json")},
-			consentDir: "bad-file-global",
-			wantErr:    true,
+			args:         []string{"collect", fmt.Sprintf("--period=%s", overflowInt.String())},
+			wantErr:      true,
+			wantUsageErr: true,
 		}, "Collect nArgs 3": {
 			args:         []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "extra-arg"},
 			wantErr:      true,
 			wantUsageErr: true,
-		},
-
-		"Exit 0 when no consent files": {
-			args:            []string{"collect", "Unknown", filepath.Join("testdata", "source_metrics", "normal.json")},
-			noGlobalConsent: true,
 		},
 	}
 
@@ -111,19 +105,12 @@ func TestCollect(t *testing.T) {
 				tc.consentDir = "true-global"
 			}
 
-			var (
-				gotCachePath string
-				gotSource    string
-				gotPeriod    uint
-				gotDryRun    bool
-			)
-			newCollector := func(l *slog.Logger, cm collector.Consent, cachePath, source string, period uint, dryRun bool, args ...collector.Options) (collector.Collector, error) {
-				gotCachePath = cachePath
-				gotSource = source
-				gotPeriod = period
-				gotDryRun = dryRun
+			var gotConfig collector.Config
+			mc := &mockCollector{}
+			newCollector := func(l *slog.Logger, cm collector.Consent, c collector.Config, args ...collector.Options) (collector.Collector, error) {
+				gotConfig = c
 
-				return collector.New(slog.Default(), cm, cachePath, source, period, true, args...)
+				return mc, nil
 			}
 
 			a, consentPath, cachePath := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewCollector(newCollector))
@@ -134,33 +121,141 @@ func TestCollect(t *testing.T) {
 			err := a.Run()
 			if tc.wantErr {
 				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
-			if tc.wantUsageErr {
-				require.True(t, a.UsageError())
+				assert.Equal(t, tc.wantUsageErr, a.UsageError(), "Unexpected usage error state")
 				return
 			}
+
+			require.NoError(t, err)
 			require.False(t, a.UsageError())
 
-			if tc.platformSource {
-				assert.Equal(t, runtime.GOOS, gotSource)
-				gotSource = "platform"
-			}
-			assert.Equal(t, cachePath, gotCachePath, "Cache path passed to app is not as expected")
+			assert.Equal(t, cachePath, gotConfig.CachePath, "Cache path passed to app is not as expected")
 
 			got := struct {
 				Source string
 				Period uint
+				Force  bool
 				DryRun bool
 			}{
-				Source: gotSource,
-				Period: gotPeriod,
-				DryRun: gotDryRun,
+				Source: gotConfig.Source,
+				Period: gotConfig.Period,
+				Force:  mc.gotForce,
+				DryRun: mc.gotDryRun,
 			}
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			require.Equal(t, want, got, "Unexpected collect command state")
 		})
 	}
+}
+
+func TestCollectCollectorErrors(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		compileErr error
+		writeErr   error
+
+		wantErr bool
+	}{
+		"No Errors": {},
+		"Consent file not error does not return error": {
+			writeErr: consent.ErrConsentFileNotFound,
+		},
+
+		"Compile Error": {
+			compileErr: fmt.Errorf("compile error"),
+			wantErr:    true,
+		},
+		"Write Error": {
+			writeErr: fmt.Errorf("write error"),
+			wantErr:  true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			mc := &mockCollector{
+				compileErr: tc.compileErr,
+				writeErr:   tc.writeErr,
+			}
+			newCollector := func(l *slog.Logger, cm collector.Consent, c collector.Config, args ...collector.Options) (collector.Collector, error) {
+				return mc, nil
+			}
+
+			a, _, _ := commands.NewAppForTests(t, []string{"collect"}, "true-global", commands.WithNewCollector(newCollector))
+			err := a.Run()
+
+			assert.False(t, a.UsageError(), "Expected no usage error")
+			if tc.wantErr {
+				require.Error(t, err, "Expected error but got none")
+				return
+			}
+
+			require.NoError(t, err, "Unexpected error running collect command")
+		})
+	}
+}
+
+func TestNewError(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		newCollectorErr error
+		wantErr         bool
+		wantUsageErr    bool
+	}{
+		"No error": {},
+		"Generic collector error": {
+			newCollectorErr: fmt.Errorf("requested collector error"),
+			wantErr:         true,
+		},
+		"collector.ErrSanitizeError": {
+			newCollectorErr: collector.ErrSanitizeError,
+			wantErr:         true,
+			wantUsageErr:    true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			mc := &mockCollector{
+				compileErr: tc.newCollectorErr,
+			}
+			newCollector := func(l *slog.Logger, cm collector.Consent, c collector.Config, args ...collector.Options) (collector.Collector, error) {
+				return mc, mc.compileErr
+			}
+
+			a, _, _ := commands.NewAppForTests(t, []string{"collect"}, "true-global", commands.WithNewCollector(newCollector))
+			err := a.Run()
+
+			assert.Equal(t, tc.wantUsageErr, a.UsageError(), "Unexpected usage error state")
+			if tc.wantErr {
+				require.Error(t, err, "Expected error but got none")
+				return
+			}
+			require.NoError(t, err, "Unexpected error running collect command")
+		})
+	}
+}
+
+type mockCollector struct {
+	compileErr error
+	writeErr   error
+
+	gotForce  bool
+	gotDryRun bool
+}
+
+func (m *mockCollector) Compile(force bool) (collector.Insights, error) {
+	m.gotForce = force
+	return collector.Insights{}, m.compileErr
+}
+
+func (m *mockCollector) Write(insights collector.Insights, dryRun bool) error {
+	m.gotDryRun = dryRun
+	return m.writeErr
 }

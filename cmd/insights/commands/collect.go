@@ -48,7 +48,7 @@ If source is provided, then the source-metrics-path should be provided as well.`
 			// Set Sources to Args
 			if len(args) == 2 {
 				app.config.Collect.Source = args[0]
-				app.config.Collect.SourceMetrics = args[1]
+				app.config.Collect.SourceMetricsPath = args[1]
 			}
 
 			slog.Info("Running collect command")
@@ -67,20 +67,26 @@ If source is provided, then the source-metrics-path should be provided as well.`
 func (a App) collectRun() (err error) {
 	defer decorate.OnError(&err, "failed to collect insights")
 
-	cConfig := a.config.Collect
 	l := slog.Default()
-	err = cConfig.Sanitize(l)
-	if err != nil {
-		return err
+
+	cConfig := collector.Config{
+		Source:            a.config.Collect.Source,
+		Period:            a.config.Collect.Period,
+		CachePath:         a.config.insightsDir,
+		SourceMetricsPath: a.config.Collect.SourceMetricsPath,
 	}
 
 	cm := consent.New(l, a.config.consentDir)
-	c, err := a.newCollector(l, cm, a.config.insightsDir, cConfig.Source, cConfig.Period, cConfig.DryRun, collector.WithSourceMetricsPath(cConfig.SourceMetrics))
+	c, err := a.newCollector(l, cm, cConfig)
 	if err != nil {
+		if errors.Is(err, collector.ErrSanitizeError) {
+			a.cmd.SilenceUsage = false
+		}
+
 		return err
 	}
 
-	insights, err := c.Compile(cConfig.Force)
+	insights, err := c.Compile(a.config.Collect.Force)
 	if err != nil {
 		return err
 	}
@@ -91,7 +97,7 @@ func (a App) collectRun() (err error) {
 	}
 	fmt.Println(string(ib))
 
-	err = c.Write(insights)
+	err = c.Write(insights, a.config.Collect.DryRun)
 	if errors.Is(err, consent.ErrConsentFileNotFound) {
 		slog.Warn("Consent file not found, will not write insights report to disk or upload.")
 		return nil
