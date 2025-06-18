@@ -1,7 +1,7 @@
 name: ubuntu-insights-services
 
 base: ubuntu@24.04
-version: "0.17" # just for humans. Semantic versioning is recommended
+version: "0.1.0" # just for humans. Semantic versioning is recommended
 license: GPL-3.0
 summary: Service for ubuntu-insights # 79 char long summary
 description: |
@@ -28,25 +28,29 @@ run-user: _daemon_ # setting a non-root user for the rock
 parts:
     web-service:
         plugin: go
-        source: .
+        source: https://github.com/ubuntu/ubuntu-insights.git
         source-subdir: cmd/web-service
         build-snaps:
             - go/1.24/stable
-        stage: 
+        build-environment:
+            - GOTOOLCHAIN: local
+        stage:
             - bin/web-service
 
     ingest-service:
         plugin: go
-        source: .
+        source: https://github.com/ubuntu/ubuntu-insights.git
         source-subdir: cmd/ingest-service
         build-snaps:
             - go/1.24/stable
+        build-environment:
+            - GOTOOLCHAIN: local
         stage:
             - bin/ingest-service
 
     migrations:
         plugin: dump
-        source: .
+        source: https://github.com/ubuntu/ubuntu-insights.git
         source-subdir: migrations
         organize:
             "*": usr/share/insights/migrations/
