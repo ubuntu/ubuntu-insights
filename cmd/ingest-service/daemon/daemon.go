@@ -50,7 +50,7 @@ func New() (*App, error) {
 			// Command parsing has been successful. Returns to not print usage anymore.
 			a.cmd.SilenceUsage = true
 			cli.SetVerbosity(a.config.Verbosity) // Set verbosity before loading config
-			if err := cli.InitViperConfig(constants.WebServiceCmdName, a.cmd, a.viper); err != nil {
+			if err := cli.InitViperConfig(constants.IngestServiceCmdName, a.cmd, a.viper); err != nil {
 				return err
 			}
 			if err := a.viper.Unmarshal(&a.config); err != nil {
