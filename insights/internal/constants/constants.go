@@ -4,7 +4,6 @@ package constants
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -22,17 +21,8 @@ const (
 	// CmdName is the name of the command line tool.
 	CmdName = "ubuntu-insights"
 
-	// WebServiceCmdName is the name of the web service command.
-	WebServiceCmdName = "ubuntu-insights-web-service"
-
-	// IngestServiceCmdName is the name of the ingest service command.
-	IngestServiceCmdName = "ubuntu-insights-ingest-service"
-
 	// DefaultAppFolder is the name of the default root folder.
 	DefaultAppFolder = "ubuntu-insights"
-
-	// DefaultLogLevel is the default log level selected without any verbosity flags.
-	DefaultLogLevel = slog.LevelWarn
 
 	// LocalFolder is the default name of the local collected reports folder.
 	LocalFolder = "local"
@@ -62,18 +52,6 @@ const (
 	DefaultMinAge = 604800
 )
 
-// Service constants.
-const (
-	// DefaultServiceFolder is the name of the default root folder for services.
-	DefaultServiceFolder = "ubuntu-insights-services"
-
-	// DefaultServiceReportsFolder is the name of the default reports folder for services.
-	DefaultServiceReportsFolder = "reports"
-
-	// LegacyReportTag is the tag used to indicate legacy ubuntu report files.
-	LegacyReportTag = "ubuntu-report"
-)
-
 var (
 	// DefaultConfigPath is the default app user configuration path. It's overridden when imported.
 	DefaultConfigPath = DefaultAppFolder
@@ -83,21 +61,7 @@ var (
 	OptOutJSON = struct{ OptOut bool }{true}
 )
 
-// Service variables.
-var (
-	// DefaultServiceDataDir is the default data directory for services.
-	DefaultServiceDataDir = DefaultServiceFolder
-
-	// DefaultServiceReportsDir is the default reports directory for services.
-	DefaultServiceReportsDir = filepath.Join(DefaultServiceDataDir, DefaultServiceReportsFolder)
-)
-
 func init() {
-	DefaultServiceDataDir = filepath.Join("/var/lib", DefaultServiceFolder)
-	defer func() {
-		DefaultServiceReportsDir = filepath.Join(DefaultServiceDataDir, DefaultServiceReportsFolder)
-	}()
-
 	// This is to ensure that the man pages which include the default values
 	// are not generated with the home path at time of generation.
 	if manGeneration == "true" {
@@ -117,8 +81,4 @@ func init() {
 
 	DefaultConfigPath = filepath.Join(userConfigDir, DefaultConfigPath)
 	DefaultCachePath = filepath.Join(userCacheDir, DefaultCachePath)
-
-	if runtime.GOOS != "linux" {
-		DefaultServiceDataDir = filepath.Join(userCacheDir, DefaultServiceFolder)
-	}
 }

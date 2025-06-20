@@ -6,15 +6,12 @@ import (
 	"os"
 
 	"github.com/ubuntu/ubuntu-insights/insights/cmd/insights/commands"
-	"github.com/ubuntu/ubuntu-insights/insights/internal/constants"
 )
 
 //go:generate go run ../generate_completion_documentation.go completion ../../generated
 //go:generate go run -ldflags=-X=github.com/ubuntu/ubuntu-insights/insights/internal/constants.manGeneration=true ../generate_completion_documentation.go man ../../generated
 
 func main() {
-	slog.SetLogLoggerLevel(constants.DefaultLogLevel)
-
 	a, err := commands.New()
 	if err != nil {
 		os.Exit(1)
