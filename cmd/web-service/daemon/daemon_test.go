@@ -31,6 +31,19 @@ func TestConfigArg(t *testing.T) {
 	require.Equal(t, 1, a.Config().Verbosity)
 }
 
+func TestConfigEnv(t *testing.T) {
+	// Set the environment variable to point to the config file
+	t.Setenv("UBUNTU_INSIGHTS_WEB_SERVICE_DAEMON_READTIMEOUT", "1s")
+
+	a, err := daemon.New()
+	require.NoError(t, err, "Setup: New should not return an error")
+	a.SetArgs("version")
+
+	err = a.Run()
+	require.NoError(t, err, "Run should not return an error")
+	require.Equal(t, time.Second, a.Config().Daemon.ReadTimeout)
+}
+
 func TestConfigBadArg(t *testing.T) {
 	filename := "conf.yaml"
 	configPath := filepath.Join(t.TempDir(), filename)

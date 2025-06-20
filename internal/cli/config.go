@@ -53,7 +53,7 @@ func InitViperConfig(cmdName string, cmd *cobra.Command, vip *viper.Viper) error
 	// Visit manually env to bind every possibly related environment variable to be able to unmarshal
 	// those into a struct.
 	// More context on https://github.com/spf13/viper/pull/1429.
-	prefix := strings.ToUpper(cmdName) + "_"
+	prefix := strings.ToUpper(strings.ReplaceAll(cmdName, "-", "_")) + "_"
 	for _, e := range os.Environ() {
 		if !strings.HasPrefix(e, prefix) {
 			continue
