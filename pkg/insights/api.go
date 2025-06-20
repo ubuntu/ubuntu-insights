@@ -55,10 +55,6 @@ type UploadFlags struct {
 func (c Config) Collect(metricsPath string, flags CollectFlags) error {
 	l := c.setup()
 
-	if flags.Period == 0 {
-		flags.Period = 1
-	}
-
 	cConf := collector.Config{
 		Source:            c.Source,
 		Period:            flags.Period,

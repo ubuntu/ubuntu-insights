@@ -1,4 +1,4 @@
 source: source
-period: 1
+period: 0
 force: false
 dryrun: true

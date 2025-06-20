@@ -23,12 +23,12 @@ func TestGetPeriodStart(t *testing.T) {
 
 		wantErr error
 	}{
-		"Valid Period":      {period: 500, time: 100000},
-		"Negative Time:":    {period: 500, time: -100000},
-		"Non-Multiple Time": {period: 500, time: 1051},
+		"Valid Period":             {period: 500, time: 100000},
+		"Negative Time:":           {period: 500, time: -100000},
+		"Non-Multiple Time":        {period: 500, time: 1051},
+		"Zero Period Returns Time": {period: 0, time: 500},
 
 		"Invalid Negative Period": {period: -500, wantErr: report.ErrInvalidPeriod},
-		"Invalid Zero Period":     {period: 0, wantErr: report.ErrInvalidPeriod},
 	}
 
 	for name, tc := range tests {
@@ -107,9 +107,9 @@ func TestGetForPeriod(t *testing.T) {
 		"Negative Timestamp":                {files: []string{"-100.json", "-101.json"}, time: -150, period: 100},
 		"Not Inclusive Period":              {files: []string{"1.json", "7.json"}, time: 2, period: 7},
 		"Lexical Order Check":               {files: []string{"5.json", "20.json"}, time: 10, period: 20},
+		"Zero Period Returns Nothing":       {files: []string{"1.json", "7.json"}, time: 7, period: 0},
 
 		"Invalid Negative Period": {files: []string{"1.json", "7.json"}, time: 2, period: -7, wantSpecificErr: report.ErrInvalidPeriod},
-		"Invalid Zero Period":     {files: []string{"1.json", "7.json"}, time: 2, period: 0, wantSpecificErr: report.ErrInvalidPeriod},
 
 		"Invalid Dir": {period: 1, invalidDir: true, wantGenericErr: true},
 	}
@@ -167,9 +167,9 @@ func TestGetPerPeriod(t *testing.T) {
 		"Multiple Consecutive Windows":     {files: []string{"1.json", "7.json", "101.json", "107.json", "201.json", "207.json"}, period: 100},
 		"Multiple Non-Consecutive Windows": {files: []string{"1.json", "7.json", "101.json", "107.json", "251.json", "257.json"}, period: 50},
 		"Get All Reports":                  {files: []string{"1.json", "2.json", "3.json", "101.json", "107.json", "251.json", "257.json"}, period: 1},
+		"Zero Period Returns Nothing":      {files: []string{"1.json", "7.json"}, period: 0},
 
 		"Invalid Negative Period": {files: []string{"1.json", "7.json"}, period: -7, wantSpecificErr: report.ErrInvalidPeriod},
-		"Invalid Zero Period":     {files: []string{"1.json", "7.json"}, period: 0, wantSpecificErr: report.ErrInvalidPeriod},
 
 		"Invalid Dir": {period: 1, invalidDir: true, wantGenericErr: true},
 	}
