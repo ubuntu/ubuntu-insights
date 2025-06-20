@@ -21,4 +21,8 @@ cmd/insights/insights
 build/
 _build/
 generated
-vendor
+**/vendor/
+
+# Debian package build artifacts
+ubuntu-insights_*
+ubuntu-insights*.ddeb

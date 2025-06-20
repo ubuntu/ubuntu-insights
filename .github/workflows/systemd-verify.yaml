@@ -9,11 +9,9 @@ on:
       - main
     tags:
       - "*"
-    paths:
-      - "autostart/systemd/*"
   pull_request:
     paths:
-      - "autostart/systemd/*"
+      - "./insights/autostart/systemd/*"
 
 jobs:
   verify-systemd:
@@ -27,7 +25,7 @@ jobs:
           sudo apt install -y ${{ env.apt_deps }}
       - name: Build Ubuntu-Insights
         run: |
-          cd cmd/insights
+          cd insights/cmd/insights
           sudo go build -o /usr/bin/ubuntu-insights
       - name: Verify systemd files
-        run: systemd-analyze --user verify autostart/systemd/*
+        run: systemd-analyze --user verify ./insights/autostart/systemd/*

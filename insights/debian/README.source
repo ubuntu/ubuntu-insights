@@ -1,0 +1,12 @@
+# Getting the Source
+The source for this package can be found here https://github.com/ubuntu/ubuntu-insights/tree/main/insights
+
+Note that this git repository also includes the source for components not included in the ubuntu-insights package.
+
+# Refreshing vendored code
+
+This package uses vendored go code tracked in `go.sum`. While it is automatically refreshed during the build process, the code can be refreshed manually using the following:
+
+```shell
+go mod vendor
+```
