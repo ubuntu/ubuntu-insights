@@ -1,0 +1,31 @@
+name: Rockcrafting
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "rockcraft.yaml"
+  pull_request:
+    paths:
+      - "rockcraft.yaml"
+
+jobs:  
+  build:
+    name: Build rock
+    runs-on: ubuntu-24.04
+    outputs:
+      rock: ${{ steps.build.outputs.rock }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: canonical/craft-actions/rockcraft-pack@main
+        id: rockcraft
+
+      - name: Upload rock
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.rockcraft.outputs.rock }}
+          path: ${{ steps.rockcraft.outputs.rock }}
