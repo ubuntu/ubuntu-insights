@@ -41,7 +41,7 @@ func buildCLI(extraArgs ...string) (execPath string, cleanup func(), err error) 
 		}
 	}
 
-	execPath = filepath.Join(tempDir, constants.CmdName)
+	execPath = filepath.Join(tempDir, constants.IngestServiceCmdName)
 	if runtime.GOOS == "windows" {
 		execPath += ".exe"
 	}
