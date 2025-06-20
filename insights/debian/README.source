@@ -1,7 +1,7 @@
 # Getting the Source
-The source for this package can be found here https://github.com/ubuntu/ubuntu-insights
+The source for this package can be found here https://github.com/ubuntu/ubuntu-insights/tree/main/insights
 
-Note that while this package only includes the client command line tool and supporting systemd service triggers, the source also includes the source for server side services.
+Note that this git repository also includes the source for components not included in the ubuntu-insights package.
 
 # Refreshing vendored code
 
@@ -10,5 +10,3 @@ This package uses vendored go code tracked in `go.sum`. While it is automaticall
 ```shell
 go mod vendor
 ```
-
-Note that some of the vendored code is not used for the client command line tool binaries included with this package, and may be only relevant for the server services also in the source.
