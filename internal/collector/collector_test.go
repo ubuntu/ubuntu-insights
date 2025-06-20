@@ -56,42 +56,42 @@ func TestNew(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		consentM       collector.Consent
-		source         string
-		period         uint
-		dryRun         bool
-		nilConsent     bool
-		emptyCachePath bool
+		consentM collector.Consent
+		config   collector.Config
+
+		nilConsent bool
 
 		wantErr bool
 	}{
 		"Blank collector": {
-			source: "source",
+			config: collector.Config{
+				CachePath: t.TempDir(),
+			},
 		},
-		"Dry run": {
-			source: "source",
-			dryRun: true,
+		"Empty Cache Path": {
+			config: collector.Config{},
 		},
 
 		"Overflow Period": {
-			source:  "source",
-			period:  math.MaxInt + 1,
+			config: collector.Config{
+				Period:    math.MaxInt + 1,
+				CachePath: t.TempDir(),
+			},
 			wantErr: true,
 		},
-		"Empty source": {
-			source:  "",
-			wantErr: true,
+		"Source without source metrics": {
+			config: collector.Config{
+				Source:    "source",
+				CachePath: t.TempDir(),
+			},
 		},
 		"Nil Consent": {
-			source:     "source",
+			config: collector.Config{
+				CachePath: t.TempDir(),
+			},
 			nilConsent: true,
 
 			wantErr: true,
-		},
-		"Empty Cache Path": {
-			source:         "source",
-			emptyCachePath: true,
-			wantErr:        true,
 		},
 	}
 
@@ -103,13 +103,8 @@ func TestNew(t *testing.T) {
 				tc.consentM = cTrue
 			}
 
-			dir := t.TempDir()
-			if tc.emptyCachePath {
-				dir = ""
-			}
-
 			l := slog.New(slog.NewTextHandler(os.Stderr, nil))
-			result, err := collector.New(l, tc.consentM, dir, tc.source, tc.period, tc.dryRun)
+			result, err := collector.New(l, tc.consentM, tc.config)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
@@ -130,90 +125,98 @@ func TestCompile(t *testing.T) {
 	)
 
 	tests := map[string]struct {
-		consentM          collector.Consent
-		source            string
-		sourceMetricsFile string
-		period            uint
-		dryRun            bool
-		force             bool
-
-		sysInfo collector.SysInfo
-		noDir   bool
-
-		wantErr bool
+		consentM collector.Consent
+		config   collector.Config
+		dryRun   bool
+		force    bool
+		sysInfo  collector.SysInfo
+		noDir    bool
+		wantErr  bool
 	}{
 		"Basic": {
-			period:   1,
+			config: collector.Config{
+				Period: 1,
+			},
 			consentM: cTrue,
-			source:   "source",
 		},
 		"Dry Run": {
-			period:   1,
+			config: collector.Config{
+				Period: 1,
+			},
 			consentM: cTrue,
-			source:   "source",
 			dryRun:   true,
 		},
 		"With SourceMetrics": {
-			period:            1,
-			consentM:          cTrue,
-			source:            "source",
-			sourceMetricsFile: "normal.json",
+			config: collector.Config{
+				Period:            1,
+				SourceMetricsPath: "testdata/source_metrics/normal.json",
+			},
+			consentM: cTrue,
 		},
 		"Consent False": {
-			period:   1,
+			config: collector.Config{
+				Period: 1,
+			},
 			consentM: cFalse,
-			source:   "source",
 		},
 		"Duplicate report force": {
-			period:   20,
+			config: collector.Config{
+				Period: 20,
+			},
 			consentM: cTrue,
-			source:   "source",
 			force:    true,
 		},
 		"Period 0": {
-			period:   0,
+			config: collector.Config{
+				Period: 0,
+			},
 			consentM: cTrue,
-			source:   "source",
 			wantErr:  true,
 		},
 		"Non-existent source metrics file": {
-			period:            1,
-			consentM:          cTrue,
-			source:            "source",
-			sourceMetricsFile: "nonexistent.json",
-			wantErr:           true,
+			config: collector.Config{
+				Period:            1,
+				SourceMetricsPath: "testdata/source_metrics/nonexistent.json",
+			},
+			consentM: cTrue,
+			wantErr:  true,
 		},
 		"Invalid source metrics file": {
-			period:            1,
-			consentM:          cTrue,
-			source:            "source",
-			sourceMetricsFile: "invalid.json",
-			wantErr:           true,
+			config: collector.Config{
+				Period:            1,
+				SourceMetricsPath: "testdata/source_metrics/invalid.json",
+			},
+			consentM: cTrue,
+			wantErr:  true,
 		},
 		"Bad ext source metrics file": {
-			period:            1,
-			consentM:          cTrue,
-			source:            "source",
-			sourceMetricsFile: "bad_ext.json",
-			wantErr:           true,
+			config: collector.Config{
+				Period:            1,
+				SourceMetricsPath: "testdata/source_metrics/bad_ext.json",
+			},
+			consentM: cTrue,
+			wantErr:  true,
 		},
 		"Empty source metrics file": {
-			period:            1,
-			consentM:          cTrue,
-			source:            "source",
-			sourceMetricsFile: "empty.json",
-			wantErr:           true,
+			config: collector.Config{
+				Period:            1,
+				SourceMetricsPath: "testdata/source_metrics/empty.json",
+			},
+			consentM: cTrue,
+			wantErr:  true,
 		},
 		"Duplicate report": {
-			period:   20,
+			config: collector.Config{
+				Period: 20,
+			},
 			consentM: cTrue,
-			source:   "source",
 			wantErr:  true,
 		},
 		"SysInfo Collect Error": {
-			period:   1,
+			config: collector.Config{
+				Period: 1,
+			},
 			consentM: cTrue,
-			source:   "source",
 			sysInfo:  testSysInfo{info: sysinfo.Info{}, err: fmt.Errorf("sysinfo error")},
 			wantErr:  true,
 		},
@@ -223,10 +226,12 @@ func TestCompile(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			dir := t.TempDir()
+			tc.config.Source = "source"
 
-			sdir := filepath.Join(dir, tc.source)
-			require.NoError(t, testutils.CopyDir(t, filepath.Join("testdata", "reports_cache"), sdir), "Setup: failed to copy reports cache")
+			dir := t.TempDir()
+			sDir := filepath.Join(dir, tc.config.Source)
+			require.NoError(t, testutils.CopyDir(t, filepath.Join("testdata", "reports_cache"), sDir), "Setup: failed to copy reports cache")
+			tc.config.CachePath = dir
 
 			if tc.sysInfo == nil {
 				tc.sysInfo = testSysInfo{info: sysinfo.Info{}, err: nil}
@@ -240,12 +245,8 @@ func TestCompile(t *testing.T) {
 				collector.WithMaxReports(maxReports),
 			}
 
-			if tc.sourceMetricsFile != "" {
-				opts = append(opts, collector.WithSourceMetricsPath(filepath.Join("testdata", "source_metrics", tc.sourceMetricsFile)))
-			}
-
 			l := slog.New(slog.NewTextHandler(os.Stderr, nil))
-			c, err := collector.New(l, tc.consentM, dir, tc.source, tc.period, tc.dryRun, opts...)
+			c, err := collector.New(l, tc.consentM, tc.config, opts...)
 			require.NoError(t, err, "Setup: failed to create collector")
 
 			results, err := c.Compile(tc.force)
@@ -281,61 +282,74 @@ func TestWrite(t *testing.T) {
 
 	tests := map[string]struct {
 		consentM   collector.Consent
-		period     uint
+		config     collector.Config
 		dryRun     bool
 		maxReports uint
 		insights   collector.Insights
-
-		noDir bool
-
-		wantErr bool
+		noDir      bool
+		wantErr    bool
 	}{
 		"Writes report to disk": {
-			period:     1,
+			config: collector.Config{
+				Period: 1,
+			},
 			maxReports: 5,
 		},
 		"Does not write or cleanup if dryRun": {
-			period:     1,
+			config: collector.Config{
+				Period: 1,
+			},
 			dryRun:     true,
 			maxReports: 5,
 		},
 		"Cleans up old reports if max reports exceeded": {
-			period:     5,
+			config: collector.Config{
+				Period: 5,
+			},
 			maxReports: 2,
 		},
 		"Does not write or cleanup if dryRun even if max reports exceeded": {
-			period:     5,
+			config: collector.Config{
+				Period: 5,
+			},
 			dryRun:     true,
 			maxReports: 2,
 		},
 		"Writes report to disk and creates dir if they do not exist": {
-			period:     1,
+			config: collector.Config{
+				Period: 1,
+			},
 			maxReports: 5,
 			noDir:      true,
 		},
-
-		// Consent Testing
 		"No consent writes opt-out": {
-			period:     1,
+			config: collector.Config{
+				Period: 1,
+			},
 			consentM:   cFalse,
 			maxReports: 5,
 		},
 		"Errors if consent errors": {
-			period:     1,
+			config: collector.Config{
+				Period: 1,
+			},
 			consentM:   cErr,
 			maxReports: 5,
 			wantErr:    true,
 		},
 		"Errors if consent true but errors": {
-			period:     1,
+			config: collector.Config{
+				Period: 1,
+			},
 			consentM:   cErrTrue,
 			maxReports: 5,
 			wantErr:    true,
 		},
-
-		// Other error cases
 		"Errors if Insights cannot be marshaled": {
-			period:     1,
+			config: collector.Config{
+				Period:    1,
+				CachePath: "",
+			},
 			maxReports: 5,
 			insights:   invalidInsights,
 			wantErr:    true,
@@ -346,6 +360,10 @@ func TestWrite(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			if tc.config.Source == "" {
+				tc.config.Source = source
+			}
+
 			dir := t.TempDir()
 			if tc.consentM == nil {
 				tc.consentM = cTrue
@@ -355,11 +373,12 @@ func TestWrite(t *testing.T) {
 			}
 			tc.insights.SourceMetrics["Test Name"] = name
 
-			sdir := filepath.Join(dir, source)
-			require.NoError(t, testutils.CopyDir(t, filepath.Join("testdata", "reports_cache"), sdir), "Setup: failed to copy reports cache")
+			sDir := filepath.Join(dir, source)
+			require.NoError(t, testutils.CopyDir(t, filepath.Join("testdata", "reports_cache"), sDir), "Setup: failed to copy reports cache")
 			if tc.noDir {
-				require.NoError(t, os.RemoveAll(sdir), "Setup: failed to remove reports cache")
+				require.NoError(t, os.RemoveAll(sDir), "Setup: failed to remove reports cache")
 			}
+			tc.config.CachePath = dir
 
 			opts := []collector.Options{
 				collector.WithTimeProvider(MockTimeProvider{CurrentTime: mockTime}),
@@ -367,17 +386,17 @@ func TestWrite(t *testing.T) {
 			}
 
 			l := slog.New(slog.NewTextHandler(os.Stderr, nil))
-			c, err := collector.New(l, tc.consentM, dir, source, tc.period, tc.dryRun, opts...)
+			c, err := collector.New(l, tc.consentM, tc.config, opts...)
 			require.NoError(t, err, "Setup: failed to create collector")
 
-			err = c.Write(tc.insights)
+			err = c.Write(tc.insights, tc.dryRun)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
 
-			got, err := testutils.GetDirContents(t, sdir, 5)
+			got, err := testutils.GetDirContents(t, sDir, 5)
 			require.NoError(t, err)
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)

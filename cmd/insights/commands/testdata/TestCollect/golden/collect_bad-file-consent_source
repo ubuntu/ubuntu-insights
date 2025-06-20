@@ -1,3 +1,4 @@
 source: Bad-File
 period: 1
+force: false
 dryrun: false

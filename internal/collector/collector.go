@@ -4,6 +4,7 @@ package collector
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -18,8 +19,12 @@ import (
 	"github.com/ubuntu/ubuntu-insights/internal/report"
 )
 
-// ErrDuplicateReport is returned when a report already exists for the current period.
-var ErrDuplicateReport = fmt.Errorf("report already exists for this period")
+var (
+	// ErrDuplicateReport is returned when a report already exists for the current period.
+	ErrDuplicateReport = fmt.Errorf("report already exists for this period")
+	// ErrSanitizeError is returned when the Config is not properly configured in an unrecoverable manner.
+	ErrSanitizeError = fmt.Errorf("collect is not properly configured")
+)
 
 // Insights contains the insights report compiled by the collector.
 type Insights struct {
@@ -49,25 +54,36 @@ type SysInfo interface {
 	Collect() (sysinfo.Info, error)
 }
 
-// Collector is an abstraction of the collector component.
-type Collector struct {
+// Collector is an interface for the collector component.
+type Collector interface {
+	// Compile checks if appropriate to make a new report, and if so, collects and compiles the data into a report.
+	// If force is true, it ignores duplicate checks.
+	Compile(force bool) (Insights, error)
+
+	// Write writes the insights report to disk, and cleans up old reports.
+	// If dryRun is true, it does not actually write the report.
+	Write(insights Insights, dryRun bool) error
+}
+
+// collector is an abstraction of the collector component.
+type collector struct {
 	consent Consent
 	period  int
-	dryRun  bool
 	source  string
 
 	collectedDir      string
 	uploadedDir       string
 	sourceMetricsPath string
-	maxReports        uint
-	time              time.Time
-	sysInfo           SysInfo
+
+	// Overrides for testing.
+	maxReports uint
+	time       time.Time
+	sysInfo    SysInfo
 
 	log *slog.Logger
 }
 
 type options struct {
-	sourceMetricsPath string
 	// Private members exported for tests.
 	maxReports   uint
 	timeProvider timeProvider
@@ -87,61 +103,54 @@ type Options func(*options)
 
 // Config represents the collector specific data needed to collect.
 type Config struct {
-	Source        string
-	Period        uint
-	Force         bool
-	DryRun        bool
-	SourceMetrics string
+	Source            string
+	Period            uint
+	CachePath         string
+	SourceMetricsPath string
 }
 
 // Sanitize sets defaults and checks that the Config is properly configured.
 func (c *Config) Sanitize(l *slog.Logger) error {
 	// Handle global source and source metrics.
-	if c.SourceMetrics == "" && c.Source != "" {
-		return fmt.Errorf("no metricsPath for %s", c.Source)
+	if c.Period > math.MaxInt {
+		return errors.New("period cannot be greater than max int")
 	}
-	if c.Source == "" && c.SourceMetrics != "" { // ignore SourceMetrics for platform source
+
+	if c.Source == "" && c.SourceMetricsPath != "" { // ignore SourceMetrics for platform source
 		l.Warn("Source Metrics were provided but is ignored for the global source")
-		c.SourceMetrics = ""
+		c.SourceMetricsPath = ""
 	}
+
 	if c.Source == "" { // Default source to platform
 		c.Source = constants.DefaultCollectSource
+		l.Info("No source provided, defaulting to platform", "source", c.Source)
+	}
+
+	if c.CachePath == "" {
+		c.CachePath = constants.DefaultCachePath
+		l.Info("No cache path provided, defaulting to", "cachePath", c.CachePath)
 	}
 
 	return nil
 }
 
-// WithSourceMetricsPath sets the path to an optional pre-made JSON file containing source specific metrics.
-func WithSourceMetricsPath(path string) Options {
-	return func(o *options) {
-		o.sourceMetricsPath = path
-	}
-}
-
 // New returns a new Collector.
 //
 // The internal time used for collecting and writing reports is the current time at the moment of creation of the Collector.
-func New(l *slog.Logger, cm Consent, cachePath, source string, period uint, dryRun bool, args ...Options) (Collector, error) {
-	l.Debug("Creating new collector", "source", source, "period", period, "dryRun", dryRun)
-
-	if source == "" {
-		return Collector{}, fmt.Errorf("source cannot be an empty string")
-	}
-
-	if period > math.MaxInt {
-		return Collector{}, fmt.Errorf("period is too large")
-	}
+// Sanitize the config before use, but Sanitize may be called beforehand safely.
+func New(l *slog.Logger, cm Consent, c Config, args ...Options) (Collector, error) {
+	l.Debug("Creating new collector", "source", c.Source, "period", c.Period)
 
 	if cm == nil {
-		return Collector{}, fmt.Errorf("consent manager cannot be nil")
+		return collector{}, fmt.Errorf("consent manager cannot be nil")
 	}
 
-	if cachePath == "" {
-		return Collector{}, fmt.Errorf("cache path cannot be an empty string")
+	if err := c.Sanitize(l); err != nil {
+		return collector{}, errors.Join(ErrSanitizeError, err)
 	}
 
-	if err := os.MkdirAll(cachePath, 0750); err != nil {
-		return Collector{}, fmt.Errorf("failed to create cache directory: %v", err)
+	if err := os.MkdirAll(c.CachePath, 0750); err != nil {
+		return collector{}, fmt.Errorf("failed to create cache directory: %v", err)
 	}
 
 	opts := defaultOptions
@@ -149,16 +158,15 @@ func New(l *slog.Logger, cm Consent, cachePath, source string, period uint, dryR
 		opt(&opts)
 	}
 
-	return Collector{
+	return collector{
 		consent: cm,
-		period:  int(period),
-		dryRun:  dryRun,
-		source:  source,
+		period:  int(c.Period), //nolint:gosec  //G115 Integer overflow conversion check is done in Sanitize.
+		source:  c.Source,
 
 		time:              opts.timeProvider.Now(),
-		collectedDir:      filepath.Join(cachePath, source, constants.LocalFolder),
-		uploadedDir:       filepath.Join(cachePath, source, constants.UploadedFolder),
-		sourceMetricsPath: opts.sourceMetricsPath,
+		collectedDir:      filepath.Join(c.CachePath, c.Source, constants.LocalFolder),
+		uploadedDir:       filepath.Join(c.CachePath, c.Source, constants.UploadedFolder),
+		sourceMetricsPath: c.SourceMetricsPath,
 		maxReports:        opts.maxReports,
 		sysInfo:           opts.sysInfo(l),
 
@@ -170,7 +178,7 @@ func New(l *slog.Logger, cm Consent, cachePath, source string, period uint, dryR
 //
 // Checks if a report already exists for the current period, and returns an error if it does.
 // Does not check consent, as this should be done at write time.
-func (c Collector) Compile(force bool) (insights Insights, err error) {
+func (c collector) Compile(force bool) (insights Insights, err error) {
 	c.log.Debug("Collecting data", "force", force)
 	defer decorate.OnError(&err, "insights compile failed")
 
@@ -201,8 +209,8 @@ func (c Collector) Compile(force bool) (insights Insights, err error) {
 // Does not check for duplicates, as this should be done in Compile.
 //
 // If the dryRun is true, then Write does nothing, other than checking consent.
-func (c Collector) Write(insights Insights) (err error) {
-	c.log.Debug("Writing data", "dryRun", c.dryRun)
+func (c collector) Write(insights Insights, dryRun bool) (err error) {
+	c.log.Debug("Writing data", "dryRun", dryRun)
 	defer decorate.OnError(&err, "insights write failed")
 
 	data, err := json.Marshal(insights)
@@ -224,7 +232,7 @@ func (c Collector) Write(insights Insights) (err error) {
 		}
 	}
 
-	if c.dryRun {
+	if dryRun {
 		c.log.Info("Dry run, not writing insights report")
 		return nil
 	}
@@ -245,7 +253,7 @@ func (c Collector) Write(insights Insights) (err error) {
 }
 
 // makeDirs creates the collected and uploaded directories if they do not already exist.
-func (c Collector) makeDirs() error {
+func (c collector) makeDirs() error {
 	for _, dir := range []string{c.collectedDir, c.uploadedDir} {
 		if err := os.MkdirAll(dir, 0750); err != nil {
 			return fmt.Errorf("failed to create directory %s: %v", dir, err)
@@ -255,7 +263,7 @@ func (c Collector) makeDirs() error {
 }
 
 // duplicateExists returns true if a report for the current period already exists in the uploaded or collected directories.
-func (c Collector) duplicateExists() (bool, error) {
+func (c collector) duplicateExists() (bool, error) {
 	for _, dir := range []string{c.collectedDir, c.uploadedDir} {
 		cReport, err := report.GetForPeriod(c.log, dir, c.time, c.period)
 		if err != nil {
@@ -271,7 +279,7 @@ func (c Collector) duplicateExists() (bool, error) {
 }
 
 // compile collects data from sources, and returns an Insights object.
-func (c Collector) compile() (Insights, error) {
+func (c collector) compile() (Insights, error) {
 	insights := Insights{
 		InsightsVersion: constants.Version,
 		CollectionTime:  c.time.Unix(),
@@ -299,7 +307,7 @@ func (c Collector) compile() (Insights, error) {
 //
 // If the file does not exist, or cannot be read, it returns an error.
 // If the file is not valid JSON, it returns an error.
-func (c Collector) getSourceMetrics() (map[string]any, error) {
+func (c collector) getSourceMetrics() (map[string]any, error) {
 	c.log.Debug("Loading source metrics", "path", c.sourceMetricsPath)
 
 	if c.sourceMetricsPath == "" {
@@ -321,7 +329,7 @@ func (c Collector) getSourceMetrics() (map[string]any, error) {
 }
 
 // write writes the insights report to disk, with the appropriate name.
-func (c Collector) write(insights []byte) error {
+func (c collector) write(insights []byte) error {
 	time, err := report.GetPeriodStart(c.period, c.time)
 	if err != nil {
 		return fmt.Errorf("failed to get report name: %v", err)

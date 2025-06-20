@@ -23,7 +23,6 @@ type timeProvider interface {
 
 //go:linkname defaultOptions github.com/ubuntu/ubuntu-insights/internal/collector.defaultOptions
 var defaultOptions struct {
-	sourceMetricsPath string
 	maxReports        uint
 	timeProvider      timeProvider
 	sysInfo           func(*slog.Logger, ...sysinfo.Options) collector.SysInfo

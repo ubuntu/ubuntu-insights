@@ -51,7 +51,6 @@ type UploadFlags struct {
 // Collect creates a report for Config.Source.
 // metricsPath is a filepath to a JSON file containing extra metrics.
 // If Config.Source is "",  the source is the platform and metricsPath is ignored.
-// returns an error if metricsPath is "" and not ignored.
 // returns an error if collection fails.
 func (c Config) Collect(metricsPath string, flags CollectFlags) error {
 	l := c.setup()
@@ -61,29 +60,24 @@ func (c Config) Collect(metricsPath string, flags CollectFlags) error {
 	}
 
 	cConf := collector.Config{
-		Source:        c.Source,
-		Period:        flags.Period,
-		Force:         flags.Force,
-		DryRun:        flags.DryRun,
-		SourceMetrics: metricsPath,
-	}
-	err := cConf.Sanitize(l)
-	if err != nil {
-		return err
+		Source:            c.Source,
+		Period:            flags.Period,
+		CachePath:         c.InsightsDir,
+		SourceMetricsPath: metricsPath,
 	}
 
 	cm := consent.New(l, c.ConsentDir)
-	col, err := collector.New(l, cm, c.InsightsDir, cConf.Source, cConf.Period, cConf.DryRun, collector.WithSourceMetricsPath(metricsPath))
+	col, err := collector.New(l, cm, cConf)
 	if err != nil {
 		return err
 	}
 
-	insights, err := col.Compile(cConf.Force)
+	insights, err := col.Compile(flags.Force)
 	if err != nil {
 		return err
 	}
 
-	return col.Write(insights)
+	return col.Write(insights, flags.DryRun)
 }
 
 // Upload uploads reports for Config.Source.
