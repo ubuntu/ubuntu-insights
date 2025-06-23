@@ -22,6 +22,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
+	ingestTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/ingest/testutils"
 )
 
 func TestIngestService(t *testing.T) {
@@ -145,7 +146,7 @@ func TestIngestService(t *testing.T) {
 			t.Parallel()
 
 			// Start containers
-			dbContainer := StartPostgresContainer(t)
+			dbContainer := ingestTestUtils.StartPostgresContainer(t)
 			defer func() {
 				if err := dbContainer.Stop(t.Context()); err != nil {
 					t.Errorf("Teardown: failed to stop dbContainer: %v", err)
@@ -161,7 +162,7 @@ func TestIngestService(t *testing.T) {
 			}()
 
 			require.NoError(t, dbContainer.IsReady(t, 5*time.Second, 10), "Setup: dbContainer was not ready in time")
-			ApplyMigrations(t, dbContainer.DSN, filepath.Join(testutils.ProjectRoot(), "server", "migrations"))
+			ingestTestUtils.ApplyMigrations(t, dbContainer.DSN, filepath.Join(testutils.ProjectRoot(), "server", "migrations"))
 
 			dst := t.TempDir()
 			for _, report := range tc.preReports {
@@ -241,7 +242,7 @@ func TestIngestService(t *testing.T) {
 			}
 
 			reportsCounts := make(map[string]reportCount)
-			for _, app := range listTables(t, dbContainer.DSN, "schema_migrations", "invalid_reports") {
+			for _, app := range ingestTestUtils.DBListTables(t, dbContainer.DSN, "schema_migrations", "invalid_reports") {
 				totalReports, optOutReports, optInReports := checkOptOutCounts(t, dbContainer.DSN, app)
 				reportsCounts[app] = reportCount{
 					TotalReports:  totalReports,
@@ -286,43 +287,6 @@ func generateTestDaemonConfig(t *testing.T, daeConf *config.Conf) string {
 	require.NoError(t, os.WriteFile(daeConfPath, d, 0600), "Setup: failed to write dynamic config for tests")
 
 	return daeConfPath
-}
-
-// listTables lists all the tables, excluding a blacklist.
-func listTables(t *testing.T, dsn string, blacklist ...string) []string {
-	t.Helper()
-
-	blacklistMap := make(map[string]bool)
-	for _, table := range blacklist {
-		blacklistMap[table] = true
-	}
-
-	conn, err := pgx.Connect(t.Context(), dsn)
-	require.NoError(t, err, "failed to connect to the database")
-	defer func() {
-		require.NoError(t, conn.Close(t.Context()), "failed to close the database connection")
-	}()
-
-	query := `
-        SELECT table_name
-        FROM information_schema.tables
-        WHERE table_schema = 'public'
-          AND table_type = 'BASE TABLE';`
-
-	rows, err := conn.Query(t.Context(), query)
-	require.NoError(t, err, "failed to execute query")
-
-	var tables []string
-	for rows.Next() {
-		var tableName string
-		require.NoError(t, rows.Scan(&tableName), "failed to scan table name")
-		if !blacklistMap[tableName] {
-			tables = append(tables, tableName)
-		}
-	}
-
-	require.NoError(t, rows.Err(), "error occurred during rows iteration")
-	return tables
 }
 
 func checkOptOutCounts(t *testing.T, dsn string, tableName string) (totalReports, optOutReports, optInReports int) {
