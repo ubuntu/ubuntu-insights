@@ -21,10 +21,10 @@ Ubuntu Insights is designed to be a full replacement for [Ubuntu Report](https:/
 
 ## Components
 
-Ubuntu Insights is divided into two components.
+Ubuntu Insights is divided into two components:
 
 - The client for local actions which consists of a command-line interface, as well as Go and C APIs. It is also packaged as a deb package. See [insights](insights)
-- The server services which is what we use to aggregate reports. See [server-services](server-services)
+- The server services which is what we use to aggregate reports. See [server](server)
 
 ## Example Insights Reports
 
