@@ -161,7 +161,7 @@ func TestIngestService(t *testing.T) {
 			}()
 
 			require.NoError(t, dbContainer.IsReady(t, 5*time.Second, 10), "Setup: dbContainer was not ready in time")
-			ApplyMigrations(t, dbContainer.DSN, filepath.Join(testutils.ProjectRoot(), "migrations"))
+			ApplyMigrations(t, dbContainer.DSN, filepath.Join(testutils.ProjectRoot(), "server-services", "migrations"))
 
 			dst := t.TempDir()
 			for _, report := range tc.preReports {
