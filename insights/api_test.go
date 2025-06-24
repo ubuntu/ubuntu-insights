@@ -17,20 +17,58 @@ func TestCollect(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		metricsPath string
-		source      string
+		source       string
+		collectFlags insights.CollectFlags
 
 		wantErr bool
 	}{
 		"Source with metrics doesn't error": {
-			metricsPath: "custom.json",
-			source:      "valid_true",
+			source: "valid_true",
+			collectFlags: insights.CollectFlags{
+				SourceMetricsPath: "custom.json",
+				DryRun:            true,
+			},
+		},
+		"Source with valid source metrics JSON doesn't error": {
+			source: "valid_true",
+			collectFlags: insights.CollectFlags{
+				SourceMetricsJSON: []byte(`{"key": "source metrics JSON"}`),
+				DryRun:            true,
+			},
 		},
 
-		"Source with no metrics errors": {
-			metricsPath: "",
-			source:      "missing_consent_file",
+		// Error cases
+		"Missing consent file errors": {
+			source: "missing_consent_file",
+			collectFlags: insights.CollectFlags{
+				DryRun: true,
+			},
 
+			wantErr: true,
+		},
+		"Invalid source metrics JSON errors": {
+			source: "valid_true",
+			collectFlags: insights.CollectFlags{
+				SourceMetricsJSON: []byte(`{"key": "invalid source metrics JSON"`),
+				DryRun:            true,
+			},
+			wantErr: true,
+		},
+		"Non-JSON object source metrics JSON errors": {
+			source: "valid_true",
+			collectFlags: insights.CollectFlags{
+				SourceMetricsJSON: []byte(`["array", "not", "object"]`),
+				DryRun:            true,
+			},
+			wantErr: true,
+		},
+		"Setting both SourceMetricsPath and SourceMetricsJSON errors": {
+			source: "valid_true",
+			collectFlags: insights.CollectFlags{
+				SourceMetricsPath: "custom.json",
+				SourceMetricsJSON: []byte(`{"key": "source metrics JSON"}`),
+				DryRun:            true,
+			},
 			wantErr: true,
 		},
 	}
@@ -47,19 +85,12 @@ func TestCollect(t *testing.T) {
 				Verbose:     false,
 			}
 
-			flags := insights.CollectFlags{
-				Period: 0,
-				Force:  false,
-				DryRun: true,
-			}
-
-			mPath := ""
-			if tc.metricsPath != "" {
-				mPath = filepath.Join("testdata", "metrics", tc.metricsPath)
+			if tc.collectFlags.SourceMetricsPath != "" {
+				tc.collectFlags.SourceMetricsPath = filepath.Join("testdata", "metrics", tc.collectFlags.SourceMetricsPath)
 			}
 
 			// this is technically an integration test for dry-run.
-			err := conf.Collect(mPath, flags)
+			err := conf.Collect(tc.collectFlags)
 
 			if tc.wantErr {
 				require.Error(t, err)

@@ -3,8 +3,9 @@ conf:
     consentdir: home/etc/dir
     insightsdir: insights/dir
     verbose: true
-metrics: ""
 flags:
+    sourcemetricspath: ""
+    sourcemetricsjson: []
     period: 0
     force: false
     dryrun: false

@@ -36,9 +36,11 @@ type Config struct {
 
 // CollectFlags represents optional parameters for Collect.
 type CollectFlags struct {
-	Period uint
-	Force  bool
-	DryRun bool
+	SourceMetricsPath string // Path to a JSON file a valid JSON object for source metrics.
+	SourceMetricsJSON []byte // JSON object for source metrics.
+	Period            uint
+	Force             bool
+	DryRun            bool
 }
 
 // UploadFlags represents optional parameters for Upload.
@@ -48,18 +50,23 @@ type UploadFlags struct {
 	DryRun bool
 }
 
-// Collect creates a report for Config.Source.
-// metricsPath is a filepath to a JSON file containing extra metrics.
-// If Config.Source is "",  the source is the platform and metricsPath is ignored.
+// Collect creates a report for Config.Source and writes it to Config.InsightsDir.
+//
+// The SourceMetricsPath and SouceMetricsJSON fields in flags are mutually exclusive.
+// If both are set, an error will be returned.
+// If SourceMetricsPath in flags is set, it must be a valid path to a JSON file with a valid JSON object.
+// SourceMetricsJSON in flags if set must be a valid JSON object, not an array or primitive.
+//
 // returns an error if collection fails.
-func (c Config) Collect(metricsPath string, flags CollectFlags) error {
+func (c Config) Collect(flags CollectFlags) error {
 	l := c.setup()
 
 	cConf := collector.Config{
 		Source:            c.Source,
 		Period:            flags.Period,
 		CachePath:         c.InsightsDir,
-		SourceMetricsPath: metricsPath,
+		SourceMetricsPath: flags.SourceMetricsPath,
+		SourceMetricsJSON: flags.SourceMetricsJSON,
 	}
 
 	cm := consent.New(l, c.ConsentDir)
