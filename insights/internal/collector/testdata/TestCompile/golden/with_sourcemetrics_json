@@ -1,0 +1,11 @@
+{
+  "insightsVersion": "Tests",
+  "collectionTime": 10,
+  "systemInfo": {
+    "hardware": {},
+    "software": {}
+  },
+  "sourceMetrics": {
+    "test": "sourceMetricsJson"
+  }
+}
