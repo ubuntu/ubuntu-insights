@@ -74,6 +74,7 @@ type collector struct {
 	collectedDir      string
 	uploadedDir       string
 	sourceMetricsPath string
+	sourceMetricsJSON []byte
 
 	// Overrides for testing.
 	maxReports uint
@@ -107,6 +108,7 @@ type Config struct {
 	Period            uint
 	CachePath         string
 	SourceMetricsPath string
+	SourceMetricsJSON []byte
 }
 
 // Sanitize sets defaults and checks that the Config is properly configured.
@@ -116,14 +118,23 @@ func (c *Config) Sanitize(l *slog.Logger) error {
 		return errors.New("period cannot be greater than max int")
 	}
 
-	if c.Source == "" && c.SourceMetricsPath != "" { // ignore SourceMetrics for platform source
-		l.Warn("Source Metrics were provided but is ignored for the global source")
-		c.SourceMetricsPath = ""
-	}
-
 	if c.Source == "" { // Default source to platform
 		c.Source = constants.DefaultCollectSource
 		l.Info("No source provided, defaulting to platform", "source", c.Source)
+	}
+
+	if c.Source == constants.DefaultCollectSource && (c.SourceMetricsPath != "" || c.SourceMetricsJSON != nil) {
+		l.Warn("Ignoring source metrics as they are not applicable for the platform source")
+		c.SourceMetricsPath = ""
+		c.SourceMetricsJSON = nil
+	}
+
+	if c.SourceMetricsPath != "" && c.SourceMetricsJSON != nil {
+		return errors.New("only one of SourceMetricsPath or SourceMetricsJSON can be provided")
+	}
+
+	if c.SourceMetricsJSON != nil && !json.Valid(c.SourceMetricsJSON) {
+		return errors.New("provided SourceMetricsJSON is not valid JSON")
 	}
 
 	if c.CachePath == "" {
@@ -167,6 +178,7 @@ func New(l *slog.Logger, cm Consent, c Config, args ...Options) (Collector, erro
 		collectedDir:      filepath.Join(c.CachePath, c.Source, constants.LocalFolder),
 		uploadedDir:       filepath.Join(c.CachePath, c.Source, constants.UploadedFolder),
 		sourceMetricsPath: c.SourceMetricsPath,
+		sourceMetricsJSON: c.SourceMetricsJSON,
 		maxReports:        opts.maxReports,
 		sysInfo:           opts.sysInfo(l),
 
@@ -178,6 +190,7 @@ func New(l *slog.Logger, cm Consent, c Config, args ...Options) (Collector, erro
 //
 // Checks if a report already exists for the current period, and returns an error if it does.
 // Does not check consent, as this should be done at write time.
+// Note that any source metrics must be a valid JSON object, not an array or primitive.
 func (c collector) Compile(force bool) (insights Insights, err error) {
 	c.log.Debug("Collecting data", "force", force)
 	defer decorate.OnError(&err, "insights compile failed")
@@ -302,13 +315,24 @@ func (c collector) compile() (Insights, error) {
 	return insights, nil
 }
 
-// getSourceMetrics loads source specific metrics from a JSON file.
+// getSourceMetrics loads source specific metrics.
+// If sourceMetricsJSON is set, it will attempt to use that.
+// Otherwise, it will use sourceMetricsPath to load from a JSON file.
 // If the sourceMetricsPath is empty, it returns nil.
 //
+// If sourceMetricsJSON is set but not valid JSON, it returns an error.
 // If the file does not exist, or cannot be read, it returns an error.
 // If the file is not valid JSON, it returns an error.
 func (c collector) getSourceMetrics() (map[string]any, error) {
 	c.log.Debug("Loading source metrics", "path", c.sourceMetricsPath)
+
+	if c.sourceMetricsJSON != nil {
+		var metrics map[string]any
+		if err := json.Unmarshal(c.sourceMetricsJSON, &metrics); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal source metrics JSON, might be an invalid JSON object: %v", err)
+		}
+		return metrics, nil
+	}
 
 	if c.sourceMetricsPath == "" {
 		c.log.Info("No source metrics file provided")
@@ -322,7 +346,7 @@ func (c collector) getSourceMetrics() (map[string]any, error) {
 
 	var metrics map[string]any
 	if err := json.Unmarshal(data, &metrics); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal source metrics, might be invalid JSON: %v", err)
+		return nil, fmt.Errorf("failed to unmarshal source metrics, might be an invalid JSON object: %v", err)
 	}
 
 	return metrics, nil
