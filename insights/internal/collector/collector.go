@@ -239,10 +239,7 @@ func (c collector) Write(insights Insights, dryRun bool) (err error) {
 		c.log.Info("Consent granted, writing insights report")
 	} else {
 		c.log.Warn("Insights data will not be written to disk, as consent was not provided.")
-		data, err = json.Marshal(constants.OptOutJSON)
-		if err != nil {
-			return fmt.Errorf("failed to marshal opt-out JSON: %v", err)
-		}
+		data = constants.OptOutPayload
 	}
 
 	if dryRun {

@@ -2,7 +2,6 @@ package uploader
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -170,10 +169,7 @@ func (um Uploader) upload(r report.Report, uploadedDir, url string, consent, for
 	}
 	data := origData
 	if !consent {
-		data, err = json.Marshal(constants.OptOutJSON)
-		if err != nil {
-			return fmt.Errorf("failed to marshal opt-out JSON data: %v", err)
-		}
+		data = constants.OptOutPayload
 	}
 	um.log.Debug("Uploading", "payload", data)
 

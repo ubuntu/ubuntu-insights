@@ -3,6 +3,7 @@
 package constants
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -59,11 +60,19 @@ var (
 	DefaultCachePath = DefaultAppFolder
 	// OptOutJSON is the data sent in case of Opt-Out choice.
 	OptOutJSON = struct{ OptOut bool }{true}
+	// OptOutPayload is the marshalled version of OptOutJSON.
+	OptOutPayload []byte
 )
 
 func init() {
-	// This is to ensure that the man pages which include the default values
-	// are not generated with the home path at time of generation.
+	initalizePaths()
+	initializeOptOutPayload()
+}
+
+// initalizePaths initializes the default configuration and cache paths based on the user's home directory.
+// If the manGeneration variable is set to "true", it will clear the path variables to avoid including potentially
+// misleading paths in the generated man pages.
+func initalizePaths() {
 	if manGeneration == "true" {
 		DefaultConfigPath = ""
 		DefaultCachePath = ""
@@ -81,4 +90,13 @@ func init() {
 
 	DefaultConfigPath = filepath.Join(userConfigDir, DefaultConfigPath)
 	DefaultCachePath = filepath.Join(userCacheDir, DefaultCachePath)
+}
+
+// initializeOptOutPayload initializes the OptOutPayload variable with the marshalled OptOutJSON.
+func initializeOptOutPayload() {
+	var err error
+	OptOutPayload, err = json.Marshal(OptOutJSON)
+	if err != nil {
+		panic(fmt.Sprintf("Could not marshal OptOutJSON: %v", err))
+	}
 }
