@@ -1,5 +1,4 @@
 CREATE TABLE ubuntu_report (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     report_id UUID NOT NULL,
     entry_time TIMESTAMP NOT NULL,
     distribution TEXT NOT NULL,
