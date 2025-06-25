@@ -23,7 +23,7 @@ jobs:
         subproject: ["insights", "shared"]
         include:
           - os: ubuntu-24.04
-            subproject: server-services # server-services is only supported on Linux
+            subproject: server # server is only supported on Linux
     steps:
       - name: Install dependencies on Linux
         if: runner.os == 'Linux' && matrix.subproject == 'insights'
@@ -48,10 +48,10 @@ jobs:
         subproject: ["insights", "shared"]
         include:
           - os: ubuntu-24.04
-            subproject: server-services # server-services is only supported on Linux
+            subproject: server # server is only supported on Linux
             test: coverage
           - os: ubuntu-24.04
-            subproject: server-services # server-services is only supported on Linux
+            subproject: server # server is only supported on Linux
             test: race
     steps:
       - name: setup-go cache workaround #https://github.com/actions/setup-go/issues/424
@@ -63,7 +63,7 @@ jobs:
           go-version-file: go.work
           cache-dependency-path: |
             insights/go.sum
-            server-services/go.sum
+            server/go.sum
             shared/go.sum
             tools/go.sum
             go.work.sum

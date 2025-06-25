@@ -4,7 +4,7 @@ toolchain go1.24.4
 
 use (
 	./insights
-	./server-services
+	./server
 	./shared
 	./tools
 )
