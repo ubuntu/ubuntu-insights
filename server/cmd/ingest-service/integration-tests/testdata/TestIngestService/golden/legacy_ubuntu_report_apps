@@ -21,12 +21,22 @@
       "OptOutReports": 0,
       "OptInReports": 0
     },
+    "ubuntu_desktop_provision": {
+      "TotalReports": 0,
+      "OptOutReports": 0,
+      "OptInReports": 0
+    },
     "ubuntu_report": {
       "TotalReports": 12,
       "OptOutReports": 6,
       "OptInReports": 6
     },
     "windows": {
+      "TotalReports": 0,
+      "OptOutReports": 0,
+      "OptInReports": 0
+    },
+    "wsl_setup": {
       "TotalReports": 0,
       "OptOutReports": 0,
       "OptInReports": 0
