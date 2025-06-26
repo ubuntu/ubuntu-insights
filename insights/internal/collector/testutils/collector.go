@@ -7,9 +7,9 @@ import (
 	"time"
 	_ "unsafe" // For go:linkname
 
+	"github.com/ubuntu/ubuntu-insights/common/testsdetection"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/collector"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/collector/sysinfo"
-	"github.com/ubuntu/ubuntu-insights/shared/testsdetection"
 )
 
 func init() {

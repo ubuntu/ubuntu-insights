@@ -9,9 +9,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/collector/sysinfo/platform"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/collector/sysinfo/software"
-	"github.com/ubuntu/ubuntu-insights/shared/testutils"
 )
 
 func TestCollectLinux(t *testing.T) {

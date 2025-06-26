@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ubuntu/ubuntu-insights/server/internal/shared/constants"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/constants"
 )
 
 // VersionHandler handles requests to the /version endpoint.

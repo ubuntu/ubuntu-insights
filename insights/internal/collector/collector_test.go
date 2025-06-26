@@ -13,10 +13,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/collector"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/collector/sysinfo"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/constants"
-	"github.com/ubuntu/ubuntu-insights/shared/testutils"
 )
 
 var (

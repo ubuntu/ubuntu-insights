@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/ubuntu-insights/server/internal/shared/config"
-	"github.com/ubuntu/ubuntu-insights/server/internal/shared/constants"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/constants"
 	"gopkg.in/yaml.v3"
 )
 

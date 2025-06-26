@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/ubuntu/ubuntu-insights/shared/cli"
-	"github.com/ubuntu/ubuntu-insights/shared/internal/constants"
+	"github.com/ubuntu/ubuntu-insights/common/cli"
+	"github.com/ubuntu/ubuntu-insights/common/internal/constants"
 )
 
 func TestSetVerbosity(t *testing.T) {

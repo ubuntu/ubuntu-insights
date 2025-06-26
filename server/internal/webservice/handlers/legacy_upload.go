@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/ubuntu/ubuntu-insights/server/internal/shared/config"
-	"github.com/ubuntu/ubuntu-insights/server/internal/shared/constants"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/constants"
 )
 
 // LegacyReport is a handler for old Ubuntu-Report JSON reports.

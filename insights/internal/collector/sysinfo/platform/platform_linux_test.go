@@ -9,8 +9,8 @@ import (
 	"unicode/utf16"
 
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/collector/sysinfo/platform"
-	"github.com/ubuntu/ubuntu-insights/shared/testutils"
 )
 
 func TestNewLinux(t *testing.T) {

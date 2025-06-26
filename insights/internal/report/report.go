@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/constants"
-	"github.com/ubuntu/ubuntu-insights/shared/fileutils"
 )
 
 var (

@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/ubuntu-insights/server/internal/shared/config"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
 )
 
 type DConfigManager = dConfigManager

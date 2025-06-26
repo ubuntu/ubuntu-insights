@@ -1,4 +1,4 @@
-module github.com/ubuntu/ubuntu-insights/shared
+module github.com/ubuntu/ubuntu-insights/common
 
 go 1.24.0
 

@@ -11,9 +11,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/collector/sysinfo/hardware"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/collector/sysinfo/platform"
-	"github.com/ubuntu/ubuntu-insights/shared/testutils"
 )
 
 func TestMain(m *testing.M) {
@@ -908,7 +908,7 @@ func TestFakeGpuScreenInfo(_ *testing.T) {
       ],
       "spdisplays_revision-id" : "0x0002",
       "spdisplays_vendor" : "Intel",
-      "spdisplays_vram_shared" : "1234 GB",
+      "spdisplays_vram_common" : "1234 GB",
       "sppci_bus" : "spdisplays_builtin",
       "sppci_device_type" : "spdisplays_gpu",
       "sppci_model" : "Intel UHD Graphics"
@@ -967,7 +967,7 @@ func TestFakeGpuScreenInfo(_ *testing.T) {
       ],
       "spdisplays_revision-id" : "0x0002",
       "spdisplays_vendor" : "Intel",
-      "spdisplays_vram_shared" : "1234 GB",
+      "spdisplays_vram_common" : "1234 GB",
       "sppci_bus" : "spdisplays_builtin",
       "sppci_device_type" : "spdisplays_gpu",
       "sppci_model" : "Intel UHD Graphics"

@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/report"
-	"github.com/ubuntu/ubuntu-insights/shared/testutils"
 )
 
 func TestGetPeriodStart(t *testing.T) {

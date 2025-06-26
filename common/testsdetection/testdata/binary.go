@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ubuntu/ubuntu-insights/shared/testsdetection"
+	"github.com/ubuntu/ubuntu-insights/common/testsdetection"
 )
 
 func main() {

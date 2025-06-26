@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/ubuntu/ubuntu-insights/server/internal/shared/constants"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/constants"
 )
 
 func (a *App) installVersion() {

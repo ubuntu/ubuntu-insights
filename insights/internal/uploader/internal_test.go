@@ -9,9 +9,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/report"
-	"github.com/ubuntu/ubuntu-insights/shared/fileutils"
 )
 
 func TestUploadBadFile(t *testing.T) {

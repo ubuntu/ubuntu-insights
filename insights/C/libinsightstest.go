@@ -50,8 +50,8 @@ import (
 	"unsafe"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/insights"
-	"github.com/ubuntu/ubuntu-insights/shared/testutils"
 )
 
 // TestCollectImpl tests collect since import "C" and _test aren't compatible.

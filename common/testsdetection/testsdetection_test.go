@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/ubuntu-insights/shared/testsdetection"
-	"github.com/ubuntu/ubuntu-insights/shared/testutils"
+	"github.com/ubuntu/ubuntu-insights/common/testsdetection"
+	"github.com/ubuntu/ubuntu-insights/common/testutils"
 )
 
 func TestMustBeTestingInTests(t *testing.T) {

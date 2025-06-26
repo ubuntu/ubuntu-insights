@@ -1,5 +1,5 @@
 // Package constants is responsible for defining private constants used
-// by the shared module of Ubuntu Insights.
+// by the common module of Ubuntu Insights.
 package constants
 
 import (

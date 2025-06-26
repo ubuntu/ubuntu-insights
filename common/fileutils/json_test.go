@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/ubuntu-insights/shared/fileutils"
-	"github.com/ubuntu/ubuntu-insights/shared/testutils"
+	"github.com/ubuntu/ubuntu-insights/common/fileutils"
+	"github.com/ubuntu/ubuntu-insights/common/testutils"
 )
 
 func TestUnmarshalJSON(t *testing.T) {

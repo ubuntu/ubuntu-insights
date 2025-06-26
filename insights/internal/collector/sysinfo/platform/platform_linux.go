@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/ubuntu/decorate"
+	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/cmdutils"
-	"github.com/ubuntu/ubuntu-insights/shared/fileutils"
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
 	"gopkg.in/ini.v1"

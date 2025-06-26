@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/cmdutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/collector/sysinfo/platform"
-	"github.com/ubuntu/ubuntu-insights/shared/fileutils"
 )
 
 type platformOptions struct {

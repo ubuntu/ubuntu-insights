@@ -3,7 +3,7 @@ package cli
 import (
 	"log/slog"
 
-	"github.com/ubuntu/ubuntu-insights/shared/internal/constants"
+	"github.com/ubuntu/ubuntu-insights/common/internal/constants"
 )
 
 // SetVerbosity sets the global logging level based on the verbose flag count.

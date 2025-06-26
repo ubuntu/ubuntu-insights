@@ -20,7 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, windows-2022, macos-13, macos-14] # Run on Ubuntu, Windows, Mac Intel, Mac ARM
-        subproject: ["insights", "shared"]
+        subproject: ["insights", "common"]
         include:
           - os: ubuntu-24.04
             subproject: server # server is only supported on Linux
@@ -45,7 +45,7 @@ jobs:
       matrix:
         test: ["coverage", "race"]
         os: [ubuntu-24.04, windows-2022, macos-13, macos-14] # Run on Ubuntu, Windows, Mac Intel, Mac ARM
-        subproject: ["insights", "shared"]
+        subproject: ["insights", "common"]
         include:
           - os: ubuntu-24.04
             subproject: server # server is only supported on Linux
@@ -64,7 +64,7 @@ jobs:
           cache-dependency-path: |
             insights/go.sum
             server/go.sum
-            shared/go.sum
+            common/go.sum
             tools/go.sum
             go.work.sum
 

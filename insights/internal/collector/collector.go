@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/ubuntu/decorate"
+	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/collector/sysinfo"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/report"
-	"github.com/ubuntu/ubuntu-insights/shared/fileutils"
 )
 
 var (

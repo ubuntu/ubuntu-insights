@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/server/cmd/ingest-service/daemon"
-	"github.com/ubuntu/ubuntu-insights/server/internal/shared/config"
-	"github.com/ubuntu/ubuntu-insights/server/internal/shared/constants"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/constants"
 )
 
 func TestConfigArg(t *testing.T) {

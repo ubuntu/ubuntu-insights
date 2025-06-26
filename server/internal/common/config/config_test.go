@@ -12,8 +12,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/ubuntu-insights/server/internal/shared/config"
-	"github.com/ubuntu/ubuntu-insights/shared/testutils"
+	"github.com/ubuntu/ubuntu-insights/common/testutils"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
 )
 
 func createTempConfigFile(t *testing.T, content string) string {

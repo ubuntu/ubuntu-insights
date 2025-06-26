@@ -11,10 +11,10 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/ubuntu/ubuntu-insights/server/internal/shared/config"
-	"github.com/ubuntu/ubuntu-insights/server/internal/shared/constants"
+	"github.com/ubuntu/ubuntu-insights/common/cli"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/constants"
 	"github.com/ubuntu/ubuntu-insights/server/internal/webservice"
-	"github.com/ubuntu/ubuntu-insights/shared/cli"
 )
 
 // App represents the application.

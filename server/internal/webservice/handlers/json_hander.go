@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/ubuntu/ubuntu-insights/server/internal/shared/config"
-	"github.com/ubuntu/ubuntu-insights/shared/fileutils"
+	"github.com/ubuntu/ubuntu-insights/common/fileutils"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
 )
 
 type jsonHandler struct {

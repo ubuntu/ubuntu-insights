@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/ubuntu/ubuntu-insights/server/internal/shared/config"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
 )
 
 // Upload is a handler for uploading standard Ubuntu-Insights JSON reports.

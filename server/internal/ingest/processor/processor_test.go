@@ -13,10 +13,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/ubuntu-insights/common/testutils"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/constants"
 	"github.com/ubuntu/ubuntu-insights/server/internal/ingest/models"
 	"github.com/ubuntu/ubuntu-insights/server/internal/ingest/processor"
-	"github.com/ubuntu/ubuntu-insights/server/internal/shared/constants"
-	"github.com/ubuntu/ubuntu-insights/shared/testutils"
 )
 
 var testFixutresDir = filepath.Join("testdata", "fixtures")

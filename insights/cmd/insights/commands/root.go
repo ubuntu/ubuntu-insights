@@ -7,10 +7,10 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/ubuntu/ubuntu-insights/common/cli"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/collector"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/constants"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/uploader"
-	"github.com/ubuntu/ubuntu-insights/shared/cli"
 )
 
 type newUploader func(l *slog.Logger, cm uploader.Consent, cachePath string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error)

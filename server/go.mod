@@ -12,7 +12,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.37.0
-	github.com/ubuntu/ubuntu-insights/shared v0.0.0-20250620182904-55c58f5c67ad
+	github.com/ubuntu/ubuntu-insights/common v0.0.0-20250626143524-506f1b038fde
 	gopkg.in/yaml.v3 v3.0.1
 )
 

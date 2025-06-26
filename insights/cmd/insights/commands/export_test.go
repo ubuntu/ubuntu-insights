@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/ubuntu-insights/shared/testutils"
+	"github.com/ubuntu/ubuntu-insights/common/testutils"
 )
 
 type (

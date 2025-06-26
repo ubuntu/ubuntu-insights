@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/ubuntu/ubuntu-insights/server/internal/shared/constants"
-	"github.com/ubuntu/ubuntu-insights/shared/testutils"
+	"github.com/ubuntu/ubuntu-insights/common/testutils"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/constants"
 )
 
 var cliPath string

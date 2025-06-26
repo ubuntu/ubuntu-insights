@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ubuntu/ubuntu-insights/shared/testutils"
+	"github.com/ubuntu/ubuntu-insights/common/testutils"
 )
 
 func TestMain(m *testing.M) {

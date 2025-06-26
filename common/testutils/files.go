@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ubuntu/ubuntu-insights/shared/fileutils"
+	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 )
 
 // CopyFile copies a file from source to destination.

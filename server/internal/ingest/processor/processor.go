@@ -17,8 +17,8 @@ import (
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/google/uuid"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/constants"
 	"github.com/ubuntu/ubuntu-insights/server/internal/ingest/models"
-	"github.com/ubuntu/ubuntu-insights/server/internal/shared/constants"
 )
 
 // ErrDatabaseErrors is returned when significant database errors occur during processing.

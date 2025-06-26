@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/consent"
-	"github.com/ubuntu/ubuntu-insights/shared/testutils"
 )
 
 func TestGetState(t *testing.T) {
