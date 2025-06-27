@@ -1,0 +1,64 @@
+name: Build and run trivial debian package tests
+# Builds the client debian package on ubuntu:devel and attempt to install it locally to run a set of toy tests.
+
+on:
+  pull_request:
+    paths-ignore:
+      - server/**
+      - tools/**
+      - "*.md"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build-ubuntu-insights:
+    name: Build ubuntu-insights debian package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Build debian package
+        uses: canonical/desktop-engineering/gh-actions/common/build-debian@main
+        with:
+          source-dir: insights
+          token: ${{ secrets.GITHUB_TOKEN }}
+          docker-image: ubuntu:devel
+
+  qa:
+    name: Run trivial debian package tests
+    runs-on: ubuntu-latest
+    needs: build-ubuntu-insights
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          # name: is left blank so that all artifacts are downloaded
+          path: ci-artifacts
+
+      - name: Install ubuntu-insights debian package
+        run: |
+          sudo apt install -y ./ci-artifacts/ubuntu-insights_*-debian-packages/ubuntu-insights_*.deb
+
+      - name: Ensure man page is installed
+        run: |
+          MANPAGER=cat man ubuntu-insights
+
+      - name: Ensure systemd units are installed
+        run: |
+          # Verify systemd can find the units (will succeed even if inactive)
+          systemctl --user --no-pager list-unit-files ubuntu-insights-collect.service
+          systemctl --user --no-pager list-unit-files ubuntu-insights-collect.timer
+          systemctl --user --no-pager list-unit-files ubuntu-insights-upload.service
+          systemctl --user --no-pager list-unit-files ubuntu-insights-upload.timer
+
+      - name: Run trivial tests
+        run:
+          | # Go through a typical workflow, ensuring that no errors are encountered. This should eventually be replaced with true end-to-end tests.
+          ubuntu-insights --version
+          ubuntu-insights --help
+          ubuntu-insights collect -df
+          ubuntu-insights collect
+          ubuntu-insights consent -s=true
+          ubuntu-insights collect
+          ubuntu-insights upload -df
