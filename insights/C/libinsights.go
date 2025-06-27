@@ -2,41 +2,11 @@
 package main
 
 /*
-#include <stdbool.h>
-
-typedef enum {
-	CONSENT_UNKNOWN = -1,
-	CONSENT_FALSE = 0,
-	CONSENT_TRUE = 1,
-} ConsentState;
-
-typedef struct {
-	const char* source;      //default: global
-	const char* consentDir;  //default: "${os.UserConfigDir}/ubuntu-insights"
-	const char* insightsDir; //default: "${os.UserCacheDir}/ubuntu-insights"
-	bool verbose;            //default: false
-} InsightsConfig;
-
-// Collector
-typedef struct {
-	unsigned int period; // default: 1 week (604800)
-	bool force, dryRun;  // default: false
-} CollectFlags;
-
-typedef struct {
-	unsigned int minAge; // default: 1
-	bool force, dryRun;  // default: false
-} UploadFlags;
-
-// typedefs to be able to have `const` in Go.
-typedef const char Cchar;
-typedef const InsightsConfig CInsightsConfig;
-typedef const CollectFlags CCollectFlags;
-typedef const UploadFlags CUploadFlags;
+#include "insights_types.h"
 */
 import "C"
 
-import insights "github.com/ubuntu/ubuntu-insights/insights"
+import "github.com/ubuntu/ubuntu-insights/insights"
 
 /* collectInsights creates a report for the config->source.
 // metricsPath is a filepath to a JSON file containing extra metrics.
@@ -47,32 +17,34 @@ import insights "github.com/ubuntu/ubuntu-insights/insights"
 // Otherwise, this returns NULL.
 // The error string must be freed. */
 //export collectInsights
-func collectInsights(config *C.CInsightsConfig, metricsPath *C.Cchar, flags *C.CCollectFlags) *C.char {
-	return collectCustomInsights(config, metricsPath, flags, func(conf insights.Config, metrics string, f insights.CollectFlags) error {
-		return conf.Collect(metrics, f)
+func collectInsights(config *C.CInsightsConfig, flags *C.CCollectFlags) *C.char {
+	return collectCustomInsights(config, flags, func(conf insights.Config, f insights.CollectFlags) error {
+		return conf.Collect(f)
 	})
 }
 
 // collector is a function that collects using the given parameters.
-type collector = func(conf insights.Config, metricsPath string, flags insights.CollectFlags) error
+type collector = func(conf insights.Config, flags insights.CollectFlags) error
 
 // collectCustomInsights handles C to Go translation and calls the custom collector.
-func collectCustomInsights(config *C.CInsightsConfig, metricsPath *C.Cchar, flags *C.CCollectFlags, customCollector collector) *C.char {
+func collectCustomInsights(config *C.CInsightsConfig, flags *C.CCollectFlags, customCollector collector) *C.char {
 	conf := toGoInsightsConfig(config)
-
-	mpath := ""
-	if metricsPath != nil {
-		mpath = C.GoString(metricsPath)
-	}
 
 	f := insights.CollectFlags{}
 	if flags != nil {
 		f.Period = (uint)(flags.period)
 		f.Force = (bool)(flags.force)
 		f.DryRun = (bool)(flags.dryRun)
+
+		if flags.sourceMetricsPath != nil {
+			f.SourceMetricsPath = C.GoString(flags.sourceMetricsPath)
+		}
+		if flags.sourceMetricsJSON != nil && flags.sourceMetricsJSONLen > 0 {
+			f.SourceMetricsJSON = C.GoBytes(flags.sourceMetricsJSON, C.int(flags.sourceMetricsJSONLen))
+		}
 	}
 
-	err := customCollector(conf, mpath, f)
+	err := customCollector(conf, f)
 	return errToCString(err)
 }
 

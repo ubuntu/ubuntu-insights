@@ -52,6 +52,106 @@ func (m MockTimeProvider) Now() time.Time {
 	return time.Unix(m.CurrentTime, 0)
 }
 
+func TestSanitize(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		config collector.Config
+
+		logs    map[slog.Level]uint
+		wantErr bool
+	}{
+		"Blanck collector config": {
+			config: collector.Config{},
+			logs: map[slog.Level]uint{
+				slog.LevelInfo: 2,
+			},
+		},
+
+		"Custom source with souceMetricsPath": {
+			config: collector.Config{
+				Source:            "customSource",
+				SourceMetricsPath: "fakeSourceMetricsPath",
+				CachePath:         "fakeCachePath",
+			},
+		},
+		"Custom source with souceMetricsJSON": {
+			config: collector.Config{
+				Source:            "customSource",
+				SourceMetricsJSON: []byte(`{"test": "sourceMetricsJson"}`),
+				CachePath:         "fakeCachePath",
+			},
+		},
+		"Source metrics provided with empty source": {
+			config: collector.Config{
+				SourceMetricsPath: "fakeSourceMetricsPath",
+				SourceMetricsJSON: []byte(`{"test": "sourceMetricsJson"}`),
+				CachePath:         "fakeCachePath",
+			},
+			logs: map[slog.Level]uint{
+				slog.LevelInfo: 1,
+				slog.LevelWarn: 1,
+			},
+		},
+		"Source metrics provided with defaultCollectorSource": {
+			config: collector.Config{
+				Source:            constants.DefaultCollectSource,
+				SourceMetricsPath: "fakeSourceMetricsPath",
+				SourceMetricsJSON: []byte(`{"test": "sourceMetricsJson"}`),
+				CachePath:         "fakeCachePath",
+			},
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		// Error cases
+		"Overflow period errors": {
+			config: collector.Config{
+				Source:    constants.DefaultCollectSource,
+				Period:    math.MaxInt + 1,
+				CachePath: t.TempDir(),
+			},
+			wantErr: true,
+		},
+		"Both sourceMetricsPath and sourceMetricsJSON provided with customSource errors": {
+			config: collector.Config{
+				Source:            "customSource",
+				SourceMetricsPath: "fakeSourceMetricsPath",
+				SourceMetricsJSON: []byte(`{"test": "sourceMetricsJson"}`),
+				CachePath:         "fakeCachePath",
+			},
+			wantErr: true,
+		},
+		"Invalid sourceMetricsJSON provided with customSource errors": {
+			config: collector.Config{
+				Source:            "customSource",
+				SourceMetricsJSON: []byte(`{"test": "invalidSourceMetricsJson"`), //
+				CachePath:         "fakeCachePath",
+			},
+			wantErr: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			l := testutils.NewMockHandler(slog.LevelDebug)
+			err := tc.config.Sanitize(slog.New(&l))
+			if tc.wantErr {
+				require.Error(t, err, "SanitizeConfig should have returned an error")
+			} else {
+				require.NoError(t, err, "SanitizeConfig returned an unexpected error")
+			}
+
+			if !l.AssertLevels(t, tc.logs) {
+				l.OutputLogs(t)
+			}
+		})
+	}
+}
+
 func TestNew(t *testing.T) {
 	t.Parallel()
 
@@ -72,24 +172,26 @@ func TestNew(t *testing.T) {
 			config: collector.Config{},
 		},
 
-		"Overflow Period": {
+		// Error cases
+		"Overflow Period (Sanitize error)": {
 			config: collector.Config{
 				Period:    math.MaxInt + 1,
 				CachePath: t.TempDir(),
 			},
 			wantErr: true,
 		},
-		"Source without source metrics": {
-			config: collector.Config{
-				Source:    "source",
-				CachePath: t.TempDir(),
-			},
-		},
 		"Nil Consent": {
 			config: collector.Config{
 				CachePath: t.TempDir(),
 			},
 			nilConsent: true,
+
+			wantErr: true,
+		},
+		"Bad cache path errors": {
+			config: collector.Config{
+				CachePath: filepath.Join(t.TempDir(), "\x00invalid"),
+			},
 
 			wantErr: true,
 		},
@@ -124,6 +226,7 @@ func TestCompile(t *testing.T) {
 		maxReports = 5
 	)
 
+	// Note that config.Source is always set in the tests.
 	tests := map[string]struct {
 		consentM collector.Consent
 		config   collector.Config
@@ -155,6 +258,13 @@ func TestCompile(t *testing.T) {
 			},
 			consentM: cTrue,
 		},
+		"With SourceMetrics JSON": {
+			config: collector.Config{
+				Period:            1,
+				SourceMetricsJSON: []byte(`{"test": "sourceMetricsJson"}`),
+			},
+			consentM: cTrue,
+		},
 		"Consent False": {
 			config: collector.Config{
 				Period: 1,
@@ -175,6 +285,8 @@ func TestCompile(t *testing.T) {
 			consentM: cTrue,
 			time:     5,
 		},
+
+		// Error cases
 		"Non-existent source metrics file": {
 			config: collector.Config{
 				Period:            1,
@@ -195,6 +307,14 @@ func TestCompile(t *testing.T) {
 			config: collector.Config{
 				Period:            1,
 				SourceMetricsPath: "testdata/source_metrics/bad_ext.json",
+			},
+			consentM: cTrue,
+			wantErr:  true,
+		},
+		"Non-json object sourceMetricsJSON errors": {
+			config: collector.Config{
+				Period:            1,
+				SourceMetricsJSON: []byte(`123`),
 			},
 			consentM: cTrue,
 			wantErr:  true,

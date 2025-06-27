@@ -5,37 +5,7 @@ package main
 
 /*
 #include <stdlib.h>
-#include <stdbool.h>
-
-typedef enum {
-	CONSENT_UNKNOWN = -1,
-	CONSENT_FALSE = 0,
-	CONSENT_TRUE = 1,
-} ConsentState;
-
-typedef struct {
-	const char* source;      //default: global
-	const char* consentDir;  //default: "${os.UserConfigDir}/ubuntu-insights"
-	const char* insightsDir; //default: "${os.UserCacheDir}/ubuntu-insights"
-	bool verbose;            //default: false
-} InsightsConfig;
-
-// Collector
-typedef struct {
-	unsigned int period; // default: 1 week (604800)
-	bool force, dryRun;  // default: false
-} CollectFlags;
-
-typedef struct {
-	unsigned int minAge; // default: 1
-	bool force, dryRun;  // default: false
-} UploadFlags;
-
-// typedefs to be able to have `const` in Go.
-typedef const char Cchar;
-typedef const InsightsConfig CInsightsConfig;
-typedef const CollectFlags CCollectFlags;
-typedef const UploadFlags CUploadFlags;
+#include "insights_types.h"
 
 extern char* collectInsights(const InsightsConfig*, const char*, const CollectFlags*);
 extern char* uploadInsights(const InsightsConfig*, const UploadFlags*);
@@ -59,9 +29,10 @@ func TestCollectImpl(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		config      *CInsightsConfig
-		metricsPath *string
-		flags       *C.CollectFlags
+		config            *CInsightsConfig
+		metricsPath       *string
+		sourceMetricsJSON []byte
+		flags             *C.CollectFlags
 
 		err error
 	}{
@@ -85,6 +56,10 @@ func TestCollectImpl(t *testing.T) {
 
 		"MetricsPath gets converted": {
 			metricsPath: strPtr("path/to/metrics"),
+		},
+
+		"SourceMetricsJSON gets converted": {
+			sourceMetricsJSON: []byte(`{"key": "value"}`),
 		},
 
 		"Flags get converted": {
@@ -123,21 +98,27 @@ func TestCollectImpl(t *testing.T) {
 			inConfig, cleanup := makeConfig(tc.config)
 			defer cleanup()
 
-			var inMetrics *C.char
+			if tc.flags == nil {
+				tc.flags = &C.CollectFlags{}
+			}
+
 			if tc.metricsPath != nil {
-				inMetrics = C.CString(*tc.metricsPath)
-				defer C.free(unsafe.Pointer(inMetrics))
+				tc.flags.sourceMetricsPath = C.CString(*tc.metricsPath)
+				defer C.free(unsafe.Pointer(tc.flags.sourceMetricsPath))
+			}
+
+			if tc.sourceMetricsJSON != nil {
+				tc.flags.sourceMetricsJSON = unsafe.Pointer(&tc.sourceMetricsJSON[0])
+				tc.flags.sourceMetricsJSONLen = C.size_t(len(tc.sourceMetricsJSON))
 			}
 
 			var got struct {
-				Conf    insights.Config
-				Metrics string
-				Flags   insights.CollectFlags
+				Conf  insights.Config
+				Flags insights.CollectFlags
 			}
 
-			ret := collectCustomInsights(inConfig, inMetrics, tc.flags, func(conf insights.Config, metrics string, flags insights.CollectFlags) error {
+			ret := collectCustomInsights(inConfig, tc.flags, func(conf insights.Config, flags insights.CollectFlags) error {
 				got.Conf = conf
-				got.Metrics = metrics
 				got.Flags = flags
 				return tc.err
 			})
@@ -149,6 +130,10 @@ func TestCollectImpl(t *testing.T) {
 				assert.Equal(t, C.GoString(ret), tc.err.Error())
 			}
 
+			// ensure SourceMetricsJSON is not nil for better comparison
+			if got.Flags.SourceMetricsJSON == nil {
+				got.Flags.SourceMetricsJSON = []byte{}
+			}
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			assert.Equal(t, want, got, "C structures should be correctly translated to Go")
 		})

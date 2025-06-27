@@ -3,8 +3,9 @@ conf:
     consentdir: ""
     insightsdir: ""
     verbose: false
-metrics: ""
 flags:
+    sourcemetricspath: ""
+    sourcemetricsjson: []
     period: 10
     force: true
     dryrun: true
