@@ -10,14 +10,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
-	ingestTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/ingest/testutils"
+	serverTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/common/testutils"
 )
 
 func TestMigrate(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
-	trueMigrationsDir := filepath.Join(testutils.ProjectRoot(), "server", "migrations")
+	trueMigrationsDir := filepath.Join(serverTestUtils.ModuleRoot(), "migrations")
 	fakeMigration := filepath.Join(tmpDir, "fake.sql")
 	require.NoError(t, os.WriteFile(fakeMigration, []byte(""), 0600), "Setup: couldn't write fake migration file")
 
@@ -74,9 +74,9 @@ func TestMigrate(t *testing.T) {
 
 			args := tc.args
 			// Start containers
-			db := &ingestTestUtils.PostgresContainer{}
+			db := &serverTestUtils.PostgresContainer{}
 			if !tc.noDatabase {
-				db = ingestTestUtils.StartPostgresContainer(t)
+				db = serverTestUtils.StartPostgresContainer(t)
 				defer func() {
 					if err := db.Stop(t.Context()); err != nil {
 						t.Errorf("Teardown: failed to stop dbContainer: %v", err)
@@ -86,7 +86,7 @@ func TestMigrate(t *testing.T) {
 				require.NoError(t, db.IsReady(t, 5*time.Second, 10), "Setup: dbContainer was not ready in time")
 
 				if tc.preAppliedMigrations {
-					ingestTestUtils.ApplyMigrations(t, db.DSN, filepath.Join(testutils.ProjectRoot(), "server", "migrations"))
+					serverTestUtils.ApplyMigrations(t, db.DSN, trueMigrationsDir)
 				}
 
 				args = append(args,
@@ -108,7 +108,7 @@ func TestMigrate(t *testing.T) {
 			if tc.wantExitCode == 0 {
 				require.NoError(t, err, "unexpected CLI error: %v\n%s", err, out)
 
-				got := ingestTestUtils.DBListTables(t, db.DSN)
+				got := serverTestUtils.DBListTables(t, db.DSN)
 				want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 				require.ElementsMatch(t, want, got, "Run should create the expected tables in the database")
 			}

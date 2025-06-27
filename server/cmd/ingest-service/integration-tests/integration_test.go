@@ -11,6 +11,7 @@ import (
 
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/server/internal/common/constants"
+	serverTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/common/testutils"
 )
 
 var cliPath string
@@ -29,8 +30,6 @@ func TestMain(m *testing.M) {
 
 // buildCLI builds the CLI executable app and returns the path to the binary.
 func buildCLI(extraArgs ...string) (execPath string, cleanup func(), err error) {
-	projectRoot := testutils.ProjectRoot()
-
 	tempDir, err := os.MkdirTemp("", "ubuntu-insights-ingest-tests-cli")
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to create temporary directory: %v", err)
@@ -46,7 +45,7 @@ func buildCLI(extraArgs ...string) (execPath string, cleanup func(), err error) 
 		execPath += ".exe"
 	}
 	cmd := exec.Command("go", "build")
-	cmd.Dir = projectRoot
+	cmd.Dir = serverTestUtils.ModuleRoot()
 	if testutils.CoverDirForTests() != "" {
 		// -cover is a "positional flag", so it needs to come right after the "build" command.
 		cmd.Args = append(cmd.Args, "-cover")
@@ -55,7 +54,7 @@ func buildCLI(extraArgs ...string) (execPath string, cleanup func(), err error) 
 		cmd.Args = append(cmd.Args, "-race")
 	}
 	cmd.Args = append(cmd.Args, extraArgs...)
-	cmd.Args = append(cmd.Args, "-o", execPath, "./server/cmd/ingest-service")
+	cmd.Args = append(cmd.Args, "-o", execPath, "./cmd/ingest-service")
 
 	if out, err := cmd.CombinedOutput(); err != nil {
 		cleanup()

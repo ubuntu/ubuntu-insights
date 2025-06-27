@@ -22,7 +22,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
-	ingestTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/ingest/testutils"
+	serverTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/common/testutils"
 )
 
 func TestIngestService(t *testing.T) {
@@ -146,7 +146,7 @@ func TestIngestService(t *testing.T) {
 			t.Parallel()
 
 			// Start containers
-			dbContainer := ingestTestUtils.StartPostgresContainer(t)
+			dbContainer := serverTestUtils.StartPostgresContainer(t)
 			defer func() {
 				if err := dbContainer.Stop(t.Context()); err != nil {
 					t.Errorf("Teardown: failed to stop dbContainer: %v", err)
@@ -162,7 +162,7 @@ func TestIngestService(t *testing.T) {
 			}()
 
 			require.NoError(t, dbContainer.IsReady(t, 5*time.Second, 10), "Setup: dbContainer was not ready in time")
-			ingestTestUtils.ApplyMigrations(t, dbContainer.DSN, filepath.Join(testutils.ProjectRoot(), "server", "migrations"))
+			serverTestUtils.ApplyMigrations(t, dbContainer.DSN, filepath.Join(serverTestUtils.ModuleRoot(), "migrations"))
 
 			dst := t.TempDir()
 			for _, report := range tc.preReports {
@@ -242,7 +242,7 @@ func TestIngestService(t *testing.T) {
 			}
 
 			reportsCounts := make(map[string]reportCount)
-			for _, app := range ingestTestUtils.DBListTables(t, dbContainer.DSN, "schema_migrations", "invalid_reports") {
+			for _, app := range serverTestUtils.DBListTables(t, dbContainer.DSN, "schema_migrations", "invalid_reports") {
 				totalReports, optOutReports, optInReports := checkOptOutCounts(t, dbContainer.DSN, app)
 				reportsCounts[app] = reportCount{
 					TotalReports:  totalReports,
