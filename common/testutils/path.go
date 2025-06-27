@@ -18,19 +18,6 @@ func CurrentDir() string {
 	return filepath.Dir(p)
 }
 
-// ProjectRoot returns the absolute path to the project root.
-func ProjectRoot() string {
-	// p is the path to the current file, in this case -> {PROJECT_ROOT}/internal/testutils/path.go
-	_, p, _, _ := runtime.Caller(0)
-
-	for range 3 {
-		// Ignores the last 3 elements -> /internal/testutils/path.go
-		p = filepath.Dir(p)
-	}
-
-	return p
-}
-
 // MakeReadOnly makes dest read only and restore permission on cleanup.
 func MakeReadOnly(t *testing.T, dest string) {
 	t.Helper()

@@ -22,6 +22,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
+	serverTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/common/testutils"
 	ingestTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/ingest/testutils"
 )
 
@@ -162,7 +163,7 @@ func TestIngestService(t *testing.T) {
 			}()
 
 			require.NoError(t, dbContainer.IsReady(t, 5*time.Second, 10), "Setup: dbContainer was not ready in time")
-			ingestTestUtils.ApplyMigrations(t, dbContainer.DSN, filepath.Join(testutils.ProjectRoot(), "server", "migrations"))
+			ingestTestUtils.ApplyMigrations(t, dbContainer.DSN, filepath.Join(serverTestUtils.ModuleRoot(), "migrations"))
 
 			dst := t.TempDir()
 			for _, report := range tc.preReports {

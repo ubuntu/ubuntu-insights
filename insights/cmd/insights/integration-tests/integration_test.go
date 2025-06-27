@@ -35,10 +35,19 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
+// moduleRoot returns the path to the module's root directory.
+func moduleRoot() string {
+	// p is the path to the caller file, in this case {MODULE_ROOT}/cmd/insights/integration-tests/integration_test.go
+	_, p, _, _ := runtime.Caller(0)
+	// Ignores the last 4 elements -> /cmd/insights/integration-tests/integration_test.go
+	for range 4 {
+		p = filepath.Dir(p)
+	}
+	return p
+}
+
 // buildCLI builds the CLI executable app and returns the path to the binary.
 func buildCLI(extraArgs ...string) (execPath string, cleanup func(), err error) {
-	projectRoot := testutils.ProjectRoot()
-
 	tempDir, err := os.MkdirTemp("", "ubuntu-insights-tests-cli")
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to create temporary directory: %v", err)
@@ -54,7 +63,7 @@ func buildCLI(extraArgs ...string) (execPath string, cleanup func(), err error) 
 		execPath += ".exe"
 	}
 	cmd := exec.Command("go", "build")
-	cmd.Dir = projectRoot
+	cmd.Dir = moduleRoot()
 	if testutils.CoverDirForTests() != "" {
 		// -cover is a "positional flag", so it needs to come right after the "build" command.
 		cmd.Args = append(cmd.Args, "-cover")
@@ -63,7 +72,7 @@ func buildCLI(extraArgs ...string) (execPath string, cleanup func(), err error) 
 		cmd.Args = append(cmd.Args, "-race")
 	}
 	cmd.Args = append(cmd.Args, extraArgs...)
-	cmd.Args = append(cmd.Args, "-o", execPath, "./insights/cmd/insights")
+	cmd.Args = append(cmd.Args, "-o", execPath, "./cmd/insights")
 
 	if out, err := cmd.CombinedOutput(); err != nil {
 		cleanup()

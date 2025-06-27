@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
+	serverTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/common/testutils"
 	ingestTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/ingest/testutils"
 )
 
@@ -17,7 +18,7 @@ func TestMigrate(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
-	trueMigrationsDir := filepath.Join(testutils.ProjectRoot(), "server", "migrations")
+	trueMigrationsDir := filepath.Join(serverTestUtils.ModuleRoot(), "migrations")
 	fakeMigration := filepath.Join(tmpDir, "fake.sql")
 	require.NoError(t, os.WriteFile(fakeMigration, []byte(""), 0600), "Setup: couldn't write fake migration file")
 
@@ -86,7 +87,7 @@ func TestMigrate(t *testing.T) {
 				require.NoError(t, db.IsReady(t, 5*time.Second, 10), "Setup: dbContainer was not ready in time")
 
 				if tc.preAppliedMigrations {
-					ingestTestUtils.ApplyMigrations(t, db.DSN, filepath.Join(testutils.ProjectRoot(), "server", "migrations"))
+					ingestTestUtils.ApplyMigrations(t, db.DSN, trueMigrationsDir)
 				}
 
 				args = append(args,

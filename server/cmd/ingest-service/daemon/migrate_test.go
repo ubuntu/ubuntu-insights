@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/server/cmd/ingest-service/daemon"
+	serverTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/common/testutils"
 	ingestTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/ingest/testutils"
 )
 
@@ -19,7 +20,7 @@ func TestMigrateRequiresDirArgument(t *testing.T) {
 	// Make a fake file in dir
 	fakeMigration := filepath.Join(dir, "fake.sql")
 	require.NoError(t, os.WriteFile(fakeMigration, []byte(""), 0600), "Setup: couldn't write fake migration file")
-	trueMigrationsDir := filepath.Join(testutils.ProjectRoot(), "server", "migrations")
+	trueMigrationsDir := filepath.Join(serverTestUtils.ModuleRoot(), "migrations")
 
 	tests := map[string]struct {
 		args               []string
