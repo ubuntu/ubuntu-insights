@@ -1,4 +1,4 @@
-name: Build and run trivial debian package tests
+name: Debian package tests
 # Builds the client debian package on ubuntu:devel and attempt to install it locally to run a set of toy tests.
 
 on:
