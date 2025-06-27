@@ -10,7 +10,6 @@ import (
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/server/cmd/ingest-service/daemon"
 	serverTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/common/testutils"
-	ingestTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/ingest/testutils"
 )
 
 func TestMigrateRequiresDirArgument(t *testing.T) {
@@ -70,9 +69,9 @@ func TestMigrateRequiresDirArgument(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			db := &ingestTestUtils.PostgresContainer{}
+			db := &serverTestUtils.PostgresContainer{}
 			if !tc.noDatabase {
-				db = ingestTestUtils.StartPostgresContainer(t)
+				db = serverTestUtils.StartPostgresContainer(t)
 
 				tc.args = append(tc.args,
 					"--db-host", db.Host,
@@ -84,7 +83,7 @@ func TestMigrateRequiresDirArgument(t *testing.T) {
 
 				require.NoError(t, db.IsReady(t, 5*time.Second, 10), "Setup: dbContainer was not ready in time")
 				if tc.preApplyMigrations {
-					ingestTestUtils.ApplyMigrations(t, db.DSN, trueMigrationsDir)
+					serverTestUtils.ApplyMigrations(t, db.DSN, trueMigrationsDir)
 				}
 			}
 
@@ -102,7 +101,7 @@ func TestMigrateRequiresDirArgument(t *testing.T) {
 			require.NoError(t, err, "Run should not return an error")
 
 			// Get list of database tables
-			got := ingestTestUtils.DBListTables(t, db.DSN)
+			got := serverTestUtils.DBListTables(t, db.DSN)
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			require.ElementsMatch(t, want, got, "Run should create the expected tables in the database")
 		})
