@@ -62,3 +62,32 @@ jobs:
           ubuntu-insights consent -s=true
           ubuntu-insights collect
           ubuntu-insights upload -df
+
+  autopkgtest:
+    name: Run autopkgtest
+    runs-on: ubuntu-latest
+    needs: build-ubuntu-insights
+    steps:
+      - name: Prepare dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y autopkgtest qemu-system qemu-utils
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          # name: is left blank so that all artifacts are downloaded
+          path: ci-artifacts
+
+      - name: Prepare artifacts
+        run: |
+          mv ./ci-artifacts/ubuntu-insights_*-debian-source/* .
+          rm -rf ./ci-artifacts
+
+      - name: Create cloud image
+        run: |
+          autopkgtest-buildvm-ubuntu-cloud -v --timeout 7200
+
+      - name: Run autopkgtest
+        run: |
+          autopkgtest ./ubuntu-insights_*.changes -- qemu ./autopkgtest-*.img
