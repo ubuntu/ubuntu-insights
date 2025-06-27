@@ -1,0 +1,5 @@
+autostart/systemd/* usr/lib/systemd/user
+usr/share/bash-completion
+usr/share/man
+usr/share/zsh
+vendor/gopkg.in/yaml.v3/NOTICE usr/share/doc/ubuntu-insights/yaml.v3
