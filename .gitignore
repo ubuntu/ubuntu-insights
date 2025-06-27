@@ -22,7 +22,12 @@ build/
 _build/
 generated
 **/vendor/
+*.rock
 
 # Debian package build artifacts
 ubuntu-insights_*
 ubuntu-insights*.ddeb
+vendor
+
+# Python virtual environments
+.venv*
