@@ -31,10 +31,11 @@ type App struct {
 
 // appConfig holds the configuration for the application.
 type appConfig struct {
-	Verbosity  int
-	DBconfig   database.Config
-	ReportsDir string // Base directory for reports
-	ConfigPath string
+	Verbosity     int
+	DBconfig      database.Config
+	ReportsDir    string // Base directory for reports
+	ConfigPath    string
+	MigrationsDir string
 }
 
 // New creates a new App instance with default values.
@@ -71,6 +72,7 @@ func New() (*App, error) {
 	a.cmd.CompletionOptions.HiddenDefaultCmd = true
 
 	installRootCmd(&a)
+	installMigrateCmd(&a)
 	cli.InstallConfigFlag(a.cmd)
 
 	if err := a.viper.BindPFlags(a.cmd.PersistentFlags()); err != nil {
@@ -95,15 +97,15 @@ func installRootCmd(app *App) {
 	cmd.PersistentFlags().StringVarP(&app.config.DBconfig.DBName, "db-name", "n", "", "Database name")
 	cmd.PersistentFlags().StringVarP(&app.config.DBconfig.SSLMode, "db-sslmode", "s", "", "Database SSL mode")
 
-	cmd.PersistentFlags().StringVar(&app.config.ReportsDir, "reports-dir", constants.DefaultServiceReportsDir, "Base directory to read reports from")
+	cmd.Flags().StringVar(&app.config.ReportsDir, "reports-dir", constants.DefaultServiceReportsDir, "Base directory to read reports from")
 
-	cmd.PersistentFlags().StringVarP(&app.config.ConfigPath, "daemon-config", "c", "", "Path to the configuration file")
+	cmd.Flags().StringVarP(&app.config.ConfigPath, "daemon-config", "c", "", "Path to the configuration file")
 
-	if err := cmd.MarkPersistentFlagDirname("reports-dir"); err != nil {
+	if err := cmd.MarkFlagDirname("reports-dir"); err != nil {
 		panic(fmt.Errorf("failed to mark reports-dir flag as directory: %w", err))
 	}
 
-	if err := cmd.MarkPersistentFlagFilename("daemon-config"); err != nil {
+	if err := cmd.MarkFlagDirname("daemon-config"); err != nil {
 		panic(fmt.Sprintf("failed to mark daemon-config flag as filename: %v", err))
 	}
 }

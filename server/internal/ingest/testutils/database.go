@@ -1,4 +1,5 @@
-package ingest_test
+// Package testutils package provides ingest-service specific test utilities.
+package testutils
 
 import (
 	"context"
@@ -16,6 +17,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
+// PostgresContainer represents a PostgreSQL container for testing purposes.
 type PostgresContainer struct {
 	Container testcontainers.Container
 	DSN       string
@@ -27,15 +29,15 @@ type PostgresContainer struct {
 	Port     string
 }
 
-const (
-	TestDBUser     = "testuser"
-	TestDBPassword = "testpassword"
-	TestDBName     = "testdb"
-)
-
 // StartPostgresContainer starts a PostgreSQL container for testing purposes.
 func StartPostgresContainer(t *testing.T) *PostgresContainer {
 	t.Helper()
+
+	const (
+		defaultUser     = "postgres"
+		defaultPassword = "postgres"
+		defaultName     = "testdb"
+	)
 
 	if runtime.GOOS != "linux" {
 		t.Skip("Skipping PostgreSQL container test on non-Linux OS")
@@ -45,9 +47,9 @@ func StartPostgresContainer(t *testing.T) *PostgresContainer {
 		Image:        "postgres:latest",
 		ExposedPorts: []string{"5432/tcp"},
 		Env: map[string]string{
-			"POSTGRES_USER":     TestDBUser,
-			"POSTGRES_PASSWORD": TestDBPassword,
-			"POSTGRES_DB":       TestDBName,
+			"POSTGRES_USER":     defaultUser,
+			"POSTGRES_PASSWORD": defaultPassword,
+			"POSTGRES_DB":       defaultName,
 		},
 		WaitingFor: wait.ForListeningPort("5432/tcp"),
 	}
@@ -65,20 +67,20 @@ func StartPostgresContainer(t *testing.T) *PostgresContainer {
 
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		TestDBUser,
-		TestDBPassword,
+		defaultUser,
+		defaultPassword,
 		host,
 		port.Port(),
-		TestDBName,
+		defaultName,
 	)
 
 	return &PostgresContainer{
 		Container: container,
 		DSN:       dsn,
 
-		User:     TestDBUser,
-		Password: TestDBPassword,
-		Name:     TestDBName,
+		User:     defaultUser,
+		Password: defaultPassword,
+		Name:     defaultName,
 		Host:     host,
 		Port:     port.Port(),
 	}
@@ -129,4 +131,41 @@ func ApplyMigrations(t *testing.T, dsn string, migrationsDir string) {
 	if err := m.Up(); err != nil {
 		require.ErrorIs(t, err, migrate.ErrNoChange, "Setup: failed to apply migrations")
 	}
+}
+
+// DBListTables lists all the tables, excluding a blacklist.
+func DBListTables(t *testing.T, dsn string, blacklist ...string) []string {
+	t.Helper()
+
+	blacklistMap := make(map[string]bool)
+	for _, table := range blacklist {
+		blacklistMap[table] = true
+	}
+
+	conn, err := pgx.Connect(t.Context(), dsn)
+	require.NoError(t, err, "failed to connect to the database")
+	defer func() {
+		require.NoError(t, conn.Close(t.Context()), "failed to close the database connection")
+	}()
+
+	query := `
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_type = 'BASE TABLE';`
+
+	rows, err := conn.Query(t.Context(), query)
+	require.NoError(t, err, "failed to execute query")
+
+	var tables []string
+	for rows.Next() {
+		var tableName string
+		require.NoError(t, rows.Scan(&tableName), "failed to scan table name")
+		if !blacklistMap[tableName] {
+			tables = append(tables, tableName)
+		}
+	}
+
+	require.NoError(t, rows.Err(), "error occurred during rows iteration")
+	return tables
 }
