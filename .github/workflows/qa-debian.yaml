@@ -1,5 +1,5 @@
-name: Build and run trivial debian package tests
-# Builds the client debian package on ubuntu:devel and attempt to install it locally to run a set of toy tests.
+name: Debian package tests
+# Builds the client debian package on ubuntu:devel and attempt to install it locally to run a set of toy tests as well as autopkgtest.
 
 on:
   pull_request:
@@ -15,6 +15,10 @@ jobs:
   build-ubuntu-insights:
     name: Build ubuntu-insights debian package
     runs-on: ubuntu-latest
+    outputs:
+      run-id: ${{ github.run_id }}
+      pkg-dsc-devel:  ${{ steps.outputs.outputs.pkg-dsc-devel }}
+      pkg-src-changes-devel: ${{ steps.outputs.outputs.pkg-src-changes-devel }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,6 +28,14 @@ jobs:
           source-dir: insights
           token: ${{ secrets.GITHUB_TOKEN }}
           docker-image: ubuntu:devel
+      
+      - name: Generate outputs
+        id: outputs
+        run: |
+          (
+            echo "pkg-dsc-devel=${{ env.PKG_DSC }}"
+            echo "pkg-src-changes-devel=${{ env.PKG_SOURCE_CHANGES }}"
+          ) >> "${GITHUB_OUTPUT}"
 
   qa:
     name: Run trivial debian package tests
@@ -62,3 +74,20 @@ jobs:
           ubuntu-insights consent -s=true
           ubuntu-insights collect
           ubuntu-insights upload -df
+
+  autopkgtest:
+    name: Run autopkgtest
+    runs-on: ubuntu-latest
+    needs: build-ubuntu-insights
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ needs.build-ubuntu-insights.outputs.run-id }}
+          merge-multiple: true
+
+      - name: Run autopkgtest
+        uses: canonical/desktop-engineering/gh-actions/common/run-autopkgtest@main
+        with:
+          lxd-image: ubuntu:devel
+          source-changes: ${{ needs.build-ubuntu-insights.outputs.pkg-src-changes-devel }}
