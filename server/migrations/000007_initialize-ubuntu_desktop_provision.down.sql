@@ -1,0 +1,9 @@
+DROP INDEX IF EXISTS idx_ubuntu_desktop_provision_entry_time_optout;
+DROP INDEX IF EXISTS idx_ubuntu_desktop_provision_source_metrics;
+DROP INDEX IF EXISTS idx_ubuntu_desktop_provision_platform;
+DROP INDEX IF EXISTS idx_ubuntu_desktop_provision_software;
+DROP INDEX IF EXISTS idx_ubuntu_desktop_provision_hardware;
+DROP INDEX IF EXISTS idx_ubuntu_desktop_provision_collection_time;
+DROP INDEX IF EXISTS idx_ubuntu_desktop_provision_report_id;
+
+DROP TABLE IF EXISTS ubuntu_desktop_provision;
