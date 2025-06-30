@@ -1,5 +1,5 @@
-ubuntu-insights (0.0.1~ppa8) questing; urgency=medium
+ubuntu-insights (0.1.0) questing; urgency=medium
 
   * Initial release (LP: #2107478)
 
- -- Kat Kuo <kat.kuo@canonical.com>  Tue, 27 May 2025 17:44:48 -0400
+ -- Kat Kuo <kat.kuo@canonical.com>  Mon, 30 Jun 2025 09:50:12 -0400
