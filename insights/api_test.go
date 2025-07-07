@@ -2,6 +2,7 @@
 package insights_test
 
 import (
+	"encoding/json"
 	"io"
 	"log/slog"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/insights"
+	"github.com/ubuntu/ubuntu-insights/insights/internal/collector"
 )
 
 func TestResolve(t *testing.T) {
@@ -56,6 +58,12 @@ func TestCollect(t *testing.T) {
 
 		wantErr bool
 	}{
+		"Source without metrics doesn't error": {
+			source: "valid_true",
+			collectFlags: insights.CollectFlags{
+				DryRun: true,
+			},
+		},
 		"Source with metrics doesn't error": {
 			source: "valid_true",
 			collectFlags: insights.CollectFlags{
@@ -68,6 +76,12 @@ func TestCollect(t *testing.T) {
 			collectFlags: insights.CollectFlags{
 				SourceMetricsJSON: []byte(`{"key": "source metrics JSON"}`),
 				DryRun:            true,
+			},
+		},
+		"Returns report even if consent is false": {
+			source: "valid_false",
+			collectFlags: insights.CollectFlags{
+				DryRun: true,
 			},
 		},
 
@@ -122,13 +136,25 @@ func TestCollect(t *testing.T) {
 			}
 
 			// this is technically an integration test for dry-run.
-			err := conf.Collect(tc.source, tc.collectFlags)
+			report, err := conf.Collect(tc.source, tc.collectFlags)
 
 			if tc.wantErr {
 				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
+
+			// Check the returned report
+			mReport := collector.Insights{}
+			err = json.Unmarshal(report, &mReport)
+			require.NoError(t, err, "Failed to unmarshal report")
+			assert.NotEmpty(t, mReport.InsightsVersion, "Insights version should not be empty")
+
+			if tc.collectFlags.SourceMetricsJSON != nil || tc.collectFlags.SourceMetricsPath != "" {
+				assert.NotEmpty(t, mReport.SourceMetrics, "Source metrics should not be empty")
+			} else {
+				assert.Empty(t, mReport.SourceMetrics, "Source metrics should be empty when not provided")
+			}
 
 			// test that dry run was applied.
 			f, err := os.Open(filepath.Join(dir, tc.source, "local"))

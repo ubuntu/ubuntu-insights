@@ -24,7 +24,8 @@ import (
 //export collectInsights
 func collectInsights(config *C.CInsightsConfig, source *C.char, flags *C.CCollectFlags) *C.char {
 	return collectCustomInsights(config, source, flags, func(conf insights.Config, source string, f insights.CollectFlags) error {
-		return conf.Collect(source, f)
+		_, err := conf.Collect(source, f)
+		return err
 	})
 }
 
