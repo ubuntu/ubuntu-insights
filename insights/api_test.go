@@ -168,21 +168,22 @@ func TestGetConsentState(t *testing.T) {
 	tests := map[string]struct {
 		source string
 
-		expected insights.ConsentState
+		expected bool
+		wantErr  bool
 	}{
 		"True consent returns CONSENT_TRUE": {
 			source:   "valid_true",
-			expected: insights.ConsentTrue,
+			expected: true,
 		},
 
 		"False consent returns CONSENT_FALSE": {
 			source:   "valid_false",
-			expected: insights.ConsentFalse,
+			expected: false,
 		},
 
 		"Missing consent returns CONSENT_UNKNOWN": {
-			source:   "missing_consent_file",
-			expected: insights.ConsentUnknown,
+			source:  "missing_consent_file",
+			wantErr: true, // missing consent file should return an error
 		},
 	}
 	for name, tc := range tests {
@@ -194,7 +195,11 @@ func TestGetConsentState(t *testing.T) {
 				ConsentDir: filepath.Join("testdata", "consent_files"),
 			}
 
-			got := conf.GetConsentState()
+			got, err := conf.GetConsentState()
+			if tc.wantErr {
+				require.Error(t, err)
+				return
+			}
 
 			assert.Equal(t, tc.expected, got)
 		})
@@ -243,12 +248,9 @@ func TestSetConsentState(t *testing.T) {
 			}
 			require.NoError(t, err)
 
-			var want insights.ConsentState = insights.ConsentFalse
-			if tc.state {
-				want = insights.ConsentTrue
-			}
-
-			assert.Equal(t, want, conf.GetConsentState())
+			state, err := conf.GetConsentState()
+			require.NoError(t, err, "Failed to get consent state after setting it")
+			assert.Equal(t, tc.state, state)
 		})
 	}
 }

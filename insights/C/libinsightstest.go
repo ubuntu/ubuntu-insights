@@ -233,7 +233,7 @@ func TestGetConsentImpl(t *testing.T) {
 	tests := map[string]struct {
 		config *CInsightsConfig
 
-		state insights.ConsentState
+		state C.ConsentState
 	}{
 		// conversion cases
 		"Null values are empty": {},
@@ -253,15 +253,15 @@ func TestGetConsentImpl(t *testing.T) {
 
 		// return cases
 		"unknown state is correctly converted": {
-			state: insights.ConsentUnknown,
+			state: C.CONSENT_UNKNOWN,
 		},
 
 		"false state is correctly converted": {
-			state: insights.ConsentFalse,
+			state: C.CONSENT_FALSE,
 		},
 
 		"true state is correctly converted": {
-			state: insights.ConsentTrue,
+			state: C.CONSENT_TRUE,
 		},
 	}
 	for name, tc := range tests {
@@ -274,22 +274,12 @@ func TestGetConsentImpl(t *testing.T) {
 
 			var got insights.Config
 
-			ret := getCustomConsentState(inConfig, func(conf insights.Config) insights.ConsentState {
+			ret := getCustomConsentState(inConfig, func(conf insights.Config) C.ConsentState {
 				got = conf
 				return tc.state
 			})
 
-			switch tc.state {
-			case insights.ConsentUnknown:
-				// we have to convert C.ConsentState to C.ConsentState because...
-				assert.Equal(t, C.ConsentState(C.CONSENT_UNKNOWN), ret)
-			case insights.ConsentFalse:
-				assert.Equal(t, C.ConsentState(C.CONSENT_FALSE), ret)
-			case insights.ConsentTrue:
-				assert.Equal(t, C.ConsentState(C.CONSENT_TRUE), ret)
-			default:
-				panic("Test case wants invalid enum!")
-			}
+			assert.Equal(t, tc.state, ret, "Did not get expected consent state")
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			assert.Equal(t, want, got, "C structures should be correctly translated to Go")

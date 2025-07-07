@@ -12,20 +12,6 @@ import (
 	"github.com/ubuntu/ubuntu-insights/insights/internal/uploader"
 )
 
-// ConsentState is one of ConsentUnknown, ConsentFalse, ConsentTrue.
-type ConsentState int
-
-const (
-	// ConsentUnknown is used when GetState returns an error.
-	ConsentUnknown = iota - 1
-
-	// ConsentFalse is used when GetState returns false.
-	ConsentFalse
-
-	// ConsentTrue is used when GetState returns an true.
-	ConsentTrue
-)
-
 // Config represents the parameters needed for any call.
 type Config struct {
 	Source      string
@@ -112,21 +98,16 @@ func (c Config) Upload(flags UploadFlags) error {
 
 // GetConsentState gets the state for Config.Source.
 // if Config.Source is "", the global source is retrieved.
-// returns ConsentUnknown if it could not be retrieved.
-// returns ConsentTrue or ConsentFalse otherwise.
-func (c Config) GetConsentState() ConsentState {
+func (c Config) GetConsentState() (bool, error) {
 	l := c.setup()
 
 	cm := consent.New(l, c.ConsentDir)
 	s, err := cm.GetState(c.Source)
 	if err != nil {
-		return ConsentUnknown
+		return false, fmt.Errorf("failed to get consent state: %v", err)
 	}
 
-	if s {
-		return ConsentTrue
-	}
-	return ConsentFalse
+	return s, nil
 }
 
 // SetConsentState sets the state for Config.Source to consent.
@@ -150,7 +131,7 @@ func newLogger(verbose bool) *slog.Logger {
 	return slog.New(slog.NewJSONHandler(os.Stdout, &hOpts))
 }
 
-// setup sets defaults and creates a new logger.
+// setup sets defaults and creates a new logger, mutating the Config.
 func (c *Config) setup() *slog.Logger {
 	if c.ConsentDir == "" {
 		c.ConsentDir = constants.DefaultConfigPath

@@ -85,18 +85,25 @@ func uploadCustomInsights(config *C.CInsightsConfig, flags *C.CUploadFlags, cust
 // Otherwise, it returns the consent state of the source. */
 //export getConsentState
 func getConsentState(config *C.CInsightsConfig) C.ConsentState {
-	return getCustomConsentState(config, func(conf insights.Config) insights.ConsentState {
-		return conf.GetConsentState()
+	return getCustomConsentState(config, func(conf insights.Config) C.ConsentState {
+		s, err := conf.GetConsentState()
+		if err != nil {
+			return C.CONSENT_UNKNOWN
+		}
+		if s {
+			return C.CONSENT_TRUE
+		}
+		return C.CONSENT_FALSE
 	})
 }
 
 // consentGeter is a function that gets the consent state using the given parameters.
-type consentGeter = func(conf insights.Config) insights.ConsentState
+type consentGeter = func(conf insights.Config) C.ConsentState
 
 // getCustomConsentState handles C to Go translation and calls the custom geter.
 func getCustomConsentState(config *C.CInsightsConfig, geter consentGeter) C.ConsentState {
 	conf := toGoInsightsConfig(config)
-	return (C.ConsentState)(geter(conf))
+	return geter(conf)
 }
 
 /* setConsentState sets the state for config->source to newState.
