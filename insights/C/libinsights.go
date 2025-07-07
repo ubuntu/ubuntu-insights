@@ -6,7 +6,12 @@ package main
 */
 import "C"
 
-import "github.com/ubuntu/ubuntu-insights/insights"
+import (
+	"log/slog"
+	"os"
+
+	"github.com/ubuntu/ubuntu-insights/insights"
+)
 
 /* collectInsights creates a report for the config->source.
 // metricsPath is a filepath to a JSON file containing extra metrics.
@@ -131,7 +136,7 @@ func setCustomConsentState(config *C.CInsightsConfig, newState C.bool, setter co
 
 // toGoInsightsConfig converts a C Insights Config into the equivalent Go structure.
 func toGoInsightsConfig(config *C.CInsightsConfig) insights.Config {
-	iConf := insights.Config{}
+	iConf := insights.Config{Logger: slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))}
 	if config != nil {
 		if config.source != nil {
 			iConf.Source = C.GoString(config.source)
@@ -142,7 +147,10 @@ func toGoInsightsConfig(config *C.CInsightsConfig) insights.Config {
 		if config.insightsDir != nil {
 			iConf.InsightsDir = C.GoString(config.insightsDir)
 		}
-		iConf.Verbose = (bool)(config.verbose)
+
+		if config.verbose {
+			iConf.Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+		}
 	}
 	return iConf
 }

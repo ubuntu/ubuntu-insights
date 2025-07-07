@@ -134,6 +134,9 @@ func TestCollectImpl(t *testing.T) {
 			if got.Flags.SourceMetricsJSON == nil {
 				got.Flags.SourceMetricsJSON = []byte{}
 			}
+
+			assert.NotNil(t, got.Conf.Logger, "Logger should not be nil in the callback")
+			got.Conf.Logger = nil // Logger is not part of the golden file, so we set it to nil for comparison.
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			assert.Equal(t, want, got, "C structures should be correctly translated to Go")
 		})
@@ -220,6 +223,8 @@ func TestUploadImpl(t *testing.T) {
 				assert.Equal(t, C.GoString(ret), tc.err.Error())
 			}
 
+			assert.NotNil(t, got.Conf.Logger, "Logger should not be nil in the callback")
+			got.Conf.Logger = nil // Logger is not part of the golden file, so we set it to nil for comparison.
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			assert.Equal(t, want, got, "C structures should be correctly translated to Go")
 		})
@@ -281,6 +286,8 @@ func TestGetConsentImpl(t *testing.T) {
 
 			assert.Equal(t, tc.state, ret, "Did not get expected consent state")
 
+			assert.NotNil(t, got.Logger, "Logger should not be nil in the callback")
+			got.Logger = nil // Logger is not part of the golden file, so we set it to nil for comparison.
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			assert.Equal(t, want, got, "C structures should be correctly translated to Go")
 		})
@@ -352,6 +359,8 @@ func TestSetConsentImpl(t *testing.T) {
 				assert.Equal(t, C.GoString(ret), tc.err.Error())
 			}
 
+			assert.NotNil(t, got.Conf.Logger, "Logger should not be nil in the callback")
+			got.Conf.Logger = nil // Logger is not part of the golden file, so we set it to nil for comparison.
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			assert.Equal(t, want, got, "C structures should be correctly translated to Go")
 		})

@@ -3,6 +3,7 @@ package insights_test
 
 import (
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,6 +12,40 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/insights"
 )
+
+func TestResolve(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		config insights.Config
+	}{
+		"Default config": {
+			config: insights.Config{},
+		},
+		"Custom config": {
+			config: insights.Config{
+				Source:      "custom_source",
+				ConsentDir:  "custom_consent_dir",
+				InsightsDir: "custom_insights_dir",
+				Logger:      slog.Default(),
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// Resolve the config
+			resolved := tc.config.Resolve()
+
+			// Assert the resolved config
+			assert.NotEmpty(t, resolved.ConsentDir)
+			assert.NotEmpty(t, resolved.InsightsDir)
+			assert.NotNil(t, resolved.Logger)
+		})
+	}
+}
 
 // TestCollect tests the Collect insights.
 func TestCollect(t *testing.T) {
@@ -82,7 +117,6 @@ func TestCollect(t *testing.T) {
 				Source:      tc.source,
 				ConsentDir:  filepath.Join("testdata", "consent_files"),
 				InsightsDir: dir,
-				Verbose:     false,
 			}
 
 			if tc.collectFlags.SourceMetricsPath != "" {
@@ -132,7 +166,6 @@ func TestUpload(t *testing.T) {
 				Source:      tc.source,
 				ConsentDir:  filepath.Join("testdata", "consent_files"),
 				InsightsDir: dir,
-				Verbose:     false,
 			}
 
 			flags := insights.UploadFlags{
@@ -236,7 +269,6 @@ func TestSetConsentState(t *testing.T) {
 				Source:      tc.source,
 				ConsentDir:  dir,
 				InsightsDir: t.TempDir(),
-				Verbose:     false,
 			}
 
 			// this is technically an integration test.
