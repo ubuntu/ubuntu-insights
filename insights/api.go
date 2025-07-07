@@ -12,9 +12,8 @@ import (
 	"github.com/ubuntu/ubuntu-insights/insights/internal/uploader"
 )
 
-// Config represents the parameters needed for any call.
+// Config represents optional parameters shared by all calls.
 type Config struct {
-	Source      string
 	ConsentDir  string
 	InsightsDir string
 
@@ -56,7 +55,7 @@ func (c Config) Resolve() Config {
 	return c
 }
 
-// Collect creates a report for Config.Source and writes it to Config.InsightsDir.
+// Collect creates a report for the specified source and writes it to Config.InsightsDir.
 //
 // The SourceMetricsPath and SourceMetricsJSON fields in flags are mutually exclusive.
 // If both are set, an error will be returned.
@@ -64,11 +63,11 @@ func (c Config) Resolve() Config {
 // SourceMetricsJSON in flags if set must be a valid JSON object, not an array or primitive.
 //
 // This method calls Resolve() on the config before proceeding.
-func (c Config) Collect(flags CollectFlags) error {
+func (c Config) Collect(source string, flags CollectFlags) error {
 	r := c.Resolve()
 
 	cConf := collector.Config{
-		Source:            r.Source,
+		Source:            source,
 		Period:            flags.Period,
 		CachePath:         r.InsightsDir,
 		SourceMetricsPath: flags.SourceMetricsPath,
@@ -89,15 +88,15 @@ func (c Config) Collect(flags CollectFlags) error {
 	return col.Write(insights, flags.DryRun)
 }
 
-// Upload uploads reports for Config.Source.
-// If source is "", all reports found irregardless of the source are handled.
+// Upload uploads reports for the specified sources.
+// If sources is empty, all reports found are handled.
 //
 // This method calls Resolve() on the config before proceeding.
-func (c Config) Upload(flags UploadFlags) error {
+func (c Config) Upload(sources []string, flags UploadFlags) error {
 	r := c.Resolve()
 
 	uConf := uploader.Config{
-		Sources: []string{r.Source},
+		Sources: sources,
 		MinAge:  flags.MinAge,
 		Force:   flags.Force,
 		DryRun:  flags.DryRun,
@@ -117,15 +116,15 @@ func (c Config) Upload(flags UploadFlags) error {
 	return uploader.UploadAll(uConf.Sources, uConf.Force, uConf.Retry)
 }
 
-// GetConsentState gets the state for Config.Source.
+// GetConsentState gets the state for the specified source.
 // If source is "", the global source is retrieved.
 //
 // This method calls Resolve() on the config before proceeding.
-func (c Config) GetConsentState() (bool, error) {
+func (c Config) GetConsentState(source string) (bool, error) {
 	r := c.Resolve()
 
 	cm := consent.New(r.Logger, r.ConsentDir)
-	s, err := cm.GetState(r.Source)
+	s, err := cm.GetState(source)
 	if err != nil {
 		return false, fmt.Errorf("failed to get consent state: %v", err)
 	}
@@ -133,13 +132,13 @@ func (c Config) GetConsentState() (bool, error) {
 	return s, nil
 }
 
-// SetConsentState sets the state for Config.Source to consent.
-// If source is "", the global source is effected.
+// SetConsentState sets the consent state for the specified source.
+// If source is "", the global source is affected.
 //
 // This method calls Resolve() on the config before proceeding.
-func (c Config) SetConsentState(consentState bool) error {
+func (c Config) SetConsentState(source string, consentState bool) error {
 	r := c.Resolve()
 
 	cm := consent.New(r.Logger, r.ConsentDir)
-	return cm.SetState(r.Source, consentState)
+	return cm.SetState(source, consentState)
 }

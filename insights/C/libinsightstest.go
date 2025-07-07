@@ -8,9 +8,9 @@ package main
 #include "insights_types.h"
 
 extern char* collectInsights(const InsightsConfig*, const char*, const CollectFlags*);
-extern char* uploadInsights(const InsightsConfig*, const UploadFlags*);
-extern ConsentState getConsentState(const InsightsConfig*);
-extern char* setConsentState(const InsightsConfig*, bool);
+extern char* uploadInsights(const InsightsConfig*, const char**, size_t, const UploadFlags*);
+extern ConsentState getConsentState(const InsightsConfig*, const char*);
+extern char* setConsentState(const InsightsConfig*, const char*, bool);
 */
 import "C"
 
@@ -30,6 +30,7 @@ func TestCollectImpl(t *testing.T) {
 
 	tests := map[string]struct {
 		config            *CInsightsConfig
+		source            string
 		metricsPath       *string
 		sourceMetricsJSON []byte
 		flags             *C.CollectFlags
@@ -47,11 +48,11 @@ func TestCollectImpl(t *testing.T) {
 
 		"Config gets converted": {
 			config: &CInsightsConfig{
-				src:     strPtr("platform"),
 				consent: strPtr("home/etc/dir"),
 				cache:   strPtr("insights/dir"),
 				verbose: true,
 			},
+			source: "platform",
 		},
 
 		"MetricsPath gets converted": {
@@ -72,11 +73,11 @@ func TestCollectImpl(t *testing.T) {
 
 		"All get converted": {
 			config: &CInsightsConfig{
-				src:     strPtr("wsl"),
 				consent: strPtr("home/etc/wsl/dir"),
 				cache:   strPtr("insights/wsl/dir"),
 				verbose: false,
 			},
+			source:      "wsl",
 			metricsPath: strPtr("metrics"),
 			flags: &C.CollectFlags{
 				period: C.uint(2000),
@@ -113,12 +114,17 @@ func TestCollectImpl(t *testing.T) {
 			}
 
 			var got struct {
-				Conf  insights.Config
-				Flags insights.CollectFlags
+				Conf   insights.Config
+				Source string
+				Flags  insights.CollectFlags
 			}
 
-			ret := collectCustomInsights(inConfig, tc.flags, func(conf insights.Config, flags insights.CollectFlags) error {
+			sourceStr := C.CString(tc.source)
+			defer C.free(unsafe.Pointer(sourceStr))
+
+			ret := collectCustomInsights(inConfig, sourceStr, tc.flags, func(conf insights.Config, source string, flags insights.CollectFlags) error {
 				got.Conf = conf
+				got.Source = source
 				got.Flags = flags
 				return tc.err
 			})
@@ -148,8 +154,9 @@ func TestUploadImpl(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		config *CInsightsConfig
-		flags  *C.UploadFlags
+		config  *CInsightsConfig
+		sources []string
+		flags   *C.UploadFlags
 
 		err error
 	}{
@@ -163,11 +170,11 @@ func TestUploadImpl(t *testing.T) {
 
 		"Config gets converted": {
 			config: &CInsightsConfig{
-				src:     strPtr("platform"),
 				consent: strPtr("home/etc/dir"),
 				cache:   strPtr("insights/dir"),
 				verbose: true,
 			},
+			sources: []string{"platform"},
 		},
 
 		"Flags get converted": {
@@ -180,11 +187,11 @@ func TestUploadImpl(t *testing.T) {
 
 		"All get converted": {
 			config: &CInsightsConfig{
-				src:     strPtr("wsl"),
 				consent: strPtr("home/etc/wsl/dir"),
 				cache:   strPtr("insights/wsl/dir"),
 				verbose: false,
 			},
+			sources: []string{"wsl", "app2"},
 			flags: &C.UploadFlags{
 				minAge: C.uint(2000),
 				force:  C.bool(false),
@@ -202,17 +209,43 @@ func TestUploadImpl(t *testing.T) {
 			t.Parallel()
 
 			// we need to convert the input here since making C strings inline is unsafe.
-			inConfig, cleanup := makeConfig(tc.config)
-			defer cleanup()
+			inConfig, configCleanup := makeConfig(tc.config)
+			defer configCleanup()
 
 			var got struct {
-				Conf  insights.Config
-				Flags insights.UploadFlags
+				Conf    insights.Config
+				Sources []string
+				Flags   insights.UploadFlags
 			}
 
-			ret := uploadCustomInsights(inConfig, tc.flags, func(conf insights.Config, flags insights.UploadFlags) error {
+			// Convert sources to C string array
+			var cSources **C.char
+			var cSourcesLen C.size_t
+			sourcesCleanup := func() {}
+			if len(tc.sources) > 0 {
+				cSourcesLen = C.size_t(len(tc.sources))
+				sourcesPtr := make([]*C.char, len(tc.sources))
+				for i, source := range tc.sources {
+					sourcesPtr[i] = C.CString(source)
+				}
+				cSources = (**C.char)(unsafe.Pointer(&sourcesPtr[0]))
+				sourcesCleanup = func() {
+					for _, ptr := range sourcesPtr {
+						C.free(unsafe.Pointer(ptr))
+					}
+				}
+			}
+			defer sourcesCleanup()
+
+			ret := uploadCustomInsights(inConfig, cSources, cSourcesLen, tc.flags, func(conf insights.Config, sources []string, flags insights.UploadFlags) error {
 				got.Conf = conf
+				got.Sources = sources
 				got.Flags = flags
+
+				if got.Sources == nil {
+					got.Sources = []string{}
+				}
+
 				return tc.err
 			})
 			defer C.free(unsafe.Pointer(ret))
@@ -237,6 +270,7 @@ func TestGetConsentImpl(t *testing.T) {
 
 	tests := map[string]struct {
 		config *CInsightsConfig
+		source string
 
 		state C.ConsentState
 	}{
@@ -249,11 +283,11 @@ func TestGetConsentImpl(t *testing.T) {
 
 		"Config gets converted": {
 			config: &CInsightsConfig{
-				src:     strPtr("platform"),
 				consent: strPtr("home/etc/dir"),
 				cache:   strPtr("insights/dir"),
 				verbose: true,
 			},
+			source: "platform",
 		},
 
 		// return cases
@@ -277,17 +311,24 @@ func TestGetConsentImpl(t *testing.T) {
 			inConfig, cleanup := makeConfig(tc.config)
 			defer cleanup()
 
-			var got insights.Config
+			var got struct {
+				Conf   insights.Config
+				Source string
+			}
 
-			ret := getCustomConsentState(inConfig, func(conf insights.Config) C.ConsentState {
-				got = conf
+			sourceStr := C.CString(tc.source)
+			defer C.free(unsafe.Pointer(sourceStr))
+
+			ret := getCustomConsentState(inConfig, sourceStr, func(conf insights.Config, source string) C.ConsentState {
+				got.Conf = conf
+				got.Source = source
 				return tc.state
 			})
 
 			assert.Equal(t, tc.state, ret, "Did not get expected consent state")
 
-			assert.NotNil(t, got.Logger, "Logger should not be nil in the callback")
-			got.Logger = nil // Logger is not part of the golden file, so we set it to nil for comparison.
+			assert.NotNil(t, got.Conf.Logger, "Logger should not be nil in the callback")
+			got.Conf.Logger = nil // Logger is not part of the golden file, so we set it to nil for comparison.
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			assert.Equal(t, want, got, "C structures should be correctly translated to Go")
 		})
@@ -300,6 +341,7 @@ func TestSetConsentImpl(t *testing.T) {
 
 	tests := map[string]struct {
 		config *CInsightsConfig
+		source string
 		state  C.bool
 
 		err error
@@ -313,11 +355,11 @@ func TestSetConsentImpl(t *testing.T) {
 
 		"Config gets converted": {
 			config: &CInsightsConfig{
-				src:     strPtr("platform"),
 				consent: strPtr("home/etc/dir"),
 				cache:   strPtr("insights/dir"),
 				verbose: true,
 			},
+			source: "platform",
 		},
 
 		"false state is correctly converted": {
@@ -342,12 +384,17 @@ func TestSetConsentImpl(t *testing.T) {
 			defer cleanup()
 
 			var got struct {
-				Conf  insights.Config
-				State bool
+				Conf   insights.Config
+				Source string
+				State  bool
 			}
 
-			ret := setCustomConsentState(inConfig, tc.state, func(conf insights.Config, state bool) error {
+			sourceStr := C.CString(tc.source)
+			defer C.free(unsafe.Pointer(sourceStr))
+
+			ret := setCustomConsentState(inConfig, sourceStr, tc.state, func(conf insights.Config, source string, state bool) error {
 				got.Conf = conf
+				got.Source = source
 				got.State = state
 				return tc.err
 			})
@@ -374,8 +421,8 @@ func strPtr(in string) *string {
 
 // CInsightsConfig lets us setup a C.InsightsConfig easier.
 type CInsightsConfig struct {
-	src, consent, cache *string
-	verbose             bool
+	consent, cache *string // Removed src since source is now passed as parameter
+	verbose        bool
 }
 
 // makeConfig is a helper to create a C InsightsConfig.
@@ -383,7 +430,6 @@ func makeConfig(conf *CInsightsConfig) (cnf *C.InsightsConfig, clean func()) {
 	defer func() {
 		clean = func() {
 			if cnf != nil {
-				C.free(unsafe.Pointer(cnf.source))
 				C.free(unsafe.Pointer(cnf.consentDir))
 				C.free(unsafe.Pointer(cnf.insightsDir))
 			}
@@ -392,9 +438,6 @@ func makeConfig(conf *CInsightsConfig) (cnf *C.InsightsConfig, clean func()) {
 
 	if conf != nil {
 		cnf = &C.InsightsConfig{}
-		if conf.src != nil {
-			cnf.source = C.CString(*conf.src)
-		}
 		if conf.consent != nil {
 			cnf.consentDir = C.CString(*conf.consent)
 		}

@@ -1,8 +1,10 @@
 conf:
-    source: wsl
     consentdir: home/etc/wsl/dir
     insightsdir: insights/wsl/dir
-    verbose: false
+    logger: null
+sources:
+    - wsl
+    - app2
 flags:
     minage: 2000
     force: false

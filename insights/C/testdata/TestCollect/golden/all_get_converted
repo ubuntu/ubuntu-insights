@@ -1,8 +1,8 @@
 conf:
-    source: wsl
     consentdir: home/etc/wsl/dir
     insightsdir: insights/wsl/dir
-    verbose: false
+    logger: null
+source: wsl
 flags:
     sourcemetricspath: metrics
     sourcemetricsjson: []
