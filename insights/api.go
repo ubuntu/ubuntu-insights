@@ -38,7 +38,7 @@ type UploadFlags struct {
 
 // Collect creates a report for Config.Source and writes it to Config.InsightsDir.
 //
-// The SourceMetricsPath and SouceMetricsJSON fields in flags are mutually exclusive.
+// The SourceMetricsPath and SourceMetricsJSON fields in flags are mutually exclusive.
 // If both are set, an error will be returned.
 // If SourceMetricsPath in flags is set, it must be a valid path to a JSON file with a valid JSON object.
 // SourceMetricsJSON in flags if set must be a valid JSON object, not an array or primitive.
