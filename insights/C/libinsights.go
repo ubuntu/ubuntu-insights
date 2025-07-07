@@ -97,13 +97,13 @@ func getConsentState(config *C.CInsightsConfig) C.ConsentState {
 	})
 }
 
-// consentGeter is a function that gets the consent state using the given parameters.
-type consentGeter = func(conf insights.Config) C.ConsentState
+// consentGetter is a function that gets the consent state using the given parameters.
+type consentGetter = func(conf insights.Config) C.ConsentState
 
-// getCustomConsentState handles C to Go translation and calls the custom geter.
-func getCustomConsentState(config *C.CInsightsConfig, geter consentGeter) C.ConsentState {
+// getCustomConsentState handles C to Go translation and calls the custom getter.
+func getCustomConsentState(config *C.CInsightsConfig, getter consentGetter) C.ConsentState {
 	conf := toGoInsightsConfig(config)
-	return geter(conf)
+	return getter(conf)
 }
 
 /* setConsentState sets the state for config->source to newState.
@@ -118,14 +118,14 @@ func setConsentState(config *C.CInsightsConfig, newState C.bool) *C.char {
 	})
 }
 
-// consentSeter is a function that gets the consent state using the given parameters.
-type consentSeter = func(conf insights.Config, newState bool) error
+// consentSetter is a function that gets the consent state using the given parameters.
+type consentSetter = func(conf insights.Config, newState bool) error
 
-// setCustomConsentState handles C to Go translation and calls the custom seter.
-func setCustomConsentState(config *C.CInsightsConfig, newState C.bool, seter consentSeter) *C.char {
+// setCustomConsentState handles C to Go translation and calls the custom setter.
+func setCustomConsentState(config *C.CInsightsConfig, newState C.bool, setter consentSetter) *C.char {
 	conf := toGoInsightsConfig(config)
 
-	err := seter(conf, (bool)(newState))
+	err := setter(conf, (bool)(newState))
 	return errToCString(err)
 }
 
