@@ -41,11 +41,11 @@ func makeCwaylandDisplays(d []cWaylandDisplay) (wds **C.struct_wayland_display) 
 	wds = (**C.struct_wayland_display)(C.malloc(C.size_t(len(d)) * C.size_t(C.sizeof_struct_wayland_display)))
 
 	// Cast the C pointer 'wds' to a Go slice of *C.struct_wayland_display.
-	// We cast to a pointer to a huge array (size 1<<30) so that we guarantee enough
+	// We cast to a pointer to a huge array (size 1<<28) so that we guarantee enough
 	// room to index any element up to len(d), valid for both 32 and 64 bit systems.
 	// The huge array size doesn't cause massive allocation because we're only reinterpreting
 	// the memory pointed to by 'wds'. Then, we slice the array to exactly len(d) elements.
-	slice := (*[1 << 30]*C.struct_wayland_display)(unsafe.Pointer(wds))[:len(d):len(d)]
+	slice := (*[1 << 28]*C.struct_wayland_display)(unsafe.Pointer(wds))[:len(d):len(d)]
 	for i, display := range d {
 		wd := makeCWaylandDisplay(display)
 		slice[i] = wd
