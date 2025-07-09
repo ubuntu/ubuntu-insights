@@ -1,4 +1,4 @@
-ubuntu-insights (0.2.0~ppa1) questing; urgency=medium
+ubuntu-insights (0.2.0~ppa3) questing; urgency=medium
 
   * Fix armhf builds
 

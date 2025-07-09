@@ -5,10 +5,10 @@ package uploader
 import (
 	"fmt"
 	"log/slog"
+	"math"
 	"os"
 	"path/filepath"
 	"time"
-	"unsafe"
 
 	"github.com/ubuntu/ubuntu-insights/insights/internal/constants"
 )
@@ -104,8 +104,7 @@ type Consent interface {
 func New(l *slog.Logger, cm Consent, cachePath string, minAge uint, dryRun bool, args ...Options) (Uploader, error) {
 	l.Debug("Creating new uploader manager", "minAge", minAge, "dryRun", dryRun)
 
-	uintBits := unsafe.Sizeof(uint(0)) * 8
-	if minAge > (1<<(uintBits-1)-1)/uint(time.Second) {
+	if minAge > math.MaxUint/2/uint(time.Second) {
 		return Uploader{}, fmt.Errorf("min age %d is too large, would overflow", minAge)
 	}
 
