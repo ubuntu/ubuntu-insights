@@ -8,11 +8,6 @@ Copyright: 2025, Canonical Ltd
 License: GPL-3
 Comment: Debian packaging is licensed under the same terms as upstream
 
-Files: debian/*
-Copyright: 2025, Canonical Ltd
-License: GPL-3
-Comment: Debian packaging is licensed under the same terms as upstream
-
 Files: vendor/github.com/BurntSushi/toml/*
 Copyright: 2013, TOML authors
 License: Expat
