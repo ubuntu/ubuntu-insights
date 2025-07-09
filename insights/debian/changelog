@@ -1,8 +1,11 @@
-ubuntu-insights (0.2.0~ppa3) questing; urgency=medium
+ubuntu-insights (0.2.0) questing; urgency=medium
 
   * Fix armhf builds
+  * Upgrades various golang dependencies
+  * Fix copyright duplication
+  * Cleanup unnecessary reference in run-tests.sh script
 
- -- Kat Kuo <kat.kuo@canonical.com>  Wed, 09 Jul 2025 10:35:31 -0400
+ -- Kat Kuo <kat.kuo@canonical.com>  Mon, 14 Jul 2025 13:23:43 -0400
 
 ubuntu-insights (0.1.0) questing; urgency=medium
 
