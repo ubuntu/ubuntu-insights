@@ -32,7 +32,7 @@ func makeCWaylandDisplay(d cWaylandDisplay) (wd *C.struct_wayland_display) {
 	return wd
 }
 
-func makeCwaylandDisplays(d []cWaylandDisplay) (wds **C.struct_wayland_display) {
+func makeCWaylandDisplays(d []cWaylandDisplay) (wds **C.struct_wayland_display) {
 	if len(d) == 0 {
 		return nil
 	}
@@ -57,7 +57,7 @@ func makeCwaylandDisplays(d []cWaylandDisplay) (wds **C.struct_wayland_display) 
 func TestingInitWayland(t *testing.T, cwd []cWaylandDisplay, memoryErr bool) {
 	t.Helper()
 
-	wds := makeCwaylandDisplays(cwd)
+	wds := makeCWaylandDisplays(cwd)
 	C.set_displays(wds, C.int(len(cwd)))
 	C.set_memory_error(C.bool(memoryErr))
 }
