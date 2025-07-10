@@ -11,10 +11,9 @@ typedef enum {
 } ConsentState;
 
 typedef struct {
-  const char *source;      // default: runtime.GOOS
   const char *consentDir;  // default: "${os.UserConfigDir}/ubuntu-insights"
   const char *insightsDir; // default: "${os.UserCacheDir}/ubuntu-insights"
-  bool verbose;            // default: false
+  bool verbose;            // Debug if true, info otherwise (default: false)
 } InsightsConfig;
 
 /**

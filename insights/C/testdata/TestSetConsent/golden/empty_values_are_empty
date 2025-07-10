@@ -1,6 +1,6 @@
 conf:
-    source: ""
     consentdir: ""
     insightsdir: ""
-    verbose: false
+    logger: null
+source: ""
 state: false

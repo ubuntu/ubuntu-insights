@@ -1,8 +1,9 @@
 conf:
-    source: platform
     consentdir: home/etc/dir
     insightsdir: insights/dir
-    verbose: true
+    logger: null
+sources:
+    - platform
 flags:
     minage: 0
     force: false

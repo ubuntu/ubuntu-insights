@@ -1,4 +1,5 @@
+conf:
+    consentdir: ""
+    insightsdir: ""
+    logger: null
 source: ""
-consentdir: ""
-insightsdir: ""
-verbose: false

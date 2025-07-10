@@ -3,6 +3,7 @@ package insights_test
 
 import (
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,6 +12,39 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/insights"
 )
+
+func TestResolve(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		config insights.Config
+	}{
+		"Default config": {
+			config: insights.Config{},
+		},
+		"Custom config": {
+			config: insights.Config{
+				ConsentDir:  "custom_consent_dir",
+				InsightsDir: "custom_insights_dir",
+				Logger:      slog.Default(),
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// Resolve the config
+			resolved := tc.config.Resolve()
+
+			// Assert the resolved config
+			assert.NotEmpty(t, resolved.ConsentDir)
+			assert.NotEmpty(t, resolved.InsightsDir)
+			assert.NotNil(t, resolved.Logger)
+		})
+	}
+}
 
 // TestCollect tests the Collect insights.
 func TestCollect(t *testing.T) {
@@ -79,10 +113,8 @@ func TestCollect(t *testing.T) {
 			dir := t.TempDir()
 
 			conf := insights.Config{
-				Source:      tc.source,
 				ConsentDir:  filepath.Join("testdata", "consent_files"),
 				InsightsDir: dir,
-				Verbose:     false,
 			}
 
 			if tc.collectFlags.SourceMetricsPath != "" {
@@ -90,7 +122,7 @@ func TestCollect(t *testing.T) {
 			}
 
 			// this is technically an integration test for dry-run.
-			err := conf.Collect(tc.collectFlags)
+			err := conf.Collect(tc.source, tc.collectFlags)
 
 			if tc.wantErr {
 				require.Error(t, err)
@@ -114,12 +146,12 @@ func TestUpload(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		source string
+		sources []string
 
 		wantErr bool
 	}{
 		"Valid source doesn't error": {
-			source: "valid_true",
+			sources: []string{"valid_true"},
 		},
 	}
 	for name, tc := range tests {
@@ -129,10 +161,8 @@ func TestUpload(t *testing.T) {
 			dir := t.TempDir()
 
 			conf := insights.Config{
-				Source:      tc.source,
 				ConsentDir:  filepath.Join("testdata", "consent_files"),
 				InsightsDir: dir,
-				Verbose:     false,
 			}
 
 			flags := insights.UploadFlags{
@@ -141,8 +171,12 @@ func TestUpload(t *testing.T) {
 				DryRun: true,
 			}
 
+			if tc.sources == nil {
+				tc.sources = []string{}
+			}
+
 			// this is technically an integration test for dry-run.
-			err := conf.Upload(flags)
+			err := conf.Upload(tc.sources, flags)
 
 			if tc.wantErr {
 				require.Error(t, err)
@@ -151,12 +185,14 @@ func TestUpload(t *testing.T) {
 			require.NoError(t, err)
 
 			// test that dry run was applied.
-			f, err := os.Open(filepath.Join(dir, tc.source, "uploaded"))
-			require.NoError(t, err, "Setup: failed to open temp directory")
-			defer f.Close()
+			for _, source := range tc.sources {
+				f, err := os.Open(filepath.Join(dir, source, "uploaded"))
+				require.NoError(t, err, "Setup: failed to open temp directory")
+				defer f.Close()
 
-			_, err = f.Readdir(1)
-			assert.ErrorIs(t, err, io.EOF)
+				_, err = f.Readdir(1)
+				assert.ErrorIs(t, err, io.EOF)
+			}
 		})
 	}
 }
@@ -168,21 +204,22 @@ func TestGetConsentState(t *testing.T) {
 	tests := map[string]struct {
 		source string
 
-		expected insights.ConsentState
+		expected bool
+		wantErr  bool
 	}{
 		"True consent returns CONSENT_TRUE": {
 			source:   "valid_true",
-			expected: insights.ConsentTrue,
+			expected: true,
 		},
 
 		"False consent returns CONSENT_FALSE": {
 			source:   "valid_false",
-			expected: insights.ConsentFalse,
+			expected: false,
 		},
 
 		"Missing consent returns CONSENT_UNKNOWN": {
-			source:   "missing_consent_file",
-			expected: insights.ConsentUnknown,
+			source:  "missing_consent_file",
+			wantErr: true, // missing consent file should return an error
 		},
 	}
 	for name, tc := range tests {
@@ -190,11 +227,14 @@ func TestGetConsentState(t *testing.T) {
 			t.Parallel()
 
 			conf := insights.Config{
-				Source:     tc.source,
 				ConsentDir: filepath.Join("testdata", "consent_files"),
 			}
 
-			got := conf.GetConsentState()
+			got, err := conf.GetConsentState(tc.source)
+			if tc.wantErr {
+				require.Error(t, err)
+				return
+			}
 
 			assert.Equal(t, tc.expected, got)
 		})
@@ -228,14 +268,12 @@ func TestSetConsentState(t *testing.T) {
 			dir := t.TempDir()
 
 			conf := insights.Config{
-				Source:      tc.source,
 				ConsentDir:  dir,
 				InsightsDir: t.TempDir(),
-				Verbose:     false,
 			}
 
 			// this is technically an integration test.
-			err := conf.SetConsentState(tc.state)
+			err := conf.SetConsentState(tc.source, tc.state)
 
 			if tc.wantErr {
 				require.Error(t, err)
@@ -243,12 +281,9 @@ func TestSetConsentState(t *testing.T) {
 			}
 			require.NoError(t, err)
 
-			var want insights.ConsentState = insights.ConsentFalse
-			if tc.state {
-				want = insights.ConsentTrue
-			}
-
-			assert.Equal(t, want, conf.GetConsentState())
+			state, err := conf.GetConsentState(tc.source)
+			require.NoError(t, err, "Failed to get consent state after setting it")
+			assert.Equal(t, tc.state, state)
 		})
 	}
 }

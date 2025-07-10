@@ -1,8 +1,8 @@
 conf:
-    source: ""
     consentdir: ""
     insightsdir: ""
-    verbose: false
+    logger: null
+source: ""
 flags:
     sourcemetricspath: ""
     sourcemetricsjson: []
