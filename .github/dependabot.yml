@@ -19,7 +19,7 @@ updates:
 
   ## Go dependencies
   - package-ecosystem: "gomod"
-    directory: "/" # Location of package manifests
+    directory: "/insights"
     schedule:
       interval: "weekly"
       day: "thursday"
@@ -29,7 +29,33 @@ updates:
         #applies-to: version-updates
         update-types: ["minor", "patch"]
     commit-message:
-      prefix: "deps(go)"
+      prefix: "deps(go-insights)"
+
+  - package-ecosystem: "gomod"
+    directory: "/server"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "09:00"
+    groups:
+      minor-updates:
+        #applies-to: version-updates
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "deps(go-server)"
+
+  - package-ecosystem: "gomod"
+    directory: "/common"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "09:00"
+    groups:
+      minor-updates:
+        #applies-to: version-updates
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "deps(go-common)"
 
   - package-ecosystem: "gomod"
     directory: "/tools"
