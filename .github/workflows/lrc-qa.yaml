@@ -84,7 +84,6 @@ jobs:
             server/go.sum
             common/go.sum
             tools/go.sum
-            go.work.sum
 
       - name: Vendor Go modules
         working-directory: insights

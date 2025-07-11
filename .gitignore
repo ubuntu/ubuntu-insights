@@ -22,6 +22,7 @@ build/
 _build/
 generated
 **/vendor/
+go.work.sum
 
 # Debian package build artifacts
 ubuntu-insights_*
