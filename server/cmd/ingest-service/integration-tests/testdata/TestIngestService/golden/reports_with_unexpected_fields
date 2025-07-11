@@ -25,11 +25,6 @@
       "TotalReports": 1,
       "OptOutReports": 1,
       "OptInReports": 0
-    },
-    "wsl_setup": {
-      "TotalReports": 0,
-      "OptOutReports": 0,
-      "OptInReports": 0
     }
   },
   "InvalidReports": [

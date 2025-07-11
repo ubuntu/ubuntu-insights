@@ -4,5 +4,4 @@
 - darwin
 - ubuntu_report
 - schema_migrations
-- wsl_setup
 - ubuntu_desktop_provision
