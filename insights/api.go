@@ -2,6 +2,7 @@
 package insights
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -62,8 +63,13 @@ func (c Config) Resolve() Config {
 // If SourceMetricsPath in flags is set, it must be a valid path to a JSON file with a valid JSON object.
 // SourceMetricsJSON in flags if set must be a valid JSON object, not an array or primitive.
 //
+// Collect returns the compiled insights as a pretty printed JSON byte slice.
+// Note that this return may not match with what is written to disk depending on provided flags and the consent state.
+// If the consent state is determined to be false, an OptOut report will be written to disk, but the full compiled
+// report will still be returned.
+//
 // This method calls Resolve() on the config before proceeding.
-func (c Config) Collect(source string, flags CollectFlags) error {
+func (c Config) Collect(source string, flags CollectFlags) ([]byte, error) {
 	r := c.Resolve()
 
 	cConf := collector.Config{
@@ -77,15 +83,19 @@ func (c Config) Collect(source string, flags CollectFlags) error {
 	cm := consent.New(r.Logger, r.ConsentDir)
 	col, err := collector.New(r.Logger, cm, cConf)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	insights, err := col.Compile(flags.Force)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return col.Write(insights, flags.DryRun)
+	if err := col.Write(insights, flags.DryRun); err != nil {
+		return nil, err
+	}
+
+	return json.MarshalIndent(insights, "", "  ")
 }
 
 // Upload uploads reports for the specified sources.
