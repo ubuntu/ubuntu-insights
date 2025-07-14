@@ -5,6 +5,7 @@ package uploader
 import (
 	"fmt"
 	"log/slog"
+	"math"
 	"os"
 	"path/filepath"
 	"time"
@@ -103,7 +104,7 @@ type Consent interface {
 func New(l *slog.Logger, cm Consent, cachePath string, minAge uint, dryRun bool, args ...Options) (Uploader, error) {
 	l.Debug("Creating new uploader manager", "minAge", minAge, "dryRun", dryRun)
 
-	if minAge > (1<<63-1)/uint(time.Second) {
+	if minAge > math.MaxUint/2/uint(time.Second) {
 		return Uploader{}, fmt.Errorf("min age %d is too large, would overflow", minAge)
 	}
 

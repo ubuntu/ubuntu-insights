@@ -1,3 +1,9 @@
+ubuntu-insights (0.2.0~ppa3) questing; urgency=medium
+
+  * Fix armhf builds
+
+ -- Kat Kuo <kat.kuo@canonical.com>  Wed, 09 Jul 2025 10:35:31 -0400
+
 ubuntu-insights (0.1.0) questing; urgency=medium
 
   * Initial release (LP: #2107478)

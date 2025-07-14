@@ -12,7 +12,8 @@ struct wayland_display {
   int32_t phys_width;
   int32_t phys_height;
 };
-// Initalize Wayland display information.
+
+// Initialize Wayland display information.
 int init_wayland();
 
 // Cleanup Wayland display information.
