@@ -83,7 +83,7 @@ func installRootCmd(app *App) {
 	cmd := app.cmd
 
 	defaultConf := webservice.StaticConfig{
-		ConfigPath: "config.json",
+		ConfigPath: "",
 		ReportsDir: constants.DefaultServiceReportsDir,
 
 		ReadTimeout:    5 * time.Second,
@@ -98,25 +98,25 @@ func installRootCmd(app *App) {
 	cmd.PersistentFlags().CountVarP(&app.config.Verbosity, "verbose", "v", "issue INFO (-v), DEBUG (-vv)")
 
 	// Daemon flags
-	cmd.PersistentFlags().StringVar(&app.config.Daemon.ConfigPath, "daemon-config", defaultConf.ConfigPath, "Path to the configuration file")
-	cmd.PersistentFlags().StringVar(&app.config.Daemon.ReportsDir, "reports-dir", defaultConf.ReportsDir, "Directory to store reports")
+	cmd.Flags().StringVar(&app.config.Daemon.ConfigPath, "daemon-config", defaultConf.ConfigPath, "path to the configuration file")
+	cmd.Flags().StringVar(&app.config.Daemon.ReportsDir, "reports-dir", defaultConf.ReportsDir, "directory to store reports in")
 
-	cmd.PersistentFlags().DurationVar(&app.config.Daemon.ReadTimeout, "read-timeout", defaultConf.ReadTimeout, "Read timeout for HTTP server")
-	cmd.PersistentFlags().DurationVar(&app.config.Daemon.WriteTimeout, "write-timeout", defaultConf.WriteTimeout, "Write timeout for HTTP server")
-	cmd.PersistentFlags().DurationVar(&app.config.Daemon.RequestTimeout, "request-timeout", defaultConf.RequestTimeout, "Request timeout for HTTP server")
-	cmd.PersistentFlags().IntVar(&app.config.Daemon.MaxHeaderBytes, "max-header-bytes", defaultConf.MaxHeaderBytes, "Maximum header bytes for HTTP server")
-	cmd.PersistentFlags().IntVar(&app.config.Daemon.MaxUploadBytes, "max-upload-bytes", defaultConf.MaxUploadBytes, "Maximum upload bytes for HTTP server")
+	cmd.Flags().DurationVar(&app.config.Daemon.ReadTimeout, "read-timeout", defaultConf.ReadTimeout, "read timeout for HTTP server")
+	cmd.Flags().DurationVar(&app.config.Daemon.WriteTimeout, "write-timeout", defaultConf.WriteTimeout, "write timeout for HTTP server")
+	cmd.Flags().DurationVar(&app.config.Daemon.RequestTimeout, "request-timeout", defaultConf.RequestTimeout, "request timeout for HTTP server")
+	cmd.Flags().IntVar(&app.config.Daemon.MaxHeaderBytes, "max-header-bytes", defaultConf.MaxHeaderBytes, "maximum header bytes for HTTP server")
+	cmd.Flags().IntVar(&app.config.Daemon.MaxUploadBytes, "max-upload-bytes", defaultConf.MaxUploadBytes, "maximum upload bytes for HTTP server")
 
-	cmd.PersistentFlags().StringVar(&app.config.Daemon.ListenHost, "listen-host", defaultConf.ListenHost, "Host to listen on")
-	cmd.PersistentFlags().IntVar(&app.config.Daemon.ListenPort, "listen-port", defaultConf.ListenPort, "Port to listen on")
+	cmd.Flags().StringVar(&app.config.Daemon.ListenHost, "listen-host", defaultConf.ListenHost, "host to listen on")
+	cmd.Flags().IntVar(&app.config.Daemon.ListenPort, "listen-port", defaultConf.ListenPort, "port to listen on")
 
-	err := cmd.MarkPersistentFlagFilename("daemon-config")
+	err := cmd.MarkFlagFilename("daemon-config")
 	if err != nil {
 		// This should never happen.
 		panic(fmt.Sprintf("failed to mark daemon-config flag as filename: %v", err))
 	}
 
-	err = cmd.MarkPersistentFlagDirname("reports-dir")
+	err = cmd.MarkFlagDirname("reports-dir")
 	if err != nil {
 		// This should never happen.
 		panic(fmt.Sprintf("failed to mark reports-dir flag as required: %v", err))
