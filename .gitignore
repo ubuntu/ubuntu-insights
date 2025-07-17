@@ -27,3 +27,11 @@ go.work.sum
 # Debian package build artifacts
 ubuntu-insights_*
 ubuntu-insights*.ddeb
+
+# Go build artifacts
+insights
+!insights/
+ingest-service
+!ingest-service/
+web-service
+!web-service/
