@@ -44,6 +44,9 @@ If no path is provided, the default path is used.`,
 			return app.migrateRun()
 		},
 	}
+
+	addDBFlags(migrateCmd, &app.config.DBconfig)
+
 	app.cmd.AddCommand(migrateCmd)
 }
 

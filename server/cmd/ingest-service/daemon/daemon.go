@@ -90,16 +90,10 @@ func installRootCmd(app *App) {
 	cmd.PersistentFlags().CountVarP(&app.config.Verbosity, "verbose", "v", "issue INFO (-v), DEBUG (-vv)")
 
 	// Daemon flags
-	cmd.PersistentFlags().StringVar(&app.config.DBconfig.Host, "db-host", "", "Database host")
-	cmd.PersistentFlags().IntVarP(&app.config.DBconfig.Port, "db-port", "p", 5432, "Database port")
-	cmd.PersistentFlags().StringVarP(&app.config.DBconfig.User, "db-user", "u", "", "Database user")
-	cmd.PersistentFlags().StringVarP(&app.config.DBconfig.Password, "db-password", "P", "", "Database password")
-	cmd.PersistentFlags().StringVarP(&app.config.DBconfig.DBName, "db-name", "n", "", "Database name")
-	cmd.PersistentFlags().StringVarP(&app.config.DBconfig.SSLMode, "db-sslmode", "s", "", "Database SSL mode")
+	cmd.Flags().StringVar(&app.config.ReportsDir, "reports-dir", constants.DefaultServiceReportsDir, "base directory to read reports from")
+	cmd.Flags().StringVarP(&app.config.ConfigPath, "daemon-config", "c", "", "path to the configuration file")
 
-	cmd.Flags().StringVar(&app.config.ReportsDir, "reports-dir", constants.DefaultServiceReportsDir, "Base directory to read reports from")
-
-	cmd.Flags().StringVarP(&app.config.ConfigPath, "daemon-config", "c", "", "Path to the configuration file")
+	addDBFlags(cmd, &app.config.DBconfig)
 
 	if err := cmd.MarkFlagDirname("reports-dir"); err != nil {
 		panic(fmt.Errorf("failed to mark reports-dir flag as directory: %w", err))
@@ -108,6 +102,15 @@ func installRootCmd(app *App) {
 	if err := cmd.MarkFlagDirname("daemon-config"); err != nil {
 		panic(fmt.Sprintf("failed to mark daemon-config flag as filename: %v", err))
 	}
+}
+
+func addDBFlags(cmd *cobra.Command, config *database.Config) {
+	cmd.Flags().StringVar(&config.Host, "db-host", "", "database host")
+	cmd.Flags().IntVarP(&config.Port, "db-port", "p", 5432, "database port")
+	cmd.Flags().StringVarP(&config.User, "db-user", "u", "", "database user")
+	cmd.Flags().StringVarP(&config.Password, "db-password", "P", "", "database password")
+	cmd.Flags().StringVarP(&config.DBName, "db-name", "n", "", "database name")
+	cmd.Flags().StringVarP(&config.SSLMode, "db-sslmode", "s", "", "database SSL mode")
 }
 
 // Run executes the command and associated process, returning an error if any.
