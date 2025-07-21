@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -24,59 +23,80 @@ func createTempConfigFile(t *testing.T, content string) string {
 	return tmpFile
 }
 
-func TestLoadValidConfig(t *testing.T) {
+func TestLoad(t *testing.T) {
 	t.Parallel()
-	content := `{
-		"allowList": ["foo", "bar"]
-	}`
-	tmpFile := createTempConfigFile(t, content)
 
-	cm := config.New(tmpFile)
-	if err := cm.Load(); err != nil {
-		t.Fatalf("expected no error loading config, got %v", err)
+	tests := map[string]struct {
+		content     string
+		missingFile bool
+
+		wantErr bool
+	}{
+		"Valid config loads": {
+			content: `{"allowList": ["foo", "bar"]}`,
+		},
+		"Empty JSON loads": {
+			content: "{}",
+		},
+		"Ignores reserved names": {
+			content: func() string {
+				content := `{"allowList": ["foo"`
+				for reservedName := range config.GetReservedNames() {
+					content += fmt.Sprintf(`, "%s"`, reservedName)
+				}
+				content += `]}`
+				return content
+			}(),
+		},
+
+		// Error cases
+		"Invalid JSON fails": {
+			content: `{"allowList": ["foo", "bar"]`, // Missing closing brace
+			wantErr: true,
+		},
+		"Missing file fails": {
+			content:     "{}",
+			missingFile: true,
+			wantErr:     true,
+		},
+		"Empty file fails": {
+			wantErr: true,
+		},
 	}
 
-	expected := []string{"foo", "bar"}
-	if got := cm.AllowList(); !reflect.DeepEqual(got, expected) {
-		t.Errorf("expected allowList %v, got %v", expected, got)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			configPath := "nonexistent.json"
+			if !tc.missingFile {
+				configPath = createTempConfigFile(t, tc.content)
+			}
+
+			cm := config.New(configPath)
+			err := cm.Load()
+
+			if tc.wantErr {
+				require.Error(t, err, "expected error loading config")
+				assert.Empty(t, cm.AllowList(), "expected empty allowList on error")
+				assert.Empty(t, cm.AllowSet(), "expected empty allowSet on error")
+				return
+			}
+			require.NoError(t, err, "expected no error loading config")
+
+			got := struct {
+				AllowList []string
+				AllowSet  map[string]struct{}
+			}{
+				AllowList: cm.AllowList(),
+				AllowSet:  cm.AllowSet(),
+			}
+
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			assert.Equal(t, want.AllowList, got.AllowList, "expected allowList to match")
+			assert.Equal(t, want.AllowSet, got.AllowSet, "expected allowSet to match")
+		})
 	}
-}
-
-func TestLoadInvalidJSON(t *testing.T) {
-	t.Parallel()
-	content := `{
-		"allowList": ["foo", "bar"]` // Missing closing brace
-	tmpFile := createTempConfigFile(t, content)
-
-	cm := config.New(tmpFile)
-	require.Error(t, cm.Load(), "expected error loading malformed JSON")
-}
-
-func TestLoadMissingFile(t *testing.T) {
-	t.Parallel()
-	cm := config.New("nonexistent.json")
-	require.Error(t, cm.Load(), "expected error loading missing config file")
-}
-
-func TestLoadIgnoresReservedNames(t *testing.T) {
-	t.Parallel()
-	content := `{
-		"allowList": ["foo"`
-
-	for reservedName := range config.GetReservedNames() {
-		content += fmt.Sprintf(`, "%s"`, reservedName)
-	}
-	content += `]
-	}`
-
-	tmpFile := createTempConfigFile(t, content)
-
-	cm := config.New(tmpFile)
-	require.NoError(t, cm.Load(), "expected no error loading config with reserved names")
-
-	expected := []string{"foo"} // Reserved names should be ignored
-	got := cm.AllowList()
-	assert.Equal(t, expected, got, "expected allowList to ignore reserved names")
 }
 
 func TestWatchMissingFile(t *testing.T) {
@@ -110,9 +130,8 @@ func TestWatchConfigReloadsOnChange(t *testing.T) {
 
 	time.Sleep(time.Second) // let watcher reload
 
-	if got := cm.AllowList(); !reflect.DeepEqual(got, []string{"beta"}) {
-		t.Errorf("expected allowList [beta], got %v", got)
-	}
+	require.Equal(t, []string{"beta"}, cm.AllowList(), "expected allowList to match")
+	require.Equal(t, map[string]struct{}{"beta": {}}, cm.AllowSet(), "expected allowSet to match")
 
 	select {
 	case err := <-watchErr:
@@ -240,9 +259,8 @@ func TestWatchIgnoresReservedNames(t *testing.T) {
 	require.NoError(t, os.WriteFile(tmpFile, []byte(updated), 0600), "Setup: failed to write updated config with reserved names")
 	time.Sleep(time.Second) // let watcher reload
 
-	if got := cm.AllowList(); !reflect.DeepEqual(got, []string{"alpha"}) {
-		t.Errorf("expected allowList [beta], got %v", got)
-	}
+	require.Equal(t, []string{"alpha"}, cm.AllowList(), "expected allowList to match")
+	require.Equal(t, map[string]struct{}{"alpha": {}}, cm.AllowSet(), "expected allowSet to match")
 
 	select {
 	case err := <-watchErr:

@@ -21,6 +21,14 @@ func (m *mockConfigManager) AllowList() []string {
 	return m.allowedList
 }
 
+func (m *mockConfigManager) AllowSet() map[string]struct{} {
+	allowSet := make(map[string]struct{}, len(m.allowedList))
+	for _, name := range m.allowedList {
+		allowSet[name] = struct{}{}
+	}
+	return allowSet
+}
+
 func runUploadTestCase(
 	t *testing.T,
 	handler http.Handler,

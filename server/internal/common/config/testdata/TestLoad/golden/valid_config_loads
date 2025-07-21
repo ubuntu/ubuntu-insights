@@ -1,0 +1,6 @@
+allowlist:
+    - foo
+    - bar
+allowset:
+    bar: {}
+    foo: {}

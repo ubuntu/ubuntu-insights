@@ -382,6 +382,14 @@ func (t testConfigManager) AllowList() []string {
 	return t.allowList
 }
 
+func (t testConfigManager) AllowSet() map[string]struct{} {
+	allowSet := make(map[string]struct{}, len(t.allowList))
+	for _, name := range t.allowList {
+		allowSet[name] = struct{}{}
+	}
+	return allowSet
+}
+
 func newForTest(t *testing.T, cm *testConfigManager, daemonConfig *webservice.StaticConfig) *webservice.Server {
 	t.Helper()
 
