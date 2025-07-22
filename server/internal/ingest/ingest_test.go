@@ -95,6 +95,11 @@ func TestRun(t *testing.T) {
 				tc.cm = newConfigManager()
 			}
 
+			// Apply the allowSet if not already set
+			if tc.cm.allowSet == nil {
+				tc.cm.allowSet = createSet(tc.cm.allowList...)
+			}
+
 			if tc.proc == nil {
 				tc.proc = newProcessor(map[string]error{})
 			}
@@ -124,21 +129,16 @@ func TestRun(t *testing.T) {
 func TestRunModifyAllowList(t *testing.T) {
 	t.Parallel()
 
-	cm := &mockConfigManager{
-		allowList: []string{"SingleValid"},
-
-		reloadCh: make(chan struct{}),
-		errCh:    make(chan error),
-	}
+	cm := newConfigManager("SingleValid")
 	s := ingest.New(t.Context(), cm, &mockDProcessor{})
 	runErr := run(t, s)
 
 	waitWorkersEqual(t, s, cm.AllowList()...)
 
-	cm.SetAllowList(t, append(cm.AllowList(), "MultiMixed"), 3)
+	cm.setAllowList(t, append(cm.AllowList(), "MultiMixed"), 3)
 	waitWorkersEqual(t, s, cm.AllowList()...)
 
-	cm.SetAllowList(t, []string{}, 3)
+	cm.setAllowList(t, []string{}, 3)
 	waitWorkersEqual(t, s)
 
 	gracefulShutdown(t, s, runErr)
@@ -147,12 +147,7 @@ func TestRunModifyAllowList(t *testing.T) {
 func TestRunAfterQuitErrors(t *testing.T) {
 	t.Parallel()
 
-	cm := &mockConfigManager{
-		allowList: []string{"SingleValid"},
-
-		reloadCh: make(chan struct{}),
-		errCh:    make(chan error),
-	}
+	cm := newConfigManager("SingleValid")
 	s := ingest.New(t.Context(), cm, &mockDProcessor{})
 	defer s.Quit(true)
 
@@ -256,13 +251,14 @@ func waitWorkersEqual(t *testing.T, s *ingest.Service, workers ...string) {
 		if slices.Equal(workers, got) {
 			return
 		}
-		require.LessOrEqual(t, time.Since(start), timeout, "Workers did not match within the timeout")
+		require.LessOrEqual(t, time.Since(start), timeout, "Workers did not match within the timeout. Wanted: %v, Got: %v", workers, got)
 		time.Sleep(delay)
 	}
 }
 
 type mockConfigManager struct {
 	allowList []string
+	allowSet  map[string]struct{}
 
 	closeReloadCh   bool
 	closeWatchErr   bool
@@ -278,6 +274,7 @@ type mockConfigManager struct {
 func newConfigManager(allowList ...string) *mockConfigManager {
 	return &mockConfigManager{
 		allowList: allowList,
+		allowSet:  createSet(allowList...),
 		reloadCh:  make(chan struct{}),
 		errCh:     make(chan error),
 	}
@@ -316,17 +313,32 @@ func (m *mockConfigManager) AllowList() []string {
 	return m.allowList
 }
 
-func (m *mockConfigManager) SetAllowList(t *testing.T, newAllowList []string, sendReloadSignal uint) {
+func (m *mockConfigManager) AllowSet() map[string]struct{} {
+	m.mu.RLock() // Lock for reading
+	defer m.mu.RUnlock()
+	return m.allowSet
+}
+
+func (m *mockConfigManager) setAllowList(t *testing.T, newAllowList []string, sendReloadSignal uint) {
 	t.Helper()
 
 	m.mu.Lock() // Lock for writing
 	defer m.mu.Unlock()
 	m.allowList = newAllowList
+	m.allowSet = createSet(newAllowList...)
 
 	for range sendReloadSignal {
 		require.NotNil(t, m.reloadCh, "Setup: Reload channel should not be nil")
 		m.reloadCh <- struct{}{}
 	}
+}
+
+func createSet(items ...string) map[string]struct{} {
+	set := make(map[string]struct{}, len(items))
+	for _, item := range items {
+		set[item] = struct{}{}
+	}
+	return set
 }
 
 // run is a helper function which runs the service in a separate goroutine

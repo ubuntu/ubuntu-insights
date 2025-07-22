@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"slices"
 
 	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
@@ -27,7 +26,7 @@ func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID st
 		return
 	}
 
-	allowed := slices.Contains(h.config.AllowList(), app)
+	_, allowed := h.config.AllowSet()[app]
 	if !allowed {
 		http.Error(w, "Invalid application name in URL", http.StatusForbidden)
 		slog.Error("Invalid application name in URL", "req_id", reqID, "app", app)
