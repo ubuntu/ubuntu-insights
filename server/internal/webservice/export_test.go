@@ -2,6 +2,7 @@ package webservice
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -12,11 +13,6 @@ import (
 )
 
 type DConfigManager = dConfigManager
-
-// Addr returns the address of the HTTP server for testing purposes.
-func (s *Server) Addr() string {
-	return s.httpServer.Addr
-}
 
 // HTTPServer returns the HTTP server for testing purposes.
 func (s *Server) HTTPServer() *http.Server {
@@ -33,4 +29,18 @@ func GenerateTestDaemonConfig(t *testing.T, daeConf *config.Conf) string {
 	require.NoError(t, os.WriteFile(daeConfPath, d, 0600), "Setup: failed to write dynamic config for tests")
 
 	return daeConfPath
+}
+
+// PrimaryAddr returns the true address of the primary server.
+func (s *Server) PrimaryAddr() net.Addr {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.primaryAddr
+}
+
+// MetricsAddr returns the true address of the metrics server.
+func (s *Server) MetricsAddr() net.Addr {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.metricsAddr
 }

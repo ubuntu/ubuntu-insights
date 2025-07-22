@@ -92,7 +92,8 @@ func installRootCmd(app *App) {
 		MaxHeaderBytes: 1 << 13, // 8 KB
 		MaxUploadBytes: 1 << 17, // 128 KB
 
-		ListenPort: 8080,
+		ListenPort:  8080,
+		MetricsPort: 2112,
 	}
 
 	cmd.PersistentFlags().CountVarP(&app.config.Verbosity, "verbose", "v", "issue INFO (-v), DEBUG (-vv)")
@@ -109,6 +110,9 @@ func installRootCmd(app *App) {
 
 	cmd.Flags().StringVar(&app.config.Daemon.ListenHost, "listen-host", defaultConf.ListenHost, "host to listen on")
 	cmd.Flags().IntVar(&app.config.Daemon.ListenPort, "listen-port", defaultConf.ListenPort, "port to listen on")
+
+	cmd.Flags().StringVar(&app.config.Daemon.MetricsHost, "metrics-host", defaultConf.MetricsHost, "host for the metrics endpoint")
+	cmd.Flags().IntVar(&app.config.Daemon.MetricsPort, "metrics-port", defaultConf.MetricsPort, "port for the metrics endpoint")
 
 	err := cmd.MarkFlagFilename("daemon-config")
 	if err != nil {
