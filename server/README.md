@@ -30,6 +30,8 @@ Flags:
       --listen-port int            port to listen on (default 8080)
       --max-header-bytes int       maximum header bytes for HTTP server (default 8192)
       --max-upload-bytes int       maximum upload bytes for HTTP server (default 131072)
+      --metrics-host string        host for metrics endpoint
+      --metrics-port int           port for metrics endpoint (default 2112)
       --read-timeout duration      read timeout for HTTP server (default 5s)
       --reports-dir string         directory to store reports in (default "/var/lib/ubuntu-insights-services/reports")
       --request-timeout duration   request timeout for HTTP server (default 3s)
