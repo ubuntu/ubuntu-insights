@@ -68,7 +68,7 @@ type Collector interface {
 // collector is an abstraction of the collector component.
 type collector struct {
 	consent Consent
-	period  int
+	period  int32
 	source  string
 
 	collectedDir      string
@@ -77,7 +77,7 @@ type collector struct {
 	sourceMetricsJSON []byte
 
 	// Overrides for testing.
-	maxReports uint
+	maxReports uint32
 	time       time.Time
 	sysInfo    SysInfo
 
@@ -86,7 +86,7 @@ type collector struct {
 
 type options struct {
 	// Private members exported for tests.
-	maxReports   uint
+	maxReports   uint32
 	timeProvider timeProvider
 	sysInfo      func(*slog.Logger, ...sysinfo.Options) SysInfo
 }
@@ -105,7 +105,7 @@ type Options func(*options)
 // Config represents the collector specific data needed to collect.
 type Config struct {
 	Source            string
-	Period            uint
+	Period            uint32
 	CachePath         string
 	SourceMetricsPath string
 	SourceMetricsJSON []byte
@@ -114,7 +114,7 @@ type Config struct {
 // Sanitize sets defaults and checks that the Config is properly configured.
 func (c *Config) Sanitize(l *slog.Logger) error {
 	// Handle global source and source metrics.
-	if c.Period > math.MaxInt {
+	if c.Period > math.MaxInt32 {
 		return errors.New("period cannot be greater than max int")
 	}
 
@@ -171,7 +171,7 @@ func New(l *slog.Logger, cm Consent, c Config, args ...Options) (Collector, erro
 
 	return collector{
 		consent: cm,
-		period:  int(c.Period), //nolint:gosec  //G115 Integer overflow conversion check is done in Sanitize.
+		period:  int32(c.Period), //nolint:gosec  //G115 Integer overflow conversion check is done in Sanitize.
 		source:  c.Source,
 
 		time:              opts.timeProvider.Now(),

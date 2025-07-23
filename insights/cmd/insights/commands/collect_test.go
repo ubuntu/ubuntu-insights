@@ -132,7 +132,7 @@ func TestCollect(t *testing.T) {
 
 			got := struct {
 				Source string
-				Period uint
+				Period uint32
 				Force  bool
 				DryRun bool
 			}{

@@ -56,7 +56,7 @@ If source is provided, then the source-metrics-path should be provided as well.`
 		},
 	}
 
-	collectCmd.Flags().UintVarP(&app.config.Collect.Period, "period", "p", constants.DefaultPeriod, "the minimum period between 2 collection periods for validation purposes in seconds")
+	collectCmd.Flags().Uint32VarP(&app.config.Collect.Period, "period", "p", constants.DefaultPeriod, "the minimum period between 2 collection periods for validation purposes in seconds")
 	collectCmd.Flags().BoolVarP(&app.config.Collect.Force, "force", "f", false, "force a collection, override the report if there are any conflicts (doesn't ignore consent)")
 	collectCmd.Flags().BoolVarP(&app.config.Collect.DryRun, "dry-run", "d", false, "perform a dry-run where a report is collected, but not written to disk")
 

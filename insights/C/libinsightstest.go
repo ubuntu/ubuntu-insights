@@ -65,7 +65,7 @@ func TestCollectImpl(t *testing.T) {
 
 		"Flags get converted": {
 			flags: &C.CollectFlags{
-				period: C.uint(10),
+				period: C.uint32_t(10),
 				force:  C.bool(true),
 				dryRun: C.bool(true),
 			},
@@ -80,7 +80,7 @@ func TestCollectImpl(t *testing.T) {
 			source:      "wsl",
 			metricsPath: strPtr("metrics"),
 			flags: &C.CollectFlags{
-				period: C.uint(2000),
+				period: C.uint32_t(2000),
 				force:  C.bool(false),
 				dryRun: C.bool(false),
 			},
@@ -179,7 +179,7 @@ func TestUploadImpl(t *testing.T) {
 
 		"Flags get converted": {
 			flags: &C.UploadFlags{
-				minAge: C.uint(10),
+				minAge: C.uint32_t(10),
 				force:  C.bool(true),
 				dryRun: C.bool(true),
 			},
@@ -193,7 +193,7 @@ func TestUploadImpl(t *testing.T) {
 			},
 			sources: []string{"wsl", "app2"},
 			flags: &C.UploadFlags{
-				minAge: C.uint(2000),
+				minAge: C.uint32_t(2000),
 				force:  C.bool(false),
 				dryRun: C.bool(false),
 			},

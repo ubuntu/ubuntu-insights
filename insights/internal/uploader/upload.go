@@ -123,7 +123,7 @@ func (um Uploader) Upload(source string, force bool) error {
 func (um Uploader) BackoffUpload(source string, force bool) (err error) {
 	um.log.Debug("Uploading reports with backoff")
 
-	attempts := 0
+	var attempts uint32
 	for {
 		err = um.Upload(source, force)
 		if !errors.Is(err, ErrSendFailure) {

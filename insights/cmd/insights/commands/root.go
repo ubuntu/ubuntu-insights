@@ -13,7 +13,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/insights/internal/uploader"
 )
 
-type newUploader func(l *slog.Logger, cm uploader.Consent, cachePath string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error)
+type newUploader func(l *slog.Logger, cm uploader.Consent, cachePath string, minAge uint32, dryRun bool, args ...uploader.Options) (uploader.Uploader, error)
 type newCollector func(l *slog.Logger, cm collector.Consent, c collector.Config, args ...collector.Options) (collector.Collector, error)
 
 // App represents the application.
@@ -30,7 +30,7 @@ type App struct {
 		Collect struct {
 			Source            string
 			SourceMetricsPath string
-			Period            uint
+			Period            uint32
 			Force             bool
 			DryRun            bool
 		}

@@ -23,13 +23,13 @@ type timeProvider interface {
 
 //go:linkname defaultOptions github.com/ubuntu/ubuntu-insights/insights/internal/collector.defaultOptions
 var defaultOptions struct {
-	maxReports   uint
+	maxReports   uint32
 	timeProvider timeProvider
 	sysInfo      func(*slog.Logger, ...sysinfo.Options) collector.SysInfo
 }
 
 // SetMaxReports overrides the max reports count the uploader is using.
-func SetMaxReports(r uint) {
+func SetMaxReports(r uint32) {
 	defaultOptions.maxReports = r
 }
 

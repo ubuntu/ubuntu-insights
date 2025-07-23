@@ -29,12 +29,12 @@ func init() {
 	}
 
 	if max_reports := os.Getenv("UBUNTU_INSIGHTS_INTEGRATIONTESTS_MAX_REPORTS"); max_reports != "" {
-		mr, err := strconv.ParseUint(max_reports, 10, 64)
+		mr, err := strconv.ParseUint(max_reports, 10, 32)
 		if err != nil {
 			panic(fmt.Sprintf("failed to parse UBUNTU_INSIGHTS_INTEGRATIONTESTS_MAX_REPORTS: %v", err))
 		}
-		uploadertestutils.SetMaxReports(uint(mr))
-		collectortestutils.SetMaxReports(uint(mr))
+		uploadertestutils.SetMaxReports(uint32(mr))
+		collectortestutils.SetMaxReports(uint32(mr))
 	}
 
 	if time := os.Getenv("UBUNTU_INSIGHTS_INTEGRATIONTESTS_TIME"); time != "" {
@@ -55,11 +55,11 @@ func init() {
 	}
 
 	if max_attempts := os.Getenv("UBUNTU_INSIGHTS_INTEGRATIONTESTS_MAX_ATTEMPTS"); max_attempts != "" {
-		ma, err := strconv.ParseInt(max_attempts, 10, 64)
+		ma, err := strconv.ParseUint(max_attempts, 10, 32)
 		if err != nil {
 			panic(fmt.Sprintf("failed to parse UBUNTU_INSIGHTS_INTEGRATIONTESTS_MAX_ATTEMPTS: %v", err))
 		}
-		uploadertestutils.SetMaxAttempts(int(ma))
+		uploadertestutils.SetMaxAttempts(uint32(ma))
 	}
 
 	if report_timeout := os.Getenv("UBUNTU_INSIGHTS_INTEGRATIONTESTS_MAX_RETRY_PERIOD"); report_timeout != "" {

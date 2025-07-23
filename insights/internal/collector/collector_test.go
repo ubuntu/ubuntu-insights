@@ -109,7 +109,7 @@ func TestSanitize(t *testing.T) {
 		"Overflow period errors": {
 			config: collector.Config{
 				Source:    constants.DefaultCollectSource,
-				Period:    math.MaxInt + 1,
+				Period:    math.MaxInt32 + 1,
 				CachePath: t.TempDir(),
 			},
 			wantErr: true,
@@ -175,7 +175,7 @@ func TestNew(t *testing.T) {
 		// Error cases
 		"Overflow Period (Sanitize error)": {
 			config: collector.Config{
-				Period:    math.MaxInt + 1,
+				Period:    math.MaxInt32 + 1,
 				CachePath: t.TempDir(),
 			},
 			wantErr: true,
@@ -411,7 +411,7 @@ func TestWrite(t *testing.T) {
 		consentM   collector.Consent
 		config     collector.Config
 		dryRun     bool
-		maxReports uint
+		maxReports uint32
 		insights   collector.Insights
 		noDir      bool
 		wantErr    bool

@@ -18,7 +18,7 @@ func TestGetPeriodStart(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		period int
+		period int32
 		time   int64
 
 		wantErr error
@@ -91,7 +91,7 @@ func TestGetForPeriod(t *testing.T) {
 		subDir      string
 		subDirFiles []string
 		time        int64
-		period      int
+		period      int32
 		invalidDir  bool
 
 		wantSpecificErr error
@@ -510,7 +510,7 @@ func TestCleanup(t *testing.T) {
 
 	tests := map[string]struct {
 		files      []string
-		maxReports uint
+		maxReports uint32
 		noDir      bool
 
 		wantErr bool
@@ -548,7 +548,7 @@ func TestCleanup(t *testing.T) {
 		},
 		"Max Reports Overflow": {
 			files:      []string{"1.json", "2.json", "3.json", "4.json", "5.json", "6.json"},
-			maxReports: math.MaxInt + 1,
+			maxReports: math.MaxInt32 + 1,
 			wantErr:    true,
 		},
 	}

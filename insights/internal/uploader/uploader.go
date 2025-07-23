@@ -5,7 +5,6 @@ package uploader
 import (
 	"fmt"
 	"log/slog"
-	"math"
 	"os"
 	"path/filepath"
 	"time"
@@ -31,12 +30,12 @@ type Uploader struct {
 	cacheDir string
 
 	baseServerURL string
-	maxReports    uint
+	maxReports    uint32
 	timeProvider  timeProvider
 
 	baseRetryPeriod time.Duration // initialRetryPeriod is the initial wait period between retries.
 	maxRetryPeriod  time.Duration // maxRetryPeriod is the maximum wait period between retries.
-	maxAttempts     int           // maxRetries is the maximum number of retry attempts before giving up.
+	maxAttempts     uint32        // maxRetries is the maximum number of retry attempts before giving up.
 
 	responseTimeout time.Duration // responseTimeout is the timeout for the HTTP request.
 
@@ -46,12 +45,12 @@ type Uploader struct {
 type options struct {
 	// Private members exported for tests.
 	baseServerURL string
-	maxReports    uint
+	maxReports    uint32
 	timeProvider  timeProvider
 
 	baseRetryPeriod time.Duration
 	maxRetryPeriod  time.Duration
-	maxAttempts     int
+	maxAttempts     uint32
 
 	responseTimeout time.Duration
 }
@@ -72,7 +71,7 @@ var defaultOptions = options{
 // Config represents the uploader specific data needed to upload.
 type Config struct {
 	Sources []string
-	MinAge  uint `mapstructure:"minAge"`
+	MinAge  uint32 `mapstructure:"minAge"`
 	Force   bool
 	DryRun  bool `mapstructure:"dryRun"`
 	Retry   bool `mapstructure:"retry"`
@@ -101,12 +100,8 @@ type Consent interface {
 }
 
 // New returns a new UploaderManager.
-func New(l *slog.Logger, cm Consent, cachePath string, minAge uint, dryRun bool, args ...Options) (Uploader, error) {
+func New(l *slog.Logger, cm Consent, cachePath string, minAge uint32, dryRun bool, args ...Options) (Uploader, error) {
 	l.Debug("Creating new uploader manager", "minAge", minAge, "dryRun", dryRun)
-
-	if minAge > math.MaxUint/2/uint(time.Second) {
-		return Uploader{}, fmt.Errorf("min age %d is too large, would overflow", minAge)
-	}
 
 	opts := defaultOptions
 	for _, opt := range args {

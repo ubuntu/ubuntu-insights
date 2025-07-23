@@ -132,7 +132,7 @@ func getReportTime(path string) (int64, error) {
 
 // GetPeriodStart returns the start of the period window for a given period in seconds.
 // If period is 0, it returns the current time as a Unix timestamp.
-func GetPeriodStart(period int, t time.Time) (int64, error) {
+func GetPeriodStart(period int32, t time.Time) (int64, error) {
 	if period < 0 {
 		return 0, ErrInvalidPeriod
 	}
@@ -151,7 +151,7 @@ func GetPeriodStart(period int, t time.Time) (int64, error) {
 // For example, given reports 1 and 7, with time 2 and period 7, the function will return the path for report 1.
 //
 // If period is 0, it returns nothing as the window does not encompass anything.
-func GetForPeriod(l *slog.Logger, dir string, t time.Time, period int) (Report, error) {
+func GetForPeriod(l *slog.Logger, dir string, t time.Time, period int32) (Report, error) {
 	if period == 0 {
 		return Report{}, nil // If period is 0, return an empty report.
 	}
@@ -282,19 +282,19 @@ func GetAll(l *slog.Logger, dir string) ([]Report, error) {
 // Cleanup removes reports in a directory, keeping the most recent maxReports reports.
 // If a file does not appear to be a report, it is skipped and ignored.
 // If a file is unable to be removed, then it will be logged, but the function will continue.
-func Cleanup(l *slog.Logger, dir string, maxReports uint) error {
-	if maxReports > math.MaxInt {
+func Cleanup(l *slog.Logger, dir string, maxReports uint32) error {
+	if maxReports > math.MaxInt32 {
 		return fmt.Errorf("maxReports is too large and would result in an overflow: %d", maxReports)
 	}
 
-	mReports := int(maxReports)
+	mReports := int32(maxReports)
 
 	reports, err := GetAll(l, dir)
 	if err != nil {
 		return err
 	}
 
-	if len(reports) <= mReports {
+	if len(reports) <= int(mReports) {
 		l.Debug("no reports to cleanup", "maxReports", mReports, "numReports", len(reports))
 		return nil
 	}
@@ -305,7 +305,7 @@ func Cleanup(l *slog.Logger, dir string, maxReports uint) error {
 	})
 
 	// Remove the oldest reports, keeping the most recent maxReports.
-	for _, report := range reports[:len(reports)-mReports] {
+	for _, report := range reports[:len(reports)-int(mReports)] {
 		if err := os.Remove(report.Path); err != nil {
 			l.Error("failed to remove report", "path", report.Path, "error", err)
 		}

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -42,15 +41,13 @@ func TestNew(t *testing.T) {
 	tests := map[string]struct {
 		consent testConsentChecker
 		source  string
-		minAge  uint
+		minAge  uint32
 		dryRun  bool
 
 		wantErr bool
 	}{
 		"Valid":        {consent: cTrue, source: "source", minAge: 5, dryRun: true},
 		"Zero Min Age": {consent: cTrue, source: "source", minAge: 0},
-
-		"Minage Overflow": {consent: cTrue, source: "source", minAge: math.MaxUint64, wantErr: true},
 	}
 
 	for name, tc := range tests {
@@ -85,7 +82,7 @@ func TestUpload(t *testing.T) {
 		noPerms        bool
 
 		consent testConsentChecker
-		minAge  uint
+		minAge  uint32
 		dryRun  bool
 		force   bool
 
@@ -208,7 +205,7 @@ func TestBackoffUpload(t *testing.T) {
 		readOnlyFiles []string
 
 		consent testConsentChecker // Default cTrue
-		minAge  uint
+		minAge  uint32
 		dryRun  bool
 		force   bool
 
