@@ -1,7 +1,22 @@
+ubuntu-insights (0.2.2) questing; urgency=medium
+
+  * Remove leftover duplication
+
+ -- Didier Roche-Tolomelli <didrocks@ubuntu.com>  Mon, 21 Jul 2025 15:17:49 +0200
+
+ubuntu-insights (0.2.1) questing; urgency=medium
+
+  * Add missing vendoring
+
+ -- Didier Roche-Tolomelli <didrocks@ubuntu.com>  Thu, 17 Jul 2025 16:01:54 +0200
+
 ubuntu-insights (0.2.0) questing; urgency=medium
 
+  [ Kat Kuo ]
   * Fix armhf builds
   * Upgrades various golang dependencies
+
+  [ Didier Roche-Tolomelli ]
   * Fix copyright duplication
   * Cleanup unnecessary reference in run-tests.sh script
 
