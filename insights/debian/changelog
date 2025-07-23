@@ -1,9 +1,10 @@
-ubuntu-insights (0.3.0~ppa2) questing; urgency=medium
+ubuntu-insights (0.3.0~ppa5) questing; urgency=medium
 
+  * Ensure system information collection uses 64-bit memory handling
   * Avoid potential overflow in exponential backoff calculations
   * Restrict min-age and period inputs to 32-bit values only
 
- -- Kat Kuo <kat.kuo@canonical.com>  Wed, 23 Jul 2025 17:19:47 -0400
+ -- Kat Kuo <kat.kuo@canonical.com>  Wed, 23 Jul 2025 23:41:43 -0400
 
 ubuntu-insights (0.2.2) questing; urgency=medium
 
