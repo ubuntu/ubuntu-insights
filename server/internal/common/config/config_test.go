@@ -125,6 +125,8 @@ func TestWatchConfigReloadsOnChange(t *testing.T) {
 
 	watchEvent, watchErr, err := cm.Watch(t.Context())
 	require.NoError(t, err, "Setup: failed to start watch")
+	require.True(t, cm.IsAllowed("alpha"), "Setup: expected 'alpha' to be allowed")
+	require.False(t, cm.IsAllowed("beta"), "Setup: expected 'beta' to not be allowed")
 
 	require.NoError(t, os.WriteFile(tmpFile, []byte(updated), 0600), "Setup: failed to write updated config")
 
@@ -132,6 +134,8 @@ func TestWatchConfigReloadsOnChange(t *testing.T) {
 
 	require.Equal(t, []string{"beta"}, cm.AllowList(), "expected allowList to match")
 	require.Equal(t, map[string]struct{}{"beta": {}}, cm.AllowSet(), "expected allowSet to match")
+	require.False(t, cm.IsAllowed("alpha"), "expected 'alpha' to not be allowed")
+	require.True(t, cm.IsAllowed("beta"), "expected 'beta' to be allowed")
 
 	select {
 	case err := <-watchErr:
@@ -210,6 +214,8 @@ func TestWatchIgnoresIrrelevantFiles(t *testing.T) {
 		require.Fail(t, "expected no change event")
 	case <-time.After(200 * time.Millisecond):
 	}
+
+	require.True(t, cm.IsAllowed("alpha"), "expected 'alpha' to still be allowed")
 }
 
 func TestWatchWarnsIfLoadFails(t *testing.T) {
@@ -268,6 +274,11 @@ func TestWatchIgnoresReservedNames(t *testing.T) {
 	case <-watchEvent:
 	case <-time.After(200 * time.Millisecond):
 		require.Fail(t, "expected change event")
+	}
+
+	assert.True(t, cm.IsAllowed("alpha"), "expected 'alpha' to be allowed")
+	for reservedName := range config.GetReservedNames() {
+		assert.False(t, cm.IsAllowed(reservedName), "expected '%s' to not be allowed", reservedName)
 	}
 }
 
