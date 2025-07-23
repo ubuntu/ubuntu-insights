@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
 	"github.com/ubuntu/ubuntu-insights/server/internal/common/constants"
 )
 
@@ -23,7 +22,7 @@ type LegacyReport struct {
 }
 
 // NewLegacyReport creates a new LegacyReport handler.
-func NewLegacyReport(cfg config.Provider, reportsDir string, maxUploadSize int64) *LegacyReport {
+func NewLegacyReport(cfg ConfigProvider, reportsDir string, maxUploadSize int64) *LegacyReport {
 	return &LegacyReport{
 		jsonHandler: &jsonHandler{
 			config:        cfg,

@@ -18,12 +18,6 @@ var reservedNames = map[string]struct{}{
 	"schema_migrations": {},
 }
 
-// Provider is an interface that defines methods to access configuration values.
-type Provider interface {
-	AllowList() []string
-	Allows(string) bool
-}
-
 // Conf represents the configuration structure.
 type Conf struct {
 	AllowedList []string `json:"allowList"`

@@ -10,11 +10,10 @@ import (
 	"path/filepath"
 
 	"github.com/ubuntu/ubuntu-insights/common/fileutils"
-	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
 )
 
 type jsonHandler struct {
-	config        config.Provider
+	config        ConfigProvider
 	reportsDir    string
 	maxUploadSize int64
 	successStatus int

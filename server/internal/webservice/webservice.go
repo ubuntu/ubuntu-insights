@@ -45,7 +45,6 @@ type StaticConfig struct {
 type dConfigManager interface {
 	Load() error
 	Watch(context.Context) (<-chan struct{}, <-chan error, error)
-	AllowList() []string
 	Allows(string) bool
 }
 
