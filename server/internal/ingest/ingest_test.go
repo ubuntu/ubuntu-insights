@@ -308,15 +308,18 @@ func (m *mockConfigManager) Watch(ctx context.Context) (<-chan struct{}, <-chan 
 }
 
 func (m *mockConfigManager) AllowList() []string {
-	m.mu.RLock() // Lock for reading
+	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.allowList
+	allowListCopy := make([]string, len(m.allowList))
+	copy(allowListCopy, m.allowList)
+	return allowListCopy
 }
 
-func (m *mockConfigManager) AllowSet() map[string]struct{} {
-	m.mu.RLock() // Lock for reading
+func (m *mockConfigManager) Allows(name string) bool {
+	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.allowSet
+	_, ok := m.allowSet[name]
+	return ok
 }
 
 func (m *mockConfigManager) setAllowList(t *testing.T, newAllowList []string, sendReloadSignal uint) {

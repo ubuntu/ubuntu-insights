@@ -46,7 +46,7 @@ type dConfigManager interface {
 	Load() error
 	Watch(context.Context) (<-chan struct{}, <-chan error, error)
 	AllowList() []string
-	AllowSet() map[string]struct{}
+	Allows(string) bool
 }
 
 // New creates a new Server instance with the given http.Server and config.ConfigManager.

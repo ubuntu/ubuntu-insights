@@ -21,7 +21,7 @@ var reservedNames = map[string]struct{}{
 // Provider is an interface that defines methods to access configuration values.
 type Provider interface {
 	AllowList() []string
-	AllowSet() map[string]struct{}
+	Allows(string) bool
 }
 
 // Conf represents the configuration structure.
@@ -162,18 +162,21 @@ func (cm *Manager) Watch(ctx context.Context) (changes <-chan struct{}, errors <
 	return changesCh, errorsCh, nil
 }
 
-// AllowList returns the allow list from the configuration.
+// AllowList returns a copy of the allow list from the configuration.
 func (cm *Manager) AllowList() []string {
 	cm.lock.RLock()
 	defer cm.lock.RUnlock()
-	return cm.config.AllowedList
+	allowListCopy := make([]string, len(cm.config.AllowedList))
+	copy(allowListCopy, cm.config.AllowedList)
+	return allowListCopy
 }
 
-// AllowSet returns a set of allowed names for faster lookups.
-func (cm *Manager) AllowSet() map[string]struct{} {
+// Allows checks if the given value is in the allow set.
+func (cm *Manager) Allows(value string) bool {
 	cm.lock.RLock()
 	defer cm.lock.RUnlock()
-	return cm.allowSet
+	_, exists := cm.allowSet[value]
+	return exists
 }
 
 // filterAllowList filters out reserved names from the allow list.

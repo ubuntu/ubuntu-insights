@@ -14,3 +14,10 @@ func WithLogger(l *slog.Logger) Options {
 func GetReservedNames() map[string]struct{} {
 	return reservedNames
 }
+
+// AllowSet returns the internal set of allowed names.
+func (cm *Manager) AllowSet() map[string]struct{} {
+	cm.lock.RLock()
+	defer cm.lock.RUnlock()
+	return cm.allowSet
+}

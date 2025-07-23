@@ -32,7 +32,8 @@ type Service struct {
 
 type dConfigManager interface {
 	Watch(context.Context) (<-chan struct{}, <-chan error, error)
-	AllowSet() map[string]struct{}
+	AllowList() []string
+	Allows(string) bool
 }
 
 type dProcessor interface {
@@ -125,17 +126,15 @@ func (s *Service) syncWorkers() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	want := s.cm.AllowSet()
-
 	// stop removed
 	for app, cancel := range s.workers {
-		if _, ok := want[app]; !ok {
+		if !s.cm.Allows(app) {
 			cancel()
 			delete(s.workers, app)
 		}
 	}
 	// start added
-	for app := range want {
+	for _, app := range s.cm.AllowList() {
 		if _, ok := s.workers[app]; ok {
 			continue
 		}
