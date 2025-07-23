@@ -390,7 +390,7 @@ func (t testConfigManager) allowSet() map[string]struct{} {
 	return allowSet
 }
 
-func (t testConfigManager) Allows(name string) bool {
+func (t testConfigManager) IsAllowed(name string) bool {
 	_, ok := t.allowSet()[name]
 	return ok
 }

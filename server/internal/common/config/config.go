@@ -165,8 +165,8 @@ func (cm *Manager) AllowList() []string {
 	return allowListCopy
 }
 
-// Allows checks if the given value is in the allow set.
-func (cm *Manager) Allows(value string) bool {
+// IsAllowed checks if the given value is in the allow set.
+func (cm *Manager) IsAllowed(value string) bool {
 	cm.lock.RLock()
 	defer cm.lock.RUnlock()
 	_, exists := cm.allowSet[value]

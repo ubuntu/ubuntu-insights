@@ -29,7 +29,7 @@ func (m *mockConfigManager) allowSet() map[string]struct{} {
 	return allowSet
 }
 
-func (m *mockConfigManager) Allows(name string) bool {
+func (m *mockConfigManager) IsAllowed(name string) bool {
 	_, ok := m.allowSet()[name]
 	return ok
 }

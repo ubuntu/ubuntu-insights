@@ -25,7 +25,7 @@ func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID st
 		return
 	}
 
-	if !h.config.Allows(app) {
+	if !h.config.IsAllowed(app) {
 		http.Error(w, "Invalid application name in URL", http.StatusForbidden)
 		slog.Error("Invalid application name in URL", "req_id", reqID, "app", app)
 		return

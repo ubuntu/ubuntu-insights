@@ -315,7 +315,7 @@ func (m *mockConfigManager) AllowList() []string {
 	return allowListCopy
 }
 
-func (m *mockConfigManager) Allows(name string) bool {
+func (m *mockConfigManager) IsAllowed(name string) bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	_, ok := m.allowSet[name]
