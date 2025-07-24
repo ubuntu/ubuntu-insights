@@ -25,14 +25,14 @@ type Config struct {
 type CollectFlags struct {
 	SourceMetricsPath string // Path to a JSON file a valid JSON object for source metrics.
 	SourceMetricsJSON []byte // JSON object for source metrics.
-	Period            uint
+	Period            uint32
 	Force             bool
 	DryRun            bool
 }
 
 // UploadFlags represents optional parameters for Upload.
 type UploadFlags struct {
-	MinAge uint
+	MinAge uint32
 	Force  bool
 	DryRun bool
 }

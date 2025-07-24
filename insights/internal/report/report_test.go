@@ -18,29 +18,24 @@ func TestGetPeriodStart(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		period int
+		period uint32
 		time   int64
-
-		wantErr error
 	}{
 		"Valid Period":             {period: 500, time: 100000},
 		"Negative Time:":           {period: 500, time: -100000},
 		"Non-Multiple Time":        {period: 500, time: 1051},
 		"Zero Period Returns Time": {period: 0, time: 500},
-
-		"Invalid Negative Period": {period: -500, wantErr: report.ErrInvalidPeriod},
+		"Zero Period and Max Time": {period: 0, time: math.MaxInt64},
+		"Zero Period and Min Time": {period: 0, time: math.MinInt64},
+		"Max Period and Max Time":  {period: math.MaxUint32, time: math.MaxInt64},
+		"Max Period and Min Time":  {period: math.MaxUint32, time: math.MinInt64},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := report.GetPeriodStart(tc.period, time.Unix(tc.time, 0))
-			if tc.wantErr != nil {
-				require.ErrorIs(t, err, tc.wantErr)
-				return
-			}
-			require.NoError(t, err, "got an unexpected error")
+			got := report.GetPeriodStart(tc.period, time.Unix(tc.time, 0))
 
 			require.IsType(t, int64(0), got)
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
@@ -91,11 +86,10 @@ func TestGetForPeriod(t *testing.T) {
 		subDir      string
 		subDirFiles []string
 		time        int64
-		period      int
+		period      uint32
 		invalidDir  bool
 
-		wantSpecificErr error
-		wantGenericErr  bool
+		wantErr bool
 	}{
 		"Empty Directory":        {time: 1, period: 500},
 		"Files in subDir":        {subDir: "subdir", subDirFiles: []string{"1.json", "2.json"}, time: 1, period: 500},
@@ -109,9 +103,9 @@ func TestGetForPeriod(t *testing.T) {
 		"Lexical Order Check":               {files: []string{"5.json", "20.json"}, time: 10, period: 20},
 		"Zero Period Returns Nothing":       {files: []string{"1.json", "7.json"}, time: 7, period: 0},
 
-		"Invalid Negative Period": {files: []string{"1.json", "7.json"}, time: 2, period: -7, wantSpecificErr: report.ErrInvalidPeriod},
-
-		"Invalid Dir": {period: 1, invalidDir: true, wantGenericErr: true},
+		// Error cases
+		"Invalid Dir":        {period: 1, invalidDir: true, wantErr: true},
+		"Max time overflows": {period: 1, time: math.MaxInt64, wantErr: true},
 	}
 
 	for name, tc := range tests {
@@ -125,11 +119,7 @@ func TestGetForPeriod(t *testing.T) {
 			}
 
 			r, err := report.GetForPeriod(slog.Default(), dir, time.Unix(tc.time, 0), tc.period)
-			if tc.wantSpecificErr != nil {
-				require.ErrorIs(t, err, tc.wantSpecificErr)
-				return
-			}
-			if tc.wantGenericErr {
+			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return
 			}
@@ -139,68 +129,6 @@ func TestGetForPeriod(t *testing.T) {
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			require.Equal(t, want, got, "GetReportPath should return the most recent report within the period window")
-		})
-	}
-}
-
-func TestGetPerPeriod(t *testing.T) {
-	t.Parallel()
-
-	tests := map[string]struct {
-		files       []string
-		subDir      string
-		subDirFiles []string
-		period      int
-		invalidDir  bool
-
-		wantSpecificErr error
-		wantGenericErr  bool
-	}{
-		"Empty Directory": {period: 500},
-		"Files in subDir": {subDir: "subdir", subDirFiles: []string{"1.json", "2.json"}, period: 500},
-
-		"Invalid File Extension":   {files: []string{"1.txt", "2.txt"}, period: 500},
-		"Invalid File Names":       {files: []string{"i-1.json", "i-2.json", "i-3.json", "test.json", "one.json"}, period: 500},
-		"Mix of Valid and Invalid": {files: []string{"1.json", "2.json", "i-1.json", "i-2.json", "i-3.json", "test.json", "five.json"}, period: 500},
-
-		"Get Newest of Period":             {files: []string{"1.json", "7.json"}, period: 100},
-		"Multiple Consecutive Windows":     {files: []string{"1.json", "7.json", "101.json", "107.json", "201.json", "207.json"}, period: 100},
-		"Multiple Non-Consecutive Windows": {files: []string{"1.json", "7.json", "101.json", "107.json", "251.json", "257.json"}, period: 50},
-		"Get All Reports":                  {files: []string{"1.json", "2.json", "3.json", "101.json", "107.json", "251.json", "257.json"}, period: 1},
-		"Zero Period Returns Nothing":      {files: []string{"1.json", "7.json"}, period: 0},
-
-		"Invalid Negative Period": {files: []string{"1.json", "7.json"}, period: -7, wantSpecificErr: report.ErrInvalidPeriod},
-
-		"Invalid Dir": {period: 1, invalidDir: true, wantGenericErr: true},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			dir, err := setupNoDataDir(t, tc.files, tc.subDir, tc.subDirFiles)
-			require.NoError(t, err, "Setup: failed to setup temporary directory")
-			if tc.invalidDir {
-				dir = filepath.Join(dir, "invalid dir")
-			}
-
-			reports, err := report.GetPerPeriod(slog.Default(), dir, tc.period)
-			if tc.wantSpecificErr != nil {
-				require.ErrorIs(t, err, tc.wantSpecificErr)
-				return
-			}
-			if tc.wantGenericErr {
-				require.Error(t, err, "expected an error but got none")
-				return
-			}
-			require.NoError(t, err, "got an unexpected error")
-
-			got := make(map[int64]report.Report, len(reports))
-			for n, r := range reports {
-				got[n] = sanitizeReportPath(t, r, dir)
-			}
-			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-			require.Equal(t, want, got, "GetReports should return the most recent report within each period window")
 		})
 	}
 }
@@ -510,7 +438,7 @@ func TestCleanup(t *testing.T) {
 
 	tests := map[string]struct {
 		files      []string
-		maxReports uint
+		maxReports uint32
 		noDir      bool
 
 		wantErr bool
@@ -548,7 +476,7 @@ func TestCleanup(t *testing.T) {
 		},
 		"Max Reports Overflow": {
 			files:      []string{"1.json", "2.json", "3.json", "4.json", "5.json", "6.json"},
-			maxReports: math.MaxInt + 1,
+			maxReports: math.MaxInt32 + 1,
 			wantErr:    true,
 		},
 	}

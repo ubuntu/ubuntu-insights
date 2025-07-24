@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 typedef enum {
   CONSENT_UNKNOWN = -1,
@@ -25,14 +26,14 @@ typedef struct {
   const char *sourceMetricsPath; // Path to JSON file (default: empty)
   const void *sourceMetricsJSON; // Raw JSON data as bytes (default: NULL)
   size_t sourceMetricsJSONLen;   // Length of sourceMetricsJSON in bytes
-  unsigned int period;           // Collection period in seconds (default: 0)
+  uint32_t period;               // Collection period in seconds (default: 0)
   bool force;  // Force collection, ignoring duplicates (default: false)
   bool dryRun; // Simulate operation without writing files (default: false)
 } CollectFlags;
 
 typedef struct {
-  unsigned int minAge; // default: 1
-  bool force, dryRun;  // default: false
+  uint32_t minAge;    // default: 1
+  bool force, dryRun; // default: false
 } UploadFlags;
 
 // typedefs to be able to have `const` in Go.

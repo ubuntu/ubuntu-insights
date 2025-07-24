@@ -38,7 +38,7 @@ func collectCustomInsights(config *C.CInsightsConfig, source *C.char, flags *C.C
 
 	f := insights.CollectFlags{}
 	if flags != nil {
-		f.Period = (uint)(flags.period)
+		f.Period = (uint32)(flags.period)
 		f.Force = (bool)(flags.force)
 		f.DryRun = (bool)(flags.dryRun)
 
@@ -100,7 +100,7 @@ func uploadCustomInsights(config *C.CInsightsConfig, sources **C.char, sourcesLe
 
 	f := insights.UploadFlags{}
 	if flags != nil {
-		f.MinAge = (uint)(flags.minAge)
+		f.MinAge = (uint32)(flags.minAge)
 		f.Force = (bool)(flags.force)
 		f.DryRun = (bool)(flags.dryRun)
 	}

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -61,21 +60,21 @@ func TestSanitize(t *testing.T) {
 		logs    map[slog.Level]uint
 		wantErr bool
 	}{
-		"Blanck collector config": {
+		"Blank collector config": {
 			config: collector.Config{},
 			logs: map[slog.Level]uint{
 				slog.LevelInfo: 2,
 			},
 		},
 
-		"Custom source with souceMetricsPath": {
+		"Custom source with sourceMetricsPath": {
 			config: collector.Config{
 				Source:            "customSource",
 				SourceMetricsPath: "fakeSourceMetricsPath",
 				CachePath:         "fakeCachePath",
 			},
 		},
-		"Custom source with souceMetricsJSON": {
+		"Custom source with sourceMetricsJSON": {
 			config: collector.Config{
 				Source:            "customSource",
 				SourceMetricsJSON: []byte(`{"test": "sourceMetricsJson"}`),
@@ -106,14 +105,6 @@ func TestSanitize(t *testing.T) {
 		},
 
 		// Error cases
-		"Overflow period errors": {
-			config: collector.Config{
-				Source:    constants.DefaultCollectSource,
-				Period:    math.MaxInt + 1,
-				CachePath: t.TempDir(),
-			},
-			wantErr: true,
-		},
 		"Both sourceMetricsPath and sourceMetricsJSON provided with customSource errors": {
 			config: collector.Config{
 				Source:            "customSource",
@@ -126,7 +117,7 @@ func TestSanitize(t *testing.T) {
 		"Invalid sourceMetricsJSON provided with customSource errors": {
 			config: collector.Config{
 				Source:            "customSource",
-				SourceMetricsJSON: []byte(`{"test": "invalidSourceMetricsJson"`), //
+				SourceMetricsJSON: []byte(`{"test": "invalidSourceMetricsJson"`),
 				CachePath:         "fakeCachePath",
 			},
 			wantErr: true,
@@ -173,13 +164,6 @@ func TestNew(t *testing.T) {
 		},
 
 		// Error cases
-		"Overflow Period (Sanitize error)": {
-			config: collector.Config{
-				Period:    math.MaxInt + 1,
-				CachePath: t.TempDir(),
-			},
-			wantErr: true,
-		},
 		"Nil Consent": {
 			config: collector.Config{
 				CachePath: t.TempDir(),
@@ -411,7 +395,7 @@ func TestWrite(t *testing.T) {
 		consentM   collector.Consent
 		config     collector.Config
 		dryRun     bool
-		maxReports uint
+		maxReports uint32
 		insights   collector.Insights
 		noDir      bool
 		wantErr    bool

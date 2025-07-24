@@ -7,7 +7,7 @@ import (
 )
 
 // WithMaxReports sets the maximum number of reports to keep.
-func WithMaxReports(maxReports uint) Options {
+func WithMaxReports(maxReports uint32) Options {
 	return func(o *options) {
 		o.maxReports = maxReports
 	}

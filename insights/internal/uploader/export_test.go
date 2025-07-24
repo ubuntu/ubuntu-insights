@@ -39,7 +39,7 @@ func WithBaseRetryPeriod(d time.Duration) Options {
 }
 
 // WithMaxAttempts sets the maximum number of attempts for the uploader for exponential backoff retries.
-func WithMaxAttempts(n int) Options {
+func WithMaxAttempts(n uint32) Options {
 	return func(o *options) {
 		o.maxAttempts = n
 	}

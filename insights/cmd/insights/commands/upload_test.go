@@ -72,8 +72,9 @@ func TestUpload(t *testing.T) {
 			wantErr:      true,
 		},
 		"Errors when min-age is set to a value that would overflow": {
-			args:    []string{"upload", "--min-age=18446744073709551615"},
-			wantErr: true,
+			args:         []string{"upload", "--min-age=18446744073709551615"},
+			wantUsageErr: true,
+			wantErr:      true,
 		},
 		"Errors with invalid reports": {
 			args:              []string{"upload"},
@@ -101,10 +102,10 @@ func TestUpload(t *testing.T) {
 			}
 
 			var (
-				gotMinAge uint
+				gotMinAge uint32
 				dRun      bool
 			)
-			newUploader := func(l *slog.Logger, cm uploader.Consent, _ string, minAge uint, dryRun bool, args ...uploader.Options) (uploader.Uploader, error) {
+			newUploader := func(l *slog.Logger, cm uploader.Consent, _ string, minAge uint32, dryRun bool, args ...uploader.Options) (uploader.Uploader, error) {
 				gotMinAge = minAge
 				dRun = dryRun
 
@@ -124,13 +125,13 @@ func TestUpload(t *testing.T) {
 			}
 
 			if tc.wantUsageErr {
-				require.True(t, a.UsageError())
+				require.True(t, a.UsageError(), "Expected usage error, but was not reported as such")
 				return
 			}
-			require.False(t, a.UsageError())
+			require.False(t, a.UsageError(), "Unexpected usage error")
 
 			type results struct {
-				MinAge uint
+				MinAge uint32
 				DryRun bool
 			}
 

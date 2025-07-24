@@ -21,11 +21,11 @@ type timeProvider interface {
 //go:linkname defaultOptions github.com/ubuntu/ubuntu-insights/insights/internal/uploader.defaultOptions
 var defaultOptions struct {
 	baseServerURL   string
-	maxReports      uint
+	maxReports      uint32
 	timeProvider    timeProvider
 	baseRetryPeriod time.Duration
 	maxRetryPeriod  time.Duration
-	maxAttempts     int
+	maxAttempts     uint32
 	responseTimeout time.Duration
 }
 
@@ -35,7 +35,7 @@ func SetServerURL(url string) {
 }
 
 // SetMaxReports overrides the max reports count the uploader is using.
-func SetMaxReports(r uint) {
+func SetMaxReports(r uint32) {
 	defaultOptions.maxReports = r
 }
 
@@ -55,7 +55,7 @@ func SetMaxRetryPeriod(d time.Duration) {
 }
 
 // SetMaxAttempts overrides the max attempts the uploader is using.
-func SetMaxAttempts(a int) {
+func SetMaxAttempts(a uint32) {
 	defaultOptions.maxAttempts = a
 }
 
