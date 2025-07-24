@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
 )
 
 // Upload is a handler for uploading standard Ubuntu-Insights JSON reports.
@@ -17,7 +16,7 @@ type Upload struct {
 }
 
 // NewUpload creates a new Upload handler.
-func NewUpload(cfg config.Provider, reportsDir string, maxUploadSize int64) *Upload {
+func NewUpload(cfg ConfigProvider, reportsDir string, maxUploadSize int64) *Upload {
 	return &Upload{
 		jsonHandler: &jsonHandler{
 			config:        cfg,

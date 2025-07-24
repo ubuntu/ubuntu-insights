@@ -18,11 +18,6 @@ var reservedNames = map[string]struct{}{
 	"schema_migrations": {},
 }
 
-// Provider is an interface that defines methods to access configuration values.
-type Provider interface {
-	AllowList() []string
-}
-
 // Conf represents the configuration structure.
 type Conf struct {
 	AllowedList []string `json:"allowList"`
@@ -31,6 +26,7 @@ type Conf struct {
 // Manager is a struct that manages the configuration.
 type Manager struct {
 	config     Conf
+	allowSet   map[string]struct{}
 	lock       sync.RWMutex
 	configPath string
 
@@ -79,6 +75,7 @@ func (cm *Manager) Load() error {
 
 	cm.lock.Lock()
 	cm.config = newConfig
+	cm.allowSet = cm.buildAllowSet()
 	cm.lock.Unlock()
 
 	cm.log.Info("Configuration loaded", "config", cm.config)
@@ -159,11 +156,21 @@ func (cm *Manager) Watch(ctx context.Context) (changes <-chan struct{}, errors <
 	return changesCh, errorsCh, nil
 }
 
-// AllowList returns the allow list from the configuration.
+// AllowList returns a copy of the allow list from the configuration.
 func (cm *Manager) AllowList() []string {
 	cm.lock.RLock()
 	defer cm.lock.RUnlock()
-	return cm.config.AllowedList
+	allowListCopy := make([]string, len(cm.config.AllowedList))
+	copy(allowListCopy, cm.config.AllowedList)
+	return allowListCopy
+}
+
+// IsAllowed checks if the given value is in the allow set.
+func (cm *Manager) IsAllowed(value string) bool {
+	cm.lock.RLock()
+	defer cm.lock.RUnlock()
+	_, exists := cm.allowSet[value]
+	return exists
 }
 
 // filterAllowList filters out reserved names from the allow list.
@@ -177,4 +184,13 @@ func (cm *Manager) filterAllowList(allowList []string) []string {
 		filteredAllowList = append(filteredAllowList, name)
 	}
 	return filteredAllowList
+}
+
+// buildAllowSet builds a set from the allow list for faster lookups.
+func (cm *Manager) buildAllowSet() map[string]struct{} {
+	allowSet := make(map[string]struct{}, len(cm.config.AllowedList))
+	for _, name := range cm.config.AllowedList {
+		allowSet[name] = struct{}{}
+	}
+	return allowSet
 }

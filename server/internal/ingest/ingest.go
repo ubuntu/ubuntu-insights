@@ -33,6 +33,7 @@ type Service struct {
 type dConfigManager interface {
 	Watch(context.Context) (<-chan struct{}, <-chan error, error)
 	AllowList() []string
+	IsAllowed(string) bool
 }
 
 type dProcessor interface {
@@ -122,24 +123,18 @@ func (s *Service) Run() error {
 
 // syncWorkers diffs the allow‐list and starts/stops goroutines.
 func (s *Service) syncWorkers() {
-	allowed := s.cm.AllowList()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	want := map[string]struct{}{}
-	for _, app := range allowed {
-		want[app] = struct{}{}
-	}
-
 	// stop removed
 	for app, cancel := range s.workers {
-		if _, ok := want[app]; !ok {
+		if !s.cm.IsAllowed(app) {
 			cancel()
 			delete(s.workers, app)
 		}
 	}
 	// start added
-	for app := range want {
+	for _, app := range s.cm.AllowList() {
 		if _, ok := s.workers[app]; ok {
 			continue
 		}

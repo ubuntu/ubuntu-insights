@@ -8,14 +8,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"slices"
 
 	"github.com/ubuntu/ubuntu-insights/common/fileutils"
-	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
 )
 
 type jsonHandler struct {
-	config        config.Provider
+	config        ConfigProvider
 	reportsDir    string
 	maxUploadSize int64
 	successStatus int
@@ -27,8 +25,7 @@ func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID st
 		return
 	}
 
-	allowed := slices.Contains(h.config.AllowList(), app)
-	if !allowed {
+	if !h.config.IsAllowed(app) {
 		http.Error(w, "Invalid application name in URL", http.StatusForbidden)
 		slog.Error("Invalid application name in URL", "req_id", reqID, "app", app)
 		return
