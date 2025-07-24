@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -124,18 +125,25 @@ func (um Uploader) BackoffUpload(source string, force bool) (err error) {
 	um.log.Debug("Uploading reports with backoff")
 
 	var attempts uint32
+	const maxShift = 62
 	for {
 		err = um.Upload(source, force)
 		if !errors.Is(err, ErrSendFailure) {
 			break
 		}
 
-		exp := min(um.baseRetryPeriod*(1<<attempts), um.maxRetryPeriod)
+		factor := int64(1) << min(attempts, maxShift)
+		exp := um.maxRetryPeriod
+		if math.MaxInt64/factor >= int64(um.baseRetryPeriod) {
+			// Only apply if it won't overflow.
+			// baseRetryPeriod and maxRetryPeriod are pseudo-constants defined at build time and always positive.
+			exp = min(um.baseRetryPeriod*time.Duration(factor), um.maxRetryPeriod)
+		}
 		wait := time.Duration(rand.Int63n(int64(max(exp, 1)))) // #nosec:G404 We don't need cryptographic randomness.
 
 		attempts++
 		if attempts > um.maxAttempts {
-			um.log.Warn("Maximum upload attempts reached, giving up", "attempts", attempts)
+			um.log.Warn("Maximum upload attempts reached, giving up", "attempts", attempts, "maxAttempts", um.maxAttempts)
 			break
 		}
 		um.log.Warn("Failed to send report, retrying upload after backoff period", "seconds", wait.Seconds(), "error", err)

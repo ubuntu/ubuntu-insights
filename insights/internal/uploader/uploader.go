@@ -33,8 +33,8 @@ type Uploader struct {
 	maxReports    uint32
 	timeProvider  timeProvider
 
-	baseRetryPeriod time.Duration // initialRetryPeriod is the initial wait period between retries.
-	maxRetryPeriod  time.Duration // maxRetryPeriod is the maximum wait period between retries.
+	baseRetryPeriod time.Duration // initialRetryPeriod is the initial wait period between retries. Assumed to be positive.
+	maxRetryPeriod  time.Duration // maxRetryPeriod is the maximum wait period between retries. Assumed to be positive.
 	maxAttempts     uint32        // maxRetries is the maximum number of retry attempts before giving up.
 
 	responseTimeout time.Duration // responseTimeout is the timeout for the HTTP request.
