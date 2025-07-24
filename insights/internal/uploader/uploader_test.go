@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -369,17 +370,85 @@ func TestGetAllSources(t *testing.T) {
 	}
 }
 
-func setupTmpDir(t *testing.T, localFiles, uploadedFiles map[string]reportType, source string) string {
+func TestUploadAllRespectsConcurrencyLimits(t *testing.T) {
+	t.Parallel()
+
+	const (
+		numReports           = 15
+		minAge               = 0 // No min age for this test
+		maxConcurrentUploads = 5
+		maxConcurrentSources = 2
+		maxTimeout           = 30 * time.Second // Prevent any timeouts during the test
+	)
+	sources := []string{"source1", "source2", "source3", "source4"}
+
+	var (
+		localFiles    = make(map[string]reportType, numReports)
+		uploadedFiles = make(map[string]reportType, 0)
+	)
+	for i := range numReports {
+		localFiles[fmt.Sprintf("%d.json", i)] = normal
+	}
+
+	dir := setupTmpDir(t, localFiles, uploadedFiles, sources...)
+
+	var (
+		counterMutex      sync.Mutex
+		responseMutex     sync.Mutex
+		numActiveRequests uint32
+		maxActiveRequests uint32
+	)
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		// Increment the active requests counter and update the max active requests if needed.
+		counterMutex.Lock()
+		numActiveRequests++
+		if numActiveRequests > maxActiveRequests {
+			maxActiveRequests = numActiveRequests
+		}
+		counterMutex.Unlock()
+
+		// Ensure releases happen in timed turns to allow for requests to build up.
+		responseMutex.Lock()
+		defer responseMutex.Unlock()
+		// Simulate processing time
+		time.Sleep(150 * time.Millisecond)
+
+		counterMutex.Lock()
+		numActiveRequests--
+		counterMutex.Unlock()
+
+		w.WriteHeader(http.StatusAccepted)
+	}
+
+	httpServer := httptest.NewServer(http.HandlerFunc(handler))
+	t.Cleanup(func() { httpServer.Close() })
+
+	msg, err := uploader.New(slog.Default(), cTrue, dir, minAge, false,
+		uploader.WithBaseServerURL(httpServer.URL),
+		uploader.WithMaxConcurrentSources(maxConcurrentSources),
+		uploader.WithMaxConcurrentUploadsPerSource(maxConcurrentUploads),
+		uploader.WithResponseTimeout(maxTimeout),
+	)
+	require.NoError(t, err, "Setup: failed to create new uploader manager")
+	require.NoError(t, msg.UploadAll(sources, false, false), "Upload should not return an error")
+
+	assert.EqualValues(t, 0, numActiveRequests, "All requests should be completed by the end of the test")
+	assert.EqualValues(t, maxConcurrentUploads*maxConcurrentSources, maxActiveRequests, "Max concurrent uploads should match the expected value")
+}
+
+func setupTmpDir(t *testing.T, localFiles, uploadedFiles map[string]reportType, sources ...string) string {
 	t.Helper()
 	dir := t.TempDir()
 
-	localDir := filepath.Join(dir, source, constants.LocalFolder)
-	uploadedDir := filepath.Join(dir, source, constants.UploadedFolder)
-	require.NoError(t, os.MkdirAll(localDir, 0750), "Setup: failed to create local directory")
-	require.NoError(t, os.MkdirAll(uploadedDir, 0750), "Setup: failed to create uploaded directory")
+	for _, source := range sources {
+		localDir := filepath.Join(dir, source, constants.LocalFolder)
+		uploadedDir := filepath.Join(dir, source, constants.UploadedFolder)
+		require.NoError(t, os.MkdirAll(localDir, 0750), "Setup: failed to create local directory")
+		require.NoError(t, os.MkdirAll(uploadedDir, 0750), "Setup: failed to create uploaded directory")
 
-	writeFiles(t, localDir, localFiles)
-	writeFiles(t, uploadedDir, uploadedFiles)
+		writeFiles(t, localDir, localFiles)
+		writeFiles(t, uploadedDir, uploadedFiles)
+	}
 
 	return dir
 }
