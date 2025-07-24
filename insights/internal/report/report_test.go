@@ -133,68 +133,6 @@ func TestGetForPeriod(t *testing.T) {
 	}
 }
 
-func TestGetPerPeriod(t *testing.T) {
-	t.Parallel()
-
-	tests := map[string]struct {
-		files       []string
-		subDir      string
-		subDirFiles []string
-		period      int
-		invalidDir  bool
-
-		wantSpecificErr error
-		wantGenericErr  bool
-	}{
-		"Empty Directory": {period: 500},
-		"Files in subDir": {subDir: "subdir", subDirFiles: []string{"1.json", "2.json"}, period: 500},
-
-		"Invalid File Extension":   {files: []string{"1.txt", "2.txt"}, period: 500},
-		"Invalid File Names":       {files: []string{"i-1.json", "i-2.json", "i-3.json", "test.json", "one.json"}, period: 500},
-		"Mix of Valid and Invalid": {files: []string{"1.json", "2.json", "i-1.json", "i-2.json", "i-3.json", "test.json", "five.json"}, period: 500},
-
-		"Get Newest of Period":             {files: []string{"1.json", "7.json"}, period: 100},
-		"Multiple Consecutive Windows":     {files: []string{"1.json", "7.json", "101.json", "107.json", "201.json", "207.json"}, period: 100},
-		"Multiple Non-Consecutive Windows": {files: []string{"1.json", "7.json", "101.json", "107.json", "251.json", "257.json"}, period: 50},
-		"Get All Reports":                  {files: []string{"1.json", "2.json", "3.json", "101.json", "107.json", "251.json", "257.json"}, period: 1},
-		"Zero Period Returns Nothing":      {files: []string{"1.json", "7.json"}, period: 0},
-
-		"Invalid Negative Period": {files: []string{"1.json", "7.json"}, period: -7, wantSpecificErr: report.ErrInvalidPeriod},
-
-		"Invalid Dir": {period: 1, invalidDir: true, wantGenericErr: true},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			dir, err := setupNoDataDir(t, tc.files, tc.subDir, tc.subDirFiles)
-			require.NoError(t, err, "Setup: failed to setup temporary directory")
-			if tc.invalidDir {
-				dir = filepath.Join(dir, "invalid dir")
-			}
-
-			reports, err := report.GetPerPeriod(slog.Default(), dir, tc.period)
-			if tc.wantSpecificErr != nil {
-				require.ErrorIs(t, err, tc.wantSpecificErr)
-				return
-			}
-			if tc.wantGenericErr {
-				require.Error(t, err, "expected an error but got none")
-				return
-			}
-			require.NoError(t, err, "got an unexpected error")
-
-			got := make(map[int64]report.Report, len(reports))
-			for n, r := range reports {
-				got[n] = sanitizeReportPath(t, r, dir)
-			}
-			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-			require.Equal(t, want, got, "GetReports should return the most recent report within each period window")
-		})
-	}
-}
-
 func TestGetAll(t *testing.T) {
 	t.Parallel()
 

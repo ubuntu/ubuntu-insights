@@ -21,9 +21,6 @@ import (
 )
 
 var (
-	// ErrInvalidPeriod is returned when a function requiring a period, received an invalid, period that isn't a non-negative integer.
-	ErrInvalidPeriod = errors.New("invalid period, period should be a non-negative integer")
-
 	// ErrInvalidReportExt is returned when a report file has an invalid extension.
 	ErrInvalidReportExt = errors.New("invalid report file extension")
 
@@ -196,53 +193,6 @@ func GetForPeriod(l *slog.Logger, dir string, t time.Time, period uint32) (Repor
 	}
 
 	return report, nil
-}
-
-// GetPerPeriod returns the latest report within each period window for a given directory.
-// The key of the map is the start of the period window, and the value is a Report object.
-//
-// If period is 0, then no reports are returned.
-func GetPerPeriod(l *slog.Logger, dir string, period int) (map[int64]Report, error) {
-	if period < 0 {
-		return nil, ErrInvalidPeriod
-	}
-
-	reports := make(map[int64]Report)
-
-	if period == 0 {
-		return reports, nil // If period is 0, return an empty map.
-	}
-
-	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return fmt.Errorf("failed to access path: %v", err)
-		}
-
-		if d.IsDir() && path != dir {
-			return filepath.SkipDir
-		}
-
-		r, err := New(path)
-		if errors.Is(err, ErrInvalidReportExt) || errors.Is(err, ErrInvalidReportName) {
-			l.Info("Skipping non-report file", "file", d.Name(), "error", err)
-			return nil
-		} else if err != nil {
-			return fmt.Errorf("failed to create report object: %v", err)
-		}
-
-		periodStart := r.TimeStamp - (r.TimeStamp % int64(period))
-		if existingReport, ok := reports[periodStart]; !ok || existingReport.TimeStamp < r.TimeStamp {
-			reports[periodStart] = r
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return reports, nil
 }
 
 // GetAll returns all reports in a given directory.
