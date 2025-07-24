@@ -1,5 +1,11 @@
 ubuntu-insights (0.3.0) questing; urgency=medium
 
+  [ Kat Kuo ]
+  [ Didier Roche-Tolomelli ]
+  * Fix build time tests
+  * Remove unnecessary dh_dwz override
+
+  [ Kat Kuo]
   * Bump control standards version to 4.7.2
   * Ensure system information collection uses 64-bit memory handling
   * Avoid potential overflow in exponential backoff calculations
