@@ -23,6 +23,3 @@ override_dh_auto_install:
 	mv $(BUILDDIR)/bin/insights $(BUILDDIR)/bin/ubuntu-insights
 	mv $(BUILDDIR)/src/$(INSIGHTS_GO_PACKAGE)/generated $(CURDIR)/debian/tmp
 	dh_auto_install -- --no-source
-
-override_dh_dwz:
-	echo "Skipping dwz because the Go compiler already compresses debug symbols."
