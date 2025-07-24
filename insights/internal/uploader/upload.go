@@ -27,14 +27,19 @@ var (
 )
 
 // UploadAll concurrently calls Upload for all the provided sources.
+// Uploads do not fail fast, but rather accumulate errors and return them at the end.
 func (um Uploader) UploadAll(sources []string, force, retry bool) error {
 	var uploadError error
 	mu := &sync.Mutex{}
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, min(int64(len(sources)), int64(um.maxConcurrentSources)))
+
 	for _, source := range sources {
 		wg.Add(1)
+		sem <- struct{}{} // Acquire a semaphore slot.
 		go func() {
 			defer wg.Done()
+			defer func() { <-sem }() // Release the semaphore slot before signaling completion to the WaitGroup.
 			var err error
 			if retry {
 				err = um.BackoffUpload(source, force)
@@ -62,6 +67,8 @@ func (um Uploader) UploadAll(sources []string, force, retry bool) error {
 //
 // It will only upload reports that are mature enough, and have not been uploaded before.
 // If force is true, maturity and duplicate check will be skipped.
+//
+// Uploads do not fail fast, but rather accumulate errors and return them at the end.
 func (um Uploader) Upload(source string, force bool) error {
 	um.log.Debug("Uploading reports")
 
@@ -94,10 +101,15 @@ func (um Uploader) Upload(source string, force bool) error {
 	mu := &sync.Mutex{}
 	var uploadError error
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, min(int64(len(reports)), int64(um.maxConcurrentUploadsPerSource)))
+
 	for _, r := range reports {
 		wg.Add(1)
+		sem <- struct{}{} // Acquire a semaphore slot.
 		go func(r report.Report) {
 			defer wg.Done()
+			defer func() { <-sem }() // Release the semaphore slot before signaling completion to the WaitGroup.
+
 			err := um.upload(r, uploadedDir, url, consent, force)
 			if errors.Is(err, ErrReportNotMature) {
 				um.log.Debug("Skipped report upload, not mature enough", "file", r.Name, "source", source)
