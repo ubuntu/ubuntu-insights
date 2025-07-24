@@ -18,29 +18,24 @@ func TestGetPeriodStart(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		period int32
+		period uint32
 		time   int64
-
-		wantErr error
 	}{
 		"Valid Period":             {period: 500, time: 100000},
 		"Negative Time:":           {period: 500, time: -100000},
 		"Non-Multiple Time":        {period: 500, time: 1051},
 		"Zero Period Returns Time": {period: 0, time: 500},
-
-		"Invalid Negative Period": {period: -500, wantErr: report.ErrInvalidPeriod},
+		"Zero Period and Max Time": {period: 0, time: math.MaxInt64},
+		"Zero Period and Min Time": {period: 0, time: math.MinInt64},
+		"Max Period and Max Time":  {period: math.MaxUint32, time: math.MaxInt64},
+		"Max Period and Min Time":  {period: math.MaxUint32, time: math.MinInt64},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := report.GetPeriodStart(tc.period, time.Unix(tc.time, 0))
-			if tc.wantErr != nil {
-				require.ErrorIs(t, err, tc.wantErr)
-				return
-			}
-			require.NoError(t, err, "got an unexpected error")
+			got := report.GetPeriodStart(tc.period, time.Unix(tc.time, 0))
 
 			require.IsType(t, int64(0), got)
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
@@ -91,11 +86,10 @@ func TestGetForPeriod(t *testing.T) {
 		subDir      string
 		subDirFiles []string
 		time        int64
-		period      int32
+		period      uint32
 		invalidDir  bool
 
-		wantSpecificErr error
-		wantGenericErr  bool
+		wantErr bool
 	}{
 		"Empty Directory":        {time: 1, period: 500},
 		"Files in subDir":        {subDir: "subdir", subDirFiles: []string{"1.json", "2.json"}, time: 1, period: 500},
@@ -109,9 +103,9 @@ func TestGetForPeriod(t *testing.T) {
 		"Lexical Order Check":               {files: []string{"5.json", "20.json"}, time: 10, period: 20},
 		"Zero Period Returns Nothing":       {files: []string{"1.json", "7.json"}, time: 7, period: 0},
 
-		"Invalid Negative Period": {files: []string{"1.json", "7.json"}, time: 2, period: -7, wantSpecificErr: report.ErrInvalidPeriod},
-
-		"Invalid Dir": {period: 1, invalidDir: true, wantGenericErr: true},
+		// Error cases
+		"Invalid Dir":        {period: 1, invalidDir: true, wantErr: true},
+		"Max time overflows": {period: 1, time: math.MaxInt64, wantErr: true},
 	}
 
 	for name, tc := range tests {
@@ -125,11 +119,7 @@ func TestGetForPeriod(t *testing.T) {
 			}
 
 			r, err := report.GetForPeriod(slog.Default(), dir, time.Unix(tc.time, 0), tc.period)
-			if tc.wantSpecificErr != nil {
-				require.ErrorIs(t, err, tc.wantSpecificErr)
-				return
-			}
-			if tc.wantGenericErr {
+			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return
 			}

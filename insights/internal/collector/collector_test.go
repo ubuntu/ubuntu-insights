@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -106,14 +105,6 @@ func TestSanitize(t *testing.T) {
 		},
 
 		// Error cases
-		"Overflow period errors": {
-			config: collector.Config{
-				Source:    constants.DefaultCollectSource,
-				Period:    math.MaxInt32 + 1,
-				CachePath: t.TempDir(),
-			},
-			wantErr: true,
-		},
 		"Both sourceMetricsPath and sourceMetricsJSON provided with customSource errors": {
 			config: collector.Config{
 				Source:            "customSource",
@@ -173,13 +164,6 @@ func TestNew(t *testing.T) {
 		},
 
 		// Error cases
-		"Overflow Period (Sanitize error)": {
-			config: collector.Config{
-				Period:    math.MaxInt32 + 1,
-				CachePath: t.TempDir(),
-			},
-			wantErr: true,
-		},
 		"Nil Consent": {
 			config: collector.Config{
 				CachePath: t.TempDir(),

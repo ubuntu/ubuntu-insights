@@ -132,16 +132,13 @@ func getReportTime(path string) (int64, error) {
 
 // GetPeriodStart returns the start of the period window for a given period in seconds.
 // If period is 0, it returns the current time as a Unix timestamp.
-func GetPeriodStart(period int32, t time.Time) (int64, error) {
-	if period < 0 {
-		return 0, ErrInvalidPeriod
-	}
-
+func GetPeriodStart(period uint32, t time.Time) int64 {
 	if period == 0 {
-		return t.Unix(), nil // If period is 0, return the current time as
+		return t.Unix() // If period is 0, return the current time as
 	}
 
-	return t.Unix() - (t.Unix() % int64(period)), nil
+	// Over and underflow is impossible as % is a remainder operation, not modulus.
+	return t.Unix() - (t.Unix() % int64(period))
 }
 
 // GetForPeriod returns the most recent report within a period window for a given directory.
@@ -151,20 +148,21 @@ func GetPeriodStart(period int32, t time.Time) (int64, error) {
 // For example, given reports 1 and 7, with time 2 and period 7, the function will return the path for report 1.
 //
 // If period is 0, it returns nothing as the window does not encompass anything.
-func GetForPeriod(l *slog.Logger, dir string, t time.Time, period int32) (Report, error) {
+func GetForPeriod(l *slog.Logger, dir string, t time.Time, period uint32) (Report, error) {
 	if period == 0 {
 		return Report{}, nil // If period is 0, return an empty report.
 	}
 
-	periodStart, err := GetPeriodStart(period, t)
-	if err != nil {
-		return Report{}, err
+	periodStart := GetPeriodStart(period, t)
+
+	if periodStart > math.MaxInt64-int64(period) {
+		return Report{}, fmt.Errorf("periodEnd would overflow")
 	}
 	periodEnd := periodStart + int64(period)
 
 	// Reports names are utc timestamps. Get the most recent report within the period window.
 	var report Report
-	err = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return fmt.Errorf("failed to access path: %v", err)
 		}

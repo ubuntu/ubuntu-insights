@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math"
 	"os"
 	"path/filepath"
 	"time"
@@ -68,7 +67,7 @@ type Collector interface {
 // collector is an abstraction of the collector component.
 type collector struct {
 	consent Consent
-	period  int32
+	period  uint32
 	source  string
 
 	collectedDir      string
@@ -114,10 +113,6 @@ type Config struct {
 // Sanitize sets defaults and checks that the Config is properly configured.
 func (c *Config) Sanitize(l *slog.Logger) error {
 	// Handle global source and source metrics.
-	if c.Period > math.MaxInt32 {
-		return errors.New("period cannot be greater than max int")
-	}
-
 	if c.Source == "" { // Default source to platform
 		c.Source = constants.DefaultCollectSource
 		l.Info("No source provided, defaulting to platform", "source", c.Source)
@@ -171,7 +166,7 @@ func New(l *slog.Logger, cm Consent, c Config, args ...Options) (Collector, erro
 
 	return collector{
 		consent: cm,
-		period:  int32(c.Period), //nolint:gosec  //G115 Integer overflow conversion check is done in Sanitize.
+		period:  c.Period,
 		source:  c.Source,
 
 		time:              opts.timeProvider.Now(),
@@ -351,10 +346,7 @@ func (c collector) getSourceMetrics() (map[string]any, error) {
 
 // write writes the insights report to disk, with the appropriate name.
 func (c collector) write(insights []byte) error {
-	time, err := report.GetPeriodStart(c.period, c.time)
-	if err != nil {
-		return fmt.Errorf("failed to get report name: %v", err)
-	}
+	time := report.GetPeriodStart(c.period, c.time)
 
 	reportPath := filepath.Join(c.collectedDir, fmt.Sprintf("%v.json", time))
 	if err := fileutils.AtomicWrite(reportPath, insights); err != nil {
