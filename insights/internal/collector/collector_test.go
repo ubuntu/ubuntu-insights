@@ -60,21 +60,21 @@ func TestSanitize(t *testing.T) {
 		logs    map[slog.Level]uint
 		wantErr bool
 	}{
-		"Blanck collector config": {
+		"Blank collector config": {
 			config: collector.Config{},
 			logs: map[slog.Level]uint{
 				slog.LevelInfo: 2,
 			},
 		},
 
-		"Custom source with souceMetricsPath": {
+		"Custom source with sourceMetricsPath": {
 			config: collector.Config{
 				Source:            "customSource",
 				SourceMetricsPath: "fakeSourceMetricsPath",
 				CachePath:         "fakeCachePath",
 			},
 		},
-		"Custom source with souceMetricsJSON": {
+		"Custom source with sourceMetricsJSON": {
 			config: collector.Config{
 				Source:            "customSource",
 				SourceMetricsJSON: []byte(`{"test": "sourceMetricsJson"}`),
@@ -117,7 +117,7 @@ func TestSanitize(t *testing.T) {
 		"Invalid sourceMetricsJSON provided with customSource errors": {
 			config: collector.Config{
 				Source:            "customSource",
-				SourceMetricsJSON: []byte(`{"test": "invalidSourceMetricsJson"`), //
+				SourceMetricsJSON: []byte(`{"test": "invalidSourceMetricsJson"`),
 				CachePath:         "fakeCachePath",
 			},
 			wantErr: true,
