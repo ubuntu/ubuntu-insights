@@ -6,6 +6,7 @@ ubuntu-insights (0.3.0) questing; urgency=medium
   * Remove unnecessary dh_dwz override
 
   [ Kat Kuo]
+  * Add fixed limits to concurrent report and source processing when uploading
   * Bump control standards version to 4.7.2
   * Ensure system information collection uses 64-bit memory handling
   * Avoid potential overflow in exponential backoff calculations

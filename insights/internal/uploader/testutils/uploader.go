@@ -20,13 +20,18 @@ type timeProvider interface {
 
 //go:linkname defaultOptions github.com/ubuntu/ubuntu-insights/insights/internal/uploader.defaultOptions
 var defaultOptions struct {
-	baseServerURL   string
-	maxReports      uint32
-	timeProvider    timeProvider
+	baseServerURL string
+	maxReports    uint32
+	timeProvider  timeProvider
+
 	baseRetryPeriod time.Duration
 	maxRetryPeriod  time.Duration
 	maxAttempts     uint32
+
 	responseTimeout time.Duration
+
+	maxConcurrentUploads uint32
+	maxConcurrentSources uint32
 }
 
 // SetServerURL overrides the server url the uploader is using.

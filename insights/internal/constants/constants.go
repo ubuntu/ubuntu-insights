@@ -51,6 +51,12 @@ const (
 
 	// DefaultMinAge is the default value for the uploader's min-age.
 	DefaultMinAge = 604800
+
+	// MaxConcurrentUploadsPerSource is the maximum number of concurrent uploads per source.
+	MaxConcurrentUploadsPerSource = MaxReports
+
+	// MaxConcurrentSources is the maximum number of sources that can be processed concurrently.
+	MaxConcurrentSources = 10
 )
 
 var (

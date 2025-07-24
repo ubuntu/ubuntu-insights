@@ -164,9 +164,11 @@ func GetForPeriod(l *slog.Logger, dir string, t time.Time, period uint32) (Repor
 			return fmt.Errorf("failed to access path: %v", err)
 		}
 
-		// Skip subdirectories.
-		if d.IsDir() && path != dir {
-			return filepath.SkipDir
+		if d.IsDir() {
+			if path != dir {
+				return filepath.SkipDir // Skip subdirectories.
+			}
+			return nil // Continue walking the directory.
 		}
 
 		r, err := New(path)
@@ -205,8 +207,11 @@ func GetAll(l *slog.Logger, dir string) ([]Report, error) {
 			return fmt.Errorf("failed to access path: %v", err)
 		}
 
-		if d.IsDir() && path != dir {
-			return filepath.SkipDir
+		if d.IsDir() {
+			if path != dir {
+				return filepath.SkipDir // Skip subdirectories.
+			}
+			return nil // Continue walking the directory.
 		}
 
 		r, err := New(path)

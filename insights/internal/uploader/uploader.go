@@ -39,6 +39,9 @@ type Uploader struct {
 
 	responseTimeout time.Duration // responseTimeout is the timeout for the HTTP request.
 
+	maxConcurrentUploadsPerSource uint32
+	maxConcurrentSources          uint32
+
 	log *slog.Logger
 }
 
@@ -53,6 +56,9 @@ type options struct {
 	maxAttempts     uint32
 
 	responseTimeout time.Duration
+
+	maxConcurrentUploadsPerSource uint32
+	maxConcurrentSources          uint32
 }
 
 var defaultOptions = options{
@@ -66,6 +72,9 @@ var defaultOptions = options{
 	maxAttempts:     15,
 
 	responseTimeout: 10 * time.Second,
+
+	maxConcurrentUploadsPerSource: constants.MaxConcurrentUploadsPerSource,
+	maxConcurrentSources:          constants.MaxConcurrentSources,
 }
 
 // Config represents the uploader specific data needed to upload.
@@ -123,6 +132,9 @@ func New(l *slog.Logger, cm Consent, cachePath string, minAge uint32, dryRun boo
 		maxAttempts:     opts.maxAttempts,
 
 		responseTimeout: opts.responseTimeout,
+
+		maxConcurrentUploadsPerSource: opts.maxConcurrentUploadsPerSource,
+		maxConcurrentSources:          opts.maxConcurrentSources,
 
 		log: l,
 	}, nil

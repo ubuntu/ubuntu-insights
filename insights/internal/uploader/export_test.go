@@ -51,3 +51,17 @@ func WithResponseTimeout(d time.Duration) Options {
 		o.responseTimeout = d
 	}
 }
+
+// WithMaxConcurrentUploadsPerSource sets the maximum number of concurrent uploads per source.
+func WithMaxConcurrentUploadsPerSource(n uint32) Options {
+	return func(o *options) {
+		o.maxConcurrentUploadsPerSource = n
+	}
+}
+
+// WithMaxConcurrentSources sets the maximum number of concurrent sources for the uploader.
+func WithMaxConcurrentSources(n uint32) Options {
+	return func(o *options) {
+		o.maxConcurrentSources = n
+	}
+}
