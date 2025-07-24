@@ -5,7 +5,6 @@ export DEB_BUILD_MAINT_OPTIONS = optimize=-lto
 export GOTOOLCHAIN := local
 export INSIGHTS_GO_PACKAGE := $(shell grep-dctrl -s XS-Go-Import-Path -n - ./debian/control)
 export GOFLAGS := -ldflags=-X=$(INSIGHTS_GO_PACKAGE)/internal/constants.Version=$(DEB_VERSION_UPSTREAM) --mod=vendor -buildmode=pie
-export DH_GOLANG_BUILDPKG := github.com/ubuntu/ubuntu-insights/insights/cmd/insights
 export DH_GOLANG_GO_GENERATE := 1
 
 BUILDDIR := _build
@@ -18,9 +17,9 @@ endif
 	dh $@ --builddirectory=$(BUILDDIR) --buildsystem=golang --with=golang
 
 override_dh_auto_install:
+	# Do not ship the library resulting binary cmdline, but we still want it in the package list to run the tests.
+	rm $(BUILDDIR)/bin/C
+	
 	mv $(BUILDDIR)/bin/insights $(BUILDDIR)/bin/ubuntu-insights
 	mv $(BUILDDIR)/src/$(INSIGHTS_GO_PACKAGE)/generated $(CURDIR)/debian/tmp
 	dh_auto_install -- --no-source
-
-override_dh_dwz:
-	echo "Skipping dwz because the Go compiler already compresses debug symbols."
