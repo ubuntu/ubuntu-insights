@@ -260,7 +260,7 @@ func (h Collector) collectMemory() (memory, error) {
 		return memory{}, fmt.Errorf("failed to read meminfo: %v", err)
 	}
 
-	data := map[string]int{}
+	data := map[string]int64{}
 	lines := strings.Split(string(f), "\n")
 	for i, l := range lines {
 		if l == "" {
@@ -277,7 +277,7 @@ func (h Collector) collectMemory() (memory, error) {
 			continue
 		}
 
-		v, err := strconv.Atoi(m[2])
+		v, err := strconv.ParseInt(m[2], 10, 64)
 		if err != nil {
 			h.log.Warn("meminfo value was not an integer", "value", v, "error", err, "linenum", i)
 			break

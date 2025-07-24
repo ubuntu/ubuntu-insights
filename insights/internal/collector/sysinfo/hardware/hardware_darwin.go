@@ -155,7 +155,7 @@ func (s Collector) collectMemory() (memory, error) {
 	m := memorys[0]
 
 	ms := m["hw.memsize"]
-	v, err := strconv.Atoi(ms)
+	v, err := strconv.ParseInt(ms, 10, 64)
 	if err != nil {
 		return memory{}, err
 	}

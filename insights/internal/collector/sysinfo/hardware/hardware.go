@@ -46,7 +46,7 @@ type gpu struct {
 
 // memory contains information for the system's memory.
 type memory struct {
-	Total int `json:"size"`
+	Total int64 `json:"size"`
 }
 
 // disk contains information of a disk or partition.

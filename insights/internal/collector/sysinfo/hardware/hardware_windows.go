@@ -162,10 +162,10 @@ func (s Collector) collectMemory() (mem memory, err error) {
 		return memory{}, err
 	}
 
-	var size = 0
+	var size int64
 	for _, os := range oses {
 		sm := os["TotalPhysicalMemory"]
-		v, err := strconv.Atoi(sm)
+		v, err := strconv.ParseInt(sm, 10, 64)
 		if err != nil {
 			s.log.Warn("memory info contained non-integer memory", "value", sm)
 			continue
