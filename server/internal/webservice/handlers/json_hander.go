@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/ubuntu/ubuntu-insights/common/fileutils"
+	"github.com/ubuntu/ubuntu-insights/server/internal/webservice/metrics"
 )
 
 type jsonHandler struct {
@@ -30,6 +31,8 @@ func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID st
 		slog.Error("Invalid application name in URL", "req_id", reqID, "app", app)
 		return
 	}
+
+	metrics.ApplyLabels(r)
 
 	r.Body = http.MaxBytesReader(w, r.Body, h.maxUploadSize)
 	jsonData, err := io.ReadAll(r.Body)

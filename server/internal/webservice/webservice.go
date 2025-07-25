@@ -6,16 +6,26 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
+	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/ubuntu/ubuntu-insights/server/internal/webservice/handlers"
+	"github.com/ubuntu/ubuntu-insights/server/internal/webservice/metrics"
 )
 
 // Server is a struct that holds the HTTP server and its configuration.
 type Server struct {
-	httpServer *http.Server
-	cm         dConfigManager
+	httpServer    *http.Server
+	metricsServer *http.Server
+	cm            dConfigManager
+
+	primaryAddr net.Addr
+	metricsAddr net.Addr
 
 	// This context is used to interrupt any action.
 	// It must be the parent of gracefulCtx.
@@ -25,6 +35,8 @@ type Server struct {
 	// This context waits until the next blocking Recv to interrupt.
 	gracefulCtx    context.Context
 	gracefulCancel context.CancelFunc
+
+	mu sync.RWMutex
 }
 
 // StaticConfig holds the static configuration for the server.
@@ -40,6 +52,9 @@ type StaticConfig struct {
 
 	ListenHost string
 	ListenPort int
+
+	MetricsHost string
+	MetricsPort int
 }
 
 type dConfigManager interface {
@@ -65,26 +80,81 @@ func New(ctx context.Context, cm dConfigManager, sc StaticConfig) (*Server, erro
 		gracefulCtx:    gCtx,
 		gracefulCancel: gCancel}
 
-	uploadHandler := handlers.NewUpload(cm, sc.ReportsDir, int64(sc.MaxUploadBytes))
-	legacyUploadHandler := handlers.NewLegacyReport(cm, sc.ReportsDir, int64(sc.MaxUploadBytes))
-	mux := http.NewServeMux()
-	mux.Handle("POST /upload/{app}", uploadHandler)
-	mux.Handle("POST /{distribution}/desktop/{version}", legacyUploadHandler)
-	mux.Handle("GET /version", http.HandlerFunc(handlers.VersionHandler))
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	)
 
 	s.httpServer = &http.Server{
 		Addr:           fmt.Sprintf("%s:%d", sc.ListenHost, sc.ListenPort),
 		ReadTimeout:    sc.ReadTimeout,
 		WriteTimeout:   sc.WriteTimeout,
-		Handler:        http.TimeoutHandler(mux, sc.RequestTimeout, ""),
+		Handler:        http.TimeoutHandler(setupPrimaryMux(cm, sc, registry), sc.RequestTimeout, ""),
 		MaxHeaderBytes: sc.MaxHeaderBytes,
+	}
+
+	s.metricsServer = &http.Server{
+		Addr:         fmt.Sprintf("%s:%d", sc.MetricsHost, sc.MetricsPort),
+		ReadTimeout:  sc.ReadTimeout,
+		WriteTimeout: sc.WriteTimeout,
+		Handler:      setupMetricsMux(registry),
 	}
 
 	return &s, nil
 }
 
+func setupPrimaryMux(cm dConfigManager, sc StaticConfig, registry *prometheus.Registry) http.Handler {
+	endpointMW := metrics.NewEndpointMiddleware(registry)
+	muxMW := metrics.NewMuxMiddleware(registry)
+
+	mux := http.NewServeMux()
+	uploadHandler := handlers.NewUpload(cm, sc.ReportsDir, int64(sc.MaxUploadBytes))
+	legacyUploadHandler := handlers.NewLegacyReport(cm, sc.ReportsDir, int64(sc.MaxUploadBytes))
+
+	mux.Handle("POST /upload/{app}", endpointMW.Wrap("upload", uploadHandler))
+	mux.Handle("POST /{distribution}/desktop/{version}", endpointMW.Wrap("legacy_upload", legacyUploadHandler))
+	mux.Handle("GET /version", endpointMW.Wrap("version", http.HandlerFunc(handlers.VersionHandler)))
+
+	return muxMW.Wrap("primary_mux", mux)
+}
+
+func setupMetricsMux(registry *prometheus.Registry) *http.ServeMux {
+	metricsMux := http.NewServeMux()
+	metricsMux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+	return metricsMux
+}
+
 // Run starts the HTTP server and listens for incoming requests.
 func (s *Server) Run() error {
+	primaryErr := make(chan error, 1)
+	metricsErr := make(chan error, 1)
+
+	go func() {
+		defer close(primaryErr)
+		primaryErr <- s.servePrimary()
+	}()
+	go func() {
+		defer close(metricsErr)
+		metricsErr <- s.serveMetrics()
+	}()
+
+	// One server shutting down will shut down the other.
+	errPrimary := <-primaryErr
+	errMetrics := <-metricsErr
+
+	if errPrimary != nil {
+		errPrimary = fmt.Errorf("primary server error: %w", errPrimary)
+	}
+	if errMetrics != nil {
+		errMetrics = fmt.Errorf("metrics server error: %w", errMetrics)
+	}
+
+	return errors.Join(errPrimary, errMetrics)
+}
+
+// servePrimary starts the primary HTTP server and listens for incoming requests.
+func (s *Server) servePrimary() error {
 	slog.Info("Starting server", "addr", s.httpServer.Addr)
 
 	// already asked to quit?
@@ -94,6 +164,8 @@ func (s *Server) Run() error {
 	default:
 	}
 
+	defer s.cancel()
+
 	_, watchErr, err := s.cm.Watch(s.gracefulCtx)
 	if err != nil {
 		return fmt.Errorf("failed to start watching configuration: %v", err)
@@ -101,10 +173,19 @@ func (s *Server) Run() error {
 
 	serverErr := make(chan error, 1)
 	go func() {
-		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		defer close(serverErr)
+		l, err := net.Listen("tcp", s.httpServer.Addr)
+		if err != nil {
+			serverErr <- err
+			return
+		}
+		s.mu.Lock()
+		s.primaryAddr = l.Addr()
+		s.mu.Unlock()
+		// Listener lifecycle is managed by the server.
+		if err := s.httpServer.Serve(l); err != nil && err != http.ErrServerClosed {
 			serverErr <- err
 		}
-		close(serverErr)
 	}()
 
 	select {
@@ -116,27 +197,60 @@ func (s *Server) Run() error {
 			return err
 		}
 		slog.Info("Server shut down gracefully")
-		// now kill everything else (watchers, handlers, etc.)
-		s.cancel()
 		return nil
 
 	case err := <-serverErr:
 		if err != nil {
 			slog.Error("Server encountered error", "err", err)
-			s.cancel()
-			return err
 		}
-		// unlikely: ListenAndServe returned nil
-		s.cancel()
-		return nil
+		return err
 	case err := <-watchErr:
 		if err != nil {
 			slog.Error("Config watcher encountered unrecoverable error", "err", err)
 		}
 		errC := s.httpServer.Close()
-		s.cancel()
 
 		return errors.Join(err, errC)
+	}
+}
+
+// serveMetrics starts the metrics HTTP server and listens for incoming requests.
+func (s *Server) serveMetrics() error {
+	slog.Info("Starting metrics server", "addr", s.metricsServer.Addr)
+
+	defer s.cancel()
+
+	serverErr := make(chan error, 1)
+	go func() {
+		defer close(serverErr)
+		l, err := net.Listen("tcp", s.metricsServer.Addr)
+		if err != nil {
+			serverErr <- err
+			return
+		}
+		// Listener lifecycle is managed by the server.
+		s.mu.Lock()
+		s.metricsAddr = l.Addr()
+		s.mu.Unlock()
+		if err := s.metricsServer.Serve(l); err != nil && err != http.ErrServerClosed {
+			serverErr <- err
+		}
+	}()
+
+	select {
+	case <-s.gracefulCtx.Done():
+		slog.Info("Graceful shutdown initiated for metrics server")
+		if err := s.metricsServer.Shutdown(s.ctx); err != nil {
+			slog.Error("Metrics server graceful shutdown failed", "err", err)
+			return err
+		}
+		slog.Info("Metrics server shut down gracefully")
+		return nil
+	case err := <-serverErr:
+		if err != nil {
+			slog.Error("Metrics server encountered error", "err", err)
+		}
+		return err
 	}
 }
 
@@ -146,6 +260,7 @@ func (s *Server) Quit(force bool) {
 
 	if force {
 		s.httpServer.Close()
+		s.metricsServer.Close()
 		s.cancel()
 	} else {
 		s.gracefulCancel()

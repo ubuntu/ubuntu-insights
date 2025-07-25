@@ -138,7 +138,7 @@ func TestServeMulti(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			req, err := http.NewRequest(tc.method, "http://"+s.Addr()+tc.path, bytes.NewReader(tc.body))
+			req, err := http.NewRequest(tc.method, "http://"+s.PrimaryAddr().String()+tc.path, bytes.NewReader(tc.body))
 			require.NoError(t, err, "Setup: failed to create request")
 			if tc.contentType != "" {
 				req.Header.Set("Content-Type", tc.contentType)
@@ -237,6 +237,14 @@ func TestRunSingle(t *testing.T) {
 			}(),
 			wantErr: true,
 		},
+		"Bad Metrics Port": {
+			dConf: func() webservice.StaticConfig {
+				d := *defaultDaemonConfig
+				d.MetricsPort = -1
+				return d
+			}(),
+			wantErr: true,
+		},
 		"New Watcher Error": {
 			cm: testConfigManager{
 				allowList:     []string{defaultApp},
@@ -285,7 +293,7 @@ func TestRunSingle(t *testing.T) {
 				return // If we expect an error and createServerAndWaitReady returns, we can stop here
 			}
 
-			req, err := http.NewRequest(tc.method, "http://"+s.Addr()+tc.path, bytes.NewReader(tc.body))
+			req, err := http.NewRequest(tc.method, "http://"+s.PrimaryAddr().String()+tc.path, bytes.NewReader(tc.body))
 			require.NoError(t, err, "Setup: failed to create request")
 			req.Header.Set("Content-Type", tc.contentType)
 			client := &http.Client{}
@@ -402,10 +410,6 @@ func newForTest(t *testing.T, cm *testConfigManager, daemonConfig *webservice.St
 		daemonConfig.ReportsDir = t.TempDir()
 	}
 
-	if daemonConfig.ListenPort == 0 {
-		daemonConfig.ListenPort = testutils.GetFreePort(t, daemonConfig.ListenHost, testutils.TCP)
-	}
-
 	if daemonConfig.ConfigPath == "" {
 		daemonConfig.ConfigPath = webservice.GenerateTestDaemonConfig(t, &config.Conf{
 			AllowedList: cm.AllowList(),
@@ -450,8 +454,6 @@ func createServerAndWaitReady(t *testing.T, cm *testConfigManager, daemonConfig 
 		waitServerReady(t, s)
 	}
 
-	require.True(t, testutils.PortOpen(t, daemonConfig.ListenHost, daemonConfig.ListenPort), "Server should be running on specified address")
-
 	return s
 }
 
@@ -465,10 +467,15 @@ func waitServerReady(t *testing.T, s *webservice.Server) {
 
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		resp, err := http.Get("http://" + s.Addr() + "/version")
+		resp, err := http.Get("http://" + s.PrimaryAddr().String() + "/version")
 		if err == nil && resp.StatusCode == http.StatusOK {
 			resp.Body.Close()
-			return
+
+			resp, err = http.Get("http://" + s.MetricsAddr().String() + "/metrics")
+			if err == nil && resp.StatusCode == http.StatusOK {
+				resp.Body.Close()
+				return
+			}
 		}
 
 		time.Sleep(interval)
