@@ -85,13 +85,12 @@ func New(ctx context.Context, cm dConfigManager, sc StaticConfig) (*Server, erro
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
-	middleware := metrics.New(registry)
 
 	s.httpServer = &http.Server{
 		Addr:           fmt.Sprintf("%s:%d", sc.ListenHost, sc.ListenPort),
 		ReadTimeout:    sc.ReadTimeout,
 		WriteTimeout:   sc.WriteTimeout,
-		Handler:        http.TimeoutHandler(setupPrimaryMux(cm, sc, middleware), sc.RequestTimeout, ""),
+		Handler:        http.TimeoutHandler(setupPrimaryMux(cm, sc, registry), sc.RequestTimeout, ""),
 		MaxHeaderBytes: sc.MaxHeaderBytes,
 	}
 
@@ -105,16 +104,19 @@ func New(ctx context.Context, cm dConfigManager, sc StaticConfig) (*Server, erro
 	return &s, nil
 }
 
-func setupPrimaryMux(cm dConfigManager, sc StaticConfig, middleware *metrics.Middleware) *http.ServeMux {
+func setupPrimaryMux(cm dConfigManager, sc StaticConfig, registry *prometheus.Registry) http.Handler {
+	endpointMW := metrics.NewEndpointMiddleware(registry)
+	muxMW := metrics.NewMuxMiddleware(registry)
+
 	mux := http.NewServeMux()
 	uploadHandler := handlers.NewUpload(cm, sc.ReportsDir, int64(sc.MaxUploadBytes))
 	legacyUploadHandler := handlers.NewLegacyReport(cm, sc.ReportsDir, int64(sc.MaxUploadBytes))
 
-	mux.Handle("POST /upload/{app}", middleware.Monitor("upload", uploadHandler))
-	mux.Handle("POST /{distribution}/desktop/{version}", middleware.Monitor("legacy_upload", legacyUploadHandler))
-	mux.Handle("GET /version", middleware.Monitor("version", http.HandlerFunc(handlers.VersionHandler)))
+	mux.Handle("POST /upload/{app}", endpointMW.Wrap("upload", uploadHandler))
+	mux.Handle("POST /{distribution}/desktop/{version}", endpointMW.Wrap("legacy_upload", legacyUploadHandler))
+	mux.Handle("GET /version", endpointMW.Wrap("version", http.HandlerFunc(handlers.VersionHandler)))
 
-	return mux
+	return muxMW.Wrap("primary_mux", mux)
 }
 
 func setupMetricsMux(registry *prometheus.Registry) *http.ServeMux {

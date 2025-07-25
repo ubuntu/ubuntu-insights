@@ -15,44 +15,44 @@ type label string
 // LabelPath is the label used for the path in metrics.
 const LabelPath label = "path"
 
-// Middleware is a middleware for collecting HTTP request metrics.
-type Middleware struct {
+// EndpointMiddleware is a observer for collecting HTTP request metrics specific to endpoints.
+type EndpointMiddleware struct {
 	buckets  []float64
 	registry prometheus.Registerer
 }
 
-// New creates a new Middleware instance with the provided registry and buckets.
-func New(registry prometheus.Registerer) *Middleware {
-	return &Middleware{
+// NewEndpointMiddleware creates a new EndpointMiddleware interface with the provided registry and buckets.
+func NewEndpointMiddleware(registry prometheus.Registerer) *EndpointMiddleware {
+	return &EndpointMiddleware{
 		// Mainly used for HTTP request durations which will skew small unless something is wrong. Max of 10.24.
 		buckets:  prometheus.ExponentialBuckets(0.005, 2, 12),
 		registry: registry,
 	}
 }
 
-// Monitor is a middleware function that wraps an HTTP handler to collect metrics.
-func (m *Middleware) Monitor(handlerName string, handler http.Handler) http.HandlerFunc {
+// Wrap is a middleware function that wraps an HTTP handler to collect metrics from an endpoint.
+func (m *EndpointMiddleware) Wrap(handlerName string, handler http.Handler) http.HandlerFunc {
 	reg := prometheus.WrapRegistererWith(prometheus.Labels{"handler": handlerName}, m.registry)
 	labels := []string{"method", "code", string(LabelPath)}
 
 	requestsTotal := promauto.With(reg).NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "http_requests_total",
-			Help: "Tracks the number of HTTP requests.",
+			Name: "http_endpoint_requests_total",
+			Help: "Tracks the number of HTTP requests to the endpoint.",
 		}, labels,
 	)
 	requestDuration := promauto.With(reg).NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "http_request_duration_seconds",
-			Help:    "Tracks the latencies for HTTP requests.",
+			Name:    "http_endpoint_request_duration_seconds",
+			Help:    "Tracks the latencies for HTTP requests to the endpoint.",
 			Buckets: m.buckets,
 		},
 		labels,
 	)
 	requestSize := promauto.With(reg).NewSummaryVec(
 		prometheus.SummaryOpts{
-			Name: "http_request_size_bytes",
-			Help: "Tracks the size of HTTP requests.",
+			Name: "http_endpoint_request_size_bytes",
+			Help: "Tracks the size of HTTP requests to the endpoint.",
 		},
 		labels,
 	)

@@ -1,0 +1,4 @@
+httpmuxrequeststotal: ""
+endpointmetrics:
+    http_endpoint_request_size_bytes: ""
+    http_endpoint_requests_total: ""

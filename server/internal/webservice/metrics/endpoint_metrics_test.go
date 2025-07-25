@@ -16,25 +16,25 @@ import (
 	"github.com/ubuntu/ubuntu-insights/server/internal/webservice/metrics"
 )
 
-var metricNames = []string{
-	"http_requests_total",
-	"http_request_duration_seconds",
-	"http_request_size_bytes",
+var endpointMetricNames = []string{
+	"http_endpoint_requests_total",
+	"http_endpoint_request_duration_seconds",
+	"http_endpoint_request_size_bytes",
 }
 
-var deterministicMetrics = []string{
-	"http_requests_total",
-	"http_request_size_bytes",
+var deterministicEndpointMetrics = []string{
+	"http_endpoint_requests_total",
+	"http_endpoint_request_size_bytes",
 }
 
-func TestNew(t *testing.T) {
+func TestNewEndpointMiddleware(t *testing.T) {
 	t.Parallel()
 
 	// Ensure middleware is returned and no panic occurs.
-	require.NotNil(t, metrics.New(prometheus.NewRegistry()))
+	require.NotNil(t, metrics.NewEndpointMiddleware(prometheus.NewRegistry()))
 }
 
-func TestMonitor(t *testing.T) {
+func TestEndpointMiddlewareWrap(t *testing.T) {
 	t.Parallel()
 
 	type request struct {
@@ -83,7 +83,7 @@ func TestMonitor(t *testing.T) {
 			t.Parallel()
 
 			reg := prometheus.NewRegistry()
-			mw := metrics.New(reg)
+			mw := metrics.NewEndpointMiddleware(reg)
 
 			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusAccepted)
@@ -95,18 +95,18 @@ func TestMonitor(t *testing.T) {
 				})
 			}
 
-			monitored := mw.Monitor(name, handler)
+			monitored := mw.Wrap(name, handler)
 
-			for _, name := range metricNames {
+			for _, name := range endpointMetricNames {
 				assert.Equal(t, 0, testutil.CollectAndCount(reg, name), "Expected no metrics to be collected before request")
 			}
 
 			for _, req := range tc.requests {
-				sendRequest(t, monitored, req.method, req.path, req.body)
+				sendRequest(t, monitored, req.method, req.path, req.body, http.StatusAccepted)
 			}
 
 			var got = map[string]string{}
-			for _, name := range deterministicMetrics {
+			for _, name := range deterministicEndpointMetrics {
 				b, err := testutil.CollectAndFormat(reg, expfmt.TypeTextPlain, name)
 				require.NoError(t, err, "Failed to collect metrics for %s", name)
 				got[name] = string(b)
@@ -154,14 +154,12 @@ func TestHandlerApplyLabels(t *testing.T) {
 	assert.Equal(t, "/test/path", req.Context().Value(metrics.LabelPath), "Expected path label to be applied")
 }
 
-func sendRequest(t *testing.T, handler http.HandlerFunc, method, target string, body io.Reader) {
+func sendRequest(t *testing.T, handler http.HandlerFunc, method, target string, body io.Reader, expectedCode int) {
 	t.Helper()
 
 	req := httptest.NewRequest(method, target, body)
 	rec := httptest.NewRecorder()
 	handler(rec, req)
 
-	if rec.Code != http.StatusAccepted {
-		t.Errorf("Expected status code %d, got %d", http.StatusAccepted, rec.Code)
-	}
+	assert.Equal(t, expectedCode, rec.Code, "Expected status code %d, got %d", expectedCode, rec.Code)
 }

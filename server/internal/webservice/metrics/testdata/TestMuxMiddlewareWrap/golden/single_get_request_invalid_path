@@ -1,0 +1,5 @@
+httpmuxrequeststotal: |
+    # HELP http_mux_requests_total Tracks the number of HTTP requests to the mux.
+    # TYPE http_mux_requests_total counter
+    http_mux_requests_total{code="404",handler="Single GET Request invalid path",method="get"} 1
+endpointmetrics: {}

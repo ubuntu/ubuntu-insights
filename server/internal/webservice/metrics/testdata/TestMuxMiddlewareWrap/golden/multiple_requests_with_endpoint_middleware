@@ -1,0 +1,20 @@
+httpmuxrequeststotal: |
+    # HELP http_mux_requests_total Tracks the number of HTTP requests to the mux.
+    # TYPE http_mux_requests_total counter
+    http_mux_requests_total{code="202",handler="Multiple Requests with Endpoint Middleware",method="get"} 2
+    http_mux_requests_total{code="202",handler="Multiple Requests with Endpoint Middleware",method="put"} 1
+    http_mux_requests_total{code="404",handler="Multiple Requests with Endpoint Middleware",method="get"} 1
+    http_mux_requests_total{code="404",handler="Multiple Requests with Endpoint Middleware",method="post"} 1
+endpointmetrics:
+    http_endpoint_request_size_bytes: |
+        # HELP http_endpoint_request_size_bytes Tracks the size of HTTP requests to the endpoint.
+        # TYPE http_endpoint_request_size_bytes summary
+        http_endpoint_request_size_bytes_sum{code="202",handler="Multiple Requests with Endpoint Middleware",method="get",path="unknown"} 64
+        http_endpoint_request_size_bytes_count{code="202",handler="Multiple Requests with Endpoint Middleware",method="get",path="unknown"} 2
+        http_endpoint_request_size_bytes_sum{code="202",handler="Multiple Requests with Endpoint Middleware",method="put",path="unknown"} 32
+        http_endpoint_request_size_bytes_count{code="202",handler="Multiple Requests with Endpoint Middleware",method="put",path="unknown"} 1
+    http_endpoint_requests_total: |
+        # HELP http_endpoint_requests_total Tracks the number of HTTP requests to the endpoint.
+        # TYPE http_endpoint_requests_total counter
+        http_endpoint_requests_total{code="202",handler="Multiple Requests with Endpoint Middleware",method="get",path="unknown"} 2
+        http_endpoint_requests_total{code="202",handler="Multiple Requests with Endpoint Middleware",method="put",path="unknown"} 1
