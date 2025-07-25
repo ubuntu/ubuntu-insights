@@ -5,7 +5,8 @@ ubuntu-insights (0.3.0) questing; urgency=medium
   * Fix build time tests
   * Remove unnecessary dh_dwz override
 
-  [ Kat Kuo]
+  [ Kat Kuo ]
+  * New upstream release (LP: #2118725)
   * Add fixed limits to concurrent report and source processing when uploading
   * Bump control standards version to 4.7.2
   * Ensure system information collection uses 64-bit memory handling
