@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/ubuntu/ubuntu-insights/common/cli"
@@ -160,7 +161,8 @@ func (a *App) run() (err error) {
 		return fmt.Errorf("failed to connect to database: %v", err)
 	}
 
-	proc, err := processor.New(a.config.ReportsDir, db)
+	registry := prometheus.NewRegistry()
+	proc, err := processor.New(a.config.ReportsDir, db, registry)
 	if err != nil {
 		return fmt.Errorf("failed to create report processor: %v", err)
 	}

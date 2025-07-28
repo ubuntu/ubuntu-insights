@@ -11,6 +11,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
@@ -25,14 +28,26 @@ func TestNew(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		baseDir string
-		wantErr bool
+		baseDir                 string
+		preRegisteredCollectors []prometheus.Collector
+		wantErr                 bool
 	}{
 		"Valid base directory": {
 			baseDir: t.TempDir(),
 		},
 		"Valid non-existent base directory": {
 			baseDir: filepath.Join(t.TempDir(), "non-existent"),
+		},
+		"Non-empty registry": {
+			baseDir: t.TempDir(),
+			preRegisteredCollectors: []prometheus.Collector{
+				prometheus.NewCounterVec(
+					prometheus.CounterOpts{
+						Name: "test_counter",
+					},
+					[]string{"label"},
+				),
+			},
 		},
 
 		// Error cases
@@ -44,13 +59,66 @@ func TestNew(t *testing.T) {
 			baseDir: string([]byte{0}),
 			wantErr: true,
 		},
+		"ingest_processor_files_processed_total already registered": {
+			baseDir: t.TempDir(),
+			preRegisteredCollectors: []prometheus.Collector{
+				prometheus.NewCounterVec(
+					prometheus.CounterOpts{
+						Name: "ingest_processor_files_processed_total",
+					},
+					[]string{"app", "result"},
+				),
+			},
+			wantErr: true,
+		},
+		"ingest_processor_process_duration_seconds already registered": {
+			baseDir: t.TempDir(),
+			preRegisteredCollectors: []prometheus.Collector{
+				prometheus.NewHistogramVec(
+					prometheus.HistogramOpts{
+						Name: "ingest_processor_process_duration_seconds",
+					},
+					[]string{"app"},
+				),
+			},
+			wantErr: true,
+		},
+		"ingest_processor_cache_size already registered": {
+			baseDir: t.TempDir(),
+			preRegisteredCollectors: []prometheus.Collector{
+				prometheus.NewGaugeVec(
+					prometheus.GaugeOpts{
+						Name: "ingest_processor_cache_size",
+					},
+					[]string{"app"},
+				),
+			},
+			wantErr: true,
+		},
+		"ingest_processor_errors_total already registered": {
+			baseDir: t.TempDir(),
+			preRegisteredCollectors: []prometheus.Collector{
+				prometheus.NewCounterVec(
+					prometheus.CounterOpts{
+						Name: "ingest_processor_errors_total",
+					},
+					[]string{"app"},
+				),
+			},
+			wantErr: true,
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			p, err := processor.New(tc.baseDir, nil)
+			registry := prometheus.NewRegistry()
+			for _, collector := range tc.preRegisteredCollectors {
+				require.NoError(t, registry.Register(collector), "Setup: Failed to register pre-existing collector")
+			}
+
+			p, err := processor.New(tc.baseDir, nil, registry)
 
 			if tc.wantErr {
 				require.Error(t, err, "Expected error for test case: %s", name)
@@ -120,7 +188,8 @@ func TestProcessFiles(t *testing.T) {
 			if tc.earlyCancel {
 				cancel()
 			}
-			p, err := processor.New(dst, &tc.db)
+			registry := prometheus.NewRegistry()
+			p, err := processor.New(dst, &tc.db, registry)
 			require.NoError(t, err, "Setup: Failed to create processor")
 			errCh := make(chan error, 1)
 			go func() {
@@ -146,18 +215,31 @@ func TestProcessFiles(t *testing.T) {
 			referenceHashes, err := testutils.GetDirHashedContents(t, filepath.Join(testFixturesDir, tc.app), 3)
 			require.NoError(t, err, "Failed to get reference directory contents")
 
+			// Ensure "ingest_processor_process_duration_seconds" is registered
+			assert.NotEqualValues(t, 0, testutil.CollectAndCount(registry, "ingest_processor_process_duration_seconds"),
+				"Expected 'ingest_processor_process_duration_seconds' metric to be registered")
+
+			// Don't check "ingest_processor_process_duration_seconds" as it may vary
+			metrics, err := testutil.CollectAndFormat(registry, expfmt.TypeTextPlain,
+				"ingest_processor_files_processed_total",
+				"ingest_processor_cache_size",
+				"ingest_processor_errors_total")
+			require.NoError(t, err, "Failed to gather metrics")
+
 			results := struct {
 				RemainingFiles      map[string]string
 				UploadedFiles       map[string][]*models.TargetModel
 				UploadedLegacyFiles map[string][]*models.LegacyTargetModel
 				InvalidReports      map[string][]string
 				ReferenceHashes     map[string]string
+				Metrics             string
 			}{
 				RemainingFiles:      remainingFiles,
 				UploadedFiles:       tc.db.reports,
 				UploadedLegacyFiles: tc.db.legacyReports,
 				InvalidReports:      tc.db.invalidReports,
 				ReferenceHashes:     referenceHashes,
+				Metrics:             string(metrics),
 			}
 
 			got, err := json.MarshalIndent(results, "", "  ")
