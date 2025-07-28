@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/server/internal/ingest"
 )
@@ -19,7 +22,8 @@ func TestRun(t *testing.T) {
 		cm   *mockConfigManager
 		proc *mockDProcessor
 
-		wantErr bool
+		skipMetricsCheck bool
+		wantErr          bool
 	}{
 		"Empty allow list": {},
 		"Single app no errors": {
@@ -35,6 +39,7 @@ func TestRun(t *testing.T) {
 			proc: newProcessor(map[string]error{
 				"SingleValid": context.Canceled,
 			}),
+			skipMetricsCheck: true,
 		},
 		"Single app with error": {
 			cm: newConfigManager("SingleValid"),
@@ -48,6 +53,7 @@ func TestRun(t *testing.T) {
 				"MultiValid1": context.Canceled,
 				"MultiValid2": context.Canceled,
 			}),
+			skipMetricsCheck: true,
 		},
 		"Multi apps with errors": {
 			cm: newConfigManager("MultiValid1", "MultiValid2", "MultiValid3"),
@@ -104,7 +110,8 @@ func TestRun(t *testing.T) {
 				tc.proc = newProcessor(map[string]error{})
 			}
 
-			s := ingest.New(t.Context(), tc.cm, tc.proc)
+			registry := prometheus.NewRegistry()
+			s := ingest.New(t.Context(), tc.cm, tc.proc, registry)
 			runErr := run(t, s)
 			time.Sleep(50 * time.Millisecond) // Allow some time for the service to start
 
@@ -117,7 +124,11 @@ func TestRun(t *testing.T) {
 				return
 			}
 
-			waitWorkersEqual(t, s, tc.cm.AllowList()...)
+			var collector prometheus.Collector
+			if !tc.skipMetricsCheck {
+				collector = registry
+			}
+			waitWorkersEqual(t, s, collector, tc.cm.AllowList()...)
 			// Ensure no errors are received
 			checkService(t, runErr, false, 0)
 		})
@@ -130,16 +141,17 @@ func TestRunModifyAllowList(t *testing.T) {
 	t.Parallel()
 
 	cm := newConfigManager("SingleValid")
-	s := ingest.New(t.Context(), cm, &mockDProcessor{})
+	registry := prometheus.NewRegistry()
+	s := ingest.New(t.Context(), cm, &mockDProcessor{}, registry)
 	runErr := run(t, s)
 
-	waitWorkersEqual(t, s, cm.AllowList()...)
+	waitWorkersEqual(t, s, registry, cm.AllowList()...)
 
 	cm.setAllowList(t, append(cm.AllowList(), "MultiMixed"), 3)
-	waitWorkersEqual(t, s, cm.AllowList()...)
+	waitWorkersEqual(t, s, registry, cm.AllowList()...)
 
 	cm.setAllowList(t, []string{}, 3)
-	waitWorkersEqual(t, s)
+	waitWorkersEqual(t, s, registry)
 
 	gracefulShutdown(t, s, runErr)
 }
@@ -148,7 +160,7 @@ func TestRunAfterQuitErrors(t *testing.T) {
 	t.Parallel()
 
 	cm := newConfigManager("SingleValid")
-	s := ingest.New(t.Context(), cm, &mockDProcessor{})
+	s := ingest.New(t.Context(), cm, &mockDProcessor{}, prometheus.NewRegistry())
 	defer s.Quit(true)
 
 	runErr := run(t, s)
@@ -175,7 +187,7 @@ func TestRunEarlyContextCancel(t *testing.T) {
 	})
 
 	ctx, cancel := context.WithCancel(t.Context())
-	s := ingest.New(ctx, cm, proc)
+	s := ingest.New(ctx, cm, proc, prometheus.NewRegistry())
 	runErr := run(t, s)
 
 	// Ensure no errors are received before the context is canceled
@@ -236,7 +248,9 @@ func gracefulShutdown(t *testing.T, s *ingest.Service, runErr chan error) {
 	}
 }
 
-func waitWorkersEqual(t *testing.T, s *ingest.Service, workers ...string) {
+// waitWorkersEqual is a helper function which waits until the active workers in the service match the expected workers.
+// It also checks the registry gauge if provided.
+func waitWorkersEqual(t *testing.T, s *ingest.Service, registry prometheus.Collector, workers ...string) {
 	t.Helper()
 	delay := 500 * time.Millisecond
 	timeout := 8 * time.Second
@@ -249,6 +263,9 @@ func waitWorkersEqual(t *testing.T, s *ingest.Service, workers ...string) {
 		slices.Sort(workers)
 
 		if slices.Equal(workers, got) {
+			if registry != nil {
+				assert.Len(t, workers, int(testutil.ToFloat64(registry)))
+			}
 			return
 		}
 		require.LessOrEqual(t, time.Since(start), timeout, "Workers did not match within the timeout. Wanted: %v, Got: %v", workers, got)

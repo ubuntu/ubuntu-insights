@@ -9,6 +9,8 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Service represents the ingest service that processes and uploads reports to the database.
@@ -28,6 +30,10 @@ type Service struct {
 	mu       sync.Mutex
 	workers  map[string]context.CancelFunc
 	workerWG sync.WaitGroup
+
+	// Metrics
+	metricsMu     sync.Mutex
+	activeWorkers prometheus.Gauge
 }
 
 type dConfigManager interface {
@@ -41,9 +47,17 @@ type dProcessor interface {
 }
 
 // New creates a new ingest service with the provided config manager and processor.
-func New(ctx context.Context, cm dConfigManager, proc dProcessor) *Service {
+func New(ctx context.Context, cm dConfigManager, proc dProcessor, registry prometheus.Registerer) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	gCtx, gCancel := context.WithCancel(ctx)
+
+	activeWorkers := prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "ingest_active_workers",
+		Help: "Number of active workers in the ingest service.",
+	})
+	if err := registry.Register(activeWorkers); err != nil {
+		slog.Error("Failed to register active workers gauge", "err", err)
+	}
 
 	return &Service{
 		cm:   cm,
@@ -54,9 +68,9 @@ func New(ctx context.Context, cm dConfigManager, proc dProcessor) *Service {
 		gracefulCtx:    gCtx,
 		gracefulCancel: gCancel,
 
-		mu:       sync.Mutex{},
-		workers:  make(map[string]context.CancelFunc),
-		workerWG: sync.WaitGroup{},
+		workers: make(map[string]context.CancelFunc),
+
+		activeWorkers: activeWorkers,
 	}
 }
 
@@ -156,6 +170,16 @@ func (s *Service) syncWorkers() {
 func (s *Service) appWorker(ctx context.Context, app string) {
 	s.workerWG.Add(1)
 	defer s.workerWG.Done()
+
+	s.metricsMu.Lock()
+	s.activeWorkers.Inc()
+	s.metricsMu.Unlock()
+
+	defer func() {
+		s.metricsMu.Lock()
+		s.activeWorkers.Dec()
+		s.metricsMu.Unlock()
+	}()
 
 	baseBackoff := 5 * time.Second
 	maxBackoff := 30 * time.Second

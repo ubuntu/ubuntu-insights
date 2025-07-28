@@ -167,7 +167,7 @@ func (a *App) run() (err error) {
 		return fmt.Errorf("failed to create report processor: %v", err)
 	}
 
-	a.daemon = ingest.New(context.Background(), cm, proc)
+	a.daemon = ingest.New(context.Background(), cm, proc, registry)
 	close(a.ready)
 
 	return a.daemon.Run()
