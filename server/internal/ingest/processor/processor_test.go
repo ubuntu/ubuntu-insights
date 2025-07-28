@@ -19,7 +19,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/server/internal/ingest/processor"
 )
 
-var testFixutresDir = filepath.Join("testdata", "fixtures")
+var testFixturesDir = filepath.Join("testdata", "fixtures")
 
 func TestNew(t *testing.T) {
 	t.Parallel()
@@ -108,7 +108,7 @@ func TestProcessFiles(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			fixtureDir := filepath.Join(testFixutresDir, tc.app)
+			fixtureDir := filepath.Join(testFixturesDir, tc.app)
 			dst := t.TempDir()
 			require.NoError(t, testutils.CopyDir(t, fixtureDir, filepath.Join(dst, tc.app)), "Setup: failed to copy fixture directory")
 
@@ -143,7 +143,7 @@ func TestProcessFiles(t *testing.T) {
 			remainingFiles, err := testutils.GetDirHashedContents(t, dst, 4)
 			require.NoError(t, err, "Failed to get directory contents")
 
-			referenceHashes, err := testutils.GetDirHashedContents(t, filepath.Join(testFixutresDir, tc.app), 3)
+			referenceHashes, err := testutils.GetDirHashedContents(t, filepath.Join(testFixturesDir, tc.app), 3)
 			require.NoError(t, err, "Failed to get reference directory contents")
 
 			results := struct {
