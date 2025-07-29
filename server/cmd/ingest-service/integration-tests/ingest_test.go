@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -173,7 +174,7 @@ func TestIngestService(t *testing.T) {
 				AllowedList: tc.validApps,
 			}
 			configPath := generateTestDaemonConfig(t, daeConf)
-
+			metricsPort := testutils.GetFreePort(t, "localhost", testutils.TCP)
 			ctx, cancel := context.WithCancel(t.Context())
 			// #nosec:G204 - we control the command arguments in tests
 			go func() {
@@ -187,6 +188,8 @@ func TestIngestService(t *testing.T) {
 					"--db-password", dbContainer.Password,
 					"--db-name", dbContainer.Name,
 					"--reports-dir", dst,
+					"--metrics-host", "localhost",
+					"--metrics-port", fmt.Sprintf("%d", metricsPort),
 					"-vv")
 
 				// Redirect command output to the pipe
@@ -223,6 +226,14 @@ func TestIngestService(t *testing.T) {
 					time.Sleep(time.Duration(report.delayAfter) * time.Second)
 				}
 			}
+
+			// Ensure the metrics endpoint is reachable
+			metricsURL := fmt.Sprintf("http://localhost:%d/metrics", metricsPort)
+			resp, err := http.Get(metricsURL) // #nosec:G107 // we control the input
+			require.NoError(t, err, "Failed to reach metrics endpoint")
+			defer resp.Body.Close()
+			require.Equal(t, http.StatusOK, resp.StatusCode, "Metrics endpoint returned non-200 status")
+
 			time.Sleep(5 * time.Second)
 			// Send signal to stop the daemon
 			cancel()
