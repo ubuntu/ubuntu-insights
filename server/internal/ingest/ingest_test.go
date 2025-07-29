@@ -3,14 +3,11 @@ package ingest_test
 import (
 	"context"
 	"errors"
-	"slices"
+	"net/http"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/server/internal/ingest"
 )
@@ -18,78 +15,99 @@ import (
 func TestRun(t *testing.T) {
 	t.Parallel()
 
+	const maxDegradedDuration = 800 * time.Millisecond
+
 	tests := map[string]struct {
-		cm   *mockConfigManager
-		proc *mockDProcessor
+		workerPool    *mockWorkerPool
+		metricsServer *mockMetricsServer
 
-		skipMetricsCheck bool
-		wantErr          bool
+		cancelContextPreRun bool // Cancel context before running the service
+		cancelContext       bool // Cancel context after early error check
+
+		triggerWorkerPoolErrEarly    bool // Trigger an error in the worker pool before run
+		triggerMetricsServerErrEarly bool // Trigger an error in the metrics server before run
+
+		// Within 50ms of early service state check
+		wantEarlyReturn bool // Return early without error
+		wantEarlyErr    bool // Errors within 200ms
+
+		// Within maxDegradedDuration + 100ms after early service state check
+		wantLateReturn bool // Return after late duration without error
+		wantLateErr    bool // Errors after lateDuration
+
+		wantSpecificErr error // Specific error to check for
 	}{
-		"Empty allow list": {},
-		"Single app no errors": {
-			cm: newConfigManager("SingleValid"),
+		"Default run blocks": {},
+
+		// Context cancellation
+		"Context cancel before run errors fast": {
+			cancelContextPreRun: true,
+			wantEarlyErr:        true,
+			wantSpecificErr:     ingest.ErrServiceClosed,
 		},
-		"Multi apps no errors": {
-			cm: newConfigManager("MultiValid1", "MultiValid2", "MultiValid3"),
+		"Context cancel after run without blocked close returns without err": {
+			cancelContext:  true,
+			wantLateReturn: true,
+		},
+		"Context cancel after run with blocked close returns with err": {
+			metricsServer: &mockMetricsServer{
+				closeDelay: 2 * time.Second,
+			},
+			cancelContext:   true,
+			wantLateErr:     true,
+			wantSpecificErr: ingest.ErrTeardownTimeout,
 		},
 
-		// Processor errors
-		"Single app with context canceled": {
-			cm: newConfigManager("SingleValid"),
-			proc: newProcessor(map[string]error{
-				"SingleValid": context.Canceled,
-			}),
-			skipMetricsCheck: true,
+		// Worker Pool errors
+		"WorkerPool Run errors early": {
+			workerPool: &mockWorkerPool{
+				runErr: errors.New("requested worker pool run error"),
+			},
+			triggerWorkerPoolErrEarly: true,
+			wantEarlyErr:              true,
 		},
-		"Single app with error": {
-			cm: newConfigManager("SingleValid"),
-			proc: newProcessor(map[string]error{
-				"SingleValid": errors.New("requested error"),
-			}),
-		},
-		"Multi apps with context canceled": {
-			cm: newConfigManager("MultiValid1", "MultiValid2", "MultiValid3"),
-			proc: newProcessor(map[string]error{
-				"MultiValid1": context.Canceled,
-				"MultiValid2": context.Canceled,
-			}),
-			skipMetricsCheck: true,
-		},
-		"Multi apps with errors": {
-			cm: newConfigManager("MultiValid1", "MultiValid2", "MultiValid3"),
-			proc: newProcessor(map[string]error{
-				"MultiValid1": errors.New("error for MultiValid1"),
-				"MultiValid2": errors.New("error for MultiValid2"),
-			}),
+		"WorkerPool Run errors late": {
+			workerPool: &mockWorkerPool{
+				runErr: errors.New("requested worker pool run error"),
+			},
+			wantLateErr: true,
 		},
 
-		// Config manager errors
-		"Exits on config manager reloadCh early close": {
-			cm: &mockConfigManager{
-				allowList:     []string{"SingleValid"},
-				closeReloadCh: true,
+		// Metrics Server errors
+		"MetricsServer ListenAndServe errors early": {
+			metricsServer: &mockMetricsServer{
+				listenAndServeErr: errors.New("requested metrics server listen and serve error"),
 			},
-			wantErr: true,
+			triggerMetricsServerErrEarly: true,
+			wantEarlyErr:                 true,
 		},
-		"Exits on config manager watchErrCh early close": {
-			cm: &mockConfigManager{
-				allowList:     []string{"SingleValid"},
-				closeWatchErr: true,
+		"MetricsServer ListenAndServe errors late": {
+			metricsServer: &mockMetricsServer{
+				listenAndServeErr: errors.New("requested metrics server listen and serve error"),
 			},
-			wantErr: true,
+			wantLateErr: true,
 		},
-		"Exits on config manager watch error": {
-			cm: &mockConfigManager{
-				allowList: []string{"SingleValid"},
-				watchErr:  errors.New("watch error"),
+
+		// Degraded state
+		"Teardown Timeout when worker pool fails and metrics shutdown hangs": {
+			workerPool: &mockWorkerPool{
+				runErr: errors.New("requested worker pool run error"),
 			},
-			wantErr: true,
+			metricsServer: &mockMetricsServer{
+				shutdownDelay: 2 * time.Second,
+			},
+			wantLateErr:     true,
+			wantSpecificErr: ingest.ErrTeardownTimeout,
 		},
-		"Does not exit on config manager delayed watch error": {
-			cm: &mockConfigManager{
-				allowList:       []string{"SingleValid"},
-				delayedWatchErr: errors.New("delayed watch error"),
+		"Teardown Timeout when metrics server fails and worker pool hangs": {
+			workerPool: &mockWorkerPool{
+				hang: true,
 			},
+			metricsServer: &mockMetricsServer{
+				listenAndServeErr: errors.New("requested metrics server listen and serve error"),
+			},
+			wantLateErr:     true,
+			wantSpecificErr: ingest.ErrTeardownTimeout,
 		},
 	}
 
@@ -97,308 +115,378 @@ func TestRun(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.cm == nil {
-				tc.cm = newConfigManager()
+			// Sanitize test case
+			// Only one of wantEarlyReturn, wantLateReturn, wantEarlyErr, or wantLateErr should be true at most.
+			wants := []bool{tc.wantEarlyErr, tc.wantLateErr, tc.wantEarlyReturn, tc.wantLateReturn}
+			oneTrue := false
+			for _, w := range wants {
+				if w {
+					require.False(t, oneTrue, "Setup: Only one of the wants flags should be true at most",
+						"got: %v", wants)
+					oneTrue = true
+				}
+			}
+			if tc.workerPool == nil {
+				tc.workerPool = &mockWorkerPool{}
+			}
+			if tc.metricsServer == nil {
+				tc.metricsServer = &mockMetricsServer{}
 			}
 
-			// Apply the allowSet if not already set
-			if tc.cm.allowSet == nil {
-				tc.cm.allowSet = createSet(tc.cm.allowList...)
+			tc.workerPool.initialize(t)
+			tc.metricsServer.initialize(t)
+
+			args := []ingest.Option{
+				ingest.WithMaxDegradedDuration(maxDegradedDuration),
 			}
 
-			if tc.proc == nil {
-				tc.proc = newProcessor(map[string]error{})
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			service := ingest.New(ctx, tc.workerPool, tc.metricsServer, args...)
+
+			if tc.cancelContextPreRun {
+				cancel()
 			}
 
-			registry := prometheus.NewRegistry()
-			s := ingest.New(t.Context(), tc.cm, tc.proc, registry)
-			runErr := run(t, s)
-			time.Sleep(50 * time.Millisecond) // Allow some time for the service to start
+			if tc.triggerWorkerPoolErrEarly {
+				tc.workerPool.triggerError()
+			}
+			if tc.triggerMetricsServerErrEarly {
+				tc.metricsServer.triggerError()
+			}
 
-			t.Cleanup(func() {
-				gracefulShutdown(t, s, runErr)
-			})
+			errCh := runServiceAsync(t, service)
 
-			if tc.wantErr {
-				checkService(t, runErr, true, 3*time.Second)
+			select {
+			case err := <-errCh:
+				if !tc.wantEarlyErr {
+					require.NoError(t, err, "Service should not have exited early with error")
+					require.True(t, tc.wantEarlyReturn, "Service should not have exited early without error")
+					return
+				}
+				require.Error(t, err, "Expected early error but got nil from early return")
+				if tc.wantSpecificErr != nil {
+					require.ErrorIs(t, err, tc.wantSpecificErr, "Expected specific error but got different error")
+					return
+				}
+				require.NotErrorIs(t, err, ingest.ErrServiceClosed, "Got unexpected service closed error")
+				require.NotErrorIs(t, err, ingest.ErrTeardownTimeout, "Got unexpected teardown timeout error")
 				return
+			case <-time.After(maxDegradedDuration + 100*time.Millisecond):
+			}
+			require.False(t, tc.wantEarlyErr, "Service should have exited early with error but did not")
+			require.False(t, tc.wantEarlyReturn, "Service should have exited early without error but did not")
+
+			if tc.cancelContext {
+				cancel()
 			}
 
-			var collector prometheus.Collector
-			if !tc.skipMetricsCheck {
-				collector = registry
+			// WorkerPool and MetricsServer always be non-nil error, so this is dependent on if the return error was set.
+			tc.workerPool.triggerError()
+			tc.metricsServer.triggerError()
+
+			select {
+			case err := <-errCh:
+				if !tc.wantLateErr {
+					require.NoError(t, err, "Service should not have exited late with error")
+					require.True(t, tc.wantLateReturn, "Service should not have exited late without error")
+					return
+				}
+				require.Error(t, err, "Expected late error but got nil from late return")
+				if tc.wantSpecificErr != nil {
+					require.ErrorIs(t, err, tc.wantSpecificErr, "Expected specific error but got different error")
+					return
+				}
+				require.NotErrorIs(t, err, ingest.ErrServiceClosed, "Got unexpected service closed error")
+				require.NotErrorIs(t, err, ingest.ErrTeardownTimeout, "Got unexpected teardown timeout error")
+				return
+			case <-time.After(maxDegradedDuration + 100*time.Millisecond):
 			}
-			waitWorkersEqual(t, s, collector, tc.cm.AllowList()...)
-			// Ensure no errors are received
-			checkService(t, runErr, false, 0)
+			require.False(t, tc.wantLateErr, "Service should have exited late with error but did not")
+			require.False(t, tc.wantLateReturn, "Service should have exited late without error but did not")
 		})
 	}
 }
 
-// Tests the addition and removal of apps from the allow list
-// and verifies that the service updates its workers accordingly.
-func TestRunModifyAllowList(t *testing.T) {
+func TestQuit(t *testing.T) {
 	t.Parallel()
 
-	cm := newConfigManager("SingleValid")
-	registry := prometheus.NewRegistry()
-	s := ingest.New(t.Context(), cm, &mockDProcessor{}, registry)
-	runErr := run(t, s)
+	tests := map[string]struct {
+		workerPool    *mockWorkerPool
+		metricsServer *mockMetricsServer
 
-	waitWorkersEqual(t, s, registry, cm.AllowList()...)
+		triggerWorkerPoolErr    bool // Trigger an error in the worker pool after run
+		triggerMetricsServerErr bool // Trigger an error in the metrics server after run
 
-	cm.setAllowList(t, append(cm.AllowList(), "MultiMixed"), 3)
-	waitWorkersEqual(t, s, registry, cm.AllowList()...)
+		force     bool
+		earlyQuit bool
 
-	cm.setAllowList(t, []string{}, 3)
-	waitWorkersEqual(t, s, registry)
+		wantHang bool
+		wantErr  bool
+	}{
+		"Basic Quit completes": {},
+		"Force Quit completes": {
+			force: true,
+		},
 
-	gracefulShutdown(t, s, runErr)
+		"Force Quit does not hang on metrics server shutdown": {
+			metricsServer: &mockMetricsServer{
+				shutdownDelay: 2 * time.Second,
+			},
+			force: true,
+		},
+		"Force Quit hangs on metrics server close": {
+			metricsServer: &mockMetricsServer{
+				closeDelay: 2 * time.Second,
+			},
+			force:    true,
+			wantHang: true,
+		},
+		"Quit hangs on metrics server shutdown": {
+			metricsServer: &mockMetricsServer{
+				shutdownDelay: 2 * time.Second,
+			},
+			wantHang: true,
+		},
+		"Quit does not hang on metrics server close": {
+			metricsServer: &mockMetricsServer{
+				closeDelay: 2 * time.Second,
+			},
+		},
+
+		// Error conditions
+		"Early Quit errors": {
+			earlyQuit: true,
+			wantErr:   true,
+		},
+		"Early Force Quit errors": {
+			earlyQuit: true,
+			force:     true,
+			wantErr:   true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if tc.workerPool == nil {
+				tc.workerPool = &mockWorkerPool{}
+			}
+			if tc.metricsServer == nil {
+				tc.metricsServer = &mockMetricsServer{}
+			}
+
+			tc.workerPool.initialize(t)
+			tc.metricsServer.initialize(t)
+
+			args := []ingest.Option{
+				ingest.WithMaxDegradedDuration(1 * time.Second),
+			}
+
+			service := ingest.New(t.Context(), tc.workerPool, tc.metricsServer, args...)
+
+			if tc.earlyQuit {
+				timedQuit(t, service, tc.force, tc.wantHang)
+				if tc.wantHang {
+					return
+				}
+			}
+
+			errCh := runServiceAsync(t, service)
+
+			select {
+			case err := <-errCh:
+				if tc.earlyQuit {
+					if tc.wantErr {
+						require.Error(t, err, "Expected error on early Quit but got none")
+						return
+					}
+					require.NoError(t, err, "Unexpected error on early Quit")
+					return
+				}
+				require.Fail(t, "Service should not have exited early before Quit")
+			case <-time.After(100 * time.Millisecond):
+				if tc.earlyQuit {
+					require.Fail(t, "Service should have early Quit but did not")
+				}
+			}
+
+			if tc.triggerWorkerPoolErr {
+				tc.workerPool.triggerError()
+			}
+			if tc.triggerMetricsServerErr {
+				tc.metricsServer.triggerError()
+			}
+			time.Sleep(50 * time.Millisecond)
+
+			timedQuit(t, service, tc.force, tc.wantHang)
+			if tc.wantHang {
+				return
+			}
+		})
+	}
 }
 
-func TestRunAfterQuitErrors(t *testing.T) {
-	t.Parallel()
+// runServiceAsync runs the ingest service in a goroutine and returns a channel to receive any errors.
+func runServiceAsync(t *testing.T, service *ingest.Service) <-chan error {
+	t.Helper()
 
-	cm := newConfigManager("SingleValid")
-	s := ingest.New(t.Context(), cm, &mockDProcessor{}, prometheus.NewRegistry())
-	defer s.Quit(true)
-
-	runErr := run(t, s)
-
-	checkService(t, runErr, false, 1*time.Second)
-	gracefulShutdown(t, s, runErr)
-
-	runErr = make(chan error, 1)
+	errCh := make(chan error, 1)
 	go func() {
-		defer close(runErr)
-		err := s.Run()
-		if err != nil {
-			runErr <- err
-		}
+		defer close(errCh)
+		errCh <- service.Run()
 	}()
-	checkService(t, runErr, true, 3*time.Second)
+
+	// Allow some time for things to process
+	time.Sleep(50 * time.Millisecond)
+	return errCh
 }
 
-func TestRunEarlyContextCancel(t *testing.T) {
-	t.Parallel()
-	cm := newConfigManager("MultiValid1", "MultiValid2", "MultiValid3")
-	proc := newProcessor(map[string]error{
-		"SingleValid": context.Canceled,
-	})
+func quitServiceAsync(t *testing.T, service *ingest.Service, force bool) <-chan struct{} {
+	t.Helper()
+
+	running := make(chan struct{})
+	go func() {
+		defer close(running)
+		service.Quit(force)
+	}()
+
+	return running
+}
+
+// timedQuit runs the Quit method.
+// If hang is not expected and quit times out, it will error.
+// If hang is expected but it does not hang, it will error.
+//
+// Hang timeout is set to 500 milliseconds.
+func timedQuit(t *testing.T, service *ingest.Service, force bool, hang bool) {
+	t.Helper()
+
+	quitRunning := quitServiceAsync(t, service, force)
+
+	select {
+	case <-quitRunning:
+		require.False(t, hang, "Expected quit to hang but it did not")
+	case <-time.After(500 * time.Millisecond):
+		require.True(t, hang, "Expected quit to exit but it did not")
+	}
+}
+
+type mockWorkerPool struct {
+	hang   bool
+	runErr error
+
+	internalCtx    context.Context
+	internalCancel context.CancelFunc
+}
+
+// initializes the mock worker pool.
+func (p *mockWorkerPool) initialize(t *testing.T) {
+	t.Helper()
 
 	ctx, cancel := context.WithCancel(t.Context())
-	s := ingest.New(ctx, cm, proc, prometheus.NewRegistry())
-	runErr := run(t, s)
-
-	// Ensure no errors are received before the context is canceled
-	checkService(t, runErr, false, 50*time.Millisecond)
-
-	cancel()
-
-	// Ensure that the service exited within a reasonable time
-	select {
-	case err := <-runErr:
-		require.NoError(t, err, "Expected nil error after context cancellation")
-	case <-time.After(3 * time.Second):
-		require.Fail(t, "Service did not exit after context cancellation")
-	}
+	p.internalCtx = ctx
+	p.internalCancel = cancel
 }
 
-// checkService is a helper function which waits a specified duration, unless an error signal is received.
-func checkService(t *testing.T, runErr chan error, expectErr bool, duration time.Duration) {
-	t.Helper()
-
-	select {
-	case err := <-runErr:
-		if expectErr {
-			require.Error(t, err, "Expected error but got nil")
-			return
-		}
-		// Unexpected early close
-		require.Fail(t, "Service closed unexpectedly: %v", err)
-	case <-time.After(duration):
-		require.False(t, expectErr, "Service did not exit with an error within the expected duration")
-	}
-}
-
-// gracefulShutdown is a helper function which simulates a graceful shutdown of the service.
-// If the service does not shutdown within 8 seconds, it fails the test.
-// If runErr receives an error during shutdown, it fails the test.
-func gracefulShutdown(t *testing.T, s *ingest.Service, runErr chan error) {
-	t.Helper()
-
-	done := make(chan struct{})
-	go func() {
-		s.Quit(false)
-		close(done)
-	}()
-
-	select {
-	case <-done:
-	case <-time.After(8 * time.Second):
-		require.Fail(t, "Service failed to shutdown gracefully within 8 seconds")
+// Run simulates the worker pool's Run method.
+func (p *mockWorkerPool) Run(ctx context.Context) error {
+	if p.hang {
+		// If hang is true, ignore the ctx
+		<-p.internalCtx.Done()
+		return p.runErr
 	}
 
-	// Check for any errors during shutdown
-	select {
-	case err := <-runErr:
-		require.NoError(t, err, "Service failed to shutdown gracefully")
-	case <-time.After(2 * time.Second):
-		require.Fail(t, "Service has not returned after 2 seconds")
-	}
-}
-
-// waitWorkersEqual is a helper function which waits until the active workers in the service match the expected workers.
-// It also checks the registry gauge if provided.
-func waitWorkersEqual(t *testing.T, s *ingest.Service, registry prometheus.Collector, workers ...string) {
-	t.Helper()
-	delay := 500 * time.Millisecond
-	timeout := 8 * time.Second
-
-	start := time.Now()
-	for {
-		got := s.WorkerNames()
-
-		slices.Sort(got)
-		slices.Sort(workers)
-
-		if slices.Equal(workers, got) {
-			if registry != nil {
-				assert.Len(t, workers, int(testutil.ToFloat64(registry)))
-			}
-			return
-		}
-		require.LessOrEqual(t, time.Since(start), timeout, "Workers did not match within the timeout. Wanted: %v, Got: %v", workers, got)
-		time.Sleep(delay)
-	}
-}
-
-type mockConfigManager struct {
-	allowList []string
-	allowSet  map[string]struct{}
-
-	closeReloadCh   bool
-	closeWatchErr   bool
-	watchErr        error
-	delayedWatchErr error
-
-	reloadCh chan struct{}
-	errCh    chan error
-
-	mu sync.RWMutex // Mutex to protect access to the allowList
-}
-
-func newConfigManager(allowList ...string) *mockConfigManager {
-	return &mockConfigManager{
-		allowList: allowList,
-		allowSet:  createSet(allowList...),
-		reloadCh:  make(chan struct{}),
-		errCh:     make(chan error),
-	}
-}
-
-func (m *mockConfigManager) Watch(ctx context.Context) (<-chan struct{}, <-chan error, error) {
-	if m.watchErr != nil {
-		return nil, nil, m.watchErr
-	}
-
-	if m.reloadCh == nil {
-		m.reloadCh = make(chan struct{})
-	}
-
-	if m.errCh == nil {
-		m.errCh = make(chan error)
-	}
-
-	if m.closeReloadCh {
-		close(m.reloadCh)
-	}
-	if m.closeWatchErr {
-		close(m.errCh)
-	} else if m.delayedWatchErr != nil {
-		go func() {
-			time.Sleep(2 * time.Second)
-			m.errCh <- m.delayedWatchErr
-		}()
-	}
-	return m.reloadCh, m.errCh, nil
-}
-
-func (m *mockConfigManager) AllowList() []string {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	allowListCopy := make([]string, len(m.allowList))
-	copy(allowListCopy, m.allowList)
-	return allowListCopy
-}
-
-func (m *mockConfigManager) IsAllowed(name string) bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	_, ok := m.allowSet[name]
-	return ok
-}
-
-func (m *mockConfigManager) setAllowList(t *testing.T, newAllowList []string, sendReloadSignal uint) {
-	t.Helper()
-
-	m.mu.Lock() // Lock for writing
-	defer m.mu.Unlock()
-	m.allowList = newAllowList
-	m.allowSet = createSet(newAllowList...)
-
-	for range sendReloadSignal {
-		require.NotNil(t, m.reloadCh, "Setup: Reload channel should not be nil")
-		m.reloadCh <- struct{}{}
-	}
-}
-
-func createSet(items ...string) map[string]struct{} {
-	set := make(map[string]struct{}, len(items))
-	for _, item := range items {
-		set[item] = struct{}{}
-	}
-	return set
-}
-
-// run is a helper function which runs the service in a separate goroutine
-// and returns a channel to receive any errors that occur during the run.
-//
-// The channel is closed when the run is complete.
-func run(t *testing.T, s *ingest.Service) chan error {
-	t.Helper()
-
-	runErr := make(chan error, 1)
-	go func() {
-		defer close(runErr)
-		err := s.Run()
-		if err != nil {
-			runErr <- err
-		}
-	}()
-
-	time.Sleep(50 * time.Millisecond) // Allow some time for the service to start
-	return runErr
-}
-
-type mockDProcessor struct {
-	processErrs map[string]error
-}
-
-func newProcessor(processErrs map[string]error) *mockDProcessor {
-	return &mockDProcessor{processErrs: processErrs}
-}
-
-func (p *mockDProcessor) Process(ctx context.Context, app string) error {
-	// Check context cancellation
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	default:
+	case <-p.internalCtx.Done():
+		return p.runErr
+	}
+}
+
+// triggerError simulates an error condition in the worker pool.
+// If runErr is set, it will cancel the internal context to simulate an error condition.
+func (p *mockWorkerPool) triggerError() {
+	if p.runErr != nil {
+		p.internalCancel()
+	}
+}
+
+type mockMetricsServer struct {
+	shutdownSignal chan struct{}
+	shutdownDelay  time.Duration
+	shutdownErr    error
+	shutdownOnce   sync.Once
+
+	closeSignal chan struct{}
+	closeDelay  time.Duration
+	closeErr    error
+	closeOnce   sync.Once
+
+	internalCtx       context.Context
+	internalCancel    context.CancelFunc
+	listenAndServeErr error
+
+	running chan struct{}
+}
+
+// initialize sets up the mock metrics server with the provided context.
+func (m *mockMetricsServer) initialize(t *testing.T) {
+	t.Helper()
+	m.shutdownSignal = make(chan struct{})
+	m.closeSignal = make(chan struct{})
+
+	ctx, cancel := context.WithCancel(t.Context())
+	m.internalCtx = ctx
+	m.internalCancel = cancel
+}
+
+// ListenAndServe simulates the metrics server's ListenAndServe method.
+func (m *mockMetricsServer) ListenAndServe() error {
+	m.running = make(chan struct{})
+	defer close(m.running)
+
+	select {
+	case <-m.internalCtx.Done():
+	case <-m.shutdownSignal:
+		return http.ErrServerClosed
+	case <-m.closeSignal:
+		return http.ErrServerClosed
+	}
+	return m.listenAndServeErr
+}
+
+// Shutdown simulates graceful shutdown of the metrics server.
+func (m *mockMetricsServer) Shutdown(ctx context.Context) error {
+	m.shutdownOnce.Do(func() {
+		close(m.shutdownSignal)
+	})
+
+	select {
+	case <-time.After(m.shutdownDelay):
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 
-	if err, ok := p.processErrs[app]; ok {
-		return err
+	return m.shutdownErr
+}
+
+// Close simulates closing the metrics server.
+func (m *mockMetricsServer) Close() error {
+	m.closeOnce.Do(func() {
+		close(m.closeSignal)
+	})
+
+	time.Sleep(m.closeDelay)
+	return m.closeErr
+}
+
+// triggerError simulates an error condition in the metrics server.
+// If listenAndServeErr is set, it will cancel the internal context to simulate an error condition.
+func (m *mockMetricsServer) triggerError() {
+	if m.listenAndServeErr != nil {
+		m.internalCancel()
 	}
-	return nil
 }
