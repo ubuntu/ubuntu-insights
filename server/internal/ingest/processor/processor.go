@@ -162,7 +162,9 @@ func (p Processor) Process(ctx context.Context, app string) (err error) {
 		default:
 		}
 
-		p.processFile(ctx, file, app, legacyApp, &attemptCount, &failureCount)
+		a, f := p.processFile(ctx, file, app, legacyApp)
+		attemptCount += a
+		failureCount += f
 	}
 
 	return nil
@@ -174,9 +176,7 @@ func (p *Processor) processFile(
 	file string,
 	app string,
 	legacyApp bool,
-	attemptCount *int,
-	failureCount *int,
-) {
+) (attemptCount, failureCount int) {
 	timer := prometheus.NewTimer(p.processDuration.WithLabelValues(app))
 	defer timer.ObserveDuration()
 	reportID := getReportID(file)
@@ -202,13 +202,13 @@ func (p *Processor) processFile(
 	}
 
 	if procErr == nil || errors.Is(procErr, errUnexpectedFields) || errors.Is(procErr, errUploadFailed) {
-		(*attemptCount)++
+		attemptCount++
 	}
 
 	if errors.Is(procErr, errUploadFailed) {
-		(*failureCount)++
+		failureCount++
 		p.filesProcessed.WithLabelValues(app, "upload_failure").Inc()
-		return
+		return attemptCount, failureCount
 	}
 
 	// Label for result of filesProcessed counter metric.
@@ -220,9 +220,9 @@ func (p *Processor) processFile(
 			processResult = "upload_invalid_pre_attempt_failure"
 		}
 		if uploadAttempted {
-			(*attemptCount)++
+			attemptCount++
 			if err != nil {
-				(*failureCount)++
+				failureCount++
 				processResult = "upload_invalid_failure"
 			}
 		}
@@ -236,6 +236,8 @@ func (p *Processor) processFile(
 
 	p.filesProcessed.WithLabelValues(app, processResult).Inc()
 	slog.Info("Finished processing file", "file", file, "id", reportID)
+
+	return attemptCount, failureCount
 }
 
 // processAndUpload processes a file, validates the report, and uploads it to the database.
