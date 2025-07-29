@@ -1,0 +1,8 @@
+httpmuxrequeststotal: |
+    # HELP http_mux_requests_total Tracks the number of HTTP requests to the mux.
+    # TYPE http_mux_requests_total counter
+    http_mux_requests_total{code="202",handler="Multiple Requests",method="get"} 2
+    http_mux_requests_total{code="202",handler="Multiple Requests",method="put"} 1
+    http_mux_requests_total{code="404",handler="Multiple Requests",method="get"} 1
+    http_mux_requests_total{code="404",handler="Multiple Requests",method="post"} 1
+endpointmetrics: {}
