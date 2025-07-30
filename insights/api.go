@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
 
 	"github.com/ubuntu/ubuntu-insights/insights/internal/collector"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/consent"
@@ -41,7 +40,7 @@ type UploadFlags struct {
 //
 // If ConsentDir is not set, a default path will be used.
 // If InsightsDir is not set, a default path will be used.
-// If Logger is not set, a default logger will be created.
+// If Logger is not set, the global default slog Logger will be used.
 func (c Config) Resolve() Config {
 	if c.ConsentDir == "" {
 		c.ConsentDir = constants.DefaultConfigPath
@@ -51,7 +50,7 @@ func (c Config) Resolve() Config {
 	}
 
 	if c.Logger == nil {
-		c.Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+		c.Logger = slog.Default()
 	}
 	return c
 }
