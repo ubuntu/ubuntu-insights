@@ -9,3 +9,4 @@ flags:
     period: 10
     force: true
     dryrun: true
+outreport: ""

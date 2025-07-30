@@ -20,20 +20,29 @@ import (
 // flags may be NULL.
 // If collection fails, an error string is returned.
 // Otherwise, this returns NULL.
+//
+// If out_report and out_report_len are not NULL,
+// the pretty printed report is returned in out_report
+// and its length in out_report_len.
+// Note that this return may not match with what is written
+// to disk depending on provided flags and the consent state.
+// If the consent state is determined to be false, an OptOut report
+// will be written to disk, but the full compiled report will still be returned.
+//
+// The out_report must be freed by the caller.
 // The error string must be freed. */
 //export collectInsights
-func collectInsights(config *C.CInsightsConfig, source *C.char, flags *C.CCollectFlags) *C.char {
-	return collectCustomInsights(config, source, flags, func(conf insights.Config, source string, f insights.CollectFlags) error {
-		_, err := conf.Collect(source, f)
-		return err
+func collectInsights(config *C.CInsightsConfig, source *C.char, flags *C.CCollectFlags, out_report **C.char, out_report_len *C.size_t) *C.char { //nolint:revive // Exported for C
+	return collectCustomInsights(config, source, flags, out_report, out_report_len, func(conf insights.Config, source string, f insights.CollectFlags) ([]byte, error) {
+		return conf.Collect(source, f)
 	})
 }
 
 // collector is a function that collects using the given parameters.
-type collector = func(conf insights.Config, source string, flags insights.CollectFlags) error
+type collector = func(conf insights.Config, source string, flags insights.CollectFlags) ([]byte, error)
 
 // collectCustomInsights handles C to Go translation and calls the custom collector.
-func collectCustomInsights(config *C.CInsightsConfig, source *C.char, flags *C.CCollectFlags, customCollector collector) *C.char {
+func collectCustomInsights(config *C.CInsightsConfig, source *C.char, flags *C.CCollectFlags, outReport **C.char, outReportLen *C.size_t, customCollector collector) *C.char {
 	conf := toGoInsightsConfig(config)
 
 	f := insights.CollectFlags{}
@@ -55,8 +64,31 @@ func collectCustomInsights(config *C.CInsightsConfig, source *C.char, flags *C.C
 		sourceStr = C.GoString(source)
 	}
 
-	err := customCollector(conf, sourceStr, f)
-	return errToCString(err)
+	report, err := customCollector(conf, sourceStr, f)
+	if err != nil {
+		if outReport != nil {
+			*outReport = nil
+		}
+		if outReportLen != nil {
+			*outReportLen = 0
+		}
+		return errToCString(err)
+	}
+
+	if outReport == nil || outReportLen == nil {
+		// avoid leaking memory or writing to nil, assume no need to return report
+		return nil
+	}
+
+	if len(report) == 0 {
+		*outReport = nil
+		*outReportLen = 0
+		return nil
+	}
+
+	*outReport = (*C.char)(C.CBytes(report))
+	*outReportLen = C.size_t(len(report))
+	return nil
 }
 
 /* uploadInsights uploads reports for the specified sources.
