@@ -15,7 +15,7 @@ import (
 )
 
 /* collectInsights creates a report for the specified source.
-// config must not be NULL.
+// If config is NULL, defaults are used.
 // source may be NULL or "" to use platform default.
 // flags may be NULL.
 // If collection fails, an error string is returned.
@@ -92,7 +92,7 @@ func collectCustomInsights(config *C.CInsightsConfig, source *C.char, flags *C.C
 }
 
 /* uploadInsights uploads reports for the specified sources.
-// config must not be NULL.
+// If config is NULL, defaults are used.
 // sources may be NULL or empty to handle all reports.
 // sourcesLen is the number of sources in the array.
 // flags may be NULL.
@@ -142,7 +142,7 @@ func uploadCustomInsights(config *C.CInsightsConfig, sources **C.char, sourcesLe
 }
 
 /* getConsentState gets the consent state for the specified source.
-// config must not be NULL.
+// If config is NULL, defaults are used.
 // source may be NULL or "" to retrieve the global source.
 // If it could not be retrieved, this function returns CONSENT_UNKNOWN.
 // Otherwise, it returns the consent state of the source. */
@@ -176,7 +176,7 @@ func getCustomConsentState(config *C.CInsightsConfig, source *C.char, getter con
 }
 
 /* setConsentState sets the state for the specified source to newState.
-// config must not be NULL.
+// If config is NULL, defaults are used.
 // source may be NULL or "" to affect the global state.
 // If the state could not be set, this function returns an error string.
 // Otherwise, it returns NULL
