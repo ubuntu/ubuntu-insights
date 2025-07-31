@@ -7,15 +7,19 @@ import (
 	"log/slog"
 	"path/filepath"
 	"runtime"
+	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/ubuntu/ubuntu-insights/common/cli"
 	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
 	"github.com/ubuntu/ubuntu-insights/server/internal/common/constants"
+	"github.com/ubuntu/ubuntu-insights/server/internal/common/metrics"
 	"github.com/ubuntu/ubuntu-insights/server/internal/ingest"
 	"github.com/ubuntu/ubuntu-insights/server/internal/ingest/database"
 	"github.com/ubuntu/ubuntu-insights/server/internal/ingest/processor"
+	"github.com/ubuntu/ubuntu-insights/server/internal/ingest/workers"
 )
 
 // App represents the application.
@@ -31,11 +35,14 @@ type App struct {
 
 // appConfig holds the configuration for the application.
 type appConfig struct {
-	Verbosity     int
+	Verbosity int
+
+	MetricsConfig metrics.Config
 	DBconfig      database.Config
 	ReportsDir    string // Base directory for reports
-	ConfigPath    string
 	MigrationsDir string
+
+	ConfigPath string
 }
 
 // New creates a new App instance with default values.
@@ -92,6 +99,12 @@ func installRootCmd(app *App) {
 	// Daemon flags
 	cmd.Flags().StringVar(&app.config.ReportsDir, "reports-dir", constants.DefaultServiceReportsDir, "base directory to read reports from")
 	cmd.Flags().StringVarP(&app.config.ConfigPath, "daemon-config", "c", "", "path to the configuration file")
+
+	// Metrics server flags
+	cmd.Flags().DurationVar(&app.config.MetricsConfig.ReadTimeout, "read-timeout", 5*time.Second, "read timeout for the metrics HTTP server")
+	cmd.Flags().DurationVar(&app.config.MetricsConfig.WriteTimeout, "write-timeout", 10*time.Second, "write timeout for the metrics HTTP server")
+	cmd.Flags().StringVar(&app.config.MetricsConfig.Host, "metrics-host", "", "host for the metrics endpoint")
+	cmd.Flags().IntVar(&app.config.MetricsConfig.Port, "metrics-port", 2113, "port for the metrics endpoint")
 
 	addDBFlags(cmd, &app.config.DBconfig)
 
@@ -160,12 +173,20 @@ func (a *App) run() (err error) {
 		return fmt.Errorf("failed to connect to database: %v", err)
 	}
 
-	proc, err := processor.New(a.config.ReportsDir, db)
+	registry := prometheus.NewRegistry()
+	proc, err := processor.New(a.config.ReportsDir, db, registry)
 	if err != nil {
 		return fmt.Errorf("failed to create report processor: %v", err)
 	}
 
-	a.daemon = ingest.New(context.Background(), cm, proc)
+	workerPool, err := workers.New(cm, proc, registry)
+	if err != nil {
+		return fmt.Errorf("failed to create worker pool: %v", err)
+	}
+
+	metricsServer := metrics.New(a.config.MetricsConfig, registry)
+
+	a.daemon = ingest.New(context.Background(), workerPool, metricsServer)
 	close(a.ready)
 
 	return a.daemon.Run()

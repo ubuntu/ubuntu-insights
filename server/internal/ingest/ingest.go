@@ -6,15 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math/rand"
+	"net/http"
 	"sync"
 	"time"
 )
 
 // Service represents the ingest service that processes and uploads reports to the database.
 type Service struct {
-	cm   dConfigManager
-	proc dProcessor
+	workerPool    WorkerPool
+	metricsServer MetricsServer
 
 	// This context is used to interrupt any action.
 	// It must be the parent of gracefulCtx.
@@ -25,185 +25,164 @@ type Service struct {
 	gracefulCtx    context.Context
 	gracefulCancel context.CancelFunc
 
-	mu       sync.Mutex
-	workers  map[string]context.CancelFunc
-	workerWG sync.WaitGroup
+	maxDegradedDuration time.Duration
+
+	running chan struct{} // Channel to signal when the service is running.
 }
 
-type dConfigManager interface {
-	Watch(context.Context) (<-chan struct{}, <-chan error, error)
-	AllowList() []string
-	IsAllowed(string) bool
+// WorkerPool is an interface that defines the methods for a worker pool.
+type WorkerPool interface {
+	Run(ctx context.Context) error
 }
 
-type dProcessor interface {
-	Process(ctx context.Context, app string) error
+// MetricsServer is an interface that defines the methods for a metrics server.
+type MetricsServer interface {
+	ListenAndServe() error
+	Shutdown(ctx context.Context) error
+	Close() error
 }
+
+type options struct {
+	maxDegradedDuration time.Duration
+}
+
+// Option is a function which tweaks the creation of the Service.
+type Option func(*options)
+
+var (
+	// errServiceClosed is returned when the service is already closed.
+	errServiceClosed = errors.New("service closed")
+
+	// ErrTeardownTimeout is returned when the service takes too long to shut down.
+	// A force Quit may be required to cleanup the service.
+	ErrTeardownTimeout = errors.New("service teardown timed out")
+)
 
 // New creates a new ingest service with the provided config manager and processor.
-func New(ctx context.Context, cm dConfigManager, proc dProcessor) *Service {
+func New(ctx context.Context, workerPool WorkerPool, metricsServer MetricsServer, args ...Option) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	gCtx, gCancel := context.WithCancel(ctx)
 
+	opts := options{
+		maxDegradedDuration: 2 * time.Minute, // Default degraded state duration
+	}
+	for _, arg := range args {
+		arg(&opts)
+	}
+
+	running := make(chan struct{})
+	close(running) // Close immediately to avoid blocking on the channel.
 	return &Service{
-		cm:   cm,
-		proc: proc,
+		workerPool:    workerPool,
+		metricsServer: metricsServer,
 
 		ctx:            ctx,
 		cancel:         cancel,
 		gracefulCtx:    gCtx,
 		gracefulCancel: gCancel,
 
-		mu:       sync.Mutex{},
-		workers:  make(map[string]context.CancelFunc),
-		workerWG: sync.WaitGroup{},
+		maxDegradedDuration: opts.maxDegradedDuration,
+
+		running: running,
 	}
 }
 
 // Run starts the ingest service.
 //
-// It watches the configured location for new reports that have been saved to disk.
-// It will then process, validate, and then upload the reports to the database.
+// Returns once all sub-services have completed, or after an extended time being in a degraded state.
 func (s *Service) Run() error {
 	slog.Info("Ingest service started")
 
 	select {
 	case <-s.gracefulCtx.Done():
-		return errors.New("server is already shutting down")
+		return errServiceClosed
 	default:
 	}
 
-	reloadEventCh, cfgWatchErrCh, err := s.cm.Watch(s.gracefulCtx)
-	if err != nil {
-		return fmt.Errorf("failed to start watch configuration: %v", err)
+	s.running = make(chan struct{})
+	defer close(s.running)
+	defer s.cancel() // Ensure we cancel the context when done, regardless of result.
+
+	done := make(chan error, 2)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() { done <- s.runWorkers(); wg.Done() }()
+	go func() { done <- s.runMetrics(); wg.Done() }()
+	go func() { wg.Wait(); close(done) }() // Close done only after both goroutines have finished.
+
+	// Ensure we don't get stuck in a degraded state if one of the services fails.
+	err := <-done
+	slog.Info("Waiting for ingest services to finish")
+
+	select {
+	case <-time.After(s.maxDegradedDuration):
+		// We've waited for teardown for too long, give up even though errors may be lost.
+		slog.Warn("Ingest service teardown timed out")
+		err = errors.Join(err, ErrTeardownTimeout)
+	case secondDone := <-done:
+		err = errors.Join(err, secondDone)
 	}
 
-	// Initial sync
-	s.syncWorkers()
-
-	// Debounce timer for handling bursts of events
-	debounceDuration := 5 * time.Second
-	debounceTimer := time.NewTimer(debounceDuration)
-	defer debounceTimer.Stop()
-
-	for {
-		select {
-		case <-s.gracefulCtx.Done():
-			slog.Info("Ingest service stopped")
-			return nil
-
-		case _, ok := <-reloadEventCh:
-			if !ok {
-				return fmt.Errorf("reloadEventCh closed unexpectedly")
-			}
-			if !debounceTimer.Stop() {
-				select {
-				case <-debounceTimer.C:
-				default:
-				}
-			}
-			debounceTimer.Reset(debounceDuration)
-
-		case <-debounceTimer.C:
-			// Timer expired, perform the resync
-			slog.Info("Resyncing workers after configuration change")
-			s.syncWorkers()
-			slog.Debug("Completed resyncing workers")
-
-		case err, ok := <-cfgWatchErrCh:
-			if !ok {
-				return fmt.Errorf("cfgWatchErrCh closed unexpectedly")
-			}
-			if err != nil {
-				slog.Error("Configuration watcher error", "err", err)
-			}
-		}
-	}
+	return err
 }
 
-// syncWorkers diffs the allow‐list and starts/stops goroutines.
-func (s *Service) syncWorkers() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *Service) runWorkers() error {
+	slog.Info("Starting worker pool")
+	defer s.gracefulCancel() // Request stop if workers fail.
 
-	// stop removed
-	for app, cancel := range s.workers {
-		if !s.cm.IsAllowed(app) {
-			cancel()
-			delete(s.workers, app)
-		}
+	if err := s.workerPool.Run(s.gracefulCtx); err != nil && !errors.Is(err, s.gracefulCtx.Err()) {
+		slog.Error("Worker pool encountered an error", "err", err)
+		return fmt.Errorf("ingest workers error: %v", err)
 	}
-	// start added
-	for _, app := range s.cm.AllowList() {
-		if _, ok := s.workers[app]; ok {
-			continue
-		}
-
-		select {
-		case <-s.gracefulCtx.Done():
-			slog.Info("Graceful shutdown in progress, stopping app worker", "app", app)
-			return // normal shutdown
-		default:
-		}
-		ctx, cancel := context.WithCancel(s.gracefulCtx)
-		s.workers[app] = cancel
-		slog.Info("Starting app worker", "app", app)
-		go s.appWorker(ctx, app)
-	}
+	slog.Info("Workers stopped")
+	return nil
 }
 
-// appWorker watches & processes files for a single app until ctx is canceled.
-func (s *Service) appWorker(ctx context.Context, app string) {
-	s.workerWG.Add(1)
-	defer s.workerWG.Done()
+func (s *Service) runMetrics() error {
+	slog.Info("Starting metrics server")
+	defer s.gracefulCancel() // Request stop if metrics fail.
 
-	baseBackoff := 5 * time.Second
-	maxBackoff := 30 * time.Second
-	backoff := baseBackoff
+	metricsErrCh := make(chan error, 1)
+	go func() {
+		defer close(metricsErrCh)
+		if err := s.metricsServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			metricsErrCh <- err
+		}
+	}()
 
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			// this will read/process/remove JSON files and call s.db.Upload(...)
-			err := s.proc.Process(ctx, app)
-			if err == nil {
-				backoff = baseBackoff
-				continue
-			}
-			if errors.Is(err, context.Canceled) {
-				slog.Debug("App worker stopped", "app", app)
-				return // normal shutdown
-			}
-
-			// #nosec:G404 We don't need cryptographic randomness.
-			sleep := time.Duration(rand.Int63n(int64(backoff)))
-			select {
-			case <-time.After(sleep):
-			case <-ctx.Done():
-				slog.Debug("App worker stopped during backoff", "app", app)
-				return // normal shutdown
-			}
-
-			backoff = min(backoff*2, maxBackoff)
+	select {
+	case <-s.ctx.Done():
+		slog.Info("Closing metrics server", "reason", s.ctx.Err())
+		s.metricsServer.Close()
+		return nil
+	case <-s.gracefulCtx.Done():
+		slog.Info("Graceful shutdown initiated for metrics server")
+		if err := s.metricsServer.Shutdown(s.ctx); err != nil {
+			slog.Error("Metrics server graceful shutdown encountered error", "err", err)
+			return fmt.Errorf("metrics server shutdown error: %v", err)
+		}
+	case err := <-metricsErrCh:
+		// No need to shutdown or close, just propagate the error.
+		if err != nil {
+			slog.Error("Metrics server encountered error", "err", err)
+			return fmt.Errorf("metrics server error: %v", err)
 		}
 	}
+	slog.Info("Metrics server shut down gracefully")
+	return nil
 }
 
 // Quit stops the ingest service.
-// If force is false, it will block until all workers close.
-//
-// Safe to call multiple times.
+// Blocks until the service has finished running.
 func (s *Service) Quit(force bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	slog.Info("Stopping Ingest service")
+
 	if force {
 		s.cancel()
+		s.metricsServer.Close()
 	} else {
 		s.gracefulCancel()
-		s.workerWG.Wait()
 	}
+
+	<-s.running // Wait for the service to finish running.
 }
