@@ -1,12 +1,12 @@
 conf:
-    consentdir: home/etc/dir
-    insightsdir: insights/dir
+    consentdir: ""
+    insightsdir: ""
     logger: null
-source: platform
+source: ""
 flags:
     sourcemetricspath: ""
     sourcemetricsjson: []
     period: 0
     force: false
     dryrun: false
-outreport: ""
+outreport: '{"output": "report data"}'
