@@ -9,4 +9,4 @@ flags:
     period: 0
     force: false
     dryrun: false
-outreport: ""
+outreport: '{"output": "report data with null \x00 in middle"}'
