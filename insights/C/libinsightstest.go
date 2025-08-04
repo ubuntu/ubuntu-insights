@@ -158,7 +158,7 @@ func TestCollectImpl(t *testing.T) {
 			})
 			defer C.free(unsafe.Pointer(ret))
 			defer func() {
-				if tc.outReport != nil && *tc.outReport != nil {
+				if tc.outReport != nil {
 					C.free(unsafe.Pointer(*tc.outReport))
 				}
 			}()
