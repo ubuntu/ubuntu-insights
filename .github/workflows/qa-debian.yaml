@@ -1,5 +1,5 @@
 name: Debian package tests
-# Builds the client debian package on ubuntu:devel and attempt to install it locally to run a set of toy tests as well as autopkgtest.
+# Builds the client debian package and attempt to install it locally to run a set of toy tests as well as autopkgtest.
 
 on:
   pull_request:
@@ -11,13 +11,33 @@ on:
   push:
     branches: [main]
 
+env:
+  UBUNTU_VERSIONS: |
+    ["devel"]
+  AUTOPKGTEST_HOST: |
+    ["ubuntu-24.04", "ubuntu-24.04-arm"]
+
 jobs:
+  plan:
+    name: Create test plan # Dynamic matrix generation for subsequent jobs
+    runs-on: ubuntu-latest
+    outputs:
+      ubuntu-versions: ${{ env.UBUNTU_VERSIONS }}
+      autopkgtest-host: ${{ env.AUTOPKGTEST_HOST }}
+    steps:
+      - run: "true"
+
   build-ubuntu-insights:
     name: Build ubuntu-insights debian package
+    needs: plan
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu-version: ${{ fromJSON(needs.plan.outputs.ubuntu-versions) }}
     runs-on: ubuntu-latest
     outputs:
       run-id: ${{ github.run_id }}
-      pkg-dsc-devel:  ${{ steps.outputs.outputs.pkg-dsc-devel }}
+      pkg-dsc-devel: ${{ steps.outputs.outputs.pkg-dsc-devel }}
       pkg-src-changes-devel: ${{ steps.outputs.outputs.pkg-src-changes-devel }}
     steps:
       - name: Checkout code
@@ -27,30 +47,36 @@ jobs:
         with:
           source-dir: insights
           token: ${{ secrets.GITHUB_TOKEN }}
-          docker-image: ubuntu:devel
-      
+          docker-image: ubuntu:${{ matrix.ubuntu-version }}
+
       - name: Generate outputs
         id: outputs
         run: |
           (
-            echo "pkg-dsc-devel=${{ env.PKG_DSC }}"
-            echo "pkg-src-changes-devel=${{ env.PKG_SOURCE_CHANGES }}"
+            echo "pkg-dsc-${{ matrix.ubuntu-version }}=${{ env.PKG_DSC }}"
+            echo "pkg-src-changes-${{ matrix.ubuntu-version }}=${{ env.PKG_SOURCE_CHANGES }}"
           ) >> "${GITHUB_OUTPUT}"
 
   qa:
     name: Run trivial debian package tests
+    needs:
+      - plan
+      - build-ubuntu-insights
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu-version: ${{ fromJSON(needs.plan.outputs.ubuntu-versions) }}
     runs-on: ubuntu-latest
-    needs: build-ubuntu-insights
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          # name: is left blank so that all artifacts are downloaded
-          path: ci-artifacts
+          run-id: ${{ needs.build-ubuntu-insights.outputs.run-id }}
+          merge-multiple: true
 
       - name: Install ubuntu-insights debian package
         run: |
-          sudo apt install -y ./ci-artifacts/ubuntu-insights_*-debian-packages/ubuntu-insights_*.deb
+          sudo apt install -y ./ubuntu-insights_*.deb
 
       - name: Ensure man page is installed
         run: |
@@ -77,9 +103,34 @@ jobs:
 
   autopkgtest:
     name: Run autopkgtest
-    runs-on: ubuntu-latest
-    needs: build-ubuntu-insights
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu-version: ${{ fromJSON(needs.plan.outputs.ubuntu-versions) }}
+        autopkgtest-host: ${{ fromJSON(needs.plan.outputs.autopkgtest-host) }}
+    runs-on: ${{ matrix.autopkgtest-host }}
+    needs:
+      - plan
+      - build-ubuntu-insights
     steps:
+      # Copied from https://github.com/ubuntu/authd/blob/main/.github/workflows/build-deb.yaml
+      # FIXME: Use dynamic outputs when possible: https://github.com/actions/runner/pull/2477
+      - name: Plan autopkgtest job
+        run: |
+          set -exuo pipefail
+
+          json_output='${{ toJSON(needs.build-ubuntu-insights.outputs) }}'
+          for var in $(echo "${json_output}" | jq -r 'keys | .[]'); do
+            if [[ "${var}" != *"-${{ matrix.ubuntu-version }}" ]]; then
+              continue;
+            fi
+
+            v=$(echo "${json_output}" | jq -r ".\"${var}\"")
+            var="${var%-${{ matrix.ubuntu-version }}}"
+            echo "${var//-/_}=${v}" >> "${GITHUB_ENV}"
+            # Environment variable names cannot contain hyphens, so replace them with underscores before exporting.
+          done
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -89,5 +140,5 @@ jobs:
       - name: Run autopkgtest
         uses: canonical/desktop-engineering/gh-actions/common/run-autopkgtest@main
         with:
-          lxd-image: ubuntu:devel
-          source-changes: ${{ needs.build-ubuntu-insights.outputs.pkg-src-changes-devel }}
+          lxd-image: ubuntu:${{ matrix.ubuntu-version }}
+          source-changes: ${{ env.pkg_src_changes }}
