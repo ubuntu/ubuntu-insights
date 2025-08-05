@@ -15,25 +15,34 @@ import (
 )
 
 /* collectInsights creates a report for the specified source.
-// config must not be NULL.
+// If config is NULL, defaults are used.
 // source may be NULL or "" to use platform default.
 // flags may be NULL.
 // If collection fails, an error string is returned.
 // Otherwise, this returns NULL.
+//
+// If out_report is not NULL,
+// the pretty printed report is returned in out_report
+// as a null-terminated C string.
+// Note that this return may not match with what is written
+// to disk depending on provided flags and the consent state.
+// If the consent state is determined to be false, an OptOut report
+// will be written to disk, but the full compiled report will still be returned.
+//
+// The out_report must be freed by the caller.
 // The error string must be freed. */
 //export collectInsights
-func collectInsights(config *C.CInsightsConfig, source *C.char, flags *C.CCollectFlags) *C.char {
-	return collectCustomInsights(config, source, flags, func(conf insights.Config, source string, f insights.CollectFlags) error {
-		_, err := conf.Collect(source, f)
-		return err
+func collectInsights(config *C.CInsightsConfig, source *C.char, flags *C.CCollectFlags, out_report **C.char) *C.char { //nolint:revive // Exported for C
+	return collectCustomInsights(config, source, flags, out_report, func(conf insights.Config, source string, f insights.CollectFlags) ([]byte, error) {
+		return conf.Collect(source, f)
 	})
 }
 
 // collector is a function that collects using the given parameters.
-type collector = func(conf insights.Config, source string, flags insights.CollectFlags) error
+type collector = func(conf insights.Config, source string, flags insights.CollectFlags) ([]byte, error)
 
 // collectCustomInsights handles C to Go translation and calls the custom collector.
-func collectCustomInsights(config *C.CInsightsConfig, source *C.char, flags *C.CCollectFlags, customCollector collector) *C.char {
+func collectCustomInsights(config *C.CInsightsConfig, source *C.char, flags *C.CCollectFlags, outReport **C.char, customCollector collector) *C.char {
 	conf := toGoInsightsConfig(config)
 
 	f := insights.CollectFlags{}
@@ -55,12 +64,30 @@ func collectCustomInsights(config *C.CInsightsConfig, source *C.char, flags *C.C
 		sourceStr = C.GoString(source)
 	}
 
-	err := customCollector(conf, sourceStr, f)
-	return errToCString(err)
+	report, err := customCollector(conf, sourceStr, f)
+	if err != nil {
+		if outReport != nil {
+			*outReport = nil
+		}
+		return errToCString(err)
+	}
+
+	if outReport == nil {
+		// avoid leaking memory or writing to nil, assume no need to return report
+		return nil
+	}
+
+	if len(report) == 0 {
+		*outReport = nil
+		return nil
+	}
+
+	*outReport = C.CString(string(report))
+	return nil
 }
 
 /* uploadInsights uploads reports for the specified sources.
-// config must not be NULL.
+// If config is NULL, defaults are used.
 // sources may be NULL or empty to handle all reports.
 // sourcesLen is the number of sources in the array.
 // flags may be NULL.
@@ -110,7 +137,7 @@ func uploadCustomInsights(config *C.CInsightsConfig, sources **C.char, sourcesLe
 }
 
 /* getConsentState gets the consent state for the specified source.
-// config must not be NULL.
+// If config is NULL, defaults are used.
 // source may be NULL or "" to retrieve the global source.
 // If it could not be retrieved, this function returns CONSENT_UNKNOWN.
 // Otherwise, it returns the consent state of the source. */
@@ -144,7 +171,7 @@ func getCustomConsentState(config *C.CInsightsConfig, source *C.char, getter con
 }
 
 /* setConsentState sets the state for the specified source to newState.
-// config must not be NULL.
+// If config is NULL, defaults are used.
 // source may be NULL or "" to affect the global state.
 // If the state could not be set, this function returns an error string.
 // Otherwise, it returns NULL

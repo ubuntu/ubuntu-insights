@@ -7,7 +7,7 @@ package main
 #include <stdlib.h>
 #include "insights_types.h"
 
-extern char* collectInsights(const InsightsConfig*, const char*, const CollectFlags*);
+extern char* collectInsights(const InsightsConfig*, const char*, const CollectFlags*, char**);
 extern char* uploadInsights(const InsightsConfig*, const char**, size_t, const UploadFlags*);
 extern ConsentState getConsentState(const InsightsConfig*, const char*);
 extern char* setConsentState(const InsightsConfig*, const char*, bool);
@@ -35,7 +35,10 @@ func TestCollectImpl(t *testing.T) {
 		sourceMetricsJSON []byte
 		flags             *C.CollectFlags
 
-		err error
+		outReport **C.char
+
+		mockOut []byte
+		mockErr error
 	}{
 		// conversion cases
 		"Null values are empty": {},
@@ -86,9 +89,32 @@ func TestCollectImpl(t *testing.T) {
 			},
 		},
 
+		// Report output
+		"Report is returned when outReport and outReportLen are provided": {
+			outReport: new(*C.char),
+			mockOut:   []byte(`{"output": "report data"}`),
+		},
+		"Report is not returned when outReport is nil": {
+			outReport: nil,
+			mockOut:   []byte(`{"output": "no report"}`),
+		},
+		"Report is returned safely when empty": {
+			outReport: new(*C.char),
+			mockOut:   []byte(""),
+		},
+		"Report return is safe when output has null terminator in middle": {
+			outReport: new(*C.char),
+			mockOut:   []byte(`{"output": "report data with null \x00 in middle"}`),
+		},
+
 		// error case
 		"error returns error string": {
-			err: errors.New("Error String"),
+			mockErr: errors.New("Error String"),
+		},
+		"Report is not returned in error case": {
+			outReport: new(*C.char),
+			mockErr:   errors.New("Error String"),
+			mockOut:   []byte(`{"output": "no report in error"}`),
 		},
 	}
 	for name, tc := range tests {
@@ -117,28 +143,39 @@ func TestCollectImpl(t *testing.T) {
 				Conf   insights.Config
 				Source string
 				Flags  insights.CollectFlags
+
+				OutReport string
 			}
 
 			sourceStr := C.CString(tc.source)
 			defer C.free(unsafe.Pointer(sourceStr))
 
-			ret := collectCustomInsights(inConfig, sourceStr, tc.flags, func(conf insights.Config, source string, flags insights.CollectFlags) error {
+			ret := collectCustomInsights(inConfig, sourceStr, tc.flags, tc.outReport, func(conf insights.Config, source string, flags insights.CollectFlags) ([]byte, error) {
 				got.Conf = conf
 				got.Source = source
 				got.Flags = flags
-				return tc.err
+				return tc.mockOut, tc.mockErr
 			})
 			defer C.free(unsafe.Pointer(ret))
+			defer func() {
+				if tc.outReport != nil {
+					C.free(unsafe.Pointer(*tc.outReport))
+				}
+			}()
 
-			if tc.err == nil {
+			if tc.mockErr == nil {
 				assert.Nil(t, ret)
 			} else {
-				assert.Equal(t, C.GoString(ret), tc.err.Error())
+				assert.Equal(t, C.GoString(ret), tc.mockErr.Error())
 			}
 
 			// ensure SourceMetricsJSON is not nil for better comparison
 			if got.Flags.SourceMetricsJSON == nil {
 				got.Flags.SourceMetricsJSON = []byte{}
+			}
+
+			if tc.outReport != nil {
+				got.OutReport = C.GoString(*tc.outReport)
 			}
 
 			assert.NotNil(t, got.Conf.Logger, "Logger should not be nil in the callback")
