@@ -47,6 +47,7 @@ type Processor struct {
 	filesProcessed  *prometheus.CounterVec
 	processDuration *prometheus.HistogramVec
 	cacheGauge      *prometheus.GaugeVec
+	cacheSizeGauge  *prometheus.GaugeVec
 	errors          *prometheus.CounterVec
 }
 
@@ -86,12 +87,23 @@ func New(reportsDir string, db database, registry prometheus.Registerer) (*Proce
 	cacheGauge := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "ingest_processor_cache_size",
-			Help: "Current size of the cache used by the processor, indicating the number of pending reports.",
+			Help: "Current number of reports in the cache for a given app, indicating the number of pending reports.",
 		},
 		[]string{"app"},
 	)
 	if err := registry.Register(cacheGauge); err != nil {
 		return nil, fmt.Errorf("failed to register cacheGauge metric: %v", err)
+	}
+
+	cacheSizeGauge := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "ingest_processor_cache_size_bytes",
+			Help: "Current size of the reports cache for a given app in bytes, indicating the size of pending reports.",
+		},
+		[]string{"app"},
+	)
+	if err := registry.Register(cacheSizeGauge); err != nil {
+		return nil, fmt.Errorf("failed to register cacheSizeGauge metric: %v", err)
 	}
 
 	errors := prometheus.NewCounterVec(
@@ -112,6 +124,7 @@ func New(reportsDir string, db database, registry prometheus.Registerer) (*Proce
 		filesProcessed:  filesProcessed,
 		processDuration: processDuration,
 		cacheGauge:      cacheGauge,
+		cacheSizeGauge:  cacheSizeGauge,
 		errors:          errors,
 	}, nil
 }
@@ -137,11 +150,12 @@ func (p Processor) Process(ctx context.Context, app string) (err error) {
 		return fmt.Errorf("failed to create directory %q: %v", dir, err)
 	}
 
-	files, err := getJSONFiles(dir)
+	files, dirSize, err := getJSONFiles(dir)
 	if err != nil {
 		return fmt.Errorf("failed to get JSON files: %v", err)
 	}
 	p.cacheGauge.WithLabelValues(app).Set(float64(len(files)))
+	p.cacheSizeGauge.WithLabelValues(app).Set(float64(dirSize))
 
 	var (
 		attemptCount = 0
@@ -312,8 +326,9 @@ func validateLegacyReport(data *models.LegacyTargetModel) error {
 	return nil
 }
 
-func getJSONFiles(dir string) ([]string, error) {
+func getJSONFiles(dir string) ([]string, int64, error) {
 	var files []string
+	var totalSize int64
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -321,11 +336,16 @@ func getJSONFiles(dir string) ([]string, error) {
 
 		if d.Type().IsRegular() && filepath.Ext(path) == ".json" {
 			files = append(files, path)
+			info, err := d.Info()
+			if err != nil {
+				slog.Warn("Failed to get file info", "file", path, "err", err)
+				return nil
+			}
+			totalSize += info.Size()
 		}
 		return nil
 	})
-
-	return files, err
+	return files, totalSize, err
 }
 
 // getReportID extracts the report ID from the file path.

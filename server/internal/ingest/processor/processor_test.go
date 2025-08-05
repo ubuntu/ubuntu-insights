@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -16,6 +18,7 @@ import (
 	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/server/internal/common/constants"
 	"github.com/ubuntu/ubuntu-insights/server/internal/ingest/models"
@@ -89,6 +92,18 @@ func TestNew(t *testing.T) {
 				prometheus.NewGaugeVec(
 					prometheus.GaugeOpts{
 						Name: "ingest_processor_cache_size",
+					},
+					[]string{"app"},
+				),
+			},
+			wantErr: true,
+		},
+		"ingest_processor_cache_size_bytes already registered": {
+			baseDir: t.TempDir(),
+			preRegisteredCollectors: []prometheus.Collector{
+				prometheus.NewGaugeVec(
+					prometheus.GaugeOpts{
+						Name: "ingest_processor_cache_size_bytes",
 					},
 					[]string{"app"},
 				),
@@ -223,6 +238,7 @@ func TestProcessFiles(t *testing.T) {
 			metrics, err := testutil.CollectAndFormat(registry, expfmt.TypeTextPlain,
 				"ingest_processor_files_processed_total",
 				"ingest_processor_cache_size",
+				"ingest_processor_cache_size_bytes",
 				"ingest_processor_errors_total")
 			require.NoError(t, err, "Failed to gather metrics")
 
@@ -247,6 +263,48 @@ func TestProcessFiles(t *testing.T) {
 			want := testutils.LoadWithUpdateFromGolden(t, string(got))
 			assert.Equal(t, strings.ReplaceAll(want, "\r\n", "\n"), string(got), "Unexpected results after processing files")
 		})
+	}
+}
+
+func BenchmarkProcessFiles(b *testing.B) {
+	dir := b.TempDir()
+	appDir := filepath.Join(dir, "Benchmark")
+
+	// Suppress logs for cleaner benchmark output.
+	slog.SetLogLoggerLevel(slog.LevelError)
+	require.NoError(b, os.Mkdir(appDir, 0o700), "Setup: Failed to create app directory")
+
+	db := &mockDBManager{}
+	proc, err := processor.New(dir, db, prometheus.NewRegistry())
+	require.NoError(b, err, "Setup: Failed to create processor")
+
+	fixtures := filepath.Join(testFixturesDir, "MultiMixed")
+
+	optOutReport, err := os.ReadFile(filepath.Join(fixtures, "optout.json"))
+	require.NoError(b, err, "Setup: Failed to read opt-out report fixture")
+
+	validReport, err := os.ReadFile(filepath.Join(fixtures, "valid_1.json"))
+	require.NoError(b, err, "Setup: Failed to read valid report fixture")
+
+	invalidReport, err := os.ReadFile(filepath.Join(fixtures, "invalid_1.json"))
+	require.NoError(b, err, "Setup: Failed to read invalid report fixture")
+
+	for b.Loop() {
+		b.StopTimer()
+		entries, err := os.ReadDir(appDir)
+		require.NoError(b, err, "Setup: Failed to read app directory")
+		require.Empty(b, entries, "Setup: App directory is not empty at start of benchmark loop")
+
+		for range 2000 {
+			// 6000 entries per loop.
+			require.NoError(b, fileutils.AtomicWrite(filepath.Join(appDir, fmt.Sprintf("%s.json", uuid.NewString())), validReport), "Setup: Failed to write valid report")
+			require.NoError(b, fileutils.AtomicWrite(filepath.Join(appDir, fmt.Sprintf("%s.json", uuid.NewString())), invalidReport), "Setup: Failed to write invalid report")
+			require.NoError(b, fileutils.AtomicWrite(filepath.Join(appDir, fmt.Sprintf("%s.json", uuid.NewString())), optOutReport), "Setup: Failed to write opt-out report")
+		}
+		b.StartTimer()
+
+		err = proc.Process(context.Background(), "Benchmark")
+		require.NoError(b, err, "Processing failed")
 	}
 }
 
