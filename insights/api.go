@@ -36,6 +36,22 @@ type UploadFlags struct {
 	DryRun bool
 }
 
+// Collect errors.
+var (
+	// ErrDuplicateReport is returned by Collect when a report for the specified period already exists.
+	ErrDuplicateReport = collector.ErrDuplicateReport
+	// ErrSanitizeError is returned by Collect when the Config is not properly configured in an unrecoverable manner.
+	ErrSanitizeError = collector.ErrSanitizeError
+	// ErrSourceMetricsError is returned by Collect when the source metrics could not be loaded or parsed.
+	ErrSourceMetricsError = collector.ErrSourceMetricsError
+)
+
+// Upload errors.
+var (
+	// ErrSendFailure is returned by Upload when a report fails to be sent to the server, either due to a network error or a non-200 status code.
+	ErrSendFailure = uploader.ErrSendFailure
+)
+
 // Resolve returns a copy of the config with default values filled in where necessary.
 //
 // If ConsentDir is not set, a default path will be used.
@@ -86,7 +102,7 @@ func (c Config) Collect(source string, flags CollectFlags) ([]byte, error) {
 	}
 
 	insights, err := col.Compile(flags.Force)
-	if err != nil {
+	if err != nil { // Errors may need to be exposed for caller correction.
 		return nil, err
 	}
 
