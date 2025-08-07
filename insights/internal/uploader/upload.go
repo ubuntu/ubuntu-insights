@@ -203,11 +203,11 @@ func (um Uploader) upload(r report.Report, uploadedDir, url string, consent, for
 	if err != nil {
 		return fmt.Errorf("failed to mark report as processed: %v", err)
 	}
-	if err := um.send(url, data); err != nil {
-		if _, err := r.UndoProcessed(); err != nil {
-			return fmt.Errorf("failed to send data: %v, and failed to restore the original report: %v", err, err)
+	if sendErr := um.send(url, data); sendErr != nil {
+		if _, undoErr := r.UndoProcessed(); undoErr != nil { // Need to expose sendErr.
+			return errors.Join(sendErr, fmt.Errorf("failed to restore the original report: %v", undoErr))
 		}
-		return fmt.Errorf("failed to send data: %w", err)
+		return sendErr
 	}
 
 	return nil
