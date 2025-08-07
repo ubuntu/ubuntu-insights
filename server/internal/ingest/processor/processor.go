@@ -17,6 +17,7 @@ import (
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/ubuntu/ubuntu-insights/server/internal/common/constants"
 	"github.com/ubuntu/ubuntu-insights/server/internal/ingest/models"
 )
@@ -41,10 +42,16 @@ type database interface {
 type Processor struct {
 	reportsDir string
 	db         database
+	registry   prometheus.Registerer
+
+	filesProcessed  *prometheus.CounterVec
+	processDuration *prometheus.HistogramVec
+	cacheGauge      *prometheus.GaugeVec
+	errors          *prometheus.CounterVec
 }
 
 // New creates a new Processor instance.
-func New(reportsDir string, db database) (*Processor, error) {
+func New(reportsDir string, db database, registry prometheus.Registerer) (*Processor, error) {
 	if reportsDir == "" {
 		return nil, fmt.Errorf("reportsDir must be set")
 	}
@@ -53,9 +60,59 @@ func New(reportsDir string, db database) (*Processor, error) {
 		return nil, fmt.Errorf("failed to create reportsDir: %v", err)
 	}
 
+	filesProcessed := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "ingest_processor_files_processed_total",
+			Help: "Total number of files processed by the processor.",
+		},
+		[]string{"app", "result"},
+	)
+	if err := registry.Register(filesProcessed); err != nil {
+		return nil, fmt.Errorf("failed to register filesProcessed metric: %v", err)
+	}
+
+	processDuration := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "ingest_processor_process_duration_seconds",
+			Help:    "Duration of processing files in seconds.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"app"},
+	)
+	if err := registry.Register(processDuration); err != nil {
+		return nil, fmt.Errorf("failed to register processDuration metric: %v", err)
+	}
+
+	cacheGauge := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "ingest_processor_cache_size",
+			Help: "Current size of the cache used by the processor, indicating the number of pending reports.",
+		},
+		[]string{"app"},
+	)
+	if err := registry.Register(cacheGauge); err != nil {
+		return nil, fmt.Errorf("failed to register cacheGauge metric: %v", err)
+	}
+
+	errors := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "ingest_processor_errors_total",
+			Help: "Number of process errors encountered by the processor including catastrophic failures and upload failure threshold breaches.",
+		},
+		[]string{"app"},
+	)
+	if err := registry.Register(errors); err != nil {
+		return nil, fmt.Errorf("failed to register errors metric: %v", err)
+	}
+
 	return &Processor{
-		reportsDir: reportsDir,
-		db:         db,
+		reportsDir:      reportsDir,
+		db:              db,
+		registry:        registry,
+		filesProcessed:  filesProcessed,
+		processDuration: processDuration,
+		cacheGauge:      cacheGauge,
+		errors:          errors,
 	}, nil
 }
 
@@ -67,6 +124,13 @@ func New(reportsDir string, db database) (*Processor, error) {
 // It returns an error if a catastrophic failure occurs, or if the number of failed uploads exceeds a threshold.
 func (p Processor) Process(ctx context.Context, app string) (err error) {
 	const minimumSuccessRate = 0.85
+	defer func() {
+		if err != nil && !errors.Is(err, context.Canceled) {
+			// Increment the counter for errors other than context cancellation.
+			// This includes catastrophic failures or upload error threshold breaches.
+			p.errors.WithLabelValues(app).Inc()
+		}
+	}()
 
 	dir := filepath.Join(p.reportsDir, app)
 	if err := os.MkdirAll(dir, 0750); err != nil {
@@ -77,12 +141,14 @@ func (p Processor) Process(ctx context.Context, app string) (err error) {
 	if err != nil {
 		return fmt.Errorf("failed to get JSON files: %v", err)
 	}
+	p.cacheGauge.WithLabelValues(app).Set(float64(len(files)))
 
 	var (
 		attemptCount = 0
 		failureCount = 0
 	)
 	defer func() {
+		// Executed before incrementing the error counter due to LIFO order of defer execution.
 		// Check if over threshold of uploads failed
 		if attemptCount > 0 && float64(failureCount)/float64(attemptCount) > (1-minimumSuccessRate) {
 			err = errors.Join(ErrDatabaseErrors, err)
@@ -96,58 +162,82 @@ func (p Processor) Process(ctx context.Context, app string) (err error) {
 		default:
 		}
 
-		reportID := getReportID(file)
-
-		var procErr error
-		if legacyApp {
-			distribution, version := parseLegacyApp(app)
-			procErr = processAndUpload(
-				file,
-				validateLegacyReport,
-				func(report *models.LegacyTargetModel) error {
-					return p.db.UploadLegacy(ctx, reportID, distribution, version, report)
-				},
-			)
-		} else {
-			procErr = processAndUpload(
-				file,
-				validateReport,
-				func(report *models.TargetModel) error {
-					return p.db.Upload(ctx, reportID, app, report)
-				},
-			)
-		}
-
-		if procErr == nil || errors.Is(procErr, errUnexpectedFields) || errors.Is(procErr, errUploadFailed) {
-			attemptCount++
-		}
-
-		if errors.Is(procErr, errUploadFailed) {
-			failureCount++
-			continue // If upload fails, skip postProcessing
-		}
-
-		if procErr != nil {
-			uploadAttempted, err := p.uploadInvalid(ctx, file, reportID, app)
-			if err != nil {
-				slog.Warn("Failed to upload invalid report", "file", file, "id", reportID, "err", err)
-			}
-			if uploadAttempted {
-				attemptCount++
-				if err != nil {
-					failureCount++
-				}
-			}
-		}
-
-		if err := os.Remove(file); err != nil {
-			slog.Warn("Failed to remove file after processing", "file", file, "id", reportID, "err", err)
-		}
-
-		slog.Info("Finished processing file", "file", file, "id", reportID)
+		a, f := p.processFile(ctx, file, app, legacyApp)
+		attemptCount += a
+		failureCount += f
 	}
 
 	return nil
+}
+
+// processFile processes a single file, validates it, and uploads the report to the database if desired.
+func (p *Processor) processFile(
+	ctx context.Context,
+	file string,
+	app string,
+	legacyApp bool,
+) (attemptCount, failureCount int) {
+	timer := prometheus.NewTimer(p.processDuration.WithLabelValues(app))
+	defer timer.ObserveDuration()
+	reportID := getReportID(file)
+
+	var procErr error
+	if legacyApp {
+		distribution, version := parseLegacyApp(app)
+		procErr = processAndUpload(
+			file,
+			validateLegacyReport,
+			func(report *models.LegacyTargetModel) error {
+				return p.db.UploadLegacy(ctx, reportID, distribution, version, report)
+			},
+		)
+	} else {
+		procErr = processAndUpload(
+			file,
+			validateReport,
+			func(report *models.TargetModel) error {
+				return p.db.Upload(ctx, reportID, app, report)
+			},
+		)
+	}
+
+	if procErr == nil || errors.Is(procErr, errUnexpectedFields) || errors.Is(procErr, errUploadFailed) {
+		attemptCount++
+	}
+
+	if errors.Is(procErr, errUploadFailed) {
+		failureCount++
+		p.filesProcessed.WithLabelValues(app, "upload_failure").Inc()
+		return attemptCount, failureCount
+	}
+
+	// Label for result of filesProcessed counter metric.
+	processResult := "success"
+	if procErr != nil {
+		uploadAttempted, err := p.uploadInvalid(ctx, file, reportID, app)
+		if err != nil {
+			slog.Warn("Failed to upload invalid report", "file", file, "id", reportID, "err", err)
+			processResult = "upload_invalid_pre_attempt_failure"
+		}
+		if uploadAttempted {
+			attemptCount++
+			if err != nil {
+				failureCount++
+				processResult = "upload_invalid_failure"
+			}
+		}
+	}
+
+	// Remove the file after processing, even if the upload invalid failed.
+	if err := os.Remove(file); err != nil {
+		slog.Warn("Failed to remove file after processing", "file", file, "id", reportID, "err", err)
+		processResult = "remove_failure"
+	}
+
+	p.filesProcessed.WithLabelValues(app, processResult).Inc()
+	slog.Info("Finished processing file", "file", file, "id", reportID)
+
+	return attemptCount, failureCount
 }
 
 // processAndUpload processes a file, validates the report, and uploads it to the database.
@@ -159,7 +249,7 @@ func processAndUpload[T models.TargetModels](
 	validate func(*T) error,
 	upload func(*T) error,
 ) error {
-	report, err := processFile[T](file)
+	report, err := decodeFile[T](file)
 	if err != nil {
 		slog.Warn("Failed to process file", "file", file, "err", err)
 		return err
@@ -252,9 +342,9 @@ func getReportID(file string) string {
 	return reportID
 }
 
-// processFile reads a JSON file, unmarshals it into the specified target model type.
+// decodeFile reads a JSON file, unmarshals, and decodes it into the specified target model type.
 // It returns the target model or an error if the file is invalid or does not match the expected structure.
-func processFile[T models.TargetModels](file string) (*T, error) {
+func decodeFile[T models.TargetModels](file string) (*T, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err

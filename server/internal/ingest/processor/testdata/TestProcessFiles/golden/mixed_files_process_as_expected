@@ -311,5 +311,6 @@
     "optout.json": "1136740698",
     "string_collectionTime.json": "3292708525",
     "valid_1.json": "3918866084"
-  }
+  },
+  "Metrics": "# HELP ingest_processor_cache_size Current size of the cache used by the processor, indicating the number of pending reports.\n# TYPE ingest_processor_cache_size gauge\ningest_processor_cache_size{app=\"MultiMixed\"} 12\n# HELP ingest_processor_files_processed_total Total number of files processed by the processor.\n# TYPE ingest_processor_files_processed_total counter\ningest_processor_files_processed_total{app=\"MultiMixed\",result=\"success\"} 12\n"
 }

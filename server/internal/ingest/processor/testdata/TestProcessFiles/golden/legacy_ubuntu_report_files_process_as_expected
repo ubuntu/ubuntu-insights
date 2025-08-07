@@ -109,5 +109,6 @@
     "ur_invalid.json": "2006775906",
     "ur_invalid_optout.json": "2816768131",
     "ur_optout.json": "1136740698"
-  }
+  },
+  "Metrics": "# HELP ingest_processor_cache_size Current size of the cache used by the processor, indicating the number of pending reports.\n# TYPE ingest_processor_cache_size gauge\ningest_processor_cache_size{app=\"ubuntu-report/distribution/desktop/version\"} 6\n# HELP ingest_processor_files_processed_total Total number of files processed by the processor.\n# TYPE ingest_processor_files_processed_total counter\ningest_processor_files_processed_total{app=\"ubuntu-report/distribution/desktop/version\",result=\"success\"} 6\n"
 }
