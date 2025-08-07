@@ -55,17 +55,21 @@ Available Commands:
   version     Returns the running version of ubuntu-insights-ingest-service and exits
 
 Flags:
-      --config string          use a specific configuration file
-  -c, --daemon-config string   path to the configuration file
-      --db-host string         database host
-  -n, --db-name string         database name
-  -P, --db-password string     database password
-  -p, --db-port int            database port (default 5432)
-  -s, --db-sslmode string      database SSL mode
-  -u, --db-user string         database user
-  -h, --help                   help for ubuntu-insights-ingest-service
-      --reports-dir string     base directory to read reports from (default "/var/lib/ubuntu-insights-services/reports")
-  -v, --verbose count          issue INFO (-v), DEBUG (-vv)
+      --config string            use a specific configuration file
+  -c, --daemon-config string     path to the configuration file
+      --db-host string           database host
+  -n, --db-name string           database name
+  -P, --db-password string       database password
+  -p, --db-port int              database port (default 5432)
+  -s, --db-sslmode string        database SSL mode
+  -u, --db-user string           database user
+  -h, --help                     help for ubuntu-insights-ingest-service
+      --metrics-host string      host for the metrics endpoint
+      --metrics-port int         port for the metrics endpoint (default 2113)
+      --read-timeout duration    read timeout for the metrics HTTP server (default 5s)
+      --reports-dir string       base directory to read reports from (default "/var/lib/ubuntu-insights-services/reports")
+  -v, --verbose count            issue INFO (-v), DEBUG (-vv)
+      --write-timeout duration   write timeout for the metrics HTTP server (default 10s)
 ```
 
 ### The Daemon Config
