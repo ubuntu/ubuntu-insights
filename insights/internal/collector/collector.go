@@ -23,6 +23,8 @@ var (
 	ErrDuplicateReport = fmt.Errorf("report already exists for this period")
 	// ErrSanitizeError is returned when the Config is not properly configured in an unrecoverable manner.
 	ErrSanitizeError = fmt.Errorf("collect is not properly configured")
+	// ErrSourceMetricsError is returned when the source metrics could not be loaded or parsed.
+	ErrSourceMetricsError = fmt.Errorf("source metrics could not be loaded or parsed")
 )
 
 // Insights contains the insights report compiled by the collector.
@@ -206,7 +208,7 @@ func (c collector) Compile(force bool) (insights Insights, err error) {
 
 	insights, err = c.compile()
 	if err != nil {
-		return Insights{}, fmt.Errorf("failed to compile insights: %v", err)
+		return Insights{}, fmt.Errorf("failed to compile insights: %w", err) // Need to expose these errors
 	}
 	c.log.Info("Insights report compiled", "report", insights)
 
@@ -300,7 +302,7 @@ func (c collector) compile() (Insights, error) {
 	// Load source specific metrics.
 	metrics, err := c.getSourceMetrics()
 	if err != nil {
-		return Insights{}, fmt.Errorf("failed to load source metrics: %v", err)
+		return Insights{}, errors.Join(ErrSourceMetricsError, err)
 	}
 	insights.SourceMetrics = metrics
 
