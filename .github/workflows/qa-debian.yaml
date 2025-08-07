@@ -3,13 +3,14 @@ name: Debian package tests
 
 on:
   pull_request:
-    paths-ignore:
-      - server/**
-      - tools/**
-      - "*.md"
+    paths:
+      - "insights/**"
+      - ".github/workflows/qa-debian.yaml"
+      - "!**.md"
   workflow_dispatch:
   push:
     branches: [main]
+    tags: ["*"]
 
 env:
   UBUNTU_VERSIONS: |
@@ -26,6 +27,40 @@ jobs:
       autopkgtest-host: ${{ env.AUTOPKGTEST_HOST }}
     steps:
       - run: "true"
+
+  check-modified-files:
+    name: Check modified files
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      list: ${{ fromJSON(steps.git-diff.outputs.modified_files) }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - id: git-diff
+        name: Check modified files
+        run: |
+          set -ue
+
+          # Default to empty array
+          modified_files='[]'
+
+          # For pull requests, use gh pr diff to get the list of modified files
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            modified_files=$(gh pr diff ${{ github.event.pull_request.number }} --name-only | \
+              while IFS= read -r line; do
+                jq -n --arg path "$line" '$path'
+              done | jq -n '. |= [inputs]')
+          fi
+
+          echo "${modified_files}"
+          escaped_json=$(echo "${modified_files}" | jq '.| tostring')
+          echo "modified_files=${escaped_json}" >> "${GITHUB_OUTPUT}"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
   build-ubuntu-insights:
     name: Build ubuntu-insights debian package
@@ -112,6 +147,20 @@ jobs:
     needs:
       - plan
       - build-ubuntu-insights
+      - check-modified-files
+
+    # Run autopkgtest only on:
+    # - Push events to main branch
+    # - When a file in the insights/debian/ directory is modified
+    # - When this file is modified
+    # - When a tag is pushed
+    # - When a release is created
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      contains(needs.check-modified-files.outputs.list, 'insights/debian/') ||
+      contains(needs.check-modified-files.outputs.list, '.github/workflows/qa-debian.yaml') ||
+      startsWith(github.ref, 'refs/tags/') ||
+      github.event_name == 'release' }}
+
     steps:
       # Copied from https://github.com/ubuntu/authd/blob/main/.github/workflows/build-deb.yaml
       # FIXME: Use dynamic outputs when possible: https://github.com/actions/runner/pull/2477
