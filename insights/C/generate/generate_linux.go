@@ -35,6 +35,7 @@ func buildSharedLibs() error {
 
 	if output, err := exec.Command("go", "build", //nolint:gosec // This is controlled by the build process and also filtered here
 		"-buildmode=c-shared",
+		"-trimpath",
 		"-ldflags", ldflags,
 		"-o", fmt.Sprintf("../generated/%s", libname),
 		"./libinsights.go",
