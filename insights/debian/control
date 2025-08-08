@@ -33,3 +33,44 @@ Description: Ubuntu metrics reporting service
  This is designed to be a full replacement for Ubuntu Report.
  .
  This package contains the command line tool and systemd service triggers.
+
+Package: libinsights0
+Section: libs
+Architecture: any
+Multi-Arch: same
+Built-Using: ${misc:Built-Using},
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+Description: Ubuntu metrics reporting service - shared lib
+ Ubuntu Insights, a user transparent, open,
+ platform-agnostic and cross application solution for reporting
+ hardware information and other collected metrics.
+ .
+ Ubuntu Insights is designed to show you exactly what is being sent, and
+ allow you to acknowledge and control your own data. The information
+ can't be used to identify a single machine, and is cached for local viewing
+ before being sent to the server.
+ .
+ This package contains shared libraries for applications using
+ the insights collection, consent management, and upload functionality.
+
+Package: libinsights-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Built-Using: ${misc:Built-Using},
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         libinsights0 (= ${binary:Version}),
+Description: Ubuntu metrics reporting service - shared lib devel
+ Ubuntu Insights, a user transparent, open,
+ platform-agnostic and cross application solution for reporting
+ hardware information and other collected metrics.
+ .
+ Ubuntu Insights is designed to show you exactly what is being sent, and
+ allow you to acknowledge and control your own data. The information
+ can't be used to identify a single machine, and is cached for local viewing
+ before being sent to the server.
+ .
+ This package contains shared development files for applications using
+ the insights collection, consent management, and upload functionality.

@@ -1,4 +1,5 @@
 autostart/systemd/* usr/lib/systemd/user
+usr/bin
 usr/share/bash-completion
 usr/share/man
 usr/share/zsh

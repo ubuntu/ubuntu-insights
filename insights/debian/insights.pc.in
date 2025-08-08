@@ -1,0 +1,10 @@
+prefix=/usr
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib/@DEB_HOST_MULTIARCH@
+includedir=${prefix}/include/insights
+
+Name: libinsights
+Description: Ubuntu metrics reporting service
+Version: @VERSION@
+Libs: -L${libdir} -linsights
+Cflags: -I${includedir}

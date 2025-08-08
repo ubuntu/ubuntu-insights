@@ -8,6 +8,9 @@ export GOFLAGS := -ldflags=-X=$(INSIGHTS_GO_PACKAGE)/internal/constants.Version=
 export DH_GOLANG_GO_GENERATE := 1
 
 BUILDDIR := _build
+DESTDIR := $(CURDIR)/debian/tmp
+DEB_VERSION_MAJOR := $(shell echo $(DEB_VERSION_UPSTREAM) | cut -d. -f1)
+GENERATED_DIR := $(BUILDDIR)/src/$(INSIGHTS_GO_PACKAGE)/generated
 
 %:
 ifeq ($(strip $(shell ./debian/prepare-source.sh)),)
@@ -20,6 +23,17 @@ override_dh_auto_install:
 	# Do not ship the library resulting binary cmdline, but we still want it in the package list to run the tests.
 	rm $(BUILDDIR)/bin/C
 	
+	install -d $(DESTDIR)/usr
 	mv $(BUILDDIR)/bin/insights $(BUILDDIR)/bin/ubuntu-insights
-	mv $(BUILDDIR)/src/$(INSIGHTS_GO_PACKAGE)/generated $(CURDIR)/debian/tmp
+	cp -a $(GENERATED_DIR)/usr/. $(DESTDIR)/usr/
+
+	# libinsights
+	install -Dm755 $(GENERATED_DIR)/libinsights.so.$(DEB_VERSION_MAJOR) $(DESTDIR)/usr/lib/$(DEB_HOST_MULTIARCH)/libinsights.so.$(DEB_VERSION_MAJOR)
+	ln -s libinsights.so.$(DEB_VERSION_MAJOR) $(DESTDIR)/usr/lib/$(DEB_HOST_MULTIARCH)/libinsights.so
+
+	install -Dm644 $(GENERATED_DIR)/types.h $(DESTDIR)/usr/include/insights/types.h
+	install -Dm644 $(GENERATED_DIR)/insights.h $(DESTDIR)/usr/include/insights/insights.h
+	install -d $(DESTDIR)/usr/lib/$(DEB_HOST_MULTIARCH)/pkgconfig
+	sed -e s/@DEB_HOST_MULTIARCH@/$(DEB_HOST_MULTIARCH)/ -e s/@VERSION@/$(DEB_VERSION_UPSTREAM)/ debian/insights.pc.in > $(DESTDIR)/usr/lib/$(DEB_HOST_MULTIARCH)/pkgconfig/insights.pc
+
 	dh_auto_install -- --no-source
