@@ -1,3 +1,11 @@
+ubuntu-insights (0.5.0) questing; urgency=medium
+
+  * New upstream release (LP: #2120161)
+  * libinsights0: Initial release
+  * libinsights-dev: Initial release
+
+ -- Kat Kuo <kat.kuo@canonical.com>  Fri, 08 Aug 2025 04:00:50 -0400
+
 ubuntu-insights (0.3.0) questing; urgency=medium
 
   [ Kat Kuo ]
