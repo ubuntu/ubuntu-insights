@@ -7,10 +7,10 @@ package main
 #include <stdlib.h>
 #include "types.h"
 
-extern char* collectInsights(const InsightsConfig*, const char*, const CollectFlags*, char**);
-extern char* uploadInsights(const InsightsConfig*, const char**, size_t, const UploadFlags*);
-extern ConsentState getConsentState(const InsightsConfig*, const char*);
-extern char* setConsentState(const InsightsConfig*, const char*, bool);
+extern char* collect_insights(const insights_config*, const char*, const insights_collect_flags*, char**);
+extern char* upload_insights(const insights_config*, const char**, size_t, const insights_upload_flags*);
+extern insights_consent_state get_consent_state(const insights_config*, const char*);
+extern char* set_consent_state(const insights_config*, const char*, bool);
 */
 import "C"
 
@@ -29,11 +29,11 @@ func TestCollectImpl(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		config            *CInsightsConfig
+		config            *insightsConfig
 		source            string
 		metricsPath       *string
 		sourceMetricsJSON []byte
-		flags             *C.CollectFlags
+		flags             *C.insights_collect_flags
 
 		outReport **C.char
 
@@ -44,13 +44,13 @@ func TestCollectImpl(t *testing.T) {
 		"Null values are empty": {},
 
 		"Empty values are empty": {
-			config:      &CInsightsConfig{},
+			config:      &insightsConfig{},
 			metricsPath: strPtr(""),
-			flags:       &C.CollectFlags{},
+			flags:       &C.insights_collect_flags{},
 		},
 
 		"Config gets converted": {
-			config: &CInsightsConfig{
+			config: &insightsConfig{
 				consent: strPtr("home/etc/dir"),
 				cache:   strPtr("insights/dir"),
 				verbose: true,
@@ -67,25 +67,25 @@ func TestCollectImpl(t *testing.T) {
 		},
 
 		"Flags get converted": {
-			flags: &C.CollectFlags{
-				period: C.uint32_t(10),
-				force:  C.bool(true),
-				dryRun: C.bool(true),
+			flags: &C.insights_collect_flags{
+				period:  C.uint32_t(10),
+				force:   C.bool(true),
+				dry_run: C.bool(true),
 			},
 		},
 
 		"All get converted": {
-			config: &CInsightsConfig{
+			config: &insightsConfig{
 				consent: strPtr("home/etc/wsl/dir"),
 				cache:   strPtr("insights/wsl/dir"),
 				verbose: false,
 			},
 			source:      "wsl",
 			metricsPath: strPtr("metrics"),
-			flags: &C.CollectFlags{
-				period: C.uint32_t(2000),
-				force:  C.bool(false),
-				dryRun: C.bool(false),
+			flags: &C.insights_collect_flags{
+				period:  C.uint32_t(2000),
+				force:   C.bool(false),
+				dry_run: C.bool(false),
 			},
 		},
 
@@ -126,17 +126,17 @@ func TestCollectImpl(t *testing.T) {
 			defer cleanup()
 
 			if tc.flags == nil {
-				tc.flags = &C.CollectFlags{}
+				tc.flags = &C.insights_collect_flags{}
 			}
 
 			if tc.metricsPath != nil {
-				tc.flags.sourceMetricsPath = C.CString(*tc.metricsPath)
-				defer C.free(unsafe.Pointer(tc.flags.sourceMetricsPath))
+				tc.flags.source_metrics_path = C.CString(*tc.metricsPath)
+				defer C.free(unsafe.Pointer(tc.flags.source_metrics_path))
 			}
 
 			if tc.sourceMetricsJSON != nil {
-				tc.flags.sourceMetricsJSON = unsafe.Pointer(&tc.sourceMetricsJSON[0])
-				tc.flags.sourceMetricsJSONLen = C.size_t(len(tc.sourceMetricsJSON))
+				tc.flags.source_metrics_json = unsafe.Pointer(&tc.sourceMetricsJSON[0])
+				tc.flags.source_metrics_json_len = C.size_t(len(tc.sourceMetricsJSON))
 			}
 
 			var got struct {
@@ -191,9 +191,9 @@ func TestUploadImpl(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		config  *CInsightsConfig
+		config  *insightsConfig
 		sources []string
-		flags   *C.UploadFlags
+		flags   *C.insights_upload_flags
 
 		err error
 	}{
@@ -201,12 +201,12 @@ func TestUploadImpl(t *testing.T) {
 		"Null values are empty": {},
 
 		"Empty values are empty": {
-			config: &CInsightsConfig{},
-			flags:  &C.UploadFlags{},
+			config: &insightsConfig{},
+			flags:  &C.insights_upload_flags{},
 		},
 
 		"Config gets converted": {
-			config: &CInsightsConfig{
+			config: &insightsConfig{
 				consent: strPtr("home/etc/dir"),
 				cache:   strPtr("insights/dir"),
 				verbose: true,
@@ -215,24 +215,24 @@ func TestUploadImpl(t *testing.T) {
 		},
 
 		"Flags get converted": {
-			flags: &C.UploadFlags{
-				minAge: C.uint32_t(10),
-				force:  C.bool(true),
-				dryRun: C.bool(true),
+			flags: &C.insights_upload_flags{
+				min_age: C.uint32_t(10),
+				force:   C.bool(true),
+				dry_run: C.bool(true),
 			},
 		},
 
 		"All get converted": {
-			config: &CInsightsConfig{
+			config: &insightsConfig{
 				consent: strPtr("home/etc/wsl/dir"),
 				cache:   strPtr("insights/wsl/dir"),
 				verbose: false,
 			},
 			sources: []string{"wsl", "app2"},
-			flags: &C.UploadFlags{
-				minAge: C.uint32_t(2000),
-				force:  C.bool(false),
-				dryRun: C.bool(false),
+			flags: &C.insights_upload_flags{
+				min_age: C.uint32_t(2000),
+				force:   C.bool(false),
+				dry_run: C.bool(false),
 			},
 		},
 
@@ -306,20 +306,20 @@ func TestGetConsentImpl(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		config *CInsightsConfig
+		config *insightsConfig
 		source string
 
-		state C.ConsentState
+		state C.insights_consent_state
 	}{
 		// conversion cases
 		"Null values are empty": {},
 
 		"Empty values are empty": {
-			config: &CInsightsConfig{},
+			config: &insightsConfig{},
 		},
 
 		"Config gets converted": {
-			config: &CInsightsConfig{
+			config: &insightsConfig{
 				consent: strPtr("home/etc/dir"),
 				cache:   strPtr("insights/dir"),
 				verbose: true,
@@ -329,15 +329,15 @@ func TestGetConsentImpl(t *testing.T) {
 
 		// return cases
 		"unknown state is correctly converted": {
-			state: C.CONSENT_UNKNOWN,
+			state: C.INSIGHTS_CONSENT_UNKNOWN,
 		},
 
 		"false state is correctly converted": {
-			state: C.CONSENT_FALSE,
+			state: C.INSIGHTS_CONSENT_FALSE,
 		},
 
 		"true state is correctly converted": {
-			state: C.CONSENT_TRUE,
+			state: C.INSIGHTS_CONSENT_TRUE,
 		},
 	}
 	for name, tc := range tests {
@@ -356,7 +356,7 @@ func TestGetConsentImpl(t *testing.T) {
 			sourceStr := C.CString(tc.source)
 			defer C.free(unsafe.Pointer(sourceStr))
 
-			ret := getCustomConsentState(inConfig, sourceStr, func(conf insights.Config, source string) C.ConsentState {
+			ret := getCustomConsentState(inConfig, sourceStr, func(conf insights.Config, source string) C.insights_consent_state {
 				got.Conf = conf
 				got.Source = source
 				return tc.state
@@ -377,7 +377,7 @@ func TestSetConsentImpl(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		config *CInsightsConfig
+		config *insightsConfig
 		source string
 		state  C.bool
 
@@ -387,11 +387,11 @@ func TestSetConsentImpl(t *testing.T) {
 		"Null values are empty": {},
 
 		"Empty values are empty": {
-			config: &CInsightsConfig{},
+			config: &insightsConfig{},
 		},
 
 		"Config gets converted": {
-			config: &CInsightsConfig{
+			config: &insightsConfig{
 				consent: strPtr("home/etc/dir"),
 				cache:   strPtr("insights/dir"),
 				verbose: true,
@@ -456,30 +456,30 @@ func strPtr(in string) *string {
 	return &in
 }
 
-// CInsightsConfig lets us setup a C.InsightsConfig easier.
-type CInsightsConfig struct {
+// insightsConfig lets us setup a C.insights_config easier.
+type insightsConfig struct {
 	consent, cache *string // Removed src since source is now passed as parameter
 	verbose        bool
 }
 
-// makeConfig is a helper to create a C InsightsConfig.
-func makeConfig(conf *CInsightsConfig) (cnf *C.InsightsConfig, clean func()) {
+// makeConfig is a helper to create a C insights_config.
+func makeConfig(conf *insightsConfig) (cnf *C.insights_config, clean func()) {
 	defer func() {
 		clean = func() {
 			if cnf != nil {
-				C.free(unsafe.Pointer(cnf.consentDir))
-				C.free(unsafe.Pointer(cnf.insightsDir))
+				C.free(unsafe.Pointer(cnf.consent_dir))
+				C.free(unsafe.Pointer(cnf.insights_dir))
 			}
 		}
 	}()
 
 	if conf != nil {
-		cnf = &C.InsightsConfig{}
+		cnf = &C.insights_config{}
 		if conf.consent != nil {
-			cnf.consentDir = C.CString(*conf.consent)
+			cnf.consent_dir = C.CString(*conf.consent)
 		}
 		if conf.cache != nil {
-			cnf.insightsDir = C.CString(*conf.cache)
+			cnf.insights_dir = C.CString(*conf.cache)
 		}
 		cnf.verbose = C.bool(conf.verbose)
 	}

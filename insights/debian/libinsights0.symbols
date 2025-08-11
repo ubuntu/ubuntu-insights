@@ -1,9 +1,7 @@
 libinsights.so.0 libinsights0 #MINVER#
 * Build-Depends-Package: libinsights-dev
  cleanup@Base 0.5.0
- collectInsights@Base 0.5.0
  fatalf@Base 0.5.0
- getConsentState@Base 0.5.0
  get_displays@Base 0.5.0
  get_output_count@Base 0.5.0
  global_handler@Base 0.5.0
@@ -12,9 +10,11 @@ libinsights.so.0 libinsights0 #MINVER#
  handle_geometry@Base 0.5.0
  handle_mode@Base 0.5.0
  init_wayland@Base 0.5.0
- setConsentState@Base 0.5.0
+ insights_collect@Base 0.6.0
+ insights_get_consent_state@Base 0.6.0
+ insights_set_consent_state@Base 0.6.0
+ insights_upload@Base 0.6.0
  set_displays@Base 0.5.0
  set_memory_error@Base 0.5.0
- uploadInsights@Base 0.5.0
  (regex|optional).*crosscall.* 0.5.0
  (regex|optional)"_cgo.*" 0.5.0

@@ -14,7 +14,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/insights"
 )
 
-/* collectInsights creates a report for the specified source.
+/* insights_collect creates a report for the specified source.
 // If config is NULL, defaults are used.
 // source may be NULL or "" to use platform default.
 // flags may be NULL.
@@ -31,8 +31,8 @@ import (
 //
 // The out_report must be freed by the caller.
 // The error string must be freed. */
-//export collectInsights
-func collectInsights(config *C.CInsightsConfig, source *C.char, flags *C.CCollectFlags, out_report **C.char) *C.char { //nolint:revive // Exported for C
+//export insights_collect
+func insights_collect(config *C.insights_const_config, source *C.insights_const_char, flags *C.insights_const_collect_flags, out_report **C.char) *C.char { //nolint:revive // Exported for C
 	return collectCustomInsights(config, source, flags, out_report, func(conf insights.Config, source string, f insights.CollectFlags) ([]byte, error) {
 		return conf.Collect(source, f)
 	})
@@ -42,20 +42,20 @@ func collectInsights(config *C.CInsightsConfig, source *C.char, flags *C.CCollec
 type collector = func(conf insights.Config, source string, flags insights.CollectFlags) ([]byte, error)
 
 // collectCustomInsights handles C to Go translation and calls the custom collector.
-func collectCustomInsights(config *C.CInsightsConfig, source *C.char, flags *C.CCollectFlags, outReport **C.char, customCollector collector) *C.char {
+func collectCustomInsights(config *C.insights_const_config, source *C.insights_const_char, flags *C.insights_const_collect_flags, outReport **C.char, customCollector collector) *C.char {
 	conf := toGoInsightsConfig(config)
 
 	f := insights.CollectFlags{}
 	if flags != nil {
 		f.Period = (uint32)(flags.period)
 		f.Force = (bool)(flags.force)
-		f.DryRun = (bool)(flags.dryRun)
+		f.DryRun = (bool)(flags.dry_run)
 
-		if flags.sourceMetricsPath != nil {
-			f.SourceMetricsPath = C.GoString(flags.sourceMetricsPath)
+		if flags.source_metrics_path != nil {
+			f.SourceMetricsPath = C.GoString(flags.source_metrics_path)
 		}
-		if flags.sourceMetricsJSON != nil && flags.sourceMetricsJSONLen > 0 {
-			f.SourceMetricsJSON = C.GoBytes(flags.sourceMetricsJSON, C.int(flags.sourceMetricsJSONLen))
+		if flags.source_metrics_json != nil && flags.source_metrics_json_len > 0 {
+			f.SourceMetricsJSON = C.GoBytes(flags.source_metrics_json, C.int(flags.source_metrics_json_len))
 		}
 	}
 
@@ -86,7 +86,7 @@ func collectCustomInsights(config *C.CInsightsConfig, source *C.char, flags *C.C
 	return nil
 }
 
-/* uploadInsights uploads reports for the specified sources.
+/* insights_upload uploads reports for the specified sources.
 // If config is NULL, defaults are used.
 // sources may be NULL or empty to handle all reports.
 // sourcesLen is the number of sources in the array.
@@ -94,9 +94,9 @@ func collectCustomInsights(config *C.CInsightsConfig, source *C.char, flags *C.C
 // If uploading fails, an error string is returned.
 // Otherwise, this returns NULL.
 // The error string must be freed. */
-//export uploadInsights
-func uploadInsights(config *C.CInsightsConfig, sources **C.char, sourcesLen C.size_t, flags *C.CUploadFlags) *C.char {
-	return uploadCustomInsights(config, sources, sourcesLen, flags, func(conf insights.Config, sources []string, f insights.UploadFlags) error {
+//export insights_upload
+func insights_upload(config *C.insights_const_config, sources **C.insights_const_char, sources_len C.size_t, flags *C.insights_const_upload_flags) *C.char { //nolint:revive // Exported for C
+	return uploadCustomInsights(config, sources, sources_len, flags, func(conf insights.Config, sources []string, f insights.UploadFlags) error {
 		return conf.Upload(sources, f)
 	})
 }
@@ -105,7 +105,7 @@ func uploadInsights(config *C.CInsightsConfig, sources **C.char, sourcesLen C.si
 type uploader = func(conf insights.Config, sources []string, flags insights.UploadFlags) error
 
 // uploadCustomInsights handles C to Go translation and calls the custom uploader.
-func uploadCustomInsights(config *C.CInsightsConfig, sources **C.char, sourcesLen C.size_t, flags *C.CUploadFlags, customUploader uploader) *C.char {
+func uploadCustomInsights(config *C.insights_const_config, sources **C.insights_const_char, sourcesLen C.size_t, flags *C.insights_const_upload_flags, customUploader uploader) *C.char {
 	conf := toGoInsightsConfig(config)
 	// Convert C string array to Go slice
 	var sourceSlice []string
@@ -127,39 +127,39 @@ func uploadCustomInsights(config *C.CInsightsConfig, sources **C.char, sourcesLe
 
 	f := insights.UploadFlags{}
 	if flags != nil {
-		f.MinAge = (uint32)(flags.minAge)
+		f.MinAge = (uint32)(flags.min_age)
 		f.Force = (bool)(flags.force)
-		f.DryRun = (bool)(flags.dryRun)
+		f.DryRun = (bool)(flags.dry_run)
 	}
 
 	err := customUploader(conf, sourceSlice, f)
 	return errToCString(err)
 }
 
-/* getConsentState gets the consent state for the specified source.
+/* insights_get_consent_state gets the consent state for the specified source.
 // If config is NULL, defaults are used.
 // source may be NULL or "" to retrieve the global source.
 // If it could not be retrieved, this function returns CONSENT_UNKNOWN.
 // Otherwise, it returns the consent state of the source. */
-//export getConsentState
-func getConsentState(config *C.CInsightsConfig, source *C.char) C.ConsentState {
-	return getCustomConsentState(config, source, func(conf insights.Config, source string) C.ConsentState {
+//export insights_get_consent_state
+func insights_get_consent_state(config *C.insights_const_config, source *C.insights_const_char) C.insights_consent_state {
+	return getCustomConsentState(config, source, func(conf insights.Config, source string) C.insights_consent_state {
 		s, err := conf.GetConsentState(source)
 		if err != nil {
-			return C.CONSENT_UNKNOWN
+			return C.INSIGHTS_CONSENT_UNKNOWN
 		}
 		if s {
-			return C.CONSENT_TRUE
+			return C.INSIGHTS_CONSENT_TRUE
 		}
-		return C.CONSENT_FALSE
+		return C.INSIGHTS_CONSENT_FALSE
 	})
 }
 
 // consentGetter is a function that gets the consent state using the given parameters.
-type consentGetter = func(conf insights.Config, source string) C.ConsentState
+type consentGetter = func(conf insights.Config, source string) C.insights_consent_state
 
 // getCustomConsentState handles C to Go translation and calls the custom getter.
-func getCustomConsentState(config *C.CInsightsConfig, source *C.char, getter consentGetter) C.ConsentState {
+func getCustomConsentState(config *C.insights_const_config, source *C.insights_const_char, getter consentGetter) C.insights_consent_state {
 	conf := toGoInsightsConfig(config)
 
 	sourceStr := ""
@@ -170,15 +170,15 @@ func getCustomConsentState(config *C.CInsightsConfig, source *C.char, getter con
 	return getter(conf, sourceStr)
 }
 
-/* setConsentState sets the state for the specified source to newState.
+/* insights_set_consent_state sets the state for the specified source to newState.
 // If config is NULL, defaults are used.
 // source may be NULL or "" to affect the global state.
 // If the state could not be set, this function returns an error string.
 // Otherwise, it returns NULL
 // The error string must be freed. */
-//export setConsentState
-func setConsentState(config *C.CInsightsConfig, source *C.char, newState C.bool) *C.char {
-	return setCustomConsentState(config, source, newState, func(conf insights.Config, source string, newState bool) error {
+//export insights_set_consent_state
+func insights_set_consent_state(config *C.insights_const_config, source *C.insights_const_char, new_state C.bool) *C.char { //nolint:revive // Exported for C
+	return setCustomConsentState(config, source, new_state, func(conf insights.Config, source string, newState bool) error {
 		return conf.SetConsentState(source, newState)
 	})
 }
@@ -187,7 +187,7 @@ func setConsentState(config *C.CInsightsConfig, source *C.char, newState C.bool)
 type consentSetter = func(conf insights.Config, source string, newState bool) error
 
 // setCustomConsentState handles C to Go translation and calls the custom setter.
-func setCustomConsentState(config *C.CInsightsConfig, source *C.char, newState C.bool, setter consentSetter) *C.char {
+func setCustomConsentState(config *C.insights_const_config, source *C.insights_const_char, newState C.bool, setter consentSetter) *C.char {
 	conf := toGoInsightsConfig(config)
 
 	sourceStr := ""
@@ -200,14 +200,14 @@ func setCustomConsentState(config *C.CInsightsConfig, source *C.char, newState C
 }
 
 // toGoInsightsConfig converts a C Insights Config into the equivalent Go structure.
-func toGoInsightsConfig(config *C.CInsightsConfig) insights.Config {
+func toGoInsightsConfig(config *C.insights_const_config) insights.Config {
 	iConf := insights.Config{Logger: slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))}
 	if config != nil {
-		if config.consentDir != nil {
-			iConf.ConsentDir = C.GoString(config.consentDir)
+		if config.consent_dir != nil {
+			iConf.ConsentDir = C.GoString(config.consent_dir)
 		}
-		if config.insightsDir != nil {
-			iConf.InsightsDir = C.GoString(config.insightsDir)
+		if config.insights_dir != nil {
+			iConf.InsightsDir = C.GoString(config.insights_dir)
 		}
 
 		if config.verbose {

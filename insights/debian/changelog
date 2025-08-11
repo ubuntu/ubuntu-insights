@@ -1,7 +1,8 @@
-ubuntu-insights (0.5.1) questing; urgency=medium
+ubuntu-insights (0.6.0) questing; urgency=medium
 
   * New upstream release (LP: #2120272)
   * libinsights: Fix types.h references
+  * libinsights: (Breaking) Rename C bindings method and type definitions
 
  -- Kat Kuo <kat.kuo@canonical.com>  Sun, 10 Aug 2025 23:49:25 -0400
 
