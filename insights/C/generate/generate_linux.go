@@ -53,7 +53,7 @@ func buildSharedLibs() error {
 }
 
 func copyTypesHeader() error {
-	if output, err := exec.Command("cp", "./insights_types.h", "../generated/types.h").CombinedOutput(); err != nil {
+	if output, err := exec.Command("cp", "./types.h", "../generated/types.h").CombinedOutput(); err != nil {
 		return fmt.Errorf("copy command failed with output: %q and error: %v", output, err)
 	}
 	return nil

@@ -2,7 +2,7 @@
 package main
 
 /*
-#include "insights_types.h"
+#include "types.h"
 */
 import "C"
 
