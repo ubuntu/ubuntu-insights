@@ -22,7 +22,7 @@
       "OptOutReports": 7,
       "OptInReports": 5
     },
-    "ubuntu_desktop_provision": {
+    "ubuntu_desktop_installer": {
       "TotalReports": 0,
       "OptOutReports": 0,
       "OptInReports": 0

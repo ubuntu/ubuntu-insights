@@ -1,0 +1,11 @@
+-- Revert table name
+ALTER TABLE ubuntu_desktop_installer RENAME TO ubuntu_desktop_provision;
+
+-- Revert index names
+ALTER INDEX idx_ubuntu_desktop_installer_report_id RENAME TO idx_ubuntu_desktop_provision_report_id;
+ALTER INDEX idx_ubuntu_desktop_installer_entry_time_optout RENAME TO idx_ubuntu_desktop_provision_entry_time_optout;
+ALTER INDEX idx_ubuntu_desktop_installer_collection_time RENAME TO idx_ubuntu_desktop_provision_collection_time;
+ALTER INDEX idx_ubuntu_desktop_installer_hardware RENAME TO idx_ubuntu_desktop_provision_hardware;
+ALTER INDEX idx_ubuntu_desktop_installer_software RENAME TO idx_ubuntu_desktop_provision_software;
+ALTER INDEX idx_ubuntu_desktop_installer_platform RENAME TO idx_ubuntu_desktop_provision_platform;
+ALTER INDEX idx_ubuntu_desktop_installer_source_metrics RENAME TO idx_ubuntu_desktop_provision_source_metrics;
