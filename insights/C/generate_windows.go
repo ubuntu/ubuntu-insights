@@ -5,5 +5,5 @@ package main
 // generate shared library and header, this requires setting up a gcc compiler on windows.
 //go:generate go build -o ../generated/libinsights.dll -buildmode=c-shared libinsights.go
 
-// Copy insights_types.h to the generated folder
-//go:generate sh -c "cp insights_types.h ../generated/types.h"
+// Copy types.h to the generated folder
+//go:generate sh -c "cp types.h ../generated/types.h"

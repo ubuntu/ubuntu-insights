@@ -5,7 +5,7 @@ package main
 
 /*
 #include <stdlib.h>
-#include "insights_types.h"
+#include "types.h"
 
 extern char* collectInsights(const InsightsConfig*, const char*, const CollectFlags*, char**);
 extern char* uploadInsights(const InsightsConfig*, const char**, size_t, const UploadFlags*);
