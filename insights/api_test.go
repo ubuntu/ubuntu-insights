@@ -84,16 +84,14 @@ func TestCollect(t *testing.T) {
 				DryRun: true,
 			},
 		},
-
-		// Error cases
-		"Missing consent file errors": {
+		"Missing consent file does not error in dry run": {
 			source: "missing_consent_file",
 			collectFlags: insights.CollectFlags{
 				DryRun: true,
 			},
-
-			wantErr: true,
 		},
+
+		// Error cases
 		"Invalid source metrics JSON errors": {
 			source: "valid_true",
 			collectFlags: insights.CollectFlags{
