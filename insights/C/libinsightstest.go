@@ -8,6 +8,7 @@ package main
 #include "types.h"
 
 extern char* insights_collect(const insights_config*, const char*, const insights_collect_flags*, char**);
+extern char* insights_compile(const insights_config*, const insights_compile_flags*, char**);
 extern char* insights_write(const insights_config*, const char*, const char*, const insights_write_flags*);
 extern char* insights_upload(const insights_config*, const char**, size_t, const insights_upload_flags*);
 extern insights_consent_state insights_get_consent_state(const insights_config*, const char*);
@@ -177,6 +178,124 @@ func TestCollectImpl(t *testing.T) {
 
 			if tc.outReport != nil {
 				got.OutReport = C.GoString(*tc.outReport)
+			}
+
+			assert.NotNil(t, got.Conf.Logger, "Logger should not be nil in the callback")
+			got.Conf.Logger = nil // Logger is not part of the golden file, so we set it to nil for comparison.
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			assert.Equal(t, want, got, "C structures should be correctly translated to Go")
+		})
+	}
+}
+
+// TestCompileImpl tests compile.
+func TestCompileImpl(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		config            *insightsConfig
+		metricsPath       *string
+		sourceMetricsJSON []byte
+
+		outReport **C.char
+
+		mockOut []byte
+		mockErr error
+	}{
+		// conversion cases
+		"Null values are empty": {},
+
+		"Empty values are empty": {
+			metricsPath: strPtr(""),
+		},
+
+		"Arguments get converted": {
+			config: &insightsConfig{
+				verbose: true,
+			},
+			metricsPath:       strPtr("metrics"),
+			sourceMetricsJSON: []byte(`{"key": "value"}`),
+		},
+
+		// Report output
+		"Report is returned when outReport and outReportLen are provided": {
+			outReport: new(*C.char),
+			mockOut:   []byte(`{"output": "report data"}`),
+		},
+		"Report is not returned when outReport is nil": {
+			outReport: nil,
+			mockOut:   []byte(`{"output": "no report"}`),
+		},
+		"Report is returned safely when empty": {
+			outReport: new(*C.char),
+			mockOut:   []byte(""),
+		},
+		"Report return is safe when output has null terminator in middle": {
+			outReport: new(*C.char),
+			mockOut:   []byte(`{"output": "report data with null \x00 in middle"}`),
+		},
+
+		// error case
+		"Error returns error string": {
+			mockErr: errors.New("Error String"),
+		},
+		"Report is not returned in error case": {
+			outReport: new(*C.char),
+			mockErr:   errors.New("Error String"),
+			mockOut:   []byte(`{"output": "no report in error"}`),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			inConfig, cleanup := makeConfig(tc.config)
+			defer cleanup()
+
+			flags := &C.insights_compile_flags{}
+			if tc.metricsPath != nil {
+				flags.source_metrics_path = C.CString(*tc.metricsPath)
+				defer C.free(unsafe.Pointer(flags.source_metrics_path))
+			}
+
+			if tc.sourceMetricsJSON != nil {
+				flags.source_metrics_json = unsafe.Pointer(&tc.sourceMetricsJSON[0])
+				flags.source_metrics_json_len = C.size_t(len(tc.sourceMetricsJSON))
+			}
+
+			var got struct {
+				Conf  insights.Config
+				Flags insights.CompileFlags
+
+				OutReport string
+			}
+
+			ret := compileCustomInsights(inConfig, flags, tc.outReport, func(conf insights.Config, flags insights.CompileFlags) ([]byte, error) {
+				got.Conf = conf
+				got.Flags = flags
+				return tc.mockOut, tc.mockErr
+			})
+			defer C.free(unsafe.Pointer(ret))
+			defer func() {
+				if tc.outReport != nil {
+					C.free(unsafe.Pointer(*tc.outReport))
+				}
+			}()
+
+			if tc.mockErr == nil {
+				assert.Nil(t, ret)
+			} else {
+				assert.Equal(t, C.GoString(ret), tc.mockErr.Error())
+			}
+
+			if tc.outReport != nil {
+				got.OutReport = C.GoString(*tc.outReport)
+			}
+
+			// ensure SourceMetricsJSON is not nil for better comparison
+			if got.Flags.SourceMetricsJSON == nil {
+				got.Flags.SourceMetricsJSON = []byte{}
 			}
 
 			assert.NotNil(t, got.Conf.Logger, "Logger should not be nil in the callback")

@@ -12,6 +12,11 @@ func TestCollect(t *testing.T) {
 	main.TestCollectImpl(t)
 }
 
+// TestCompile tests C.CompileInsights.
+func TestCompile(t *testing.T) {
+	main.TestCompileImpl(t)
+}
+
 // TestWrite tests C.WriteInsights.
 func TestWrite(t *testing.T) {
 	main.TestWriteImpl(t)

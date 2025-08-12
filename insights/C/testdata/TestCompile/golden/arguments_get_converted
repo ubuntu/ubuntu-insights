@@ -1,0 +1,24 @@
+conf:
+    consentdir: ""
+    insightsdir: ""
+    logger: null
+flags:
+    sourcemetricspath: metrics
+    sourcemetricsjson:
+        - 123
+        - 34
+        - 107
+        - 101
+        - 121
+        - 34
+        - 58
+        - 32
+        - 34
+        - 118
+        - 97
+        - 108
+        - 117
+        - 101
+        - 34
+        - 125
+outreport: ""

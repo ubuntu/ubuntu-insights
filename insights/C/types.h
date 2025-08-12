@@ -32,6 +32,12 @@ typedef struct {
 } insights_collect_flags;
 
 typedef struct {
+  const char *source_metrics_path; // Path to JSON file (default: empty)
+  const void *source_metrics_json; // Raw JSON data as bytes (default: NULL)
+  size_t source_metrics_json_len;  // Length of source_metrics_json in bytes
+} insights_compile_flags;
+
+typedef struct {
   uint32_t period; // Collection period in seconds (default: 0)
   bool force;      // Force write, ignoring duplicates (default: false)
   bool dry_run;    // Simulate operation without writing files (default: false)
@@ -48,6 +54,7 @@ typedef struct {
 typedef const char insights_const_char;
 typedef const insights_config insights_const_config;
 typedef const insights_collect_flags insights_const_collect_flags;
+typedef const insights_compile_flags insights_const_compile_flags;
 typedef const insights_write_flags insights_const_write_flags;
 typedef const insights_upload_flags insights_const_upload_flags;
 
