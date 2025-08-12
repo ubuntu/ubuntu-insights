@@ -32,6 +32,11 @@ typedef struct {
 } insights_collect_flags;
 
 typedef struct {
+  uint32_t period; // Collection period in seconds (default: 0)
+  bool dry_run;    // Simulate operation without writing files (default: false)
+} insights_write_flags;
+
+typedef struct {
   uint32_t min_age; // default: 1
   bool force;
   bool dry_run; // default: false
@@ -42,6 +47,7 @@ typedef struct {
 typedef const char insights_const_char;
 typedef const insights_config insights_const_config;
 typedef const insights_collect_flags insights_const_collect_flags;
+typedef const insights_write_flags insights_const_write_flags;
 typedef const insights_upload_flags insights_const_upload_flags;
 
 #endif // INSIGHTS_TYPES_H

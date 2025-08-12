@@ -86,6 +86,51 @@ func collectCustomInsights(config *C.insights_const_config, source *C.insights_c
 	return nil
 }
 
+/* insights_write writes the report to disk based on the consent state.
+ * If config is NULL, defaults are used.
+ * If "source" is NULL or "" the platform default is used.
+ * If "report" is not a valid Insights report, an error string is returned.
+ * If "flags" is NULL, defaults are used.
+ * If writing fails, an error string is returned.
+ * Any error string returned must be freed.
+ */
+//export insights_write
+func insights_write(config *C.insights_const_config, source *C.insights_const_char, report *C.insights_const_char, flags *C.insights_const_write_flags) *C.char {
+	return writeCustomInsights(config, source, report, flags, func(conf insights.Config, source string, report []byte, flags insights.WriteFlags) error {
+		return conf.Write(source, report, flags)
+	})
+}
+
+type writer = func(conf insights.Config, source string, report []byte, flags insights.WriteFlags) error
+
+func writeCustomInsights(config *C.insights_const_config, source *C.insights_const_char, report *C.insights_const_char, flags *C.insights_const_write_flags,
+	customWriter writer) *C.char {
+	conf := toGoInsightsConfig(config)
+
+	f := insights.WriteFlags{}
+	if flags != nil {
+		f.Period = (uint32)(flags.period)
+		f.DryRun = (bool)(flags.dry_run)
+	}
+
+	sourceStr := ""
+	if source != nil {
+		sourceStr = C.GoString(source)
+	}
+
+	bReport := []byte{}
+	if report != nil {
+		bReport = []byte(C.GoString(report))
+	}
+
+	err := customWriter(conf, sourceStr, bReport, f)
+	if err != nil {
+		return errToCString(err)
+	}
+
+	return nil
+}
+
 /* insights_upload uploads reports for the specified sources.
 // If config is NULL, defaults are used.
 // sources may be NULL or empty to handle all reports.

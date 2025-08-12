@@ -1,0 +1,9 @@
+conf:
+    consentdir: ""
+    insightsdir: ""
+    logger: null
+source: ""
+report: ""
+flags:
+    period: 0
+    dryrun: false

@@ -7,10 +7,11 @@ package main
 #include <stdlib.h>
 #include "types.h"
 
-extern char* collect_insights(const insights_config*, const char*, const insights_collect_flags*, char**);
-extern char* upload_insights(const insights_config*, const char**, size_t, const insights_upload_flags*);
-extern insights_consent_state get_consent_state(const insights_config*, const char*);
-extern char* set_consent_state(const insights_config*, const char*, bool);
+extern char* insights_collect(const insights_config*, const char*, const insights_collect_flags*, char**);
+extern char* insights_write(const insights_config*, const char*, const char*, const insights_write_flags*);
+extern char* insights_upload(const insights_config*, const char**, size_t, const insights_upload_flags*);
+extern insights_consent_state insights_get_consent_state(const insights_config*, const char*);
+extern char* insights_set_consent_state(const insights_config*, const char*, bool);
 */
 import "C"
 
@@ -176,6 +177,83 @@ func TestCollectImpl(t *testing.T) {
 
 			if tc.outReport != nil {
 				got.OutReport = C.GoString(*tc.outReport)
+			}
+
+			assert.NotNil(t, got.Conf.Logger, "Logger should not be nil in the callback")
+			got.Conf.Logger = nil // Logger is not part of the golden file, so we set it to nil for comparison.
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			assert.Equal(t, want, got, "C structures should be correctly translated to Go")
+		})
+	}
+}
+
+// TestWriteImpl tests the write functionality.
+func TestWriteImpl(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		config *insightsConfig
+		source string
+		report string
+		flags  *C.insights_write_flags
+
+		mockErr error
+	}{
+		"Empty case": {},
+		"Parameters are passed": {
+			config: &insightsConfig{
+				consent: strPtr("home/etc/dir"),
+				cache:   strPtr("insights/dir"),
+				verbose: true,
+			},
+			source: "platform",
+			report: "report data",
+			flags: &C.insights_write_flags{
+				period:  C.uint32_t(10),
+				dry_run: C.bool(true),
+			},
+		},
+
+		// Error case
+		"Error is returned": {
+			mockErr: errors.New("Error String"),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// we need to convert the input here since making C strings inline is unsafe.
+			inConfig, cleanup := makeConfig(tc.config)
+			defer cleanup()
+
+			var got struct {
+				Conf   insights.Config
+				Source string
+				Report string
+				Flags  insights.WriteFlags
+			}
+
+			sourceStr := C.CString(tc.source)
+			defer C.free(unsafe.Pointer(sourceStr))
+
+			reportStr := C.CString(tc.report)
+			defer C.free(unsafe.Pointer(reportStr))
+
+			ret := writeCustomInsights(inConfig, sourceStr, reportStr, tc.flags, func(conf insights.Config, source string, report []byte, flags insights.WriteFlags) error {
+				got.Conf = conf
+				got.Source = source
+				got.Report = string(report)
+				got.Flags = flags
+				return tc.mockErr
+			})
+			defer C.free(unsafe.Pointer(ret))
+
+			if tc.mockErr == nil {
+				assert.Nil(t, ret)
+			} else {
+				assert.Equal(t, C.GoString(ret), tc.mockErr.Error())
 			}
 
 			assert.NotNil(t, got.Conf.Logger, "Logger should not be nil in the callback")
