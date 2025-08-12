@@ -58,18 +58,21 @@ type SysInfo interface {
 // Collector is an interface for the collector component.
 type Collector interface {
 	// Compile checks if appropriate to make a new report, and if so, collects and compiles the data into a report.
-	// If force is true, it ignores duplicate checks.
-	Compile(force bool) (Insights, error)
+	Compile() (Insights, error)
 
 	// Write writes the insights report to disk, and cleans up old reports.
-	// If dryRun is true, it does not actually write the report.
-	Write(insights Insights, dryRun bool) error
+	//
+	// If force is true, then Write will overwrite any existing reports for a given period.
+	// If dryRun is true, then Write does nothing, other than checking consent.
+	//
+	// Note that duplicity checks and the timestamp in the file name is based on the current time,
+	// not the collection time of the Insights report passed.
+	Write(insights Insights, period uint32, force, dryRun bool) error
 }
 
 // collector is an abstraction of the collector component.
 type collector struct {
 	consent Consent
-	period  uint32
 	source  string
 
 	collectedDir      string
@@ -106,7 +109,6 @@ type Options func(*options)
 // Config represents the collector specific data needed to collect.
 type Config struct {
 	Source            string
-	Period            uint32
 	CachePath         string
 	SourceMetricsPath string
 	SourceMetricsJSON []byte
@@ -147,7 +149,7 @@ func (c *Config) Sanitize(l *slog.Logger) error {
 // The internal time used for collecting and writing reports is the current time at the moment of creation of the Collector.
 // Sanitize the config before use, but Sanitize may be called beforehand safely.
 func New(l *slog.Logger, cm Consent, c Config, args ...Options) (Collector, error) {
-	l.Debug("Creating new collector", "source", c.Source, "period", c.Period)
+	l.Debug("Creating new collector", "source", c.Source)
 
 	if cm == nil {
 		return collector{}, fmt.Errorf("consent manager cannot be nil")
@@ -168,7 +170,6 @@ func New(l *slog.Logger, cm Consent, c Config, args ...Options) (Collector, erro
 
 	return collector{
 		consent: cm,
-		period:  c.Period,
 		source:  c.Source,
 
 		time:              opts.timeProvider.Now(),
@@ -183,28 +184,13 @@ func New(l *slog.Logger, cm Consent, c Config, args ...Options) (Collector, erro
 	}, nil
 }
 
-// Compile checks if appropriate to make a new report, and if so, collects and compiles the data into a report.
+// Compile collects and compiles data into a report.
 //
-// Checks if a report already exists for the current period, and returns an error if it does.
-// Does not check consent, as this should be done at write time.
+// Compile does not check consent or report duplicity, as this should be done at write time.
 // Note that any source metrics must be a valid JSON object, not an array or primitive.
-func (c collector) Compile(force bool) (insights Insights, err error) {
-	c.log.Debug("Collecting data", "force", force)
+func (c collector) Compile() (insights Insights, err error) {
+	c.log.Debug("Collecting data")
 	defer decorate.OnError(&err, "insights compile failed")
-
-	if err := c.makeDirs(); err != nil {
-		return Insights{}, err
-	}
-
-	if !force {
-		duplicate, err := c.duplicateExists()
-		if err != nil {
-			return Insights{}, err
-		}
-		if duplicate {
-			return Insights{}, ErrDuplicateReport
-		}
-	}
 
 	insights, err = c.compile()
 	if err != nil {
@@ -216,11 +202,14 @@ func (c collector) Compile(force bool) (insights Insights, err error) {
 }
 
 // Write writes the insights report to disk, and cleans up old reports.
-// Does not check for duplicates, as this should be done in Compile.
 //
-// If the dryRun is true, then Write does nothing, other than checking consent.
-func (c collector) Write(insights Insights, dryRun bool) (err error) {
-	c.log.Debug("Writing data", "dryRun", dryRun)
+// If force is true, then Write will overwrite any existing reports for a given period.
+// If dryRun is true, then Write does nothing, other than checking consent.
+//
+// Note that duplicity checks and the timestamp in the file name is based on the current time,
+// not the collection time of the Insights report passed.
+func (c collector) Write(insights Insights, period uint32, force, dryRun bool) (err error) {
+	c.log.Debug("Writing data", "period", period, "force", force, "dryRun", dryRun)
 	defer decorate.OnError(&err, "insights write failed")
 
 	data, err := json.Marshal(insights)
@@ -239,6 +228,16 @@ func (c collector) Write(insights Insights, dryRun bool) (err error) {
 		data = constants.OptOutPayload
 	}
 
+	if !force {
+		duplicate, err := c.duplicateExists(period)
+		if err != nil {
+			return err
+		}
+		if duplicate {
+			return ErrDuplicateReport
+		}
+	}
+
 	if dryRun {
 		c.log.Info("Dry run, not writing insights report")
 		return nil
@@ -248,7 +247,7 @@ func (c collector) Write(insights Insights, dryRun bool) (err error) {
 		return fmt.Errorf("failed to create directories: %v", err)
 	}
 
-	if err := c.write(data); err != nil {
+	if err := c.write(data, period); err != nil {
 		return fmt.Errorf("failed to write insights report: %v", err)
 	}
 
@@ -270,9 +269,18 @@ func (c collector) makeDirs() error {
 }
 
 // duplicateExists returns true if a report for the current period already exists in the uploaded or collected directories.
-func (c collector) duplicateExists() (bool, error) {
-	for _, dir := range []string{c.collectedDir, c.uploadedDir} {
-		cReport, err := report.GetForPeriod(c.log, dir, c.time, c.period)
+// Directories are only checked if they exist.
+func (c collector) duplicateExists(period uint32) (bool, error) {
+	dirs := []string{}
+	if _, err := os.Stat(c.collectedDir); !os.IsNotExist(err) {
+		dirs = append(dirs, c.collectedDir)
+	}
+	if _, err := os.Stat(c.uploadedDir); !os.IsNotExist(err) {
+		dirs = append(dirs, c.uploadedDir)
+	}
+
+	for _, dir := range dirs {
+		cReport, err := report.GetForPeriod(c.log, dir, c.time, period)
 		if err != nil {
 			return false, fmt.Errorf("failed to check for duplicate report in %s for period: %v", dir, err)
 		}
@@ -347,8 +355,8 @@ func (c collector) getSourceMetrics() (map[string]any, error) {
 }
 
 // write writes the insights report to disk, with the appropriate name.
-func (c collector) write(insights []byte) error {
-	time := report.GetPeriodStart(c.period, c.time)
+func (c collector) write(insights []byte, period uint32) error {
+	time := report.GetPeriodStart(period, c.time)
 
 	reportPath := filepath.Join(c.collectedDir, fmt.Sprintf("%v.json", time))
 	if err := fileutils.AtomicWrite(reportPath, insights); err != nil {

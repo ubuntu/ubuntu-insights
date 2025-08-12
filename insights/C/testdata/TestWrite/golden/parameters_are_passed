@@ -1,0 +1,10 @@
+conf:
+    consentdir: home/etc/dir
+    insightsdir: insights/dir
+    logger: null
+source: platform
+report: report data
+flags:
+    period: 10
+    force: true
+    dryrun: true

@@ -2,6 +2,7 @@
 package insights
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,6 +29,13 @@ type CollectFlags struct {
 	Period            uint32
 	Force             bool
 	DryRun            bool
+}
+
+// WriteFlags represents optional parameters for Write.
+type WriteFlags struct {
+	Period uint32
+	Force  bool
+	DryRun bool
 }
 
 // UploadFlags represents optional parameters for Upload.
@@ -96,7 +104,6 @@ func (c Config) Collect(source string, flags CollectFlags) ([]byte, error) {
 
 	cConf := collector.Config{
 		Source:            source,
-		Period:            flags.Period,
 		CachePath:         r.InsightsDir,
 		SourceMetricsPath: flags.SourceMetricsPath,
 		SourceMetricsJSON: flags.SourceMetricsJSON,
@@ -108,18 +115,44 @@ func (c Config) Collect(source string, flags CollectFlags) ([]byte, error) {
 		return nil, err
 	}
 
-	insights, err := col.Compile(flags.Force)
+	insights, err := col.Compile()
 	if err != nil { // Errors may need to be exposed for caller correction.
 		return nil, err
 	}
 
-	if err := col.Write(insights, flags.DryRun); err != nil {
+	if err := col.Write(insights, flags.Period, flags.Force, flags.DryRun); err != nil {
 		if !(flags.DryRun && errors.Is(err, ErrConsentFileNotFound)) {
 			return nil, err
 		}
 	}
 
 	return json.MarshalIndent(insights, "", "  ")
+}
+
+// Write writes a valid insights report to disk based on consent.
+//
+// If consent is false, an OptOut report will be written to disk.
+// If a consent file could not be found, and error is returned.
+func (c Config) Write(source string, report []byte, flags WriteFlags) error {
+	r := c.Resolve()
+
+	cm := consent.New(r.Logger, r.ConsentDir)
+	col, err := collector.New(r.Logger, cm, collector.Config{
+		Source:    source,
+		CachePath: r.InsightsDir,
+	})
+	if err != nil {
+		return err
+	}
+
+	var insightsObj collector.Insights
+	dec := json.NewDecoder(bytes.NewReader(report))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&insightsObj); err != nil {
+		return err
+	}
+
+	return col.Write(insightsObj, flags.Period, flags.Force, flags.DryRun)
 }
 
 // Upload uploads reports for the specified sources.

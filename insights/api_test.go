@@ -155,12 +155,69 @@ func TestCollect(t *testing.T) {
 			}
 
 			// test that dry run was applied.
-			f, err := os.Open(filepath.Join(dir, tc.source, "local"))
-			require.NoError(t, err, "Setup: failed to open temp directory")
-			defer f.Close()
+			assert.NoDirExists(t, filepath.Join(dir, tc.source, "local"))
+			assert.NoDirExists(t, filepath.Join(dir, tc.source, "uploaded"))
+		})
+	}
+}
 
-			_, err = f.Readdir(1)
-			assert.ErrorIs(t, err, io.EOF)
+func TestWrite(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		source string
+		report []byte
+
+		wantErr bool
+	}{
+		"Valid source and empty insights doesn't error": {
+			source: "valid_true",
+			report: []byte(`{}`),
+		},
+		"Valid source and insights doesn't error": {
+			source: "valid_true",
+			report: []byte(`{"insightsVersion": "1.0.0", "sourceMetrics": {"inner": "value"}}`),
+		},
+
+		// Error cases
+		"Invalid source errors": {
+			source:  "invalid",
+			report:  []byte(`{}`),
+			wantErr: true,
+		},
+		"Nil insights errors": {
+			source:  "valid_true",
+			report:  nil,
+			wantErr: true,
+		},
+		"Unexpect insights fields errors": {
+			source:  "valid_true",
+			report:  []byte(`{"insightsVersion": "1.0.0", "sourceMetrics": {"inner": "value"}, "unexpectedField": "value"}`),
+			wantErr: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+
+			conf := insights.Config{
+				ConsentDir:  filepath.Join("testdata", "consent_files"),
+				InsightsDir: dir,
+			}
+
+			err := conf.Write(tc.source, tc.report, insights.WriteFlags{DryRun: true})
+			if tc.wantErr {
+				require.Error(t, err, "Expected error from write but got none")
+				return
+			}
+			require.NoError(t, err, "Got unexpected error from write")
+
+			// test that dry run was applied.
+			assert.NoDirExists(t, filepath.Join(dir, tc.source, "local"))
+			assert.NoDirExists(t, filepath.Join(dir, tc.source, "uploaded"))
 		})
 	}
 }

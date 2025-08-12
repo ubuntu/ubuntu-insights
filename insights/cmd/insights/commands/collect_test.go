@@ -137,7 +137,7 @@ func TestCollect(t *testing.T) {
 				DryRun bool
 			}{
 				Source: gotConfig.Source,
-				Period: gotConfig.Period,
+				Period: mc.gotPeriod,
 				Force:  mc.gotForce,
 				DryRun: mc.gotDryRun,
 			}
@@ -246,16 +246,18 @@ type mockCollector struct {
 	compileErr error
 	writeErr   error
 
+	gotPeriod uint32
 	gotForce  bool
 	gotDryRun bool
 }
 
-func (m *mockCollector) Compile(force bool) (collector.Insights, error) {
-	m.gotForce = force
+func (m *mockCollector) Compile() (collector.Insights, error) {
 	return collector.Insights{}, m.compileErr
 }
 
-func (m *mockCollector) Write(insights collector.Insights, dryRun bool) error {
+func (m *mockCollector) Write(insights collector.Insights, period uint32, force, dryRun bool) error {
+	m.gotPeriod = period
+	m.gotForce = force
 	m.gotDryRun = dryRun
 	return m.writeErr
 }

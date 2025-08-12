@@ -1,0 +1,5 @@
+local/5.json: '{"insightsVersion":"","collectionTime":0,"systemInfo":{"hardware":{},"software":{}},"sourceMetrics":{"Test Name":"Writes reports to disk if duplicate reports and force"}}'
+local/5.txt: ""
+local/20.json: ""
+uploaded/5.json: ""
+uploaded/30.json: ""
