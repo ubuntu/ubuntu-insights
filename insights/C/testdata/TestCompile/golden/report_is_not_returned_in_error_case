@@ -1,0 +1,8 @@
+conf:
+    consentdir: ""
+    insightsdir: ""
+    logger: null
+flags:
+    sourcemetricspath: ""
+    sourcemetricsjson: []
+outreport: ""

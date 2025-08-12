@@ -89,6 +89,60 @@ func collectCustomInsights(config *C.insights_const_config, source *C.insights_c
 }
 
 /**
+ * insights_compile compiles the report for the specified source.
+ * If config is NULL, defaults are used.
+ * If "flags" is NULL, defaults are used.
+ * If compilation fails, an error string is returned.
+ * Otherwise, this returns NULL.
+ *
+ * If out_report is not NULL, the pretty printed report is
+ * returned via out_report as a null-terminated C string.
+ *
+ * The out_report must be freed by the caller.
+ * The error string must be freed.
+ **/
+//export insights_compile
+func insights_compile(config *C.insights_const_config, flags *C.insights_const_compile_flags, out_report **C.char) *C.char { //nolint:revive // Exported for C
+	return compileCustomInsights(config, flags, out_report, func(conf insights.Config, flags insights.CompileFlags) ([]byte, error) {
+		return conf.Compile(flags)
+	})
+}
+
+type compiler = func(conf insights.Config, flags insights.CompileFlags) ([]byte, error)
+
+func compileCustomInsights(config *C.insights_const_config, flags *C.insights_const_compile_flags, outReport **C.char, customCompiler compiler) *C.char {
+	conf := toGoInsightsConfig(config)
+
+	f := insights.CompileFlags{}
+	if flags != nil {
+		if flags.source_metrics_path != nil {
+			f.SourceMetricsPath = C.GoString(flags.source_metrics_path)
+		}
+		if flags.source_metrics_json != nil && flags.source_metrics_json_len > 0 {
+			f.SourceMetricsJSON = C.GoBytes(flags.source_metrics_json, C.int(flags.source_metrics_json_len))
+		}
+	}
+
+	report, err := customCompiler(conf, f)
+	if err != nil {
+		return errToCString(err)
+	}
+
+	if outReport == nil {
+		// avoid leaking memory or writing to nil, assume no need to return report
+		return nil
+	}
+
+	if len(report) == 0 {
+		*outReport = nil
+		return nil
+	}
+
+	*outReport = C.CString(string(report))
+	return nil
+}
+
+/**
  * insights_write writes the report to disk based on the consent state.
  * If config is NULL, defaults are used.
  * If "source" is NULL or "" the platform default is used.
