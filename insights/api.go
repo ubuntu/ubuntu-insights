@@ -3,6 +3,7 @@ package insights
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -44,6 +45,12 @@ var (
 	ErrSanitizeError = collector.ErrSanitizeError
 	// ErrSourceMetricsError is returned by Collect when the source metrics could not be loaded or parsed.
 	ErrSourceMetricsError = collector.ErrSourceMetricsError
+)
+
+// Consent errors.
+var (
+	// ErrConsentFileNotFound is returned by Consent when the consent file is not found.
+	ErrConsentFileNotFound = consent.ErrConsentFileNotFound
 )
 
 // Upload errors.
@@ -107,7 +114,9 @@ func (c Config) Collect(source string, flags CollectFlags) ([]byte, error) {
 	}
 
 	if err := col.Write(insights, flags.DryRun); err != nil {
-		return nil, err
+		if !(flags.DryRun && errors.Is(err, ErrConsentFileNotFound)) {
+			return nil, err
+		}
 	}
 
 	return json.MarshalIndent(insights, "", "  ")
