@@ -31,6 +31,12 @@ type CollectFlags struct {
 	DryRun            bool
 }
 
+// CompileFlags represents optional parameters for Compile.
+type CompileFlags struct {
+	SourceMetricsPath string // Path to a JSON file a valid JSON object for source metrics.
+	SourceMetricsJSON []byte // JSON object for source metrics.
+}
+
 // WriteFlags represents optional parameters for Write.
 type WriteFlags struct {
 	Period uint32
@@ -124,6 +130,36 @@ func (c Config) Collect(source string, flags CollectFlags) ([]byte, error) {
 		if !(flags.DryRun && errors.Is(err, ErrConsentFileNotFound)) {
 			return nil, err
 		}
+	}
+
+	return json.MarshalIndent(insights, "", "  ")
+}
+
+// Compile compiles and returns a pretty printed insights report. Consent and duplicity are not checked.
+//
+// The SourceMetricsPath and SourceMetricsJSON fields in flags are mutually exclusive.
+// If both are set, an error will be returned.
+// If SourceMetricsPath in flags is set, it must be a valid path to a JSON file with a valid JSON object.
+// SourceMetricsJSON in flags if set must be a valid JSON object, not an array or primitive.
+func (c Config) Compile(flags CompileFlags) ([]byte, error) {
+	r := c.Resolve()
+
+	cConf := collector.Config{
+		CachePath:         r.InsightsDir,
+		SourceMetricsPath: flags.SourceMetricsPath,
+		SourceMetricsJSON: flags.SourceMetricsJSON,
+	}
+
+	// TODO: remove consent manager dependency from Compile
+	cm := consent.New(r.Logger, r.ConsentDir)
+	col, err := collector.New(r.Logger, cm, cConf)
+	if err != nil {
+		return nil, err
+	}
+
+	insights, err := col.Compile()
+	if err != nil { // Errors may need to be exposed for caller correction.
+		return nil, err
 	}
 
 	return json.MarshalIndent(insights, "", "  ")

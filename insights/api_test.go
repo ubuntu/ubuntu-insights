@@ -161,6 +161,85 @@ func TestCollect(t *testing.T) {
 	}
 }
 
+func TestCompile(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		compileFlags insights.CompileFlags
+
+		wantErr bool
+	}{
+		"Without source metrics": {},
+		"With valid JSON source metrics": {
+			compileFlags: insights.CompileFlags{
+				SourceMetricsJSON: []byte(`{"key": "source metrics JSON"}`),
+			},
+		},
+		"With valid source metrics path": {
+			compileFlags: insights.CompileFlags{
+				SourceMetricsPath: "custom.json",
+			},
+		},
+
+		// Error cases
+		"Errors with both SourceMetricsJSON and SourceMetricsPath": {
+			compileFlags: insights.CompileFlags{
+				SourceMetricsJSON: []byte(`{"key": "source metrics JSON"}`),
+				SourceMetricsPath: "custom.json",
+			},
+			wantErr: true,
+		},
+		"Errors with invalid JSON source metrics": {
+			compileFlags: insights.CompileFlags{
+				SourceMetricsJSON: []byte(`{"key": "invalid metrics JSON"`),
+			},
+			wantErr: true,
+		},
+		"Errors with non-object source metrics JSON": {
+			compileFlags: insights.CompileFlags{
+				SourceMetricsJSON: []byte(`["array", "not", "object"]`),
+			},
+			wantErr: true,
+		},
+		"Errors with invalid source metrics path": {
+			compileFlags: insights.CompileFlags{
+				SourceMetricsPath: "invalid.json",
+			},
+			wantErr: true,
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if tc.compileFlags.SourceMetricsPath != "" {
+				tc.compileFlags.SourceMetricsPath = filepath.Join("testdata", "metrics", tc.compileFlags.SourceMetricsPath)
+			}
+
+			// Compile doesn't use anything but the logger.
+			report, err := insights.Config{}.Compile(tc.compileFlags)
+
+			if tc.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+
+			// Check the returned report
+			mReport := collector.Insights{}
+			err = json.Unmarshal(report, &mReport)
+			require.NoError(t, err, "Failed to unmarshal report")
+			assert.NotEmpty(t, mReport.InsightsVersion, "Insights version should not be empty")
+
+			if tc.compileFlags.SourceMetricsJSON != nil || tc.compileFlags.SourceMetricsPath != "" {
+				assert.NotEmpty(t, mReport.SourceMetrics, "Source metrics should not be empty")
+			} else {
+				assert.Empty(t, mReport.SourceMetrics, "Source metrics should be empty when not provided")
+			}
+		})
+	}
+}
+
 func TestWrite(t *testing.T) {
 	t.Parallel()
 
