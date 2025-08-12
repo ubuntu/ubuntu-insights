@@ -14,23 +14,25 @@ import (
 	"github.com/ubuntu/ubuntu-insights/insights"
 )
 
-/* insights_collect creates a report for the specified source.
-// If config is NULL, defaults are used.
-// source may be NULL or "" to use platform default.
-// flags may be NULL.
-// If collection fails, an error string is returned.
-// Otherwise, this returns NULL.
-//
-// If out_report is not NULL,
-// the pretty printed report is returned in out_report
-// as a null-terminated C string.
-// Note that this return may not match with what is written
-// to disk depending on provided flags and the consent state.
-// If the consent state is determined to be false, an OptOut report
-// will be written to disk, but the full compiled report will still be returned.
-//
-// The out_report must be freed by the caller.
-// The error string must be freed. */
+/**
+ * insights_collect creates a report for the specified source.
+ * If config is NULL, defaults are used.
+ * source may be NULL or "" to use platform default.
+ * flags may be NULL.
+ * If collection fails, an error string is returned.
+ * Otherwise, this returns NULL.
+ *
+ * If out_report is not NULL,
+ * the pretty printed report is returned in out_report
+ * as a null-terminated C string.
+ * Note that this return may not match with what is written
+ * to disk depending on provided flags and the consent state.
+ * If the consent state is determined to be false, an OptOut report
+ * will be written to disk, but the full compiled report will still be returned.
+ *
+ * The out_report must be freed by the caller.
+ * The error string must be freed.
+ **/
 //export insights_collect
 func insights_collect(config *C.insights_const_config, source *C.insights_const_char, flags *C.insights_const_collect_flags, out_report **C.char) *C.char { //nolint:revive // Exported for C
 	return collectCustomInsights(config, source, flags, out_report, func(conf insights.Config, source string, f insights.CollectFlags) ([]byte, error) {
@@ -86,14 +88,15 @@ func collectCustomInsights(config *C.insights_const_config, source *C.insights_c
 	return nil
 }
 
-/* insights_write writes the report to disk based on the consent state.
+/**
+ * insights_write writes the report to disk based on the consent state.
  * If config is NULL, defaults are used.
  * If "source" is NULL or "" the platform default is used.
  * If "report" is not a valid Insights report, an error string is returned.
  * If "flags" is NULL, defaults are used.
  * If writing fails, an error string is returned.
  * Any error string returned must be freed.
- */
+ **/
 //export insights_write
 func insights_write(config *C.insights_const_config, source *C.insights_const_char, report *C.insights_const_char, flags *C.insights_const_write_flags) *C.char {
 	return writeCustomInsights(config, source, report, flags, func(conf insights.Config, source string, report []byte, flags insights.WriteFlags) error {
@@ -132,14 +135,16 @@ func writeCustomInsights(config *C.insights_const_config, source *C.insights_con
 	return nil
 }
 
-/* insights_upload uploads reports for the specified sources.
-// If config is NULL, defaults are used.
-// sources may be NULL or empty to handle all reports.
-// sourcesLen is the number of sources in the array.
-// flags may be NULL.
-// If uploading fails, an error string is returned.
-// Otherwise, this returns NULL.
-// The error string must be freed. */
+/**
+ * insights_upload uploads reports for the specified sources.
+ * If config is NULL, defaults are used.
+ * sources may be NULL or empty to handle all reports.
+ * sourcesLen is the number of sources in the array.
+ * flags may be NULL.
+ * If uploading fails, an error string is returned.
+ * Otherwise, this returns NULL.
+ * The error string must be freed.
+ **/
 //export insights_upload
 func insights_upload(config *C.insights_const_config, sources **C.insights_const_char, sources_len C.size_t, flags *C.insights_const_upload_flags) *C.char { //nolint:revive // Exported for C
 	return uploadCustomInsights(config, sources, sources_len, flags, func(conf insights.Config, sources []string, f insights.UploadFlags) error {
@@ -182,11 +187,13 @@ func uploadCustomInsights(config *C.insights_const_config, sources **C.insights_
 	return errToCString(err)
 }
 
-/* insights_get_consent_state gets the consent state for the specified source.
-// If config is NULL, defaults are used.
-// source may be NULL or "" to retrieve the global source.
-// If it could not be retrieved, this function returns CONSENT_UNKNOWN.
-// Otherwise, it returns the consent state of the source. */
+/**
+ * insights_get_consent_state gets the consent state for the specified source.
+ * If config is NULL, defaults are used.
+ * source may be NULL or "" to retrieve the global source.
+ * If it could not be retrieved, this function returns CONSENT_UNKNOWN.
+ * Otherwise, it returns the consent state of the source.
+ **/
 //export insights_get_consent_state
 func insights_get_consent_state(config *C.insights_const_config, source *C.insights_const_char) C.insights_consent_state {
 	return getCustomConsentState(config, source, func(conf insights.Config, source string) C.insights_consent_state {
@@ -216,12 +223,14 @@ func getCustomConsentState(config *C.insights_const_config, source *C.insights_c
 	return getter(conf, sourceStr)
 }
 
-/* insights_set_consent_state sets the state for the specified source to newState.
-// If config is NULL, defaults are used.
-// source may be NULL or "" to affect the global state.
-// If the state could not be set, this function returns an error string.
-// Otherwise, it returns NULL
-// The error string must be freed. */
+/**
+ * insights_set_consent_state sets the state for the specified source to newState.
+ * If config is NULL, defaults are used.
+ * source may be NULL or "" to affect the global state.
+ * If the state could not be set, this function returns an error string.
+ * Otherwise, it returns NULL
+ * The error string must be freed.
+ **/
 //export insights_set_consent_state
 func insights_set_consent_state(config *C.insights_const_config, source *C.insights_const_char, new_state C.bool) *C.char { //nolint:revive // Exported for C
 	return setCustomConsentState(config, source, new_state, func(conf insights.Config, source string, newState bool) error {
