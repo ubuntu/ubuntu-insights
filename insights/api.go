@@ -34,6 +34,7 @@ type CollectFlags struct {
 // WriteFlags represents optional parameters for Write.
 type WriteFlags struct {
 	Period uint32
+	Force  bool
 	DryRun bool
 }
 
@@ -103,7 +104,6 @@ func (c Config) Collect(source string, flags CollectFlags) ([]byte, error) {
 
 	cConf := collector.Config{
 		Source:            source,
-		Period:            flags.Period,
 		CachePath:         r.InsightsDir,
 		SourceMetricsPath: flags.SourceMetricsPath,
 		SourceMetricsJSON: flags.SourceMetricsJSON,
@@ -115,12 +115,12 @@ func (c Config) Collect(source string, flags CollectFlags) ([]byte, error) {
 		return nil, err
 	}
 
-	insights, err := col.Compile(flags.Force)
+	insights, err := col.Compile()
 	if err != nil { // Errors may need to be exposed for caller correction.
 		return nil, err
 	}
 
-	if err := col.Write(insights, flags.DryRun); err != nil {
+	if err := col.Write(insights, flags.Period, flags.Force, flags.DryRun); err != nil {
 		if !(flags.DryRun && errors.Is(err, ErrConsentFileNotFound)) {
 			return nil, err
 		}
@@ -139,7 +139,6 @@ func (c Config) Write(source string, report []byte, flags WriteFlags) error {
 	cm := consent.New(r.Logger, r.ConsentDir)
 	col, err := collector.New(r.Logger, cm, collector.Config{
 		Source:    source,
-		Period:    flags.Period,
 		CachePath: r.InsightsDir,
 	})
 	if err != nil {
@@ -153,7 +152,7 @@ func (c Config) Write(source string, report []byte, flags WriteFlags) error {
 		return err
 	}
 
-	return col.Write(insightsObj, flags.DryRun)
+	return col.Write(insightsObj, flags.Period, flags.Force, flags.DryRun)
 }
 
 // Upload uploads reports for the specified sources.

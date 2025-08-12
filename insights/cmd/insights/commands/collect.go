@@ -71,7 +71,6 @@ func (a App) collectRun() (err error) {
 
 	cConfig := collector.Config{
 		Source:            a.config.Collect.Source,
-		Period:            a.config.Collect.Period,
 		CachePath:         a.config.insightsDir,
 		SourceMetricsPath: a.config.Collect.SourceMetricsPath,
 	}
@@ -86,7 +85,7 @@ func (a App) collectRun() (err error) {
 		return err
 	}
 
-	insights, err := c.Compile(a.config.Collect.Force)
+	insights, err := c.Compile()
 	if err != nil {
 		return err
 	}
@@ -97,7 +96,7 @@ func (a App) collectRun() (err error) {
 	}
 	fmt.Println(string(ib))
 
-	err = c.Write(insights, a.config.Collect.DryRun)
+	err = c.Write(insights, a.config.Collect.Period, a.config.Collect.Force, a.config.Collect.DryRun)
 	if errors.Is(err, consent.ErrConsentFileNotFound) {
 		slog.Warn("Consent file not found, will not write insights report to disk or upload.")
 		return nil

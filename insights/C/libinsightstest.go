@@ -210,6 +210,7 @@ func TestWriteImpl(t *testing.T) {
 			report: "report data",
 			flags: &C.insights_write_flags{
 				period:  C.uint32_t(10),
+				force:   C.bool(true),
 				dry_run: C.bool(true),
 			},
 		},

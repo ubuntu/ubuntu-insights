@@ -110,6 +110,7 @@ func writeCustomInsights(config *C.insights_const_config, source *C.insights_con
 	f := insights.WriteFlags{}
 	if flags != nil {
 		f.Period = (uint32)(flags.period)
+		f.Force = (bool)(flags.force)
 		f.DryRun = (bool)(flags.dry_run)
 	}
 

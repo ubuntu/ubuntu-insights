@@ -6,4 +6,5 @@ source: platform
 report: report data
 flags:
     period: 10
+    force: true
     dryrun: true

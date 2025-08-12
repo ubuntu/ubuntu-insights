@@ -155,12 +155,8 @@ func TestCollect(t *testing.T) {
 			}
 
 			// test that dry run was applied.
-			f, err := os.Open(filepath.Join(dir, tc.source, "local"))
-			require.NoError(t, err, "Setup: failed to open temp directory")
-			defer f.Close()
-
-			_, err = f.Readdir(1)
-			assert.ErrorIs(t, err, io.EOF)
+			assert.NoDirExists(t, filepath.Join(dir, tc.source, "local"))
+			assert.NoDirExists(t, filepath.Join(dir, tc.source, "uploaded"))
 		})
 	}
 }
@@ -221,6 +217,7 @@ func TestWrite(t *testing.T) {
 
 			// test that dry run was applied.
 			assert.NoDirExists(t, filepath.Join(dir, tc.source, "local"))
+			assert.NoDirExists(t, filepath.Join(dir, tc.source, "uploaded"))
 		})
 	}
 }

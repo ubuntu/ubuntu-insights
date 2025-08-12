@@ -33,6 +33,7 @@ typedef struct {
 
 typedef struct {
   uint32_t period; // Collection period in seconds (default: 0)
+  bool force;      // Force write, ignoring duplicates (default: false)
   bool dry_run;    // Simulate operation without writing files (default: false)
 } insights_write_flags;
 
