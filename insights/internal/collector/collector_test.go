@@ -81,28 +81,6 @@ func TestSanitize(t *testing.T) {
 				CachePath:         "fakeCachePath",
 			},
 		},
-		"Source metrics provided with empty source": {
-			config: collector.Config{
-				SourceMetricsPath: "fakeSourceMetricsPath",
-				SourceMetricsJSON: []byte(`{"test": "sourceMetricsJson"}`),
-				CachePath:         "fakeCachePath",
-			},
-			logs: map[slog.Level]uint{
-				slog.LevelInfo: 1,
-				slog.LevelWarn: 1,
-			},
-		},
-		"Source metrics provided with defaultCollectorSource": {
-			config: collector.Config{
-				Source:            constants.DefaultCollectSource,
-				SourceMetricsPath: "fakeSourceMetricsPath",
-				SourceMetricsJSON: []byte(`{"test": "sourceMetricsJson"}`),
-				CachePath:         "fakeCachePath",
-			},
-			logs: map[slog.Level]uint{
-				slog.LevelWarn: 1,
-			},
-		},
 
 		// Error cases
 		"Both sourceMetricsPath and sourceMetricsJSON provided with customSource errors": {

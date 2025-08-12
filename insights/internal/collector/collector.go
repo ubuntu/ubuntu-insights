@@ -122,12 +122,6 @@ func (c *Config) Sanitize(l *slog.Logger) error {
 		l.Info("No source provided, defaulting to platform", "source", c.Source)
 	}
 
-	if c.Source == constants.DefaultCollectSource && (c.SourceMetricsPath != "" || c.SourceMetricsJSON != nil) {
-		l.Warn("Ignoring source metrics as they are not applicable for the platform source")
-		c.SourceMetricsPath = ""
-		c.SourceMetricsJSON = nil
-	}
-
 	if c.SourceMetricsPath != "" && c.SourceMetricsJSON != nil {
 		return errors.New("only one of SourceMetricsPath or SourceMetricsJSON can be provided")
 	}
