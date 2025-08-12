@@ -222,6 +222,11 @@ func (c collector) Write(insights Insights, period uint32, force, dryRun bool) (
 		data = constants.OptOutPayload
 	}
 
+	time := time.Unix(insights.CollectionTime, 0)
+	if time.Unix() == 0 {
+		time = c.time // If no collection time is provided (zero value), use the current time
+	}
+
 	if !force {
 		duplicate, err := c.duplicateExists(period)
 		if err != nil {
@@ -241,7 +246,7 @@ func (c collector) Write(insights Insights, period uint32, force, dryRun bool) (
 		return fmt.Errorf("failed to create directories: %v", err)
 	}
 
-	if err := c.write(data, period); err != nil {
+	if err := c.write(data, period, time); err != nil {
 		return fmt.Errorf("failed to write insights report: %v", err)
 	}
 
@@ -349,10 +354,8 @@ func (c collector) getSourceMetrics() (map[string]any, error) {
 }
 
 // write writes the insights report to disk, with the appropriate name.
-func (c collector) write(insights []byte, period uint32) error {
-	time := report.GetPeriodStart(period, c.time)
-
-	reportPath := filepath.Join(c.collectedDir, fmt.Sprintf("%v.json", time))
+func (c collector) write(insights []byte, period uint32, time time.Time) error {
+	reportPath := filepath.Join(c.collectedDir, fmt.Sprintf("%v.json", time.Unix()))
 	if err := fileutils.AtomicWrite(reportPath, insights); err != nil {
 		return fmt.Errorf("failed to write to disk: %v", err)
 	}
