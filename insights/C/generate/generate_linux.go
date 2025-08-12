@@ -30,8 +30,7 @@ func buildSharedLibs() error {
 	if version := os.Getenv("DEB_VERSION_UPSTREAM"); version != "" {
 		constants.Version = version
 	}
-
-	ldflags := fmt.Sprintf("-X=constants.Version/internal/constants.Version=%s -extldflags -Wl,-soname,%s", constants.Version, libname)
+	ldflags := fmt.Sprintf("-X=github.com/ubuntu/ubuntu-insights/insights/internal/constants.Version=%s -extldflags -Wl,-soname,%s", constants.Version, libname)
 
 	if output, err := exec.Command("go", "build", //nolint:gosec // This is controlled by the build process and also filtered here
 		"-buildmode=c-shared",
