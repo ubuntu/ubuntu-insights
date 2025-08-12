@@ -5,6 +5,7 @@ ubuntu-insights (0.6.0) questing; urgency=medium
   * libinsights: (Breaking) Rename C bindings method and type definitions
   * libinsights: Dry run collect only warns if consent file is missing
   * libinsights: Expose collector write method
+  * libinsights: Don't ignore source metrics for platform source or empty source
 
  -- Kat Kuo <kat.kuo@canonical.com>  Sun, 10 Aug 2025 23:49:25 -0400
 
