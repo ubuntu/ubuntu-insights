@@ -7,6 +7,8 @@ ubuntu-insights (0.6.0) questing; urgency=medium
   * libinsights: Expose collector write method
   * libinsights: Expose collector compile method
   * libinsights: Don't ignore source metrics for platform source or empty source
+  * Rework collector period window logic to be more intuitive
+  * Ensure that all duplicates are removed when the collector writes with force
 
  -- Kat Kuo <kat.kuo@canonical.com>  Sun, 10 Aug 2025 23:49:25 -0400
 
