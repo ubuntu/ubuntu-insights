@@ -215,14 +215,8 @@ func (c collector) Write(insights Insights, period uint32, force, dryRun bool) (
 		time = c.time // If no collection time is provided (zero value), use the current time
 	}
 
-	if !force {
-		duplicate, err := c.duplicateExists(period)
-		if err != nil {
-			return err
-		}
-		if duplicate {
-			return ErrDuplicateReport
-		}
+	if err := c.handleDuplicates(force, time, period); err != nil {
+		return err
 	}
 
 	if dryRun {
@@ -255,9 +249,40 @@ func (c collector) makeDirs() error {
 	return nil
 }
 
+// handleDuplicates checks and handles duplicates based on the force flag.
+// If force is false and there are duplicates in either the collected or uploaded directories, it will error.
+// Otherwise, if force is true, it will clear out all existing reports for the given period in the collected dir.
+func (c collector) handleDuplicates(force bool, time int64, period uint32) error {
+	if !force {
+		duplicate, err := c.duplicateExists(time, period)
+		if err != nil {
+			return err
+		}
+		if duplicate {
+			return ErrDuplicateReport
+		}
+	}
+
+	// If force is true, clear out all existing reports for the given period.
+	if force {
+		if _, err := os.Stat(c.collectedDir); err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return err
+		}
+
+		if err := report.ClearPeriod(c.log, c.collectedDir, time, period); err != nil {
+			return fmt.Errorf("failed to clear old reports: %v", err)
+		}
+	}
+
+	return nil
+}
+
 // duplicateExists returns true if a report for the current period already exists in the uploaded or collected directories.
 // Directories are only checked if they exist.
-func (c collector) duplicateExists(period uint32) (bool, error) {
+func (c collector) duplicateExists(time int64, period uint32) (bool, error) {
 	dirs := []string{}
 	if _, err := os.Stat(c.collectedDir); !os.IsNotExist(err) {
 		dirs = append(dirs, c.collectedDir)
@@ -267,7 +292,7 @@ func (c collector) duplicateExists(period uint32) (bool, error) {
 	}
 
 	for _, dir := range dirs {
-		cReport, err := report.GetLatest(c.log, dir, c.time, period)
+		cReport, err := report.GetLatest(c.log, dir, time, period)
 		if err != nil {
 			return false, fmt.Errorf("failed to check for duplicate report in %s for period: %v", dir, err)
 		}
