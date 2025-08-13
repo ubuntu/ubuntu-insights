@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,14 +40,6 @@ type testSysInfo struct {
 
 func (m testSysInfo) Collect() (sysinfo.Info, error) {
 	return m.info, m.err
-}
-
-type MockTimeProvider struct {
-	CurrentTime int64
-}
-
-func (m MockTimeProvider) Now() time.Time {
-	return time.Unix(m.CurrentTime, 0)
 }
 
 func TestSanitize(t *testing.T) {
@@ -280,7 +271,7 @@ func TestCompile(t *testing.T) {
 			}
 
 			opts := []collector.Options{
-				collector.WithTimeProvider(MockTimeProvider{CurrentTime: tc.time}),
+				collector.WithTime(tc.time),
 				collector.WithSysInfo(func(l *slog.Logger, opts ...sysinfo.Options) collector.SysInfo {
 					return tc.sysInfo
 				}),
@@ -439,7 +430,7 @@ func TestWrite(t *testing.T) {
 			}
 
 			opts := []collector.Options{
-				collector.WithTimeProvider(MockTimeProvider{CurrentTime: tc.time}),
+				collector.WithTime(tc.time),
 				collector.WithMaxReports(tc.maxReports),
 			}
 

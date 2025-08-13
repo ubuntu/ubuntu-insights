@@ -13,10 +13,9 @@ func WithMaxReports(maxReports uint32) Options {
 	}
 }
 
-// WithTimeProvider sets the time provider for the collector.
-func WithTimeProvider(tp timeProvider) Options {
+func WithTime(time int64) Options {
 	return func(o *options) {
-		o.timeProvider = tp
+		o.time = time
 	}
 }
 

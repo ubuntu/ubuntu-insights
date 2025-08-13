@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
@@ -34,7 +33,7 @@ func TestGetPeriodStart(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got := report.GetPeriodStart(tc.period, time.Unix(tc.time, 0))
+			got := report.GetPeriodStart(tc.time, tc.period)
 
 			require.IsType(t, int64(0), got)
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
@@ -118,7 +117,7 @@ func TestGetForPeriod(t *testing.T) {
 				dir = filepath.Join(dir, "invalid dir")
 			}
 
-			r, err := report.GetLatest(slog.Default(), dir, time.Unix(tc.time, 0), tc.period)
+			r, err := report.GetLatest(slog.Default(), dir, tc.time, tc.period)
 			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return
@@ -176,7 +175,7 @@ func TestGetNForPeriod(t *testing.T) {
 				dir = filepath.Join(dir, "invalid dir")
 			}
 
-			got, err := report.GetNLatest(slog.Default(), dir, time.Unix(tc.time, 0), tc.period, tc.n)
+			got, err := report.GetNLatest(slog.Default(), dir, tc.time, tc.period, tc.n)
 			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return
@@ -542,7 +541,7 @@ func TestClearPeriod(t *testing.T) {
 			if tc.noDir {
 				dir = filepath.Join(baseDir, "invalid dir")
 			}
-			err := report.ClearPeriod(slog.Default(), dir, time.Unix(tc.time, 0), tc.period)
+			err := report.ClearPeriod(slog.Default(), dir, tc.time, tc.period)
 			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return

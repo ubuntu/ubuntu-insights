@@ -14,7 +14,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/constants"
@@ -130,23 +129,23 @@ func getReportTime(path string) (int64, error) {
 // GetPeriodStart returns the start of the period window for a given period in seconds.
 // If period is 0, it returns the current time as a Unix timestamp.
 // In cases of underflow, it returns the minimum int64 value.
-func GetPeriodStart(period uint32, t time.Time) int64 {
+func GetPeriodStart(t int64, period uint32) int64 {
 	if period == 0 {
-		return t.Unix() // If period is 0, return the current time
+		return t // If period is 0, return the current time
 	}
 
-	if t.Unix() < math.MinInt64+int64(period) {
+	if t < math.MinInt64+int64(period) {
 		return math.MinInt64 // Pin to minimum int64 in case of underflow
 	}
 
-	return t.Unix() - int64(period)
+	return t - int64(period)
 }
 
 // GetLatest returns the most recent report within a period window for a given directory.
 // If no report is found, an empty report is returned.
 //
 // For example, given reports 1 and 7, with time 2 and period 7, the function will return the path for report 1.
-func GetLatest(l *slog.Logger, dir string, t time.Time, period uint32) (Report, error) {
+func GetLatest(l *slog.Logger, dir string, t int64, period uint32) (Report, error) {
 	reports, err := GetNLatest(l, dir, t, period, 1)
 	if err != nil || len(reports) == 0 {
 		return Report{}, err
@@ -158,13 +157,12 @@ func GetLatest(l *slog.Logger, dir string, t time.Time, period uint32) (Report, 
 //
 // For example, given reports 1, 2, 3, 5, and 7, with time 5, period 3, and n 2, reports 2 and 3 are returned.
 // If n is 0, all reports within the period window are returned.
-func GetNLatest(l *slog.Logger, dir string, t time.Time, period uint32, n int) ([]Report, error) {
+func GetNLatest(l *slog.Logger, dir string, t int64, period uint32, n int) ([]Report, error) {
 	if n < 0 {
 		return nil, fmt.Errorf("n must be non-negative, got %d", n)
 	}
 
-	periodStart := GetPeriodStart(period, t)
-	periodEnd := t.Unix()
+	periodStart := GetPeriodStart(t, period)
 
 	// Reports names are utc timestamps.
 	var reports []Report
@@ -189,12 +187,12 @@ func GetNLatest(l *slog.Logger, dir string, t time.Time, period uint32, n int) (
 		if r.TimeStamp < periodStart {
 			return nil
 		}
-		if r.TimeStamp > periodEnd {
+		if r.TimeStamp > t {
 			return nil
 		}
 
 		reports = append(reports, r)
-		if periodStart == periodEnd {
+		if periodStart == t {
 			return filepath.SkipAll // Optimization to stop walking early.
 		}
 		return nil
@@ -247,7 +245,7 @@ func GetAll(l *slog.Logger, dir string) ([]Report, error) {
 
 // ClearPeriod removes all reports in a given dir, within the period window [t-period, t].
 // If a file failed to be removed, an error is logged but the function continues.
-func ClearPeriod(l *slog.Logger, dir string, t time.Time, period uint32) error {
+func ClearPeriod(l *slog.Logger, dir string, t int64, period uint32) error {
 	reports, err := GetNLatest(l, dir, t, period, 0)
 	if err != nil {
 		return err

@@ -35,16 +35,6 @@ type Insights struct {
 	SourceMetrics   map[string]any `json:"sourceMetrics,omitempty"`
 }
 
-type timeProvider interface {
-	Now() time.Time
-}
-
-type realTimeProvider struct{}
-
-func (realTimeProvider) Now() time.Time {
-	return time.Now()
-}
-
 // Consent is an interface for getting the consent state for a given source.
 type Consent interface {
 	HasConsent(source string) (bool, error)
@@ -82,7 +72,7 @@ type collector struct {
 
 	// Overrides for testing.
 	maxReports uint32
-	time       time.Time
+	time       int64
 	sysInfo    SysInfo
 
 	log *slog.Logger
@@ -90,17 +80,9 @@ type collector struct {
 
 type options struct {
 	// Private members exported for tests.
-	maxReports   uint32
-	timeProvider timeProvider
-	sysInfo      func(*slog.Logger, ...sysinfo.Options) SysInfo
-}
-
-var defaultOptions = options{
-	maxReports:   constants.MaxReports,
-	timeProvider: realTimeProvider{},
-	sysInfo: func(l *slog.Logger, opts ...sysinfo.Options) SysInfo {
-		return sysinfo.New(l, opts...)
-	},
+	maxReports uint32
+	time       int64
+	sysInfo    func(*slog.Logger, ...sysinfo.Options) SysInfo
 }
 
 // Options represents an optional function to override Collector default values.
@@ -157,7 +139,13 @@ func New(l *slog.Logger, cm Consent, c Config, args ...Options) (Collector, erro
 		return collector{}, fmt.Errorf("failed to create cache directory: %v", err)
 	}
 
-	opts := defaultOptions
+	opts := options{
+		maxReports: constants.MaxReports,
+		time:       time.Now().Unix(),
+		sysInfo: func(l *slog.Logger, opts ...sysinfo.Options) SysInfo {
+			return sysinfo.New(l, opts...)
+		},
+	}
 	for _, opt := range args {
 		opt(&opts)
 	}
@@ -166,7 +154,7 @@ func New(l *slog.Logger, cm Consent, c Config, args ...Options) (Collector, erro
 		consent: cm,
 		source:  c.Source,
 
-		time:              opts.timeProvider.Now(),
+		time:              opts.time,
 		collectedDir:      filepath.Join(c.CachePath, c.Source, constants.LocalFolder),
 		uploadedDir:       filepath.Join(c.CachePath, c.Source, constants.UploadedFolder),
 		sourceMetricsPath: c.SourceMetricsPath,
@@ -222,8 +210,8 @@ func (c collector) Write(insights Insights, period uint32, force, dryRun bool) (
 		data = constants.OptOutPayload
 	}
 
-	time := time.Unix(insights.CollectionTime, 0)
-	if time.Unix() == 0 {
+	time := insights.CollectionTime
+	if time == 0 {
 		time = c.time // If no collection time is provided (zero value), use the current time
 	}
 
@@ -246,7 +234,7 @@ func (c collector) Write(insights Insights, period uint32, force, dryRun bool) (
 		return fmt.Errorf("failed to create directories: %v", err)
 	}
 
-	if err := c.write(data, period, time); err != nil {
+	if err := c.write(data, time); err != nil {
 		return fmt.Errorf("failed to write insights report: %v", err)
 	}
 
@@ -296,7 +284,7 @@ func (c collector) duplicateExists(period uint32) (bool, error) {
 func (c collector) compile() (Insights, error) {
 	insights := Insights{
 		InsightsVersion: constants.Version,
-		CollectionTime:  c.time.Unix(),
+		CollectionTime:  c.time,
 	}
 
 	// Collect system information.
@@ -354,8 +342,8 @@ func (c collector) getSourceMetrics() (map[string]any, error) {
 }
 
 // write writes the insights report to disk, with the appropriate name.
-func (c collector) write(insights []byte, period uint32, time time.Time) error {
-	reportPath := filepath.Join(c.collectedDir, fmt.Sprintf("%v.json", time.Unix()))
+func (c collector) write(insights []byte, time int64) error {
+	reportPath := filepath.Join(c.collectedDir, fmt.Sprintf("%v.json", time))
 	if err := fileutils.AtomicWrite(reportPath, insights); err != nil {
 		return fmt.Errorf("failed to write to disk: %v", err)
 	}
