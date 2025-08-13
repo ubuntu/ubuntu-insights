@@ -190,11 +190,9 @@ func GetNLatest(l *slog.Logger, dir string, t time.Time, period uint32, n int) (
 		}
 
 		r, err := New(path)
-		if errors.Is(err, ErrInvalidReportExt) || errors.Is(err, ErrInvalidReportName) {
+		if err != nil {
 			l.Debug("Skipping non-report file", "file", d.Name(), "error", err)
 			return nil
-		} else if err != nil {
-			return fmt.Errorf("failed to create report object: %v", err)
 		}
 
 		if r.TimeStamp < periodStart {
