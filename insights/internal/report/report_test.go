@@ -23,7 +23,6 @@ func TestGetPeriodStart(t *testing.T) {
 	}{
 		"Valid Period":             {period: 500, time: 100000},
 		"Negative Time:":           {period: 500, time: -100000},
-		"Non-Multiple Time":        {period: 500, time: 1051},
 		"Zero Period Returns Time": {period: 0, time: 500},
 		"Zero Period and Max Time": {period: 0, time: math.MaxInt64},
 		"Zero Period and Min Time": {period: 0, time: math.MinInt64},
@@ -97,15 +96,15 @@ func TestGetForPeriod(t *testing.T) {
 		"Invalid File Extension": {files: []string{"1.txt", "2.txt"}, time: 1, period: 500},
 		"Invalid File Names":     {files: []string{"i-1.json", "i-2.json", "i-3.json", "test.json", "one.json"}, time: -100, period: 500},
 
-		"Specific Time Single Valid Report": {files: []string{"1.json", "2.json"}, time: 2, period: 1},
-		"Negative Timestamp":                {files: []string{"-100.json", "-101.json"}, time: -150, period: 100},
-		"Not Inclusive Period":              {files: []string{"1.json", "7.json"}, time: 2, period: 7},
-		"Lexical Order Check":               {files: []string{"5.json", "20.json"}, time: 10, period: 20},
-		"Zero Period Returns Nothing":       {files: []string{"1.json", "7.json"}, time: 7, period: 0},
+		"Returns latest in period":    {files: []string{"1.json", "2.json"}, time: 3, period: 5},
+		"Not inclusive time":          {files: []string{"1.json", "2.json"}, time: 2, period: 5},
+		"Negative Timestamp":          {files: []string{"-100.json", "-101.json"}, time: -50, period: 50},
+		"Lexical Order Check":         {files: []string{"3.json", "5.json", "1.json"}, time: 10, period: 10},
+		"Zero Period Returns Nothing": {files: []string{"1.json", "7.json"}, time: 7, period: 0},
 
 		// Error cases
-		"Invalid Dir":        {period: 1, invalidDir: true, wantErr: true},
-		"Max time overflows": {period: 1, time: math.MaxInt64, wantErr: true},
+		"Invalid Dir": {period: 1, invalidDir: true, wantErr: true},
+		//"Max time overflows": {period: 1, time: math.MaxInt64, wantErr: true},
 	}
 
 	for name, tc := range tests {

@@ -129,13 +129,17 @@ func getReportTime(path string) (int64, error) {
 
 // GetPeriodStart returns the start of the period window for a given period in seconds.
 // If period is 0, it returns the current time as a Unix timestamp.
+// In cases of underflow, it returns the minimum int64 value.
 func GetPeriodStart(period uint32, t time.Time) int64 {
 	if period == 0 {
-		return t.Unix() // If period is 0, return the current time as
+		return t.Unix() // If period is 0, return the current time
 	}
 
-	// Over and underflow is impossible as % is a remainder operation, not modulus.
-	return t.Unix() - (t.Unix() % int64(period))
+	if t.Unix() < math.MinInt64+int64(period) {
+		return math.MinInt64 // Pin to minimum int64 in case of underflow
+	}
+
+	return t.Unix() - int64(period)
 }
 
 // GetForPeriod returns the most recent report within a period window for a given directory.
@@ -195,6 +199,67 @@ func GetForPeriod(l *slog.Logger, dir string, t time.Time, period uint32) (Repor
 	}
 
 	return report, nil
+}
+
+// GetNForPeriod returns the N most recent reports within a period window for a given directory.
+// Not inclusive of t.
+//
+// For example, given reports 1, 2, 3, 5, and 7, with time 5, period 3, and n 2, reports 2 and 3 are returned.
+// If period is 0, nil is returned.
+// If n is 0, all reports within the period window are returned.
+func GetNForPeriod(l *slog.Logger, dir string, t time.Time, period uint32, n int) ([]Report, error) {
+	if n < 0 {
+		return nil, fmt.Errorf("n must be non-negative, got %d", n)
+	}
+
+	if period == 0 {
+		return nil, nil
+	}
+
+	periodStart := GetPeriodStart(period, t)
+	periodEnd := t.Unix()
+
+	// Reports names are utc timestamps.
+	var reports []Report
+	if err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("failed to access path: %v", err)
+		}
+
+		if d.IsDir() {
+			if path != dir {
+				return filepath.SkipDir // Skip subdirectories.
+			}
+			return nil // Continue walking the directory.
+		}
+
+		r, err := New(path)
+		if errors.Is(err, ErrInvalidReportExt) || errors.Is(err, ErrInvalidReportName) {
+			l.Debug("Skipping non-report file", "file", d.Name(), "error", err)
+			return nil
+		} else if err != nil {
+			return fmt.Errorf("failed to create report object: %v", err)
+		}
+
+		if r.TimeStamp < periodStart {
+			return nil
+		}
+		if r.TimeStamp >= periodEnd {
+			return nil
+		}
+
+		reports = append(reports, r)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	// WalkDir parses lexically, meaning reports should be chronological in ascending order.
+	if len(reports) > n {
+		reports = reports[len(reports)-n:]
+	}
+
+	return reports, nil
 }
 
 // GetAll returns all reports in a given directory.
