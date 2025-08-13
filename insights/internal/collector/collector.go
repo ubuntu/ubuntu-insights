@@ -292,12 +292,11 @@ func (c collector) duplicateExists(time int64, period uint32) (bool, error) {
 	}
 
 	for _, dir := range dirs {
-		cReport, err := report.GetLatest(c.log, dir, time, period)
+		duplicateExists, err := report.DuplicateExists(c.log, dir, time, period)
 		if err != nil {
 			return false, fmt.Errorf("failed to check for duplicate report in %s for period: %v", dir, err)
 		}
-		if cReport.Name != "" {
-			c.log.Info("Duplicate report already exists", "file", cReport.Path)
+		if duplicateExists {
 			return true, nil
 		}
 	}

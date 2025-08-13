@@ -141,115 +141,42 @@ func GetPeriodStart(t int64, period uint32) int64 {
 	return t - int64(period)
 }
 
-// GetLatest returns the most recent report within a period window for a given directory.
-// If no report is found, an empty report is returned.
-//
-// For example, given reports 1 and 7, with time 2 and period 7, the function will return the path for report 1.
-func GetLatest(l *slog.Logger, dir string, t int64, period uint32) (Report, error) {
-	reports, err := GetNLatest(l, dir, t, period, 1)
-	if err != nil || len(reports) == 0 {
-		return Report{}, err
-	}
-	return reports[0], nil
-}
-
-// GetNLatest returns the N most recent reports within a period window for a given directory in ascending order.
-//
-// For example, given reports 1, 2, 3, 5, and 7, with time 5, period 3, and n 2, reports 2 and 3 are returned.
-// If n is 0, all reports within the period window are returned.
-func GetNLatest(l *slog.Logger, dir string, t int64, period uint32, n int) ([]Report, error) {
-	if n < 0 {
-		return nil, fmt.Errorf("n must be non-negative, got %d", n)
-	}
-
+// DuplicateExists checks if there are any reports within the given period window.
+func DuplicateExists(l *slog.Logger, dir string, t int64, period uint32) (bool, error) {
 	periodStart := GetPeriodStart(t, period)
 
-	// Reports names are utc timestamps.
-	var reports []Report
-	if err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return fmt.Errorf("failed to access path: %v", err)
-		}
-
-		if d.IsDir() {
-			if path != dir {
-				return filepath.SkipDir // Skip subdirectories.
-			}
-			return nil // Continue walking the directory.
-		}
-
-		r, err := New(path)
-		if err != nil {
-			l.Debug("Skipping non-report file", "file", d.Name(), "error", err)
-			return nil
-		}
-
-		if r.TimeStamp < periodStart {
-			return nil
-		}
-		if r.TimeStamp > t {
-			return nil
-		}
-
-		reports = append(reports, r)
-		if periodStart == t {
-			return filepath.SkipAll // Optimization to stop walking early.
-		}
-		return nil
-	}); err != nil {
-		return nil, err
+	reports, err := walkReports(l, dir, periodStart, t, func(reports []Report) bool {
+		return len(reports) > 0
+	})
+	if err != nil {
+		return false, err
 	}
 
-	// WalkDir parses lexically, meaning reports should be chronological in ascending order.
-	if n != 0 && len(reports) > n {
-		reports = reports[len(reports)-n:]
-	}
-
-	return reports, nil
+	return len(reports) > 0, nil
 }
 
 // GetAll returns all reports in a given directory.
 // Reports are expected to have the correct file extension, and have a name which can be parsed by a timestamp.
-// Does not traverse subdirectories. Returns in lexical order.
+// Does not traverse subdirectories.
 func GetAll(l *slog.Logger, dir string) ([]Report, error) {
-	reports := make([]Report, 0)
-	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return fmt.Errorf("failed to access path: %v", err)
-		}
-
-		if d.IsDir() {
-			if path != dir {
-				return filepath.SkipDir // Skip subdirectories.
-			}
-			return nil // Continue walking the directory.
-		}
-
-		r, err := New(path)
-		if errors.Is(err, ErrInvalidReportExt) || errors.Is(err, ErrInvalidReportName) {
-			l.Info("Skipping non-report file", "file", d.Name(), "error", err)
-			return nil
-		} else if err != nil {
-			return fmt.Errorf("failed to create report object: %v", err)
-		}
-
-		reports = append(reports, r)
-		return nil
+	return walkReports(l, dir, math.MinInt64, math.MaxInt64, func(reports []Report) bool {
+		return false // No early exit condition, we want all reports.
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	return reports, nil
 }
 
 // ClearPeriod removes all reports in a given dir, within the period window [t-period, t].
 // If a file failed to be removed, an error is logged but the function continues.
 func ClearPeriod(l *slog.Logger, dir string, t int64, period uint32) error {
-	reports, err := GetNLatest(l, dir, t, period, 0)
+	periodStart := GetPeriodStart(t, period)
+	maxReports := int64(period) + 1
+	reports, err := walkReports(l, dir, periodStart, t, func(reports []Report) bool {
+		// Early exit condition: stop if we have enough reports.
+		return int64(len(reports)) >= maxReports
+	})
 	if err != nil {
 		return err
 	}
+
 	for _, r := range reports {
 		if err := os.Remove(r.Path); err != nil {
 			l.Error("failed to remove report", "path", r.Path, "error", err)
@@ -292,4 +219,43 @@ func Cleanup(l *slog.Logger, dir string, maxReports uint32) error {
 	}
 
 	return nil
+}
+
+// walkReports walks the report directory and collects reports within the given time period.
+// When a new report is found and appended, earlyExitFn is called to determine if we should stop walking.
+func walkReports(l *slog.Logger, dir string, periodStart, periodEnd int64, earlyExitFn func([]Report) bool) ([]Report, error) {
+	var reports []Report
+	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("failed to access path: %v", err)
+		}
+
+		if d.IsDir() {
+			if path != dir {
+				return filepath.SkipDir // Skip subdirectories.
+			}
+			return nil // Continue walking the directory.
+		}
+
+		r, err := New(path)
+		if err != nil {
+			l.Debug("Skipping non-report file", "file", d.Name(), "error", err)
+			return nil
+		}
+
+		if r.TimeStamp < periodStart || r.TimeStamp > periodEnd {
+			return nil
+		}
+
+		reports = append(reports, r)
+		if earlyExitFn(reports) {
+			return filepath.SkipAll // Stop walking early if early exit condition is met.
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return reports, nil
 }

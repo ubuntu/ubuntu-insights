@@ -76,35 +76,42 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestGetForPeriod(t *testing.T) {
+func TestDuplicateExists(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
 		files       []string
 		subDir      string
 		subDirFiles []string
-		time        int64
-		period      uint32
-		invalidDir  bool
 
-		wantErr bool
+		time   int64
+		period uint32
+
+		invalidDir bool
+
+		wantTrue bool
+		wantErr  bool
 	}{
-		"Empty Directory":        {time: 1, period: 500},
-		"Files in subDir":        {subDir: "subdir", subDirFiles: []string{"1.json", "2.json"}, time: 5, period: 500},
-		"Empty subDir":           {subDir: "subdir", time: 1, period: 500},
-		"Invalid File Extension": {files: []string{"1.txt", "2.txt"}, time: 1, period: 500},
-		"Invalid File Names":     {files: []string{"i-1.json", "i-2.json", "i-3.json", "test.json", "one.json"}, time: -100, period: 500},
+		// False cases
+		"Empty Directory": {time: 1, period: 500},
 
-		"Returns latest in period":                 {files: []string{"1.json", "2.json"}, time: 3, period: 5},
-		"Inclusive of time":                        {files: []string{"1.json", "2.json"}, time: 2, period: 5},
-		"Inclusive of period start":                {files: []string{"1.json", "2.json"}, time: 3, period: 1},
-		"Negative Timestamp":                       {files: []string{"-100.json", "-101.json"}, time: -50, period: 50},
-		"Lexical Order Check":                      {files: []string{"3.json", "5.json", "1.json"}, time: 10, period: 10},
-		"Returns report at time if period is zero": {files: []string{"1.json", "7.json", "8.json"}, time: 7, period: 0},
+		"Ignores subDir":             {subDir: "subdir", subDirFiles: []string{"1.json", "2.json"}, time: 5, period: 500},
+		"Ignores empty subDir":       {subDir: "subdir", time: 1, period: 500},
+		"Ignores invalid file names": {files: []string{"i-1.json", "i-2.json", "i-3.json", "test.json", "one.json", "1.txt"}, time: 10, period: 500},
+
+		"Window includes only time if period 0":             {files: []string{"6.json", "8.json"}, time: 7, period: 0},
+		"Windows excludes outside of period start and time": {files: []string{"-2.json", "5.json"}, time: 4, period: 5},
+
+		// True cases
+		"Any within window returns true":                {files: []string{"-1.json", "2.json", "4.json"}, time: 4, period: 5, wantTrue: true},
+		"Window includes time":                          {files: []string{"4.json"}, time: 4, period: 5, wantTrue: true},
+		"Window includes period start":                  {files: []string{"-1.json"}, time: 4, period: 5, wantTrue: true},
+		"Window includes between time and period start": {files: []string{"2.json"}, time: 4, period: 5, wantTrue: true},
+
+		"Window includes time if period 0": {files: []string{"7.json"}, time: 7, period: 0, wantTrue: true},
 
 		// Error cases
-		"Invalid Dir": {period: 1, invalidDir: true, wantErr: true},
-		//"Max time overflows": {period: 1, time: math.MaxInt64, wantErr: true},
+		"Returns error if invalid dir": {period: 1, invalidDir: true, wantErr: true},
 	}
 
 	for name, tc := range tests {
@@ -117,81 +124,14 @@ func TestGetForPeriod(t *testing.T) {
 				dir = filepath.Join(dir, "invalid dir")
 			}
 
-			r, err := report.GetLatest(slog.Default(), dir, tc.time, tc.period)
+			got, err := report.DuplicateExists(slog.Default(), dir, tc.time, tc.period)
 			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return
 			}
 			require.NoError(t, err, "got an unexpected error")
 
-			got := sanitizeReportPath(t, r, dir)
-
-			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-			require.Equal(t, want, got, "GetLatest should return the most recent report within the period window")
-		})
-	}
-}
-
-func TestGetNForPeriod(t *testing.T) {
-	t.Parallel()
-
-	tests := map[string]struct {
-		files       []string
-		subDir      string
-		subDirFiles []string
-		time        int64
-		period      uint32
-		n           int
-		invalidDir  bool
-
-		wantErr bool
-	}{
-		"Empty Directory": {time: 1, period: 500, n: 5},
-
-		"Returns at most n reports":                  {files: []string{"1.json", "2.json", "3.json", "4.json", "5.json"}, time: 4, period: 10, n: 3},
-		"Returns all reports in window if n is zero": {files: []string{"1.json", "2.json", "3.json", "4.json", "5.json"}, time: 4, period: 10, n: 0},
-		"Return is always lexically ascending":       {files: []string{"3.json", "5.json", "1.json", "2.json", "4.json"}, time: 10, period: 10, n: 5},
-		"Handles negative timestamps":                {files: []string{"-100.json", "-101.json"}, time: -50, period: 50, n: 5},
-		"Window includes time and period start":      {files: []string{"0.json", "1.json", "2.json", "3.json"}, time: 2, period: 1, n: 5},
-
-		"Returns report at time if period is zero": {files: []string{"1.json", "7.json", "8.json"}, time: 7, period: 0, n: 5},
-
-		"Skips subDir":             {subDir: "subdir", subDirFiles: []string{"1.json", "2.json"}, time: 5, period: 500, n: 5},
-		"Skips empty subDir":       {subDir: "subdir", time: 1, period: 500, n: 5},
-		"Skips invalid file names": {files: []string{"i-1.json", "i-2.json", "i-3.json", "test.json", "one.json", "1.txt"}, time: 10, period: 500, n: 5},
-
-		// Error cases
-		"Returns error if invalid dir":   {period: 1, invalidDir: true, n: 5, wantErr: true},
-		"Returns error if n is negative": {period: 1, time: 10, n: -1, wantErr: true},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			dir, err := setupNoDataDir(t, tc.files, tc.subDir, tc.subDirFiles)
-			require.NoError(t, err, "Setup: failed to setup temporary directory")
-			if tc.invalidDir {
-				dir = filepath.Join(dir, "invalid dir")
-			}
-
-			got, err := report.GetNLatest(slog.Default(), dir, tc.time, tc.period, tc.n)
-			if tc.wantErr {
-				require.Error(t, err, "expected an error but got none")
-				return
-			}
-			require.NoError(t, err, "got an unexpected error")
-
-			if got == nil {
-				got = make([]report.Report, 0)
-			}
-
-			for i, r := range got {
-				got[i] = sanitizeReportPath(t, r, dir)
-			}
-
-			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-			require.Equal(t, want, got, "GetNLatest output doesn't match golden file")
+			require.Equal(t, tc.wantTrue, got, "DuplicateExists should return the expected result")
 		})
 	}
 }
