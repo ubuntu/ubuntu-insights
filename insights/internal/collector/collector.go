@@ -218,7 +218,7 @@ func (c collector) Write(insights Insights, period uint32, force, dryRun bool) (
 	if consent {
 		c.log.Info("Consent granted, writing insights report")
 	} else {
-		c.log.Warn("Insights data will not be written to disk, as consent was not provided.")
+		c.log.Info("Consent not granted, writing optout instead of insights report")
 		data = constants.OptOutPayload
 	}
 
