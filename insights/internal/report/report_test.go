@@ -96,11 +96,12 @@ func TestGetForPeriod(t *testing.T) {
 		"Invalid File Extension": {files: []string{"1.txt", "2.txt"}, time: 1, period: 500},
 		"Invalid File Names":     {files: []string{"i-1.json", "i-2.json", "i-3.json", "test.json", "one.json"}, time: -100, period: 500},
 
-		"Returns latest in period":    {files: []string{"1.json", "2.json"}, time: 3, period: 5},
-		"Not inclusive time":          {files: []string{"1.json", "2.json"}, time: 2, period: 5},
-		"Negative Timestamp":          {files: []string{"-100.json", "-101.json"}, time: -50, period: 50},
-		"Lexical Order Check":         {files: []string{"3.json", "5.json", "1.json"}, time: 10, period: 10},
-		"Zero Period Returns Nothing": {files: []string{"1.json", "7.json"}, time: 7, period: 0},
+		"Returns latest in period":                 {files: []string{"1.json", "2.json"}, time: 3, period: 5},
+		"Inclusive of time":                        {files: []string{"1.json", "2.json"}, time: 2, period: 5},
+		"Inclusive of period start":                {files: []string{"1.json", "2.json"}, time: 3, period: 1},
+		"Negative Timestamp":                       {files: []string{"-100.json", "-101.json"}, time: -50, period: 50},
+		"Lexical Order Check":                      {files: []string{"3.json", "5.json", "1.json"}, time: 10, period: 10},
+		"Returns report at time if period is zero": {files: []string{"1.json", "7.json", "8.json"}, time: 7, period: 0},
 
 		// Error cases
 		"Invalid Dir": {period: 1, invalidDir: true, wantErr: true},
@@ -148,13 +149,13 @@ func TestGetNForPeriod(t *testing.T) {
 	}{
 		"Empty Directory": {time: 1, period: 500, n: 5},
 
-		"Returns at most n reports":                  {files: []string{"1.json", "2.json", "3.json", "4.json", "5.json"}, time: 4, period: 10, n: 2},
+		"Returns at most n reports":                  {files: []string{"1.json", "2.json", "3.json", "4.json", "5.json"}, time: 4, period: 10, n: 3},
 		"Returns all reports in window if n is zero": {files: []string{"1.json", "2.json", "3.json", "4.json", "5.json"}, time: 4, period: 10, n: 0},
-		"Window excludes time":                       {files: []string{"1.json", "2.json", "3.json", "4.json", "5.json"}, time: 4, period: 10, n: 5},
 		"Return is always lexically ascending":       {files: []string{"3.json", "5.json", "1.json", "2.json", "4.json"}, time: 10, period: 10, n: 5},
 		"Handles negative timestamps":                {files: []string{"-100.json", "-101.json"}, time: -50, period: 50, n: 5},
+		"Window includes time and period start":      {files: []string{"0.json", "1.json", "2.json", "3.json"}, time: 2, period: 1, n: 5},
 
-		"Returns nothing if period is zero": {files: []string{"1.json", "7.json"}, time: 7, period: 0, n: 5},
+		"Returns report at time if period is zero": {files: []string{"1.json", "7.json", "8.json"}, time: 7, period: 0, n: 5},
 
 		"Skips subDir":             {subDir: "subdir", subDirFiles: []string{"1.json", "2.json"}, time: 5, period: 500, n: 5},
 		"Skips empty subDir":       {subDir: "subdir", time: 1, period: 500, n: 5},
@@ -511,11 +512,11 @@ func TestClearPeriod(t *testing.T) {
 			files:  []string{"1.json", "2.json", "3.json", "4.json", "5.json"},
 			period: 10, time: 6,
 		},
-		"Removes none if period is zero": {
+		"Removes time if period is zero": {
 			files:  []string{"1.json", "2.json", "3.json"},
-			period: 0, time: 10,
+			period: 0, time: 2,
 		},
-		"Time is not in window": {
+		"Time and period start is in window": {
 			files:  []string{"1.json", "5.json", "10.json", "15.json"},
 			period: 10, time: 15,
 		},

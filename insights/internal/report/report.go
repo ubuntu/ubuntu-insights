@@ -143,12 +143,9 @@ func GetPeriodStart(period uint32, t time.Time) int64 {
 }
 
 // GetLatest returns the most recent report within a period window for a given directory.
-// Not inclusive of "t".
 // If no report is found, an empty report is returned.
 //
 // For example, given reports 1 and 7, with time 2 and period 7, the function will return the path for report 1.
-//
-// If period is 0, it returns nothing as the window does not encompass anything.
 func GetLatest(l *slog.Logger, dir string, t time.Time, period uint32) (Report, error) {
 	reports, err := GetNLatest(l, dir, t, period, 1)
 	if err != nil || len(reports) == 0 {
@@ -158,18 +155,12 @@ func GetLatest(l *slog.Logger, dir string, t time.Time, period uint32) (Report, 
 }
 
 // GetNLatest returns the N most recent reports within a period window for a given directory in ascending order.
-// Not inclusive of t.
 //
 // For example, given reports 1, 2, 3, 5, and 7, with time 5, period 3, and n 2, reports 2 and 3 are returned.
-// If period is 0, nil is returned.
 // If n is 0, all reports within the period window are returned.
 func GetNLatest(l *slog.Logger, dir string, t time.Time, period uint32, n int) ([]Report, error) {
 	if n < 0 {
 		return nil, fmt.Errorf("n must be non-negative, got %d", n)
-	}
-
-	if period == 0 {
-		return nil, nil
 	}
 
 	periodStart := GetPeriodStart(period, t)
@@ -198,11 +189,14 @@ func GetNLatest(l *slog.Logger, dir string, t time.Time, period uint32, n int) (
 		if r.TimeStamp < periodStart {
 			return nil
 		}
-		if r.TimeStamp >= periodEnd {
+		if r.TimeStamp > periodEnd {
 			return nil
 		}
 
 		reports = append(reports, r)
+		if periodStart == periodEnd {
+			return filepath.SkipAll // Optimization to stop walking early.
+		}
 		return nil
 	}); err != nil {
 		return nil, err
@@ -251,8 +245,7 @@ func GetAll(l *slog.Logger, dir string) ([]Report, error) {
 	return reports, nil
 }
 
-// ClearPeriod removes all reports in a given dir, within the period window [t-period, t).
-// Does nothing is period is zero.
+// ClearPeriod removes all reports in a given dir, within the period window [t-period, t].
 // If a file failed to be removed, an error is logged but the function continues.
 func ClearPeriod(l *slog.Logger, dir string, t time.Time, period uint32) error {
 	reports, err := GetNLatest(l, dir, t, period, 0)

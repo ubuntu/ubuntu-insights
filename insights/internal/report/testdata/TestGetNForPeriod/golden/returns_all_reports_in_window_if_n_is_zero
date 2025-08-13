@@ -7,3 +7,6 @@
 - path: 3.json
   name: 3.json
   timestamp: 3
+- path: 4.json
+  name: 4.json
+  timestamp: 4
