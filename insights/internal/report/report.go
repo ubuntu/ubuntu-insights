@@ -251,6 +251,23 @@ func GetAll(l *slog.Logger, dir string) ([]Report, error) {
 	return reports, nil
 }
 
+// ClearPeriod removes all reports in a given dir, within the period window [t-period, t).
+// Does nothing is period is zero.
+// If a file failed to be removed, an error is logged but the function continues.
+func ClearPeriod(l *slog.Logger, dir string, t time.Time, period uint32) error {
+	reports, err := GetNLatest(l, dir, t, period, 0)
+	if err != nil {
+		return err
+	}
+	for _, r := range reports {
+		if err := os.Remove(r.Path); err != nil {
+			l.Error("failed to remove report", "path", r.Path, "error", err)
+		}
+	}
+
+	return nil
+}
+
 // Cleanup removes reports in a directory, keeping the most recent maxReports reports.
 // If a file does not appear to be a report, it is skipped and ignored.
 // If a file is unable to be removed, then it will be logged, but the function will continue.

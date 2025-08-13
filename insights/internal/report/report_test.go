@@ -496,6 +496,65 @@ func TestReadJSON(t *testing.T) {
 	}
 }
 
+func TestClearPeriod(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		files   []string
+		time    int64
+		period  uint32
+		noDir   bool
+		wantErr bool
+	}{
+		"Empty Directory": {period: 500, time: 1000},
+		"Removes all in window": {
+			files:  []string{"1.json", "2.json", "3.json", "4.json", "5.json"},
+			period: 10, time: 6,
+		},
+		"Removes none if period is zero": {
+			files:  []string{"1.json", "2.json", "3.json"},
+			period: 0, time: 10,
+		},
+		"Time is not in window": {
+			files:  []string{"1.json", "5.json", "10.json", "15.json"},
+			period: 10, time: 15,
+		},
+
+		// Error cases
+		"Bad Path": {
+			files:  []string{"1.json", "2.json"},
+			period: 5, time: 10,
+			noDir:   true,
+			wantErr: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			baseDir := t.TempDir()
+			for _, file := range tc.files {
+				path := filepath.Join(baseDir, file)
+				require.NoError(t, os.WriteFile(path, []byte(`{"test": true}`), 0o600), "Setup: failed to write report file")
+			}
+			dir := baseDir
+			if tc.noDir {
+				dir = filepath.Join(baseDir, "invalid dir")
+			}
+			err := report.ClearPeriod(slog.Default(), dir, time.Unix(tc.time, 0), tc.period)
+			if tc.wantErr {
+				require.Error(t, err, "expected an error but got none")
+				return
+			}
+			require.NoError(t, err, "got an unexpected error")
+			got, err := testutils.GetDirContents(t, baseDir, 2)
+			require.NoError(t, err, "failed to get directory contents")
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			require.Equal(t, want, got, "ClearPeriod should remove all reports in the period window")
+		})
+	}
+}
+
 func TestCleanup(t *testing.T) {
 	t.Parallel()
 
