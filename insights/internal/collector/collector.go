@@ -279,7 +279,7 @@ func (c collector) duplicateExists(period uint32) (bool, error) {
 	}
 
 	for _, dir := range dirs {
-		cReport, err := report.GetForPeriod(c.log, dir, c.time, period)
+		cReport, err := report.GetLatest(c.log, dir, c.time, period)
 		if err != nil {
 			return false, fmt.Errorf("failed to check for duplicate report in %s for period: %v", dir, err)
 		}

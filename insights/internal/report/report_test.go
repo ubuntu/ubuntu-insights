@@ -117,7 +117,7 @@ func TestGetForPeriod(t *testing.T) {
 				dir = filepath.Join(dir, "invalid dir")
 			}
 
-			r, err := report.GetForPeriod(slog.Default(), dir, time.Unix(tc.time, 0), tc.period)
+			r, err := report.GetLatest(slog.Default(), dir, time.Unix(tc.time, 0), tc.period)
 			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return
@@ -127,7 +127,7 @@ func TestGetForPeriod(t *testing.T) {
 			got := sanitizeReportPath(t, r, dir)
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-			require.Equal(t, want, got, "GetForPeriod should return the most recent report within the period window")
+			require.Equal(t, want, got, "GetLatest should return the most recent report within the period window")
 		})
 	}
 }
@@ -148,10 +148,11 @@ func TestGetNForPeriod(t *testing.T) {
 	}{
 		"Empty Directory": {time: 1, period: 500, n: 5},
 
-		"Returns at most n reports":            {files: []string{"1.json", "2.json", "3.json", "4.json", "5.json"}, time: 4, period: 10, n: 2},
-		"Window excludes time":                 {files: []string{"1.json", "2.json", "3.json", "4.json", "5.json"}, time: 4, period: 10, n: 5},
-		"Return is always lexically ascending": {files: []string{"3.json", "5.json", "1.json", "2.json", "4.json"}, time: 10, period: 10, n: 5},
-		"Handles negative timestamps":          {files: []string{"-100.json", "-101.json"}, time: -50, period: 50, n: 5},
+		"Returns at most n reports":                  {files: []string{"1.json", "2.json", "3.json", "4.json", "5.json"}, time: 4, period: 10, n: 2},
+		"Returns all reports in window if n is zero": {files: []string{"1.json", "2.json", "3.json", "4.json", "5.json"}, time: 4, period: 10, n: 0},
+		"Window excludes time":                       {files: []string{"1.json", "2.json", "3.json", "4.json", "5.json"}, time: 4, period: 10, n: 5},
+		"Return is always lexically ascending":       {files: []string{"3.json", "5.json", "1.json", "2.json", "4.json"}, time: 10, period: 10, n: 5},
+		"Handles negative timestamps":                {files: []string{"-100.json", "-101.json"}, time: -50, period: 50, n: 5},
 
 		"Returns nothing if period is zero": {files: []string{"1.json", "7.json"}, time: 7, period: 0, n: 5},
 
@@ -174,7 +175,7 @@ func TestGetNForPeriod(t *testing.T) {
 				dir = filepath.Join(dir, "invalid dir")
 			}
 
-			got, err := report.GetNForPeriod(slog.Default(), dir, time.Unix(tc.time, 0), tc.period, tc.n)
+			got, err := report.GetNLatest(slog.Default(), dir, time.Unix(tc.time, 0), tc.period, tc.n)
 			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return
@@ -190,7 +191,7 @@ func TestGetNForPeriod(t *testing.T) {
 			}
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-			require.Equal(t, want, got, "GetNForPeriod output doesn't match golden file")
+			require.Equal(t, want, got, "GetNLatest output doesn't match golden file")
 		})
 	}
 }

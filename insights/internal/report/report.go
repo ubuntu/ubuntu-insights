@@ -142,28 +142,28 @@ func GetPeriodStart(period uint32, t time.Time) int64 {
 	return t.Unix() - int64(period)
 }
 
-// GetForPeriod returns the most recent report within a period window for a given directory.
+// GetLatest returns the most recent report within a period window for a given directory.
 // Not inclusive of "t".
 // If no report is found, an empty report is returned.
 //
 // For example, given reports 1 and 7, with time 2 and period 7, the function will return the path for report 1.
 //
 // If period is 0, it returns nothing as the window does not encompass anything.
-func GetForPeriod(l *slog.Logger, dir string, t time.Time, period uint32) (Report, error) {
-	reports, err := GetNForPeriod(l, dir, t, period, 1)
+func GetLatest(l *slog.Logger, dir string, t time.Time, period uint32) (Report, error) {
+	reports, err := GetNLatest(l, dir, t, period, 1)
 	if err != nil || len(reports) == 0 {
 		return Report{}, err
 	}
 	return reports[0], nil
 }
 
-// GetNForPeriod returns the N most recent reports within a period window for a given directory.
+// GetNLatest returns the N most recent reports within a period window for a given directory in ascending order.
 // Not inclusive of t.
 //
 // For example, given reports 1, 2, 3, 5, and 7, with time 5, period 3, and n 2, reports 2 and 3 are returned.
 // If period is 0, nil is returned.
 // If n is 0, all reports within the period window are returned.
-func GetNForPeriod(l *slog.Logger, dir string, t time.Time, period uint32, n int) ([]Report, error) {
+func GetNLatest(l *slog.Logger, dir string, t time.Time, period uint32, n int) ([]Report, error) {
 	if n < 0 {
 		return nil, fmt.Errorf("n must be non-negative, got %d", n)
 	}
@@ -211,7 +211,7 @@ func GetNForPeriod(l *slog.Logger, dir string, t time.Time, period uint32, n int
 	}
 
 	// WalkDir parses lexically, meaning reports should be chronological in ascending order.
-	if len(reports) > n {
+	if n != 0 && len(reports) > n {
 		reports = reports[len(reports)-n:]
 	}
 
