@@ -143,62 +143,18 @@ func GetPeriodStart(period uint32, t time.Time) int64 {
 }
 
 // GetForPeriod returns the most recent report within a period window for a given directory.
-// Not inclusive of the period end (periodStart + period).
+// Not inclusive of "t".
 // If no report is found, an empty report is returned.
 //
 // For example, given reports 1 and 7, with time 2 and period 7, the function will return the path for report 1.
 //
 // If period is 0, it returns nothing as the window does not encompass anything.
 func GetForPeriod(l *slog.Logger, dir string, t time.Time, period uint32) (Report, error) {
-	if period == 0 {
-		return Report{}, nil // If period is 0, return an empty report.
-	}
-
-	periodStart := GetPeriodStart(period, t)
-
-	if periodStart > math.MaxInt64-int64(period) {
-		return Report{}, fmt.Errorf("periodEnd would overflow")
-	}
-	periodEnd := periodStart + int64(period)
-
-	// Reports names are utc timestamps. Get the most recent report within the period window.
-	var report Report
-	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return fmt.Errorf("failed to access path: %v", err)
-		}
-
-		if d.IsDir() {
-			if path != dir {
-				return filepath.SkipDir // Skip subdirectories.
-			}
-			return nil // Continue walking the directory.
-		}
-
-		r, err := New(path)
-		if errors.Is(err, ErrInvalidReportExt) || errors.Is(err, ErrInvalidReportName) {
-			l.Info("Skipping non-report file", "file", d.Name(), "error", err)
-			return nil
-		} else if err != nil {
-			return fmt.Errorf("failed to create report object: %v", err)
-		}
-
-		if r.TimeStamp < periodStart {
-			return nil
-		}
-		if r.TimeStamp >= periodEnd {
-			return nil
-		}
-
-		report = r
-		return nil
-	})
-
-	if err != nil {
+	reports, err := GetNForPeriod(l, dir, t, period, 1)
+	if err != nil || len(reports) == 0 {
 		return Report{}, err
 	}
-
-	return report, nil
+	return reports[0], nil
 }
 
 // GetNForPeriod returns the N most recent reports within a period window for a given directory.
