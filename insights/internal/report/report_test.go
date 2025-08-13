@@ -440,9 +440,11 @@ func TestClearPeriod(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		files   []string
-		time    int64
-		period  uint32
+		files  []string
+		time   int64
+		period uint32
+		dryRun bool
+
 		noDir   bool
 		wantErr bool
 	}{
@@ -458,6 +460,11 @@ func TestClearPeriod(t *testing.T) {
 		"Time and period start is in window": {
 			files:  []string{"1.json", "5.json", "10.json", "15.json"},
 			period: 10, time: 15,
+		},
+		"Dry run does not remove files": {
+			files:  []string{"1.json", "2.json", "3.json", "4.json", "5.json"},
+			period: 10, time: 6,
+			dryRun: true,
 		},
 
 		// Error cases
@@ -481,7 +488,7 @@ func TestClearPeriod(t *testing.T) {
 			if tc.noDir {
 				dir = filepath.Join(baseDir, "invalid dir")
 			}
-			err := report.ClearPeriod(slog.Default(), dir, tc.time, tc.period)
+			err := report.ClearPeriod(slog.Default(), dir, tc.time, tc.period, tc.dryRun)
 			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return

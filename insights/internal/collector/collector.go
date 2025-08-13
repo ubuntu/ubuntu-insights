@@ -81,8 +81,18 @@ type collector struct {
 type options struct {
 	// Private members exported for tests.
 	maxReports uint32
-	time       int64
+	time       timeFunc
 	sysInfo    func(*slog.Logger, ...sysinfo.Options) SysInfo
+}
+
+type timeFunc func() int64
+
+var defaultOptions = options{
+	maxReports: constants.MaxReports,
+	time:       func() int64 { return time.Now().Unix() },
+	sysInfo: func(l *slog.Logger, opts ...sysinfo.Options) SysInfo {
+		return sysinfo.New(l, opts...)
+	},
 }
 
 // Options represents an optional function to override Collector default values.
@@ -139,13 +149,7 @@ func New(l *slog.Logger, cm Consent, c Config, args ...Options) (Collector, erro
 		return collector{}, fmt.Errorf("failed to create cache directory: %v", err)
 	}
 
-	opts := options{
-		maxReports: constants.MaxReports,
-		time:       time.Now().Unix(),
-		sysInfo: func(l *slog.Logger, opts ...sysinfo.Options) SysInfo {
-			return sysinfo.New(l, opts...)
-		},
-	}
+	opts := defaultOptions
 	for _, opt := range args {
 		opt(&opts)
 	}
@@ -154,7 +158,7 @@ func New(l *slog.Logger, cm Consent, c Config, args ...Options) (Collector, erro
 		consent: cm,
 		source:  c.Source,
 
-		time:              opts.time,
+		time:              opts.time(),
 		collectedDir:      filepath.Join(c.CachePath, c.Source, constants.LocalFolder),
 		uploadedDir:       filepath.Join(c.CachePath, c.Source, constants.UploadedFolder),
 		sourceMetricsPath: c.SourceMetricsPath,
@@ -215,7 +219,7 @@ func (c collector) Write(insights Insights, period uint32, force, dryRun bool) (
 		time = c.time // If no collection time is provided (zero value), use the current time
 	}
 
-	if err := c.handleDuplicates(force, time, period); err != nil {
+	if err := c.handleDuplicates(force, dryRun, time, period); err != nil {
 		return err
 	}
 
@@ -252,7 +256,7 @@ func (c collector) makeDirs() error {
 // handleDuplicates checks and handles duplicates based on the force flag.
 // If force is false and there are duplicates in either the collected or uploaded directories, it will error.
 // Otherwise, if force is true, it will clear out all existing reports for the given period in the collected dir.
-func (c collector) handleDuplicates(force bool, time int64, period uint32) error {
+func (c collector) handleDuplicates(force, dryRun bool, time int64, period uint32) error {
 	if !force {
 		duplicate, err := c.duplicateExists(time, period)
 		if err != nil {
@@ -272,7 +276,7 @@ func (c collector) handleDuplicates(force bool, time int64, period uint32) error
 			return err
 		}
 
-		if err := report.ClearPeriod(c.log, c.collectedDir, time, period); err != nil {
+		if err := report.ClearPeriod(c.log, c.collectedDir, time, period, dryRun); err != nil {
 			return fmt.Errorf("failed to clear old reports: %v", err)
 		}
 	}

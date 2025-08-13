@@ -43,7 +43,7 @@ func init() {
 			panic(fmt.Sprintf("failed to parse UBUNTU_INSIGHTS_INTEGRATIONTESTS_TIME: %v", err))
 		}
 		uploadertestutils.SetTimeProvider(MockTimeProvider{CurrentTime: t})
-		collectortestutils.SetTimeProvider(MockTimeProvider{CurrentTime: t})
+		collectortestutils.SetTime(t)
 	}
 
 	if base_retry_period := os.Getenv("UBUNTU_INSIGHTS_INTEGRATIONTESTS_BASE_RETRY_PERIOD"); base_retry_period != "" {

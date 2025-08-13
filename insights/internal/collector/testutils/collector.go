@@ -4,7 +4,6 @@ package collectortestutils
 
 import (
 	"log/slog"
-	"time"
 	_ "unsafe" // For go:linkname
 
 	"github.com/ubuntu/ubuntu-insights/common/testsdetection"
@@ -17,15 +16,13 @@ func init() {
 	testsdetection.MustBeTesting()
 }
 
-type timeProvider interface {
-	Now() time.Time
-}
+type timeFunc func() int64
 
 //go:linkname defaultOptions github.com/ubuntu/ubuntu-insights/insights/internal/collector.defaultOptions
 var defaultOptions struct {
-	maxReports   uint32
-	timeProvider timeProvider
-	sysInfo      func(*slog.Logger, ...sysinfo.Options) collector.SysInfo
+	maxReports uint32
+	time       timeFunc
+	sysInfo    func(*slog.Logger, ...sysinfo.Options) collector.SysInfo
 }
 
 // SetMaxReports overrides the max reports count the uploader is using.
@@ -33,9 +30,9 @@ func SetMaxReports(r uint32) {
 	defaultOptions.maxReports = r
 }
 
-// SetTimeProvider overrides the time provider the uploader is using.
-func SetTimeProvider(tp timeProvider) {
-	defaultOptions.timeProvider = tp
+// SetTime overrides the collector time.
+func SetTime(t int64) {
+	defaultOptions.time = func() int64 { return t }
 }
 
 // SetSysInfo overrides the sysinfo the collector is using.

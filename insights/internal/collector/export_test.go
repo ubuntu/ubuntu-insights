@@ -15,7 +15,7 @@ func WithMaxReports(maxReports uint32) Options {
 
 func WithTime(time int64) Options {
 	return func(o *options) {
-		o.time = time
+		o.time = func() int64 { return time }
 	}
 }
 

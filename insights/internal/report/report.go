@@ -166,7 +166,8 @@ func GetAll(l *slog.Logger, dir string) ([]Report, error) {
 
 // ClearPeriod removes all reports in a given dir, within the period window [t-period, t].
 // If a file failed to be removed, an error is logged but the function continues.
-func ClearPeriod(l *slog.Logger, dir string, t int64, period uint32) error {
+// If dryRun is true, then removal is skipped and logged instead.
+func ClearPeriod(l *slog.Logger, dir string, t int64, period uint32, dryRun bool) error {
 	periodStart := GetPeriodStart(t, period)
 	maxReports := int64(period) + 1
 	reports, err := walkReports(l, dir, periodStart, t, func(reports []Report) bool {
@@ -178,6 +179,11 @@ func ClearPeriod(l *slog.Logger, dir string, t int64, period uint32) error {
 	}
 
 	for _, r := range reports {
+		if dryRun {
+			l.Info("Dry run, not clearing report", "path", r.Path)
+			continue
+		}
+
 		if err := os.Remove(r.Path); err != nil {
 			l.Error("failed to remove report", "path", r.Path, "error", err)
 		}
