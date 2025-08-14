@@ -38,7 +38,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - id: git-diff
         name: Check modified files
@@ -76,7 +76,7 @@ jobs:
       pkg-src-changes-devel: ${{ steps.outputs.outputs.pkg-src-changes-devel }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Build debian package
         uses: canonical/desktop-engineering/gh-actions/common/build-debian@main
         with:
