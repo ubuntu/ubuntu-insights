@@ -30,7 +30,7 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y ${{ env.insights_apt_deps }}
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Go code sanity check
         uses: canonical/desktop-engineering/gh-actions/go/code-sanity@main
         with:
@@ -57,7 +57,7 @@ jobs:
       - name: setup-go cache workaround #https://github.com/actions/setup-go/issues/424
         shell: bash
         run: echo "TAR_OPTIONS=--skip-old-files" >> $GITHUB_ENV
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.work
