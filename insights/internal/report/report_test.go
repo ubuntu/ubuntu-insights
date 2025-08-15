@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
@@ -23,7 +22,6 @@ func TestGetPeriodStart(t *testing.T) {
 	}{
 		"Valid Period":             {period: 500, time: 100000},
 		"Negative Time:":           {period: 500, time: -100000},
-		"Non-Multiple Time":        {period: 500, time: 1051},
 		"Zero Period Returns Time": {period: 0, time: 500},
 		"Zero Period and Max Time": {period: 0, time: math.MaxInt64},
 		"Zero Period and Min Time": {period: 0, time: math.MinInt64},
@@ -35,7 +33,7 @@ func TestGetPeriodStart(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got := report.GetPeriodStart(tc.period, time.Unix(tc.time, 0))
+			got := report.GetPeriodStart(tc.time, tc.period)
 
 			require.IsType(t, int64(0), got)
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
@@ -78,34 +76,42 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestGetForPeriod(t *testing.T) {
+func TestDuplicateExists(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
 		files       []string
 		subDir      string
 		subDirFiles []string
-		time        int64
-		period      uint32
-		invalidDir  bool
 
-		wantErr bool
+		time   int64
+		period uint32
+
+		invalidDir bool
+
+		wantTrue bool
+		wantErr  bool
 	}{
-		"Empty Directory":        {time: 1, period: 500},
-		"Files in subDir":        {subDir: "subdir", subDirFiles: []string{"1.json", "2.json"}, time: 1, period: 500},
-		"Empty subDir":           {subDir: "subdir", time: 1, period: 500},
-		"Invalid File Extension": {files: []string{"1.txt", "2.txt"}, time: 1, period: 500},
-		"Invalid File Names":     {files: []string{"i-1.json", "i-2.json", "i-3.json", "test.json", "one.json"}, time: -100, period: 500},
+		// False cases
+		"Empty Directory": {time: 1, period: 500},
 
-		"Specific Time Single Valid Report": {files: []string{"1.json", "2.json"}, time: 2, period: 1},
-		"Negative Timestamp":                {files: []string{"-100.json", "-101.json"}, time: -150, period: 100},
-		"Not Inclusive Period":              {files: []string{"1.json", "7.json"}, time: 2, period: 7},
-		"Lexical Order Check":               {files: []string{"5.json", "20.json"}, time: 10, period: 20},
-		"Zero Period Returns Nothing":       {files: []string{"1.json", "7.json"}, time: 7, period: 0},
+		"Ignores subDir":             {subDir: "subdir", subDirFiles: []string{"1.json", "2.json"}, time: 5, period: 500},
+		"Ignores empty subDir":       {subDir: "subdir", time: 1, period: 500},
+		"Ignores invalid file names": {files: []string{"i-1.json", "i-2.json", "i-3.json", "test.json", "one.json", "1.txt"}, time: 10, period: 500},
+
+		"Window includes only time if period 0":             {files: []string{"6.json", "8.json"}, time: 7, period: 0},
+		"Windows excludes outside of period start and time": {files: []string{"-2.json", "5.json"}, time: 4, period: 5},
+
+		// True cases
+		"Any within window returns true":                {files: []string{"-1.json", "2.json", "4.json"}, time: 4, period: 5, wantTrue: true},
+		"Window includes time":                          {files: []string{"4.json"}, time: 4, period: 5, wantTrue: true},
+		"Window includes period start":                  {files: []string{"-1.json"}, time: 4, period: 5, wantTrue: true},
+		"Window includes between time and period start": {files: []string{"2.json"}, time: 4, period: 5, wantTrue: true},
+
+		"Window includes time if period 0": {files: []string{"7.json"}, time: 7, period: 0, wantTrue: true},
 
 		// Error cases
-		"Invalid Dir":        {period: 1, invalidDir: true, wantErr: true},
-		"Max time overflows": {period: 1, time: math.MaxInt64, wantErr: true},
+		"Returns error if invalid dir": {period: 1, invalidDir: true, wantErr: true},
 	}
 
 	for name, tc := range tests {
@@ -118,17 +124,14 @@ func TestGetForPeriod(t *testing.T) {
 				dir = filepath.Join(dir, "invalid dir")
 			}
 
-			r, err := report.GetForPeriod(slog.Default(), dir, time.Unix(tc.time, 0), tc.period)
+			got, err := report.DuplicateExists(slog.Default(), dir, tc.time, tc.period)
 			if tc.wantErr {
 				require.Error(t, err, "expected an error but got none")
 				return
 			}
 			require.NoError(t, err, "got an unexpected error")
 
-			got := sanitizeReportPath(t, r, dir)
-
-			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-			require.Equal(t, want, got, "GetReportPath should return the most recent report within the period window")
+			require.Equal(t, tc.wantTrue, got, "DuplicateExists should return the expected result")
 		})
 	}
 }
@@ -429,6 +432,72 @@ func TestReadJSON(t *testing.T) {
 			got := string(data)
 			want := testutils.LoadWithUpdateFromGolden(t, got)
 			require.Equal(t, want, got, "ReadJSON should return the data from the report file")
+		})
+	}
+}
+
+func TestClearPeriod(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		files  []string
+		time   int64
+		period uint32
+		dryRun bool
+
+		noDir   bool
+		wantErr bool
+	}{
+		"Empty Directory": {period: 500, time: 1000},
+		"Removes all in window": {
+			files:  []string{"1.json", "2.json", "3.json", "4.json", "5.json"},
+			period: 10, time: 6,
+		},
+		"Removes time if period is zero": {
+			files:  []string{"1.json", "2.json", "3.json"},
+			period: 0, time: 2,
+		},
+		"Time and period start is in window": {
+			files:  []string{"1.json", "5.json", "10.json", "15.json"},
+			period: 10, time: 15,
+		},
+		"Dry run does not remove files": {
+			files:  []string{"1.json", "2.json", "3.json", "4.json", "5.json"},
+			period: 10, time: 6,
+			dryRun: true,
+		},
+
+		// Error cases
+		"Bad Path": {
+			files:  []string{"1.json", "2.json"},
+			period: 5, time: 10,
+			noDir:   true,
+			wantErr: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			baseDir := t.TempDir()
+			for _, file := range tc.files {
+				path := filepath.Join(baseDir, file)
+				require.NoError(t, os.WriteFile(path, []byte(`{"test": true}`), 0o600), "Setup: failed to write report file")
+			}
+			dir := baseDir
+			if tc.noDir {
+				dir = filepath.Join(baseDir, "invalid dir")
+			}
+			err := report.ClearPeriod(slog.Default(), dir, tc.time, tc.period, tc.dryRun)
+			if tc.wantErr {
+				require.Error(t, err, "expected an error but got none")
+				return
+			}
+			require.NoError(t, err, "got an unexpected error")
+			got, err := testutils.GetDirContents(t, baseDir, 2)
+			require.NoError(t, err, "failed to get directory contents")
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			require.Equal(t, want, got, "ClearPeriod should remove all reports in the period window")
 		})
 	}
 }

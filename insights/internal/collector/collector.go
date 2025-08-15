@@ -35,16 +35,6 @@ type Insights struct {
 	SourceMetrics   map[string]any `json:"sourceMetrics,omitempty"`
 }
 
-type timeProvider interface {
-	Now() time.Time
-}
-
-type realTimeProvider struct{}
-
-func (realTimeProvider) Now() time.Time {
-	return time.Now()
-}
-
 // Consent is an interface for getting the consent state for a given source.
 type Consent interface {
 	HasConsent(source string) (bool, error)
@@ -82,7 +72,7 @@ type collector struct {
 
 	// Overrides for testing.
 	maxReports uint32
-	time       time.Time
+	time       int64
 	sysInfo    SysInfo
 
 	log *slog.Logger
@@ -90,14 +80,16 @@ type collector struct {
 
 type options struct {
 	// Private members exported for tests.
-	maxReports   uint32
-	timeProvider timeProvider
-	sysInfo      func(*slog.Logger, ...sysinfo.Options) SysInfo
+	maxReports uint32
+	time       timeFunc
+	sysInfo    func(*slog.Logger, ...sysinfo.Options) SysInfo
 }
 
+type timeFunc func() int64
+
 var defaultOptions = options{
-	maxReports:   constants.MaxReports,
-	timeProvider: realTimeProvider{},
+	maxReports: constants.MaxReports,
+	time:       func() int64 { return time.Now().Unix() },
 	sysInfo: func(l *slog.Logger, opts ...sysinfo.Options) SysInfo {
 		return sysinfo.New(l, opts...)
 	},
@@ -166,7 +158,7 @@ func New(l *slog.Logger, cm Consent, c Config, args ...Options) (Collector, erro
 		consent: cm,
 		source:  c.Source,
 
-		time:              opts.timeProvider.Now(),
+		time:              opts.time(),
 		collectedDir:      filepath.Join(c.CachePath, c.Source, constants.LocalFolder),
 		uploadedDir:       filepath.Join(c.CachePath, c.Source, constants.UploadedFolder),
 		sourceMetricsPath: c.SourceMetricsPath,
@@ -222,14 +214,13 @@ func (c collector) Write(insights Insights, period uint32, force, dryRun bool) (
 		data = constants.OptOutPayload
 	}
 
-	if !force {
-		duplicate, err := c.duplicateExists(period)
-		if err != nil {
-			return err
-		}
-		if duplicate {
-			return ErrDuplicateReport
-		}
+	time := insights.CollectionTime
+	if time == 0 {
+		time = c.time // If no collection time is provided (zero value), use the current time
+	}
+
+	if err := c.handleDuplicates(force, dryRun, time, period); err != nil {
+		return err
 	}
 
 	if dryRun {
@@ -241,7 +232,7 @@ func (c collector) Write(insights Insights, period uint32, force, dryRun bool) (
 		return fmt.Errorf("failed to create directories: %v", err)
 	}
 
-	if err := c.write(data, period); err != nil {
+	if err := c.write(data, time); err != nil {
 		return fmt.Errorf("failed to write insights report: %v", err)
 	}
 
@@ -262,9 +253,40 @@ func (c collector) makeDirs() error {
 	return nil
 }
 
+// handleDuplicates checks and handles duplicates based on the force flag.
+// If force is false and there are duplicates in either the collected or uploaded directories, it will error.
+// Otherwise, if force is true, it will clear out all existing reports for the given period in the collected dir.
+func (c collector) handleDuplicates(force, dryRun bool, time int64, period uint32) error {
+	if !force {
+		duplicate, err := c.duplicateExists(time, period)
+		if err != nil {
+			return err
+		}
+		if duplicate {
+			return ErrDuplicateReport
+		}
+	}
+
+	// If force is true, clear out all existing reports for the given period.
+	if force {
+		if _, err := os.Stat(c.collectedDir); err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return err
+		}
+
+		if err := report.ClearPeriod(c.log, c.collectedDir, time, period, dryRun); err != nil {
+			return fmt.Errorf("failed to clear old reports: %v", err)
+		}
+	}
+
+	return nil
+}
+
 // duplicateExists returns true if a report for the current period already exists in the uploaded or collected directories.
 // Directories are only checked if they exist.
-func (c collector) duplicateExists(period uint32) (bool, error) {
+func (c collector) duplicateExists(time int64, period uint32) (bool, error) {
 	dirs := []string{}
 	if _, err := os.Stat(c.collectedDir); !os.IsNotExist(err) {
 		dirs = append(dirs, c.collectedDir)
@@ -274,12 +296,11 @@ func (c collector) duplicateExists(period uint32) (bool, error) {
 	}
 
 	for _, dir := range dirs {
-		cReport, err := report.GetForPeriod(c.log, dir, c.time, period)
+		duplicateExists, err := report.DuplicateExists(c.log, dir, time, period)
 		if err != nil {
 			return false, fmt.Errorf("failed to check for duplicate report in %s for period: %v", dir, err)
 		}
-		if cReport.Name != "" {
-			c.log.Info("Duplicate report already exists", "file", cReport.Path)
+		if duplicateExists {
 			return true, nil
 		}
 	}
@@ -291,7 +312,7 @@ func (c collector) duplicateExists(period uint32) (bool, error) {
 func (c collector) compile() (Insights, error) {
 	insights := Insights{
 		InsightsVersion: constants.Version,
-		CollectionTime:  c.time.Unix(),
+		CollectionTime:  c.time,
 	}
 
 	// Collect system information.
@@ -349,9 +370,7 @@ func (c collector) getSourceMetrics() (map[string]any, error) {
 }
 
 // write writes the insights report to disk, with the appropriate name.
-func (c collector) write(insights []byte, period uint32) error {
-	time := report.GetPeriodStart(period, c.time)
-
+func (c collector) write(insights []byte, time int64) error {
 	reportPath := filepath.Join(c.collectedDir, fmt.Sprintf("%v.json", time))
 	if err := fileutils.AtomicWrite(reportPath, insights); err != nil {
 		return fmt.Errorf("failed to write to disk: %v", err)

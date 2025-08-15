@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,14 +40,6 @@ type testSysInfo struct {
 
 func (m testSysInfo) Collect() (sysinfo.Info, error) {
 	return m.info, m.err
-}
-
-type MockTimeProvider struct {
-	CurrentTime int64
-}
-
-func (m MockTimeProvider) Now() time.Time {
-	return time.Unix(m.CurrentTime, 0)
 }
 
 func TestSanitize(t *testing.T) {
@@ -280,7 +271,7 @@ func TestCompile(t *testing.T) {
 			}
 
 			opts := []collector.Options{
-				collector.WithTimeProvider(MockTimeProvider{CurrentTime: tc.time}),
+				collector.WithTime(tc.time),
 				collector.WithSysInfo(func(l *slog.Logger, opts ...sysinfo.Options) collector.SysInfo {
 					return tc.sysInfo
 				}),
@@ -344,19 +335,21 @@ func TestWrite(t *testing.T) {
 		"Does not write or cleanup if dryRun": {
 			period:     1,
 			dryRun:     true,
-			maxReports: 5,
+			maxReports: 1,
 		},
 		"Cleans up old reports if max reports exceeded": {
-			period:     5,
-			maxReports: 2,
-		},
-		"Does not write or cleanup if dryRun even if max reports exceeded": {
-			period:     5,
-			dryRun:     true,
+			period:     1,
 			maxReports: 2,
 		},
 		"Writes report to disk and creates dir if they do not exist": {
 			period:     1,
+			maxReports: 5,
+			noDir:      true,
+		},
+		"Force dryRun does not create dir if it does not exist": {
+			period:     1,
+			dryRun:     true,
+			force:      true,
 			maxReports: 5,
 			noDir:      true,
 		},
@@ -372,11 +365,11 @@ func TestWrite(t *testing.T) {
 			maxReports: 5,
 			time:       5,
 		},
-		"Period zero ignores duplicates": {
-			period:     0,
-			consentM:   cTrue,
+		"Force deletes duplicate reports": {
+			period:     10,
+			force:      true,
 			maxReports: 5,
-			time:       5,
+			time:       25,
 		},
 
 		// Error cases
@@ -403,6 +396,13 @@ func TestWrite(t *testing.T) {
 		},
 		"Errors if there are duplicate reports": {
 			period:     1,
+			consentM:   cTrue,
+			maxReports: 5,
+			time:       5,
+			wantErr:    true,
+		},
+		"Errors if period is zero and there are duplicates": {
+			period:     0,
 			consentM:   cTrue,
 			maxReports: 5,
 			time:       5,
@@ -439,7 +439,7 @@ func TestWrite(t *testing.T) {
 			}
 
 			opts := []collector.Options{
-				collector.WithTimeProvider(MockTimeProvider{CurrentTime: tc.time}),
+				collector.WithTime(tc.time),
 				collector.WithMaxReports(tc.maxReports),
 			}
 
@@ -455,6 +455,10 @@ func TestWrite(t *testing.T) {
 			require.NoError(t, err)
 
 			got, err := testutils.GetDirContents(t, sDir, 5)
+			if tc.noDir && tc.dryRun {
+				require.ErrorIs(t, err, os.ErrNotExist, "GetDirContents should have failed with dir not existing")
+				return
+			}
 			require.NoError(t, err)
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
