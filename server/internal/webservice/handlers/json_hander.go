@@ -28,7 +28,7 @@ func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID st
 
 	if !h.config.IsAllowed(app) {
 		http.Error(w, "Invalid application name in URL", http.StatusForbidden)
-		slog.Error("Invalid application name in URL", "req_id", reqID, "app", app)
+		slog.Debug("Request had invalid application name in URL", "req_id", reqID, "app", app)
 		return
 	}
 
@@ -38,12 +38,12 @@ func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID st
 	jsonData, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Failed to read request body", http.StatusBadRequest)
-		slog.Error("Error reading the file", "req_id", reqID, "app", app, "err", err)
+		slog.Debug("Request had unreadable payload", "req_id", reqID, "app", app, "err", err)
 		return
 	}
 	if !json.Valid(jsonData) {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		slog.Error("Invalid JSON in uploaded file", "req_id", reqID, "app", app)
+		slog.Debug("Request had invalid JSON", "req_id", reqID, "app", app)
 		return
 	}
 
