@@ -23,6 +23,7 @@ type jsonHandler struct {
 func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID string, app string) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		slog.Debug("Request had invalid method", "req_id", reqID, "method", r.Method)
 		return
 	}
 

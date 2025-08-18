@@ -32,6 +32,7 @@ func (h *Upload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	app := filepath.Clean(r.PathValue("app"))
 	if app == "" || app == "." || strings.Contains(app, "..") {
 		http.Error(w, "Invalid application name in URL", http.StatusForbidden)
+		slog.Debug("Request had invalid application name in URL", "req_id", reqID, "app", app)
 		return
 	}
 
