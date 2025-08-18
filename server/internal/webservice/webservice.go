@@ -160,7 +160,7 @@ func (s *Server) servePrimary() error {
 	// already asked to quit?
 	select {
 	case <-s.gracefulCtx.Done():
-		return errors.New("server is already shutting down")
+		return s.gracefulCtx.Err()
 	default:
 	}
 
@@ -193,20 +193,19 @@ func (s *Server) servePrimary() error {
 		slog.Info("Graceful shutdown initiated")
 		// use parent ctx so if you call s.cancel() elsewhere it unblocks Shutdown immediately
 		if err := s.httpServer.Shutdown(s.ctx); err != nil {
-			slog.Error("Graceful shutdown failed", "err", err)
-			return err
+			return fmt.Errorf("failed to gracefully shutdown server: %v", err)
 		}
 		slog.Info("Server shut down gracefully")
 		return nil
 
 	case err := <-serverErr:
 		if err != nil {
-			slog.Error("Server encountered error", "err", err)
+			return fmt.Errorf("primary HTTP server encountered an error: %v", err)
 		}
-		return err
+		return nil
 	case err := <-watchErr:
 		if err != nil {
-			slog.Error("Config watcher encountered unrecoverable error", "err", err)
+			err = fmt.Errorf("config watcher encountered an unrecoverable error: %v", err)
 		}
 		errC := s.httpServer.Close()
 
@@ -241,16 +240,15 @@ func (s *Server) serveMetrics() error {
 	case <-s.gracefulCtx.Done():
 		slog.Info("Graceful shutdown initiated for metrics server")
 		if err := s.metricsServer.Shutdown(s.ctx); err != nil {
-			slog.Error("Metrics server graceful shutdown failed", "err", err)
-			return err
+			return fmt.Errorf("failed to gracefully shutdown server: %v", err)
 		}
 		slog.Info("Metrics server shut down gracefully")
 		return nil
 	case err := <-serverErr:
 		if err != nil {
-			slog.Error("Metrics server encountered error", "err", err)
+			return fmt.Errorf("metrics server encountered an error: %v", err)
 		}
-		return err
+		return nil
 	}
 }
 
