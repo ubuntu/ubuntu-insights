@@ -49,7 +49,7 @@ func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID st
 
 	targetDir := filepath.Join(h.reportsDir, app)
 	if err := os.MkdirAll(targetDir, 0750); err != nil {
-		http.Error(w, "Error creating directory", http.StatusInternalServerError)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		slog.Error("Error creating directory", "req_id", reqID, "app", app, "target", targetDir, "err", err)
 		return
 	}
@@ -58,7 +58,7 @@ func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID st
 	targetPath := filepath.Join(targetDir, safeFilename)
 
 	if err := fileutils.AtomicWrite(targetPath, jsonData); err != nil {
-		http.Error(w, "Error saving file", http.StatusInternalServerError)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		slog.Error("Error saving file", "req_id", reqID, "app", app, "target", targetPath, "err", err)
 		return
 	}
