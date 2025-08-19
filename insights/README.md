@@ -1,6 +1,11 @@
 # Ubuntu Insights Client
 
-The Ubuntu Insights Client is the component responsible for handling all local Ubuntu Insights actions. This component includes a command-line interface, a Go and C API, as well as the source for the `ubuntu-insights` deb package. 
+[reference-documentation-image]: https://pkg.go.dev/badge/github.com/ubuntu/ubuntu-insights/insights.svg
+[reference-documentation-url]: https://pkg.go.dev/github.com/ubuntu/ubuntu-insights/insights
+
+[![Go Reference][reference-documentation-image]][reference-documentation-url]
+
+The Ubuntu Insights Client is the component responsible for handling all local Ubuntu Insights actions. This component includes a command-line interface, a Go and C API, as well as the source for the `ubuntu-insights` deb package.
 
 ## About
 
@@ -141,6 +146,4 @@ These commands are hidden from help, and should primarily be used by the system 
 
 Generate the autocompletion script for ubuntu-insights for the specified shell.
 
-`
-  ubuntu-insights completion [shell]
-`
+`  ubuntu-insights completion [shell]`
