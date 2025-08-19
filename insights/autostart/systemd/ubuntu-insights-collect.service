@@ -10,8 +10,9 @@ SuccessExitStatus=1
 
 # Containment
 ProtectSystem=strict
-ProtectHome=yes
-ReadWritePaths=%h/.config %h/.cache
+ProtectHome=tmpfs
+BindPaths=%h/.config %h/.cache
+BindReadOnlyPaths=/run/user/%U
 LockPersonality=yes
 MemoryDenyWriteExecute=yes
 NoNewPrivileges=true
