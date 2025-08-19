@@ -50,9 +50,6 @@ type options struct {
 type Option func(*options)
 
 var (
-	// errServiceClosed is returned when the service is already closed.
-	errServiceClosed = errors.New("service closed")
-
 	// ErrTeardownTimeout is returned when the service takes too long to shut down.
 	// A force Quit may be required to cleanup the service.
 	ErrTeardownTimeout = errors.New("service teardown timed out")
@@ -95,7 +92,7 @@ func (s *Service) Run() error {
 
 	select {
 	case <-s.gracefulCtx.Done():
-		return errServiceClosed
+		return s.gracefulCtx.Err()
 	default:
 	}
 
@@ -117,7 +114,6 @@ func (s *Service) Run() error {
 	select {
 	case <-time.After(s.maxDegradedDuration):
 		// We've waited for teardown for too long, give up even though errors may be lost.
-		slog.Warn("Ingest service teardown timed out")
 		err = errors.Join(err, ErrTeardownTimeout)
 	case secondDone := <-done:
 		err = errors.Join(err, secondDone)
@@ -131,8 +127,7 @@ func (s *Service) runWorkers() error {
 	defer s.gracefulCancel() // Request stop if workers fail.
 
 	if err := s.workerPool.Run(s.gracefulCtx); err != nil && !errors.Is(err, s.gracefulCtx.Err()) {
-		slog.Error("Worker pool encountered an error", "err", err)
-		return fmt.Errorf("ingest workers error: %v", err)
+		return fmt.Errorf("ingest workers encountered an error: %v", err)
 	}
 	slog.Info("Workers stopped")
 	return nil
@@ -158,14 +153,12 @@ func (s *Service) runMetrics() error {
 	case <-s.gracefulCtx.Done():
 		slog.Info("Graceful shutdown initiated for metrics server")
 		if err := s.metricsServer.Shutdown(s.ctx); err != nil {
-			slog.Error("Metrics server graceful shutdown encountered error", "err", err)
-			return fmt.Errorf("metrics server shutdown error: %v", err)
+			return fmt.Errorf("failed to gracefully shutdown metrics server: %v", err)
 		}
 	case err := <-metricsErrCh:
 		// No need to shutdown or close, just propagate the error.
 		if err != nil {
-			slog.Error("Metrics server encountered error", "err", err)
-			return fmt.Errorf("metrics server error: %v", err)
+			return fmt.Errorf("metrics server encountered an error: %v", err)
 		}
 	}
 	slog.Info("Metrics server shut down gracefully")

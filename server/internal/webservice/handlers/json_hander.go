@@ -23,12 +23,13 @@ type jsonHandler struct {
 func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID string, app string) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		slog.Debug("Request had invalid method", "req_id", reqID, "method", r.Method)
 		return
 	}
 
 	if !h.config.IsAllowed(app) {
 		http.Error(w, "Invalid application name in URL", http.StatusForbidden)
-		slog.Error("Invalid application name in URL", "req_id", reqID, "app", app)
+		slog.Debug("Request had invalid application name in URL", "req_id", reqID, "app", app)
 		return
 	}
 
@@ -38,18 +39,18 @@ func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID st
 	jsonData, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Failed to read request body", http.StatusBadRequest)
-		slog.Error("Error reading the file", "req_id", reqID, "app", app, "err", err)
+		slog.Debug("Request had unreadable payload", "req_id", reqID, "app", app, "err", err)
 		return
 	}
 	if !json.Valid(jsonData) {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		slog.Error("Invalid JSON in uploaded file", "req_id", reqID, "app", app)
+		slog.Debug("Request had invalid JSON", "req_id", reqID, "app", app)
 		return
 	}
 
 	targetDir := filepath.Join(h.reportsDir, app)
 	if err := os.MkdirAll(targetDir, 0750); err != nil {
-		http.Error(w, "Error creating directory", http.StatusInternalServerError)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		slog.Error("Error creating directory", "req_id", reqID, "app", app, "target", targetDir, "err", err)
 		return
 	}
@@ -58,7 +59,7 @@ func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID st
 	targetPath := filepath.Join(targetDir, safeFilename)
 
 	if err := fileutils.AtomicWrite(targetPath, jsonData); err != nil {
-		http.Error(w, "Error saving file", http.StatusInternalServerError)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		slog.Error("Error saving file", "req_id", reqID, "app", app, "target", targetPath, "err", err)
 		return
 	}

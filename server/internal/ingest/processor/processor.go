@@ -195,6 +195,7 @@ func (p *Processor) processFile(
 	defer timer.ObserveDuration()
 	reportID := getReportID(file)
 
+	slog.Debug("Processing file", "file", file, "id", reportID, "app", app)
 	var procErr error
 	if legacyApp {
 		distribution, version := parseLegacyApp(app)
@@ -220,14 +221,18 @@ func (p *Processor) processFile(
 	}
 
 	if errors.Is(procErr, errUploadFailed) {
+		// If there was any upload failure, don't try to upload as invalid even if it has unexpected fields.
 		failureCount++
 		p.filesProcessed.WithLabelValues(app, "upload_failure").Inc()
+		slog.Warn("Failed to upload report", "file", file, "id", reportID, "app", app, "err", procErr)
 		return attemptCount, failureCount
 	}
 
 	// Label for result of filesProcessed counter metric.
 	processResult := "success"
 	if procErr != nil {
+		// Decode or validation error
+		slog.Debug("Uploading invalid report", "file", file, "id", reportID, "app", app, "err", procErr)
 		uploadAttempted, err := p.uploadInvalid(ctx, file, reportID, app)
 		if err != nil {
 			slog.Warn("Failed to upload invalid report", "file", file, "id", reportID, "err", err)
@@ -249,7 +254,7 @@ func (p *Processor) processFile(
 	}
 
 	p.filesProcessed.WithLabelValues(app, processResult).Inc()
-	slog.Info("Finished processing file", "file", file, "id", reportID)
+	slog.Info("Finished processing file", "file", file, "id", reportID, "app", app)
 
 	return attemptCount, failureCount
 }
@@ -265,25 +270,17 @@ func processAndUpload[T models.TargetModels](
 ) error {
 	report, err := decodeFile[T](file)
 	if err != nil {
-		slog.Warn("Failed to process file", "file", file, "err", err)
 		return err
 	}
 	validationErr := validate(report)
-	switch {
-	case errors.Is(validationErr, errUnexpectedFields):
-		slog.Warn("Failed to fully process file", "file", file, "err", validationErr)
-		fallthrough
-	case validationErr == nil:
-		if err := upload(report); err != nil {
-			slog.Warn("Failed to upload file to PostgreSQL", "file", file, "err", err)
-			return errors.Join(errUploadFailed, err)
-		}
-		slog.Info("Successfully processed and uploaded file", "file", file)
-		return validationErr
-	default:
-		slog.Warn("File processed with errors, skipping upload", "file", file, "err", validationErr)
+	if validationErr != nil && !errors.Is(validationErr, errUnexpectedFields) {
 		return validationErr
 	}
+
+	if err := upload(report); err != nil {
+		return errors.Join(errUploadFailed, err, validationErr)
+	}
+	return validationErr // Could be nil or errUnexpectedFields
 }
 
 func validateReport(data *models.TargetModel) (err error) {

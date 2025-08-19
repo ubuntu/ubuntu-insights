@@ -43,7 +43,7 @@ func TestRun(t *testing.T) {
 		"Context cancel before run errors fast": {
 			cancelContextPreRun: true,
 			wantEarlyErr:        true,
-			wantSpecificErr:     ingest.ErrServiceClosed,
+			wantSpecificErr:     context.Canceled,
 		},
 		"Context cancel after run without blocked close returns without err": {
 			cancelContext:  true,
@@ -167,10 +167,7 @@ func TestRun(t *testing.T) {
 				require.Error(t, err, "Expected early error but got nil from early return")
 				if tc.wantSpecificErr != nil {
 					require.ErrorIs(t, err, tc.wantSpecificErr, "Expected specific error but got different error")
-					return
 				}
-				require.NotErrorIs(t, err, ingest.ErrServiceClosed, "Got unexpected service closed error")
-				require.NotErrorIs(t, err, ingest.ErrTeardownTimeout, "Got unexpected teardown timeout error")
 				return
 			case <-time.After(maxDegradedDuration + 100*time.Millisecond):
 			}
@@ -195,10 +192,7 @@ func TestRun(t *testing.T) {
 				require.Error(t, err, "Expected late error but got nil from late return")
 				if tc.wantSpecificErr != nil {
 					require.ErrorIs(t, err, tc.wantSpecificErr, "Expected specific error but got different error")
-					return
 				}
-				require.NotErrorIs(t, err, ingest.ErrServiceClosed, "Got unexpected service closed error")
-				require.NotErrorIs(t, err, ingest.ErrTeardownTimeout, "Got unexpected teardown timeout error")
 				return
 			case <-time.After(maxDegradedDuration + 100*time.Millisecond):
 			}

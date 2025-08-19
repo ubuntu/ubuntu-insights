@@ -3,7 +3,6 @@ package workers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"math/rand"
@@ -43,7 +42,7 @@ func New(cm dConfigManager, proc dProcessor, reg prometheus.Registerer) (*Pool, 
 		Help: "Number of active workers in the ingest service.",
 	})
 	if err := reg.Register(activeWorkers); err != nil {
-		return nil, fmt.Errorf("failed to create worker pool: %v", err)
+		return nil, fmt.Errorf("failed to register active workers gauge: %v", err)
 	}
 
 	return &Pool{
@@ -67,7 +66,7 @@ func (m *Pool) Run(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		return errors.New("Context already done")
+		return ctx.Err()
 	default:
 	}
 
