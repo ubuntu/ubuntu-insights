@@ -1,5 +1,5 @@
 [Unit]
-Description="Collect platform report using Ubuntu Insights while respecting consent."
+Description="Collect platform report using Ubuntu Insights while respecting consent"
 
 [Service]
 Type=oneshot
