@@ -4,7 +4,7 @@ Description="Run Ubuntu-Insights upload 8 mins after boot and every week relativ
 [Timer]
 OnBootSec=8min
 OnUnitActiveSec=1weeks
-Unit=ubuntu-insights-upload
+Unit=ubuntu-insights-upload.service
 
 [Install]
 WantedBy=timers.target

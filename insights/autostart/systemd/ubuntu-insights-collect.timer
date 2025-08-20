@@ -4,7 +4,7 @@ Description="Run Ubuntu-Insights collects 5 mins after boot and every month rela
 [Timer]
 OnBootSec=5min
 OnUnitActiveSec=1months
-Unit=ubuntu-insights-collect
+Unit=ubuntu-insights-collect.service
 
 [Install]
 WantedBy=timers.target
