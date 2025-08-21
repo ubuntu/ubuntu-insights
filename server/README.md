@@ -26,12 +26,13 @@ Flags:
       --config string              use a specific configuration file
       --daemon-config string       path to the configuration file
   -h, --help                       help for ubuntu-insights-web-service
+      --json-logs                  enable JSON formatted logs
       --listen-host string         host to listen on
       --listen-port int            port to listen on (default 8080)
       --max-header-bytes int       maximum header bytes for HTTP server (default 8192)
       --max-upload-bytes int       maximum upload bytes for HTTP server (default 131072)
-      --metrics-host string        host for metrics endpoint
-      --metrics-port int           port for metrics endpoint (default 2112)
+      --metrics-host string        host for the metrics endpoint
+      --metrics-port int           port for the metrics endpoint (default 2112)
       --read-timeout duration      read timeout for HTTP server (default 5s)
       --reports-dir string         directory to store reports in (default "/var/lib/ubuntu-insights-services/reports")
       --request-timeout duration   request timeout for HTTP server (default 3s)
@@ -64,6 +65,7 @@ Flags:
   -s, --db-sslmode string        database SSL mode
   -u, --db-user string           database user
   -h, --help                     help for ubuntu-insights-ingest-service
+      --json-logs                enable JSON formatted logs
       --metrics-host string      host for the metrics endpoint
       --metrics-port int         port for the metrics endpoint (default 2113)
       --read-timeout duration    read timeout for the metrics HTTP server (default 5s)
