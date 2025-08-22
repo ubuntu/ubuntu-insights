@@ -17,7 +17,7 @@ func installConsentCmd(app *App) {
 		Short: "Manage or get user consent state",
 		Long: `Manage or get user consent state for data collection and upload.
 		
-If no sources are provided, the global consent state is managed.`,
+If no sources are provided, the default consent state is managed.`,
 		Args: cobra.ArbitraryArgs,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if _, err := strconv.ParseBool(app.config.Consent.State); app.config.Consent.State != "" && err != nil {
@@ -62,7 +62,7 @@ func (a App) consentRun() error {
 	cm := consent.New(slog.Default(), a.config.consentDir)
 
 	if len(a.config.Consent.Sources) == 0 {
-		// Global consent state to be changed
+		// Change default consent state
 		a.config.Consent.Sources = append(a.config.Consent.Sources, "")
 	}
 
@@ -86,7 +86,7 @@ func (a App) consentRun() error {
 	for _, source := range a.config.Consent.Sources {
 		state, err := cm.GetState(source)
 		if source == "" {
-			source = "Global"
+			source = "Default"
 		}
 		if err != nil {
 			slog.Error("Failed to get consent state for source", "source", source, "error", err)

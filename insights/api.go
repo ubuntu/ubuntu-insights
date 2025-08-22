@@ -220,7 +220,7 @@ func (c Config) Upload(sources []string, flags UploadFlags) error {
 }
 
 // GetConsentState gets the state for the specified source.
-// If source is "", the global source is retrieved.
+// If source is "", the default consent state is retrieved.
 //
 // This method calls Resolve() on the config before proceeding.
 func (c Config) GetConsentState(source string) (bool, error) {
@@ -236,7 +236,7 @@ func (c Config) GetConsentState(source string) (bool, error) {
 }
 
 // SetConsentState sets the consent state for the specified source.
-// If source is "", the global source is affected.
+// If source is "", the default consent state is affected.
 //
 // This method calls Resolve() on the config before proceeding.
 func (c Config) SetConsentState(source string, consentState bool) error {

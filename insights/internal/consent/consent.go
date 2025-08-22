@@ -1,5 +1,5 @@
 // Package consent is the implementation of the consent manager component.
-// The consent manager is responsible for managing consent files, which are used to store the consent state for a source or the global consent state.
+// The consent manager is responsible for managing consent files, which are used to store the consent state for a source or the default consent state.
 package consent
 
 import (
@@ -40,7 +40,7 @@ func New(l *slog.Logger, path string) *Manager {
 
 // GetState gets the consent state for the given source.
 // If the source do not have a consent file, it will be considered as a false state.
-// If the source is an empty string, then the global consent state will be returned.
+// If the source is an empty string, then the default consent state will be returned.
 // If the target consent file does not exist, it will not be created.
 // If the target consent file does not exist, then ErrConsentFileNotFound will be returned.
 func (cm Manager) GetState(source string) (state bool, err error) {
@@ -59,10 +59,10 @@ func (cm Manager) GetState(source string) (state bool, err error) {
 	return sourceConsent.ConsentState, nil
 }
 
-var consentSourceFilePattern = `%s` + constants.ConsentSourceBaseSeparator + constants.GlobalFileName
+var consentSourceFilePattern = `%s` + constants.ConsentSourceBaseSeparator + constants.DefaultConsentFileName
 
 // SetState updates the consent state for the given source.
-// If the source is an empty string, then the global consent state will be set.
+// If the source is an empty string, then the default consent state will be set.
 // If the target consent file does not exist, it will be created.
 func (cm Manager) SetState(source string, state bool) (err error) {
 	defer decorate.OnError(&err, "could not set consent state")
@@ -73,13 +73,13 @@ func (cm Manager) SetState(source string, state bool) (err error) {
 
 // HasConsent returns true if there is consent for the given source, based on the hierarchy rules.
 // If the source has a consent file, its value is returned.
-// Otherwise, the global consent state is returned.
+// Otherwise, the default consent state is returned.
 //
-// If the source state can't be gotten, and the global consent file does not exist, then ErrConsentFileNotFound will be returned.
+// If the source state can't be gotten, and the default consent file does not exist, then ErrConsentFileNotFound will be returned.
 func (cm Manager) HasConsent(source string) (bool, error) {
 	consent, err := cm.GetState(source)
 	if err != nil {
-		cm.log.Warn("Could not get source specific consent state, falling back to global consent state", "source", source, "error", err)
+		cm.log.Warn("Could not get source specific consent state, falling back to default consent state", "source", source, "error", err)
 		return cm.GetState("")
 	}
 
@@ -87,10 +87,10 @@ func (cm Manager) HasConsent(source string) (bool, error) {
 }
 
 // getFile returns the expected path to the consent file for the given source.
-// If source is blank, it returns the path to the global consent file.
+// If source is blank, it returns the path to the default consent file.
 // It does not check if the file exists, or if it is valid.
 func (cm Manager) getFile(source string) string {
-	p := filepath.Join(cm.path, constants.GlobalFileName)
+	p := filepath.Join(cm.path, constants.DefaultConsentFileName)
 	if source != "" {
 		p = filepath.Join(cm.path, fmt.Sprintf(consentSourceFilePattern, source))
 	}
@@ -98,7 +98,7 @@ func (cm Manager) getFile(source string) string {
 	return p
 }
 
-// getSourceConsentFiles returns a map of all paths to validly named consent files in the folder, other than the global file.
+// getSourceConsentFiles returns a map of all paths to validly named consent files in the folder, other than the default consent file.
 func (cm Manager) getFiles() (map[string]string, error) {
 	sourceFiles := make(map[string]string)
 
@@ -113,10 +113,10 @@ func (cm Manager) getFiles() (map[string]string, error) {
 		}
 
 		// Source file
-		if !strings.HasSuffix(entry.Name(), constants.ConsentSourceBaseSeparator+constants.GlobalFileName) {
+		if !strings.HasSuffix(entry.Name(), constants.ConsentSourceBaseSeparator+constants.DefaultConsentFileName) {
 			continue
 		}
-		source := strings.TrimSuffix(entry.Name(), constants.ConsentSourceBaseSeparator+constants.GlobalFileName)
+		source := strings.TrimSuffix(entry.Name(), constants.ConsentSourceBaseSeparator+constants.DefaultConsentFileName)
 		sourceFiles[source] = filepath.Join(cm.path, entry.Name())
 		cm.log.Debug("Found source consent file", "file", sourceFiles[source])
 	}

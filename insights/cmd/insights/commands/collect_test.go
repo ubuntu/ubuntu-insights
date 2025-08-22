@@ -26,8 +26,8 @@ func TestCollect(t *testing.T) {
 	tests := map[string]struct {
 		args []string
 
-		consentDir      string
-		noGlobalConsent bool
+		consentDir       string
+		noDefaultConsent bool
 
 		wantErr      bool
 		wantUsageErr bool
@@ -56,8 +56,8 @@ func TestCollect(t *testing.T) {
 		},
 
 		"Exit 0 when no consent files": {
-			args:            []string{"collect", "Unknown", filepath.Join("testdata", "source_metrics", "normal.json")},
-			noGlobalConsent: true,
+			args:             []string{"collect", "Unknown", filepath.Join("testdata", "source_metrics", "normal.json")},
+			noDefaultConsent: true,
 		},
 
 		// Error cases
@@ -102,7 +102,7 @@ func TestCollect(t *testing.T) {
 			t.Parallel()
 
 			if tc.consentDir == "" {
-				tc.consentDir = "true-global"
+				tc.consentDir = "true"
 			}
 
 			var gotConfig collector.Config
@@ -114,8 +114,8 @@ func TestCollect(t *testing.T) {
 			}
 
 			a, consentPath, cachePath := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewCollector(newCollector))
-			if tc.noGlobalConsent {
-				require.NoError(t, os.Remove(filepath.Join(consentPath, "consent.toml")), "Setup: could not remove global consent file")
+			if tc.noDefaultConsent {
+				require.NoError(t, os.Remove(filepath.Join(consentPath, "consent.toml")), "Setup: could not remove default consent file")
 			}
 
 			err := a.Run()
@@ -184,7 +184,7 @@ func TestCollectCollectorErrors(t *testing.T) {
 				return mc, nil
 			}
 
-			a, _, _ := commands.NewAppForTests(t, []string{"collect"}, "true-global", commands.WithNewCollector(newCollector))
+			a, _, _ := commands.NewAppForTests(t, []string{"collect"}, "true", commands.WithNewCollector(newCollector))
 			err := a.Run()
 
 			assert.False(t, a.UsageError(), "Expected no usage error")
@@ -229,7 +229,7 @@ func TestNewError(t *testing.T) {
 				return mc, mc.compileErr
 			}
 
-			a, _, _ := commands.NewAppForTests(t, []string{"collect"}, "true-global", commands.WithNewCollector(newCollector))
+			a, _, _ := commands.NewAppForTests(t, []string{"collect"}, "true", commands.WithNewCollector(newCollector))
 			err := a.Run()
 
 			assert.Equal(t, tc.wantUsageErr, a.UsageError(), "Unexpected usage error state")
