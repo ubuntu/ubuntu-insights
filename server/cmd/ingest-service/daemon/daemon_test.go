@@ -105,7 +105,7 @@ func TestAppCanSigHupAfterExecute(t *testing.T) {
 	allowlistPath := daemon.GenerateTestAllowlist(t, &config.Conf{})
 	a, wait := startDaemon(t, nil, allowlistPath)
 	a.Quit()
-	wait(false)
+	wait(true)
 
 	orig := os.Stdout
 	os.Stdout = w

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -56,12 +57,7 @@ func New(ctx context.Context, cfg Config, args ...Options) (*Manager, error) {
 		opt(&opts)
 	}
 
-	dsn := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName, cfg.SSLMode,
-	)
-
-	dbpool, err := opts.newPool(ctx, dsn)
+	dbpool, err := opts.newPool(ctx, cfg.URI("postgres"))
 	if err != nil {
 		return nil, fmt.Errorf("unable to create database connection pool: %w", err)
 	}
@@ -244,4 +240,34 @@ func (db *Manager) Close() error {
 	case <-time.After(10 * time.Second):
 		return fmt.Errorf("timeout while closing database, connection may still be open")
 	}
+}
+
+// URI is a helper method that returns a connection URI for PostgreSQL.
+// It does not check the validity of the configuration values.
+//
+// Security warning: the returned string may include credentials.
+func (c Config) URI(scheme string) string {
+	host := c.Host
+	if c.Port != 0 {
+		host = fmt.Sprintf("%s:%d", c.Host, c.Port)
+	}
+
+	user := url.User(c.User)
+	if c.Password != "" {
+		user = url.UserPassword(c.User, c.Password)
+	}
+
+	u := &url.URL{
+		Scheme: scheme,
+		User:   user,
+		Host:   host,
+		Path:   c.DBName,
+	}
+
+	q := u.Query()
+	if c.SSLMode != "" {
+		q.Set("sslmode", c.SSLMode)
+	}
+	u.RawQuery = q.Encode()
+	return u.String()
 }

@@ -51,22 +51,9 @@ If no path is provided, the default path is used.`,
 }
 
 func (a App) migrateRun() error {
-	dbCfg := a.config.DBconfig
-
-	// Convert config to DSN format
-	dsn := fmt.Sprintf(
-		"pgx://%s:%s@%s:%d/%s?sslmode=%s",
-		dbCfg.User,
-		dbCfg.Password, // can be empty for some auth methods
-		dbCfg.Host,
-		dbCfg.Port,
-		dbCfg.DBName,
-		dbCfg.SSLMode,
-	)
-
 	m, err := migrate.New(
 		fmt.Sprintf("file://%s", a.config.MigrationsDir),
-		dsn, // Convert DSN
+		a.config.DBconfig.URI("pgx"),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create migration instance: %v", err)
