@@ -19,7 +19,7 @@ import (
 func TestConfigArg(t *testing.T) {
 	filename := "conf.yaml"
 	configPath := filepath.Join(t.TempDir(), filename)
-	require.NoError(t, os.WriteFile(configPath, []byte("Verbosity: 1"), 0600), "Setup: couldn't write config file")
+	require.NoError(t, os.WriteFile(configPath, []byte("Verbosity: 1\nJSONLogs: true"), 0600), "Setup: couldn't write config file")
 
 	a, err := daemon.New()
 	require.NoError(t, err, "Setup: New should not return an error")
@@ -28,6 +28,7 @@ func TestConfigArg(t *testing.T) {
 	err = a.Run()
 	require.NoError(t, err, "Run should not return an error")
 	require.Equal(t, 1, a.Config().Verbosity)
+	require.True(t, a.Config().JSONLogs)
 }
 
 func TestConfigEnv(t *testing.T) {

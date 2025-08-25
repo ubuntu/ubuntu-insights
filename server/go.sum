@@ -265,8 +265,8 @@ github.com/tklauser/go-sysconf v0.3.12 h1:0QaGUFOdQaIVdPgfITYzaTegZvdCjmYO52cSFA
 github.com/tklauser/go-sysconf v0.3.12/go.mod h1:Ho14jnntGE1fpdOqQEEaiKRpvIavV0hSfmBq8nJbHYI=
 github.com/tklauser/numcpus v0.6.1 h1:ng9scYS7az0Bk4OZLvrNXNSAO2Pxr1XXRAPyjhIx+Fk=
 github.com/tklauser/numcpus v0.6.1/go.mod h1:1XfjsgE2zo8GVw7POkMbHENHzVg3GzmoZ9fESEdAacY=
-github.com/ubuntu/ubuntu-insights/common v0.3.0 h1:ybVzo24GGzveOHQT9OoO1lKU006UgETfhm38LzJJwFo=
-github.com/ubuntu/ubuntu-insights/common v0.3.0/go.mod h1:Xyi34TiWUpW1T8BL9BRvWITGm9pXf2Aw+Okwc5UdOjs=
+github.com/ubuntu/ubuntu-insights/common v0.6.1 h1:fAx8j3H21ofOjyaqz//7hBvpAPpfhWrzTcL4pcYj0Gc=
+github.com/ubuntu/ubuntu-insights/common v0.6.1/go.mod h1:M7p8z4zy0p1NKUBhj7g+2IA1vVXki6tY5z541JOLQJ0=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=

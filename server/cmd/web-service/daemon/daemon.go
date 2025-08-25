@@ -31,7 +31,9 @@ type App struct {
 // appConfig holds the configuration for the application.
 type appConfig struct {
 	Verbosity int
-	Daemon    webservice.StaticConfig
+	JSONLogs  bool
+
+	Daemon webservice.StaticConfig
 }
 
 // New creates a new App instance with default values.
@@ -46,7 +48,7 @@ func New() (*App, error) {
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// Command parsing has been successful. Returns to not print usage anymore.
 			a.cmd.SilenceUsage = true
-			cli.SetVerbosity(a.config.Verbosity) // Set verbosity before loading config
+			cli.SetSlog(a.config.Verbosity, a.config.JSONLogs) // Set verbosity before loading config
 			if err := cli.InitViperConfig(constants.WebServiceCmdName, a.cmd, a.viper); err != nil {
 				return err
 			}
@@ -55,7 +57,7 @@ func New() (*App, error) {
 			}
 			slog.Info("got app config", "config", a.config)
 
-			cli.SetVerbosity(a.config.Verbosity)
+			cli.SetSlog(a.config.Verbosity, a.config.JSONLogs) // Update logging after loading config if necessary
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -97,6 +99,7 @@ func installRootCmd(app *App) {
 	}
 
 	cmd.PersistentFlags().CountVarP(&app.config.Verbosity, "verbose", "v", "issue INFO (-v), DEBUG (-vv)")
+	cmd.PersistentFlags().BoolVar(&app.config.JSONLogs, "json-logs", false, "enable JSON formatted logs")
 
 	// Daemon flags
 	cmd.Flags().StringVar(&app.config.Daemon.ConfigPath, "daemon-config", defaultConf.ConfigPath, "path to the configuration file")
