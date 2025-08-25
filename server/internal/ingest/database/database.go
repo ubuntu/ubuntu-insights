@@ -27,6 +27,7 @@ type Config struct {
 
 type dbPool interface {
 	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	Ping(ctx context.Context) error
 	Close()
 }
 
@@ -42,8 +43,9 @@ type options struct {
 // Options represents an optional function to override Manager default values.
 type Options func(*options)
 
-// Connect establishes a connection to the PostgreSQL database using the provided configuration.
-func Connect(ctx context.Context, cfg Config, args ...Options) (*Manager, error) {
+// New creates database manager with a PostgreSQL connection pool using the provided configuration.
+// Note: The connection is validated with a ping, but it is not maintained.
+func New(ctx context.Context, cfg Config, args ...Options) (*Manager, error) {
 	opts := options{
 		newPool: func(ctx context.Context, dsn string) (dbPool, error) {
 			return pgxpool.New(ctx, dsn)
@@ -61,10 +63,18 @@ func Connect(ctx context.Context, cfg Config, args ...Options) (*Manager, error)
 
 	dbpool, err := opts.newPool(ctx, dsn)
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect to database: %w", err)
+		return nil, fmt.Errorf("unable to create database connection pool: %w", err)
 	}
 
-	slog.Info("Connected to PostgreSQL database", "host", cfg.Host, "port", cfg.Port)
+	slog.Debug("Testing database connection", "host", cfg.Host, "port", cfg.Port)
+	pingCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	if err := dbpool.Ping(pingCtx); err != nil {
+		dbpool.Close()
+		return nil, fmt.Errorf("unable to ping database: %v", err)
+	}
+
+	slog.Info("Successfully pinged PostgreSQL database", "host", cfg.Host, "port", cfg.Port)
 	return &Manager{dbpool: dbpool}, nil
 }
 

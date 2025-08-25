@@ -168,7 +168,7 @@ func (a *App) run() (err error) {
 		return fmt.Errorf("failed to get absolute path for config file: %v", err)
 	}
 	cm := config.New(a.config.ConfigPath)
-	db, err := database.Connect(context.Background(), a.config.DBconfig)
+	db, err := database.New(context.Background(), a.config.DBconfig)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %v", err)
 	}
