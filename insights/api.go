@@ -145,6 +145,7 @@ func (c Config) Compile(flags CompileFlags) ([]byte, error) {
 	r := c.Resolve()
 
 	cConf := collector.Config{
+		Source:            constants.DefaultCollectSource, // TODO: remove following Not actually used, this is to prevent misleading logs.
 		CachePath:         r.InsightsDir,
 		SourceMetricsPath: flags.SourceMetricsPath,
 		SourceMetricsJSON: flags.SourceMetricsJSON,
