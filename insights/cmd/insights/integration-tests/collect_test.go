@@ -29,8 +29,8 @@ func TestCollect(t *testing.T) {
 		sysinfoErr     bool
 		platformOnly   string
 
-		useSysinfo          bool
-		removeGlobalConsent bool
+		useSysinfo           bool
+		removeDefaultConsent bool
 
 		skipReportCheck bool
 		wantExitCode    int
@@ -65,15 +65,15 @@ func TestCollect(t *testing.T) {
 			sourceMetrics: "invalid.json",
 			wantExitCode:  1,
 		},
-		"True Normal Global False": {
+		"True Normal Default False": {
 			source:         "True",
 			sourceMetrics:  "normal.json",
-			consentFixture: "false-global",
+			consentFixture: "false",
 		},
-		"True Normal Global Bad-file": {
+		"True Normal Default Bad-file": {
 			source:         "True",
 			sourceMetrics:  "normal.json",
-			consentFixture: "bad-file-global",
+			consentFixture: "bad-file",
 		},
 		"True Normal Force": {
 			source:        "True",
@@ -152,21 +152,21 @@ func TestCollect(t *testing.T) {
 			sourceMetrics: "invalid.json",
 			wantExitCode:  1,
 		},
-		"Unknown-A Normal Global False": {
+		"Unknown-A Normal Default False": {
 			source:         "Unknown-A",
 			sourceMetrics:  "normal.json",
-			consentFixture: "false-global",
+			consentFixture: "false",
 		},
-		"Unknown-A Invalid Global False": {
+		"Unknown-A Invalid Default False": {
 			source:         "Unknown-A",
 			sourceMetrics:  "invalid.json",
-			consentFixture: "false-global",
+			consentFixture: "false",
 			wantExitCode:   1,
 		},
-		"Unknown-A Normal Global Bad-file": {
+		"Unknown-A Normal Default Bad-file": {
 			source:         "Unknown-A",
 			sourceMetrics:  "normal.json",
-			consentFixture: "bad-file-global",
+			consentFixture: "bad-file",
 			wantExitCode:   1,
 		},
 
@@ -192,11 +192,11 @@ func TestCollect(t *testing.T) {
 			useSysinfo:    true,
 		},
 
-		"Exit 0 no metrics if unable to read source consent and no global consent file": {
-			source:              "Unknown-B",
-			sourceMetrics:       "normal.json",
-			useSysinfo:          true,
-			removeGlobalConsent: true,
+		"Exit 0 no metrics if unable to read source consent and no default consent file": {
+			source:               "Unknown-B",
+			sourceMetrics:        "normal.json",
+			useSysinfo:           true,
+			removeDefaultConsent: true,
 		},
 	}
 
@@ -217,7 +217,7 @@ func TestCollect(t *testing.T) {
 			}
 			paths := copyFixtures(t, tc.consentFixture)
 
-			if tc.removeGlobalConsent {
+			if tc.removeDefaultConsent {
 				require.NoError(t, os.Remove(filepath.Join(paths.consent, "consent.toml")))
 			}
 			for _, f := range tc.readOnlyFile {

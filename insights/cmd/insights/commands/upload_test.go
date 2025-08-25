@@ -18,7 +18,7 @@ func TestUpload(t *testing.T) {
 		args []string
 
 		consentDir        string
-		noGlobalConsent   bool
+		noDefaultConsent  bool
 		useReportsFixture bool
 
 		wantErr      bool
@@ -52,12 +52,12 @@ func TestUpload(t *testing.T) {
 			args: []string{"upload", "--retry"},
 		},
 		"Does not error when no consent files": {
-			args:            []string{"upload", "Unknown"},
-			noGlobalConsent: true,
+			args:             []string{"upload", "Unknown"},
+			noDefaultConsent: true,
 		},
 		"Does not error when no consent files and retry": {
-			args:            []string{"upload", "Unknown", "--retry"},
-			noGlobalConsent: true,
+			args:             []string{"upload", "Unknown", "--retry"},
+			noDefaultConsent: true,
 		},
 
 		// Error cases
@@ -93,7 +93,7 @@ func TestUpload(t *testing.T) {
 			t.Parallel()
 
 			if tc.consentDir == "" {
-				tc.consentDir = "true-global"
+				tc.consentDir = "true"
 			}
 
 			dir := t.TempDir()
@@ -113,8 +113,8 @@ func TestUpload(t *testing.T) {
 			}
 			a, cDir, _ := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewUploader(newUploader))
 
-			if tc.noGlobalConsent {
-				require.NoError(t, os.Remove(filepath.Join(cDir, "consent.toml")), "Setup: could not remove global consent file")
+			if tc.noDefaultConsent {
+				require.NoError(t, os.Remove(filepath.Join(cDir, "consent.toml")), "Setup: could not remove default consent file")
 			}
 
 			err := a.Run()

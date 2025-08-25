@@ -30,14 +30,14 @@ func TestConsent(t *testing.T) {
 		ignoreGolden bool
 		wantExitCode int
 	}{
-		// Get Global
-		"Get Global True":      {config: "global.yaml", consentFixture: "true-global"},
-		"Get Global False":     {config: "global.yaml", consentFixture: "false-global"},
-		"Get Global Empty":     {config: "global.yaml", consentFixture: "empty-global"},
-		"Get Global Bad-Value": {config: "global.yaml", consentFixture: "bad-value-global", wantExitCode: 1},
-		"Get Global Bad-Key":   {config: "global.yaml", consentFixture: "bad-key-global"},
-		"Get Global Bad-File":  {config: "global.yaml", consentFixture: "bad-file-global", wantExitCode: 1},
-		"Get Global Bad-Ext":   {config: "global.yaml", consentFixture: "bad-ext-global", wantExitCode: 1},
+		// Get Default
+		"Get Default True":      {config: "default.yaml", consentFixture: "true"},
+		"Get Default False":     {config: "default.yaml", consentFixture: "false"},
+		"Get Default Empty":     {config: "default.yaml", consentFixture: "empty"},
+		"Get Default Bad-Value": {config: "default.yaml", consentFixture: "bad-value", wantExitCode: 1},
+		"Get Default Bad-Key":   {config: "default.yaml", consentFixture: "bad-key"},
+		"Get Default Bad-File":  {config: "default.yaml", consentFixture: "bad-file", wantExitCode: 1},
+		"Get Default Bad-Ext":   {config: "default.yaml", consentFixture: "bad-ext", wantExitCode: 1},
 
 		// Get Source
 		"Get Source True":           {config: "true.yaml"},
@@ -51,26 +51,26 @@ func TestConsent(t *testing.T) {
 		"Get Source Multiple Err":   {config: "multiple-err.yaml", wantExitCode: 1},
 		"Get Source Multiple Mixed": {config: "multiple-mixed.yaml", wantExitCode: 1},
 
-		// Set Global
-		"Set Global True T":      {state: "true", config: "global.yaml", consentFixture: "true-global"},
-		"Set Global False T":     {state: "true", config: "global.yaml", consentFixture: "false-global"},
-		"Set Global Empty T":     {state: "true", config: "global.yaml", consentFixture: "empty-global"},
-		"Set Global Bad-Value T": {state: "true", config: "global.yaml", consentFixture: "bad-value-global"},
-		"Set Global Bad-Key T":   {state: "true", config: "global.yaml", consentFixture: "bad-key-global"},
-		"Set Global Bad-File T":  {state: "true", config: "global.yaml", consentFixture: "bad-file-global"},
-		"Set Global Bad-Ext T":   {state: "true", config: "global.yaml", consentFixture: "bad-ext-global"},
+		// Set Default
+		"Set Default True T":      {state: "true", config: "default.yaml", consentFixture: "true"},
+		"Set Default False T":     {state: "true", config: "default.yaml", consentFixture: "false"},
+		"Set Default Empty T":     {state: "true", config: "default.yaml", consentFixture: "empty"},
+		"Set Default Bad-Value T": {state: "true", config: "default.yaml", consentFixture: "bad-value"},
+		"Set Default Bad-Key T":   {state: "true", config: "default.yaml", consentFixture: "bad-key"},
+		"Set Default Bad-File T":  {state: "true", config: "default.yaml", consentFixture: "bad-file"},
+		"Set Default Bad-Ext T":   {state: "true", config: "default.yaml", consentFixture: "bad-ext"},
 
-		"Set Global True F":      {state: "false", config: "global.yaml", consentFixture: "true-global"},
-		"Set Global False F":     {state: "false", config: "global.yaml", consentFixture: "false-global"},
-		"Set Global Empty F":     {state: "false", config: "global.yaml", consentFixture: "empty-global"},
-		"Set Global Bad-Value F": {state: "false", config: "global.yaml", consentFixture: "bad-value-global"},
-		"Set Global Bad-Key F":   {state: "false", config: "global.yaml", consentFixture: "bad-key-global"},
-		"Set Global Bad-File F":  {state: "false", config: "global.yaml", consentFixture: "bad-file-global"},
-		"Set Global Bad-Ext F":   {state: "false", config: "global.yaml", consentFixture: "bad-ext-global"},
+		"Set Default True F":      {state: "false", config: "default.yaml", consentFixture: "true"},
+		"Set Default False F":     {state: "false", config: "default.yaml", consentFixture: "false"},
+		"Set Default Empty F":     {state: "false", config: "default.yaml", consentFixture: "empty"},
+		"Set Default Bad-Value F": {state: "false", config: "default.yaml", consentFixture: "bad-value"},
+		"Set Default Bad-Key F":   {state: "false", config: "default.yaml", consentFixture: "bad-key"},
+		"Set Default Bad-File F":  {state: "false", config: "default.yaml", consentFixture: "bad-file"},
+		"Set Default Bad-Ext F":   {state: "false", config: "default.yaml", consentFixture: "bad-ext"},
 
-		"Set Global True Invalid":  {state: "invalid", config: "global.yaml", consentFixture: "true-global", wantExitCode: 2},
-		"Set Global False Invalid": {state: "invalid", config: "global.yaml", consentFixture: "false-global", wantExitCode: 2},
-		"Set Global Empty Invalid": {state: "invalid", config: "global.yaml", consentFixture: "empty-global", wantExitCode: 2},
+		"Set Default True Invalid":  {state: "invalid", config: "default.yaml", consentFixture: "true", wantExitCode: 2},
+		"Set Default False Invalid": {state: "invalid", config: "default.yaml", consentFixture: "false", wantExitCode: 2},
+		"Set Default Empty Invalid": {state: "invalid", config: "default.yaml", consentFixture: "empty", wantExitCode: 2},
 
 		// Set Source
 		"Set Source True T":           {state: "true", config: "true.yaml"},
@@ -87,8 +87,8 @@ func TestConsent(t *testing.T) {
 		"Set Source Multiple Mixed Invalid": {state: "invalid", config: "multiple-mixed.yaml", wantExitCode: 2},
 
 		// Set Read Only
-		"Set Global Read Only": {
-			state: "false", config: "global.yaml", consentFixture: "true-global", readOnlyFile: []string{"consent.toml"},
+		"Set Default Read Only": {
+			state: "false", config: "default.yaml", consentFixture: "true", readOnlyFile: []string{"consent.toml"},
 			ignoreGolden: runtime.GOOS != "windows",
 			wantExitCode: readOnlyErrorCode()},
 		"Set Source Read Only": {

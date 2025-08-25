@@ -23,28 +23,28 @@ func TestConsent(t *testing.T) {
 		wantUsageErr bool
 	}{
 		// Get
-		"Get Global True":      {args: []string{"consent"}},
-		"Get Global False":     {args: []string{"consent"}, consentDir: "false-global"},
+		"Get Default True":     {args: []string{"consent"}},
+		"Get Default False":    {args: []string{"consent"}, consentDir: "false"},
 		"Get Source True":      {args: []string{"consent", "True"}},
 		"Get Source False":     {args: []string{"consent", "False"}},
 		"Get Multiple Sources": {args: []string{"consent", "True", "False"}},
-		"Get Global Empty":     {args: []string{"consent"}, consentDir: "empty-global"},
-		"Get Global Bad Key":   {args: []string{"consent"}, consentDir: "bad-key-global"},
+		"Get Default Empty":    {args: []string{"consent"}, consentDir: "empty"},
+		"Get Default Bad Key":  {args: []string{"consent"}, consentDir: "bad-key"},
 
 		// Get Errors
 		"Get Multiple Sources errors when source is missing ": {args: []string{"consent", "True", "Unknown"}, wantErr: true},
 		"Get Multiple Sources errors when source file bad":    {args: []string{"consent", "True", "Bad-File", "False"}, wantErr: true},
 
-		"Get errors when Global missing":   {args: []string{"consent"}, removeFiles: []string{"consent.toml"}, wantErr: true},
-		"Get errors when Global bad file":  {args: []string{"consent"}, consentDir: "bad-file-global", wantErr: true},
-		"Get errors when Global bad ext":   {args: []string{"consent"}, consentDir: "bad-ext-global", wantErr: true},
-		"Get errors when Global bad value": {args: []string{"consent"}, consentDir: "bad-value-global", wantErr: true},
+		"Get errors when Default missing":   {args: []string{"consent"}, removeFiles: []string{"consent.toml"}, wantErr: true},
+		"Get errors when Default bad file":  {args: []string{"consent"}, consentDir: "bad-file", wantErr: true},
+		"Get errors when Default bad ext":   {args: []string{"consent"}, consentDir: "bad-ext", wantErr: true},
+		"Get errors when Default bad value": {args: []string{"consent"}, consentDir: "bad-value", wantErr: true},
 
 		"Get errors when source missing": {args: []string{"consent", "unknown"}, wantErr: true},
 
 		// Set
-		"Set global to new value":     {args: []string{"consent", "--state=false"}},
-		"Set global to same value":    {args: []string{"consent", "--state=true"}},
+		"Set default to new value":    {args: []string{"consent", "--state=false"}},
+		"Set default to same value":   {args: []string{"consent", "--state=true"}},
 		"Set source to new value":     {args: []string{"consent", "False", "--state=true"}},
 		"Set source to same value":    {args: []string{"consent", "True", "--state=true"}},
 		"Set multiple sources:":       {args: []string{"consent", "True", "False", "-s=false"}},
@@ -64,7 +64,7 @@ func TestConsent(t *testing.T) {
 			t.Parallel()
 
 			if tc.consentDir == "" {
-				tc.consentDir = "true-global"
+				tc.consentDir = "true"
 			}
 			app, configDir := newAppForTests(t, tc.args, tc.consentDir, tc.removeFiles)
 

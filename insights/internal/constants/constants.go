@@ -31,8 +31,8 @@ const (
 	// UploadedFolder is the default name of the uploaded reports folder.
 	UploadedFolder = "uploaded"
 
-	// GlobalFileName is the default base name of the consent state files.
-	GlobalFileName = "consent.toml"
+	// DefaultConsentFileName is the default base name of the consent state files.
+	DefaultConsentFileName = "consent.toml"
 
 	// ConsentSourceBaseSeparator is the default separator between the source and the base name of the consent state files.
 	ConsentSourceBaseSeparator = "-"

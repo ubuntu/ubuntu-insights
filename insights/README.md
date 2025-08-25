@@ -73,7 +73,7 @@ Global Flags:
 
 #### Examples
 
-To get the global consent state using the default consent directory:
+To get the default consent state using the default consent directory:
 
 ```console
 foo@bar:~$ ubuntu-insights consent

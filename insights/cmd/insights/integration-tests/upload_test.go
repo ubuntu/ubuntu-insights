@@ -20,7 +20,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
 )
 
-const defaultConsentFixture = "true-global"
+const defaultConsentFixture = "true"
 
 func TestUpload(t *testing.T) {
 	t.Parallel()
@@ -46,8 +46,8 @@ func TestUpload(t *testing.T) {
 		responseCode        int
 		noServer            bool
 
-		removeReports       []string
-		removeGlobalConsent bool
+		removeReports        []string
+		removeDefaultConsent bool
 
 		wantExitCode int
 	}{
@@ -108,9 +108,9 @@ func TestUpload(t *testing.T) {
 				"True/uploaded/1000.json",
 			},
 		},
-		"True-Prioritizes local consent over Global False": {
+		"True-Prioritizes local consent over Default False": {
 			sources:        []string{"True"},
-			consentFixture: "false-global",
+			consentFixture: "false",
 			removeReports: []string{
 				"True/local/2000.json",
 				"True/uploaded/1000.json",
@@ -238,7 +238,7 @@ func TestUpload(t *testing.T) {
 		},
 
 		// Unknown
-		"Unknown-Consent falls back to global when not set": {
+		"Unknown-Consent falls back to default when not set": {
 			sources: []string{"Unknown-A"},
 			removeReports: []string{
 				"Unknown-A/local/2000.json",
@@ -261,10 +261,10 @@ func TestUpload(t *testing.T) {
 			},
 		},
 
-		// Unknown Global False
-		"Unknown-Consent falls back to global when not set and respects no consent": {
+		// Unknown Default False
+		"Unknown-Consent falls back to default when not set and respects no consent": {
 			sources:        []string{"Unknown-A"},
-			consentFixture: "false-global",
+			consentFixture: "false",
 			removeReports: []string{
 				"Unknown-A/local/2000.json",
 				"Unknown-A/uploaded/1000.json",
@@ -273,7 +273,7 @@ func TestUpload(t *testing.T) {
 		"Unknown-DryRun causes nothing to happen with false consent": {
 			sources:        []string{"Unknown-A"},
 			config:         "dry.yaml",
-			consentFixture: "false-global",
+			consentFixture: "false",
 			removeReports: []string{
 				"Unknown-A/local/2000.json",
 				"Unknown-A/uploaded/1000.json",
@@ -282,20 +282,20 @@ func TestUpload(t *testing.T) {
 		"Unknown-Force respects consent and uploads duplicate files": {
 			sources:        []string{"Unknown-A"},
 			config:         "force.yaml",
-			consentFixture: "false-global",
+			consentFixture: "false",
 			removeReports: []string{
 				"Unknown-A/local/2000.json",
 			},
 		},
 
-		// Unknown Global Not Set
+		// Unknown Default Not Set
 		"Unknown-Exits 0 when no consent set and does nothing": {
 			sources: []string{"Unknown-A"},
 			removeReports: []string{
 				"Unknown-A/local/2000.json",
 				"Unknown-A/uploaded/1000.json",
 			},
-			removeGlobalConsent: true,
+			removeDefaultConsent: true,
 		},
 
 		// Multi Sources
@@ -427,7 +427,7 @@ func TestUpload(t *testing.T) {
 				"False/local/2000.json",
 				"False/uploaded/1000.json",
 			},
-			removeGlobalConsent: true,
+			removeDefaultConsent: true,
 
 			initialResponseCode: http.StatusInternalServerError,
 			badCount:            2,
@@ -546,8 +546,8 @@ func TestUpload(t *testing.T) {
 			for _, f := range tc.removeReports {
 				require.NoError(t, os.Remove(filepath.Join(paths.reports, f)), "Setup: failed to remove file")
 			}
-			if tc.removeGlobalConsent {
-				require.NoError(t, os.Remove(filepath.Join(paths.consent, "consent.toml")), "Setup: failed to remove global consent file")
+			if tc.removeDefaultConsent {
+				require.NoError(t, os.Remove(filepath.Join(paths.consent, "consent.toml")), "Setup: failed to remove default consent file")
 			}
 
 			for _, f := range tc.readOnlyFile {

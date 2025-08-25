@@ -108,7 +108,7 @@ type Config struct {
 
 // Sanitize sets defaults and checks that the Config is properly configured.
 func (c *Config) Sanitize(l *slog.Logger) error {
-	// Handle global source and source metrics.
+	// Handle default source and source metrics.
 	if c.Source == "" { // Default source to platform
 		c.Source = constants.DefaultCollectSource
 		l.Info("No source provided, defaulting to platform", "source", c.Source)
