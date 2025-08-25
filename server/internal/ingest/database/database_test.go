@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/server/internal/ingest/database"
 	"github.com/ubuntu/ubuntu-insights/server/internal/ingest/models"
 )
@@ -270,6 +271,78 @@ func TestClose(t *testing.T) {
 
 			// No error after second close
 			require.NoError(t, mgr.Close(), "Close should not error on second call")
+		})
+	}
+}
+
+func TestURI(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		config database.Config
+		scheme string
+	}{
+		"basic config": {
+			config: database.Config{
+				Host:     "localhost",
+				Port:     5432,
+				User:     "testuser",
+				Password: "testpassword",
+				DBName:   "testdb",
+				SSLMode:  "disable",
+			},
+			scheme: "postgres",
+		},
+		"handles no port": {
+			config: database.Config{
+				Host:     "localhost",
+				User:     "testuser",
+				Password: "testpassword",
+				DBName:   "testdb",
+				SSLMode:  "disable",
+			},
+			scheme: "postgres",
+		},
+		"handles no password": {
+			config: database.Config{
+				Host:    "localhost",
+				Port:    5432,
+				User:    "testuser",
+				DBName:  "testdb",
+				SSLMode: "disable",
+			},
+			scheme: "postgres",
+		},
+		"handles no sslmode": {
+			config: database.Config{
+				Host:     "localhost",
+				Port:     5432,
+				User:     "testuser",
+				Password: "testpassword",
+				DBName:   "testdb",
+			},
+			scheme: "postgres",
+		},
+		"handles custom scheme": {
+			config: database.Config{
+				Host:     "localhost",
+				Port:     5432,
+				User:     "testuser",
+				Password: "testpassword",
+				DBName:   "testdb",
+				SSLMode:  "disable",
+			},
+			scheme: "pgx",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got := tc.config.URI(tc.scheme)
+			want := testutils.LoadWithUpdateFromGolden(t, got)
+			require.Equal(t, want, got, "URI() output does not match golden file")
 		})
 	}
 }
