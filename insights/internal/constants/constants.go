@@ -71,14 +71,14 @@ var (
 )
 
 func init() {
-	initalizePaths()
+	initializePaths()
 	initializeOptOutPayload()
 }
 
-// initalizePaths initializes the default configuration and cache paths based on the user's home directory.
+// initializePaths initializes the default configuration and cache paths based on the user's home directory.
 // If the manGeneration variable is set to "true", it will clear the path variables to avoid including potentially
 // misleading paths in the generated man pages.
-func initalizePaths() {
+func initializePaths() {
 	if manGeneration == "true" {
 		DefaultConfigPath = ""
 		DefaultCachePath = ""
