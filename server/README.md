@@ -33,7 +33,7 @@ Flags:
       --metrics-host string        host for the metrics endpoint
       --metrics-port int           port for the metrics endpoint (default 2112)
       --read-timeout duration      read timeout for HTTP server (default 5s)
-      --reports-dir string         directory to store reports in (default "/var/lib/ubuntu-insights-services/reports")
+      --reports-dir string         directory to store reports in (default "~/.cache/ubuntu-insights-services~/reports")
       --request-timeout duration   request timeout for HTTP server (default 3s)
   -v, --verbose count              issue INFO (-v), DEBUG (-vv)
       --write-timeout duration     write timeout for HTTP server (default 10s)
@@ -67,7 +67,7 @@ Flags:
       --metrics-host string      host for the metrics endpoint
       --metrics-port int         port for the metrics endpoint (default 2113)
       --read-timeout duration    read timeout for the metrics HTTP server (default 5s)
-      --reports-dir string       base directory to read reports from (default "/var/lib/ubuntu-insights-services/reports")
+      --reports-dir string       base directory to read reports from (default "~/.cache/ubuntu-insights-services/reports")
   -v, --verbose count            issue INFO (-v), DEBUG (-vv)
       --write-timeout duration   write timeout for the metrics HTTP server (default 10s)
 ```

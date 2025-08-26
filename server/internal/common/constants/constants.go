@@ -3,6 +3,8 @@
 package constants
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 )
 
@@ -34,8 +36,18 @@ const (
 // Service variables.
 var (
 	// DefaultServiceDataDir is the default data directory for services.
-	DefaultServiceDataDir = filepath.Join("/var/lib", DefaultServiceFolder)
+	DefaultServiceDataDir = DefaultServiceFolder
 
 	// DefaultServiceReportsDir is the default reports directory for services.
 	DefaultServiceReportsDir = filepath.Join(DefaultServiceDataDir, DefaultServiceReportsFolder)
 )
+
+func init() {
+	userCacheDir, err := os.UserCacheDir()
+	if err != nil {
+		panic(fmt.Sprintf("Could not fetch cache directory: %v", err))
+	}
+
+	DefaultServiceDataDir = filepath.Join(userCacheDir, DefaultServiceFolder)
+	DefaultServiceReportsDir = filepath.Join(DefaultServiceDataDir, DefaultServiceReportsFolder)
+}
