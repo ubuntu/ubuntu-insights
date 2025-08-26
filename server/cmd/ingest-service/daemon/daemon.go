@@ -64,7 +64,10 @@ func New() (*App, error) {
 			if err := a.viper.Unmarshal(&a.config); err != nil {
 				return fmt.Errorf("unable to strictly decode configuration into struct: %w", err)
 			}
-			slog.Info("got app config", "config", a.config)
+
+			redactedConfig := a.config
+			redactedConfig.DBconfig.Password = "[REDACTED]"
+			slog.Info("got app config", "config", redactedConfig)
 
 			cli.SetVerbosity(a.config.Verbosity)
 			return nil
@@ -168,19 +171,22 @@ func (a *App) run() (err error) {
 		return fmt.Errorf("failed to get absolute path for config file: %v", err)
 	}
 	cm := config.New(a.config.ConfigPath)
-	db, err := database.Connect(context.Background(), a.config.DBconfig)
+	db, err := database.New(context.Background(), a.config.DBconfig)
 	if err != nil {
+		close(a.ready)
 		return fmt.Errorf("failed to connect to database: %v", err)
 	}
 
 	registry := prometheus.NewRegistry()
 	proc, err := processor.New(a.config.ReportsDir, db, registry)
 	if err != nil {
+		close(a.ready)
 		return fmt.Errorf("failed to create report processor: %v", err)
 	}
 
 	workerPool, err := workers.New(cm, proc, registry)
 	if err != nil {
+		close(a.ready)
 		return fmt.Errorf("failed to create worker pool: %v", err)
 	}
 

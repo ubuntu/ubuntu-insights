@@ -10,15 +10,17 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/server/internal/ingest/database"
 	"github.com/ubuntu/ubuntu-insights/server/internal/ingest/models"
 )
 
-func TestConnect(t *testing.T) {
+func TestNew(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		config database.Config
+		config  database.Config
+		pingErr error
 
 		wantErr bool
 	}{
@@ -42,7 +44,7 @@ func TestConnect(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			mgr, err := database.Connect(t.Context(), tc.config, database.WithNewPool(mockNewDBPool(t, mockDBPool{})))
+			mgr, err := database.New(t.Context(), tc.config, database.WithNewPool(mockNewDBPool(t, mockDBPool{pingErr: tc.pingErr})))
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("Connect() error = %v, wantErr %v", err, tc.wantErr)
 			}
@@ -90,7 +92,7 @@ func TestUpload(t *testing.T) {
 				execErr: tc.execErr,
 			}
 
-			mgr, err := database.Connect(t.Context(), database.Config{}, database.WithNewPool(mockNewDBPool(t, dbPool)))
+			mgr, err := database.New(t.Context(), database.Config{}, database.WithNewPool(mockNewDBPool(t, dbPool)))
 			require.NoError(t, err, "Setup: Connect() error")
 			defer mgr.Close()
 
@@ -148,7 +150,7 @@ func TestUploadLegacy(t *testing.T) {
 				execErr: tc.execErr,
 			}
 
-			mgr, err := database.Connect(t.Context(), database.Config{}, database.WithNewPool(mockNewDBPool(t, dbPool)))
+			mgr, err := database.New(t.Context(), database.Config{}, database.WithNewPool(mockNewDBPool(t, dbPool)))
 			require.NoError(t, err, "Setup: Connect() error")
 			defer mgr.Close()
 
@@ -208,7 +210,7 @@ func TestUploadInvalid(t *testing.T) {
 				execErr: tc.execErr,
 			}
 
-			mgr, err := database.Connect(t.Context(), database.Config{}, database.WithNewPool(mockNewDBPool(t, dbPool)))
+			mgr, err := database.New(t.Context(), database.Config{}, database.WithNewPool(mockNewDBPool(t, dbPool)))
 			require.NoError(t, err, "Setup: Connect() error")
 			defer mgr.Close()
 
@@ -256,7 +258,7 @@ func TestClose(t *testing.T) {
 				closeDelay: tc.closeDelay,
 			}
 
-			mgr, err := database.Connect(t.Context(), database.Config{}, database.WithNewPool(mockNewDBPool(t, dbPool)))
+			mgr, err := database.New(t.Context(), database.Config{}, database.WithNewPool(mockNewDBPool(t, dbPool)))
 			require.NoError(t, err, "Setup: Connect() error")
 			defer mgr.Close()
 
@@ -269,6 +271,78 @@ func TestClose(t *testing.T) {
 
 			// No error after second close
 			require.NoError(t, mgr.Close(), "Close should not error on second call")
+		})
+	}
+}
+
+func TestURI(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		config database.Config
+		scheme string
+	}{
+		"basic config": {
+			config: database.Config{
+				Host:     "localhost",
+				Port:     5432,
+				User:     "testuser",
+				Password: "testpassword",
+				DBName:   "testdb",
+				SSLMode:  "disable",
+			},
+			scheme: "postgres",
+		},
+		"handles no port": {
+			config: database.Config{
+				Host:     "localhost",
+				User:     "testuser",
+				Password: "testpassword",
+				DBName:   "testdb",
+				SSLMode:  "disable",
+			},
+			scheme: "postgres",
+		},
+		"handles no password": {
+			config: database.Config{
+				Host:    "localhost",
+				Port:    5432,
+				User:    "testuser",
+				DBName:  "testdb",
+				SSLMode: "disable",
+			},
+			scheme: "postgres",
+		},
+		"handles no sslmode": {
+			config: database.Config{
+				Host:     "localhost",
+				Port:     5432,
+				User:     "testuser",
+				Password: "testpassword",
+				DBName:   "testdb",
+			},
+			scheme: "postgres",
+		},
+		"handles custom scheme": {
+			config: database.Config{
+				Host:     "localhost",
+				Port:     5432,
+				User:     "testuser",
+				Password: "testpassword",
+				DBName:   "testdb",
+				SSLMode:  "disable",
+			},
+			scheme: "pgx",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got := tc.config.URI(tc.scheme)
+			want := testutils.LoadWithUpdateFromGolden(t, got)
+			require.Equal(t, want, got, "URI() output does not match golden file")
 		})
 	}
 }
@@ -288,11 +362,16 @@ func mockNewDBPool(t *testing.T, dbPool mockDBPool) func(ctx context.Context, ds
 
 type mockDBPool struct {
 	execErr    error
+	pingErr    error
 	closeDelay time.Duration
 }
 
 func (m mockDBPool) Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error) {
 	return pgconn.CommandTag{}, m.execErr
+}
+
+func (m mockDBPool) Ping(ctx context.Context) error {
+	return m.pingErr
 }
 
 func (m mockDBPool) Close() {
