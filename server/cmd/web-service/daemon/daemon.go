@@ -19,9 +19,11 @@ import (
 
 // App represents the application.
 type App struct {
-	cmd    *cobra.Command
-	viper  *viper.Viper
-	config appConfig
+	cmd   *cobra.Command
+	viper *viper.Viper
+
+	allowlistPath string
+	config        appConfig
 
 	daemon *webservice.Server
 
@@ -64,7 +66,7 @@ An JSON structured <allowlist> file is required to specify which sources to proc
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			a.cmd.SilenceUsage = true
-			a.config.Daemon.ConfigPath = args[0]
+			a.allowlistPath = args[0]
 
 			return a.run()
 		},
@@ -88,7 +90,6 @@ func installRootCmd(app *App) {
 	cmd := app.cmd
 
 	defaultConf := webservice.StaticConfig{
-		ConfigPath: "",
 		ReportsDir: constants.DefaultServiceReportsDir,
 
 		ReadTimeout:    5 * time.Second,
@@ -163,13 +164,12 @@ func (a App) RootCmd() cobra.Command {
 }
 
 func (a *App) run() (err error) {
-	a.config.Daemon.ConfigPath, err = filepath.Abs(a.config.Daemon.ConfigPath)
+	a.allowlistPath, err = filepath.Abs(a.allowlistPath)
 	if err != nil {
-		return fmt.Errorf("failed to get absolute path for config file: %v", err)
+		return fmt.Errorf("failed to get absolute path for allowlist file: %v", err)
 	}
-	dConf := a.config.Daemon
-	cm := config.New(dConf.ConfigPath)
-	a.daemon, err = webservice.New(context.Background(), cm, dConf)
+	cm := config.New(a.allowlistPath)
+	a.daemon, err = webservice.New(context.Background(), cm, a.config.Daemon)
 	close(a.ready)
 	if err != nil {
 		return fmt.Errorf("failed to create server: %v", err)

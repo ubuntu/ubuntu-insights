@@ -14,7 +14,6 @@ import (
 	"github.com/ubuntu/ubuntu-insights/server/cmd/web-service/daemon"
 	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
 	"github.com/ubuntu/ubuntu-insights/server/internal/common/constants"
-	"github.com/ubuntu/ubuntu-insights/server/internal/webservice"
 )
 
 func TestConfigArg(t *testing.T) {
@@ -60,12 +59,7 @@ func TestConfigBadArg(t *testing.T) {
 func TestDaeConfigBadPathErrors(t *testing.T) {
 	t.Parallel()
 
-	conf := &daemon.AppConfig{
-		Daemon: webservice.StaticConfig{
-			ConfigPath: "/does/not/exist.yaml",
-		},
-	}
-	a := daemon.NewForTests(t, conf, nil)
+	a := daemon.NewForTests(t, &daemon.AppConfig{}, "/does/not/exist.yaml")
 
 	chErr := make(chan error, 1)
 	go func() {
@@ -162,7 +156,8 @@ func TestRootCmd(t *testing.T) {
 func startDaemon(t *testing.T, conf *daemon.AppConfig, daeConf *config.Conf) (app *daemon.App, done func()) {
 	t.Helper()
 
-	a := daemon.NewForTests(t, conf, daeConf)
+	allowlistPath := daemon.GenerateTestAllowlist(t, daeConf)
+	a := daemon.NewForTests(t, conf, allowlistPath)
 
 	chErr := make(chan error, 1)
 	go func() {

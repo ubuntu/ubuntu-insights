@@ -24,9 +24,11 @@ import (
 
 // App represents the application.
 type App struct {
-	cmd    *cobra.Command
-	viper  *viper.Viper
-	config appConfig
+	cmd   *cobra.Command
+	viper *viper.Viper
+
+	allowlistPath string
+	config        appConfig
 
 	daemon *ingest.Service
 
@@ -42,8 +44,6 @@ type appConfig struct {
 	DBconfig      database.Config
 	ReportsDir    string // Base directory for reports
 	MigrationsDir string
-
-	ConfigPath string
 }
 
 // New creates a new App instance with default values.
@@ -74,7 +74,7 @@ An JSON structured <allowlist> file is required to specify which sources to proc
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			a.cmd.SilenceUsage = true
-			a.config.ConfigPath = args[0]
+			a.allowlistPath = args[0]
 
 			return a.run()
 		},
@@ -163,11 +163,11 @@ func (a App) RootCmd() cobra.Command {
 }
 
 func (a *App) run() (err error) {
-	a.config.ConfigPath, err = filepath.Abs(a.config.ConfigPath)
+	a.allowlistPath, err = filepath.Abs(a.allowlistPath)
 	if err != nil {
-		return fmt.Errorf("failed to get absolute path for config file: %v", err)
+		return fmt.Errorf("failed to get absolute path for allowlist file: %v", err)
 	}
-	cm := config.New(a.config.ConfigPath)
+	cm := config.New(a.allowlistPath)
 	db, err := database.Connect(context.Background(), a.config.DBconfig)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %v", err)

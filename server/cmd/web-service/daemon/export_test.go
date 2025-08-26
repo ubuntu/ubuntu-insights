@@ -22,20 +22,11 @@ func (a *App) Config() AppConfig {
 }
 
 // NewForTests creates a new App instance for testing purposes.
-func NewForTests(t *testing.T, conf *AppConfig, daeConf *config.Conf, args ...string) *App {
+func NewForTests(t *testing.T, conf *AppConfig, allowlistPath string, args ...string) *App {
 	t.Helper()
 
-	if conf == nil {
-		conf = &AppConfig{}
-	}
-
-	allowlistConf := conf.Daemon.ConfigPath
-	if allowlistConf == "" {
-		allowlistConf = GenerateTestDaemonConfig(t, daeConf)
-	}
-
 	p := GenerateTestConfig(t, conf)
-	argsWithConf := []string{allowlistConf, "--config", p}
+	argsWithConf := []string{allowlistPath, "--config", p}
 	argsWithConf = append(argsWithConf, args...)
 
 	a, err := New()
@@ -44,16 +35,16 @@ func NewForTests(t *testing.T, conf *AppConfig, daeConf *config.Conf, args ...st
 	return a
 }
 
-// GenerateTestDaemonConfig generates a temporary daemon config file for testing.
-func GenerateTestDaemonConfig(t *testing.T, daeConf *config.Conf) string {
+// GenerateTestAllowlist generates a temporary allowlist configuration file for testing.
+func GenerateTestAllowlist(t *testing.T, allowlist *config.Conf) string {
 	t.Helper()
 
-	d, err := json.Marshal(daeConf)
+	d, err := json.Marshal(allowlist)
 	require.NoError(t, err, "Setup: failed to marshal dynamic server config for tests")
-	daeConfPath := filepath.Join(t.TempDir(), "daemon-testconfig.yaml")
-	require.NoError(t, os.WriteFile(daeConfPath, d, 0600), "Setup: failed to write dynamic config for tests")
+	allowlistPath := filepath.Join(t.TempDir(), "allowlist-test.yaml")
+	require.NoError(t, os.WriteFile(allowlistPath, d, 0600), "Setup: failed to write dynamic config for tests")
 
-	return daeConfPath
+	return allowlistPath
 }
 
 // GenerateTestConfig generates a temporary config file for testing.
