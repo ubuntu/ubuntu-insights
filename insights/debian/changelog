@@ -1,3 +1,16 @@
+ubuntu-insights (0.6.1) questing; urgency=medium
+
+  * New upstream release (LP: #2121454)
+  * Fix systemd services permission error in certain environments
+  * Fix systemd unit descriptions
+  * Fix systemd timer Unit= directive unit type
+  * Fix misleading references to "global consent" by renaming 
+    to "default consent"
+  * libinsights: Fix misleading log message about sources when using Compile
+  * Upgrades various golang dependencies (resolve GHSA-2464-8j7c-4cjm)
+
+ -- Kat Kuo <kat.kuo@canonical.com>  Thu, 21 Aug 2025 13:15:34 -0400
+
 ubuntu-insights (0.6.0) questing; urgency=medium
 
   * New upstream release (LP: #2120272)
