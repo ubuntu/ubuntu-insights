@@ -41,7 +41,6 @@ type Server struct {
 
 // StaticConfig holds the static configuration for the server.
 type StaticConfig struct {
-	ConfigPath string
 	ReportsDir string
 
 	ReadTimeout    time.Duration

@@ -56,13 +56,10 @@ func TestConfigBadArg(t *testing.T) {
 	require.Error(t, err, "Run should return an error")
 }
 
-func TestDaemonConfigBadPathErrors(t *testing.T) {
+func TestBadAllowlistPathErrors(t *testing.T) {
 	t.Parallel()
 
-	conf := &daemon.AppConfig{
-		ConfigPath: "/does/not/exist.yaml",
-	}
-	_, done := startDaemon(t, conf, nil)
+	_, done := startDaemon(t, nil, "/does/not/exist.yaml")
 	done(true)
 }
 
@@ -83,7 +80,6 @@ func TestUsageError(t *testing.T) {
 
 	a, err := daemon.New()
 	require.NoError(t, err, "Setup: New should not return an error")
-	a.SetArgs("doesnotexist")
 
 	err = a.Run()
 	require.Error(t, err, "Run should return an error")
@@ -106,7 +102,8 @@ func TestAppCanSigHupAfterExecute(t *testing.T) {
 	r, w, err := os.Pipe()
 	require.NoError(t, err, "Setup: pipe shouldn't fail")
 
-	a, wait := startDaemon(t, nil, nil)
+	allowlistPath := daemon.GenerateTestAllowlist(t, &config.Conf{})
+	a, wait := startDaemon(t, nil, allowlistPath)
 	a.Quit()
 	wait(false)
 
@@ -148,10 +145,10 @@ func TestRootCmd(t *testing.T) {
 // to wait for the daemon to stop.
 //
 // The done function should be called in the main goroutine for the test.
-func startDaemon(t *testing.T, conf *daemon.AppConfig, daeConf *config.Conf) (app *daemon.App, done func(bool)) {
+func startDaemon(t *testing.T, conf *daemon.AppConfig, allowlistPath string) (app *daemon.App, done func(bool)) {
 	t.Helper()
 
-	a := daemon.NewForTests(t, conf, daeConf)
+	a := daemon.NewForTests(t, conf, allowlistPath)
 
 	chErr := make(chan error, 1)
 	go func() {
