@@ -32,8 +32,13 @@ func NewForTests(t *testing.T, conf *AppConfig, daeConf *config.Conf, args ...st
 		conf.ReportsDir = filepath.Join(t.TempDir(), "reports")
 	}
 
-	p := GenerateTestConfig(t, conf, daeConf)
-	argsWithConf := []string{"--config", p}
+	allowlistConf := conf.ConfigPath
+	if allowlistConf == "" {
+		allowlistConf = GenerateTestDaemonConfig(t, daeConf)
+	}
+
+	p := GenerateTestConfig(t, conf)
+	argsWithConf := []string{allowlistConf, "--config", p}
 	argsWithConf = append(argsWithConf, args...)
 
 	a, err := New()
@@ -55,7 +60,7 @@ func GenerateTestDaemonConfig(t *testing.T, daeConf *config.Conf) string {
 }
 
 // GenerateTestConfig generates a temporary config file for testing.
-func GenerateTestConfig(t *testing.T, origConf *AppConfig, daeConf *config.Conf) string {
+func GenerateTestConfig(t *testing.T, origConf *AppConfig) string {
 	t.Helper()
 
 	var conf appConfig
@@ -66,10 +71,6 @@ func GenerateTestConfig(t *testing.T, origConf *AppConfig, daeConf *config.Conf)
 
 	if conf.Verbosity == 0 {
 		conf.Verbosity = 2
-	}
-
-	if conf.ConfigPath == "" {
-		conf.ConfigPath = GenerateTestDaemonConfig(t, daeConf)
 	}
 
 	d, err := yaml.Marshal(conf)

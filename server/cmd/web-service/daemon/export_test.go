@@ -25,8 +25,17 @@ func (a *App) Config() AppConfig {
 func NewForTests(t *testing.T, conf *AppConfig, daeConf *config.Conf, args ...string) *App {
 	t.Helper()
 
-	p := GenerateTestConfig(t, conf, daeConf)
-	argsWithConf := []string{"--config", p}
+	if conf == nil {
+		conf = &AppConfig{}
+	}
+
+	allowlistConf := conf.Daemon.ConfigPath
+	if allowlistConf == "" {
+		allowlistConf = GenerateTestDaemonConfig(t, daeConf)
+	}
+
+	p := GenerateTestConfig(t, conf)
+	argsWithConf := []string{allowlistConf, "--config", p}
 	argsWithConf = append(argsWithConf, args...)
 
 	a, err := New()
@@ -48,7 +57,7 @@ func GenerateTestDaemonConfig(t *testing.T, daeConf *config.Conf) string {
 }
 
 // GenerateTestConfig generates a temporary config file for testing.
-func GenerateTestConfig(t *testing.T, origConf *AppConfig, daeConf *config.Conf) string {
+func GenerateTestConfig(t *testing.T, origConf *AppConfig) string {
 	t.Helper()
 
 	var conf appConfig
@@ -59,10 +68,6 @@ func GenerateTestConfig(t *testing.T, origConf *AppConfig, daeConf *config.Conf)
 
 	if conf.Verbosity == 0 {
 		conf.Verbosity = 2
-	}
-
-	if conf.Daemon.ConfigPath == "" {
-		conf.Daemon.ConfigPath = GenerateTestDaemonConfig(t, daeConf)
 	}
 
 	if conf.Daemon.ReportsDir == "" {

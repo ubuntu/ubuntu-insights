@@ -83,7 +83,6 @@ func TestUsageError(t *testing.T) {
 
 	a, err := daemon.New()
 	require.NoError(t, err, "Setup: New should not return an error")
-	a.SetArgs("doesnotexist")
 
 	err = a.Run()
 	require.Error(t, err, "Run should return an error")

@@ -181,7 +181,7 @@ func TestIngestService(t *testing.T) {
 				r, w := io.Pipe()
 				cmd := exec.CommandContext(ctx,
 					cliPath,
-					"--daemon-config", configPath,
+					configPath,
 					"--db-host", dbContainer.Host,
 					"--db-port", dbContainer.Port,
 					"--db-user", dbContainer.User,

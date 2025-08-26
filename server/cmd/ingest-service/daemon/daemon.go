@@ -51,10 +51,12 @@ func New() (*App, error) {
 	a := App{ready: make(chan struct{})}
 
 	a.cmd = &cobra.Command{
-		Use:           constants.IngestServiceCmdName,
-		Short:         "Ubuntu Insights ingest service",
-		Long:          "Ubuntu Insights ingest service uses validated received reports and inserts them into a PostgreSQL database.",
+		Use:   fmt.Sprintf("%s <allowlist>", constants.IngestServiceCmdName),
+		Short: "Ubuntu Insights ingest service",
+		Long: `Ubuntu Insights ingest service uses validated received reports and inserts them into a PostgreSQL database.
+An JSON structured <allowlist> file is required to specify which sources to process. The service will watch this file for changes and reload it automatically.`,
 		SilenceErrors: true,
+		Args:          cobra.ExactArgs(1),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// Command parsing has been successful. Returns to not print usage anymore.
 			a.cmd.SilenceUsage = true
@@ -72,6 +74,7 @@ func New() (*App, error) {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			a.cmd.SilenceUsage = true
+			a.config.ConfigPath = args[0]
 
 			return a.run()
 		},
@@ -100,7 +103,6 @@ func installRootCmd(app *App) {
 
 	// Daemon flags
 	cmd.Flags().StringVar(&app.config.ReportsDir, "reports-dir", constants.DefaultServiceReportsDir, "base directory to read reports from")
-	cmd.Flags().StringVarP(&app.config.ConfigPath, "daemon-config", "c", "", "path to the configuration file")
 
 	// Metrics server flags
 	cmd.Flags().DurationVar(&app.config.MetricsConfig.ReadTimeout, "read-timeout", 5*time.Second, "read timeout for the metrics HTTP server")
@@ -112,10 +114,6 @@ func installRootCmd(app *App) {
 
 	if err := cmd.MarkFlagDirname("reports-dir"); err != nil {
 		panic(fmt.Errorf("failed to mark reports-dir flag as directory: %w", err))
-	}
-
-	if err := cmd.MarkFlagDirname("daemon-config"); err != nil {
-		panic(fmt.Sprintf("failed to mark daemon-config flag as filename: %v", err))
 	}
 }
 
