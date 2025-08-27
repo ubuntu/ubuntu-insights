@@ -9,131 +9,159 @@ on:
 
 env:
   DEBIAN_FRONTEND: noninteractive
-  GO_TESTS_TIMEOUT: 20m
-  insights_apt_deps: "libwayland-dev"
+  GO_TESTS_TIMEOUT: 30m
+  INSIGHTS_APT_DEPS: "libwayland-dev"
+  # RAW_MATRIX defines the OS/module matrix for jobs.
+  # The "server" module only supports ubuntu.
+  RAW_MATRIX: |
+    {
+      "os": ["ubuntu-24.04", "windows-2022", "macos-13", "macos-14"],
+      "module": ["insights", "common"],
+      "include": [
+        {"os": "ubuntu-24.04", "module": "server"}
+      ]
+    }
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
+  plan:
+    name: Create test plan # Dynamic matrix generation for subsequent jobs
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          echo "matrix=$(echo "${RAW_MATRIX}" | jq -c .)"  >> $GITHUB_OUTPUT
+
   go-sanity:
     name: "Go: Code sanity"
+    needs: plan
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, windows-2022, macos-13, macos-14] # Run on Ubuntu, Windows, Mac Intel, Mac ARM
-        subproject: ["insights", "common"]
-        include:
-          - os: ubuntu-24.04
-            subproject: server # server is only supported on Linux
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
     steps:
       - name: Install dependencies on Linux
-        if: runner.os == 'Linux' && matrix.subproject == 'insights'
+        if: runner.os == 'Linux' && matrix.module == 'insights'
         run: |
           sudo apt update
-          sudo apt install -y ${{ env.insights_apt_deps }}
+          sudo apt install -y ${{ env.INSIGHTS_APT_DEPS }}
       - uses: actions/checkout@v5
       - name: Go code sanity check
         uses: canonical/desktop-engineering/gh-actions/go/code-sanity@v2
         with:
-          working-directory: ${{ matrix.subproject }}
+          working-directory: ${{ matrix.module }}
           tools-directory: ${{ github.workspace }}/tools
           golangci-lint-configfile: ${{ github.workspace }}/.golangci.yaml
-  go-tests:
-    name: "Go: Tests"
+
+  go-race-tests:
+    name: "Go: Race Tests"
+    needs: plan
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-      matrix:
-        test: ["coverage", "race"]
-        os: [ubuntu-24.04, windows-2022, macos-13, macos-14] # Run on Ubuntu, Windows, Mac Intel, Mac ARM
-        subproject: ["insights", "common"]
-        include:
-          - os: ubuntu-24.04
-            subproject: server # server is only supported on Linux
-            test: coverage
-          - os: ubuntu-24.04
-            subproject: server # server is only supported on Linux
-            test: race
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v5
       - name: Prepare environment
         uses: ./.github/actions/prepare-environment
         with:
-          apt-dependencies: ${{ env.insights_apt_deps }}
+          apt-dependencies: ${{ env.INSIGHTS_APT_DEPS }}
 
       - name: Install gotestfmt and our wrapper script
         uses: canonical/desktop-engineering/gh-actions/go/gotestfmt@main
 
+      - name: Prepare test artifacts path
+        run: |
+          set -euo pipefail
+
+          artifacts_dir=${RUNNER_TEMP}/test-artifacts
+          mkdir -p "${artifacts_dir}"
+          echo TEST_ARTIFACTS_PATH="${artifacts_dir}" >> $GITHUB_ENV
+
+      - name: Run tests (with race detector)
+        working-directory: ${{ matrix.module }}
+        run: |
+          set -euo pipefail
+
+          # -json will sometimes write non-json warnings to stdout, especially on macOS with -race
+          # CGO_LDFLAGS="-w" could be set to suppress linker warnings, but it is better to see them.
+          # See https://github.com/golang/go/issues/74978 and https://github.com/golang/go/issues/61229 
+          # Print executed commands to ease debugging
+
+          go test -json -timeout "${GO_TESTS_TIMEOUT}" -race ./... \
+            | tee >(jq -r 'select(.Action == "build-output") | "WARNING: Build output action filtered out -> \(. | tostring)"' >&2) \
+            | jq -c 'select(.Action != "build-output")' \
+            | gotestfmt --logfile "${TEST_ARTIFACTS_PATH}/gotestfmt.race.log"
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: insights-${{ github.job }}-${{ matrix.module }}-${{ matrix.os }}-artifacts-${{ github.run_attempt }}
+          path: ${{ env.TEST_ARTIFACTS_PATH }}
+
+  go-coverage-tests:
+    name: "Go: Coverage Tests"
+    needs: plan
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Prepare environment
+        uses: ./.github/actions/prepare-environment
+        with:
+          apt-dependencies: ${{ env.INSIGHTS_APT_DEPS }}
+
       - name: Install coverage test dependencies
-        shell: bash
-        if: matrix.test == 'coverage'
         run: |
           go install github.com/AlekSi/gocov-xml@latest
           go install github.com/axw/gocov/gocov@latest
 
-      - name: Prepare tests artifacts path
+      - name: Install gotestfmt and our wrapper script
+        uses: canonical/desktop-engineering/gh-actions/go/gotestfmt@main
+
+      - name: Prepare test artifacts path
         run: |
           set -euo pipefail
 
-          artifacts_dir=$(mktemp -d -t insights-test-artifacts-XXXXXX)
-          echo INSIGHTS_TEST_ARTIFACTS_PATH="${artifacts_dir}" >> $GITHUB_ENV
-        shell: bash
+          artifacts_dir=${RUNNER_TEMP}/test-artifacts
+          mkdir -p "${artifacts_dir}"
+          echo TEST_ARTIFACTS_PATH="${artifacts_dir}" >> $GITHUB_ENV
 
       - name: Run tests (with coverage collection)
-        if: matrix.test == 'coverage'
-        env:
-          G_DEBUG: "fatal-criticals"
-        working-directory: ${{ matrix.subproject }}
+        working-directory: ${{ matrix.module }}
         run: |
           set -euo pipefail
 
-          cov_dir=$(pwd)/coverage
+          cov_dir=${TEST_ARTIFACTS_PATH}/coverage
           mkdir -p ${cov_dir}/codecov ${cov_dir}/raw
-          go test -shuffle=on -coverpkg=./... -coverprofile=${cov_dir}/raw/coverage.out -covermode=count ./...
-          grep -hv -e "testutils" ${cov_dir}/raw/coverage.out > ${cov_dir}/codecov/coverage.out.codecov
+
+          # Print executed commands to ease debugging
+          set -x
+
+          go test -shuffle=on -coverpkg=./... -coverprofile=${cov_dir}/raw/coverage.out -covermode=set ./...
+
+          # Filter out the testutils and testsdetection packages from the coverage report
+          grep -hv -e "testutils" -e "testsdetection" ${cov_dir}/raw/coverage.out > ${cov_dir}/codecov/coverage.out.codecov
           gocov convert ${cov_dir}/codecov/coverage.out.codecov | gocov-xml > ${cov_dir}/coverage.xml
 
-          SAFE_ID=$(echo "${{ matrix.subproject }}-${{ matrix.os }}" | tr '/' '_')
-          echo "SAFE_ID=$SAFE_ID" >> $GITHUB_ENV
-        shell: bash
-
-      - name: Run tests (with race detector)
-        if: matrix.test == 'race' && runner.os != 'macOS'
-        env:
-          GO_TESTS_TIMEOUT: 35m
-        working-directory: ${{ matrix.subproject }}
-        run: |
-          set -euo pipefail
-          go test -json -timeout ${GO_TESTS_TIMEOUT} -race ./... | \
-            gotestfmt --logfile "${INSIGHTS_TEST_ARTIFACTS_PATH}/gotestfmt.race.log"
-        shell: bash
-
-      - name: Run tests (with unformatted race detector)
-        if: matrix.test == 'race' && runner.os == 'macOS'
-        env:
-          GO_TESTS_TIMEOUT: 35m
-        working-directory: ${{ matrix.subproject }}
-        run: |
-          set -euo pipefail
-          go test -json -timeout ${GO_TESTS_TIMEOUT} -race ./...
-        shell: bash
-
-      - name: Upload test coverage artifact
-        if: matrix.test == 'coverage'
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-${{ env.SAFE_ID }}
-          path: ${{ matrix.subproject }}/coverage/coverage.xml
-
       - name: Upload test artifacts
-        if: always() && matrix.test == 'race' && runner.os != 'macOS'
         uses: actions/upload-artifact@v4
         with:
-          name: insights-${{ github.job }}-${{ matrix.test }}-${{ matrix.subproject }}-${{ matrix.os }}-artifacts-${{ github.run_attempt }}
-          path: ${{ env.INSIGHTS_TEST_ARTIFACTS_PATH }}
+          name: insights-${{ github.job }}-${{ matrix.module }}-${{ matrix.os }}-artifacts-${{ github.run_attempt }}
+          path: ${{ env.TEST_ARTIFACTS_PATH }}
 
-  codecoverage:
-    name: "Combine and upload code coverage"
-    needs: go-tests
+  process-coverage:
+    name: "Combine and process code coverage"
+    needs: go-coverage-tests
+    if: always() # Run this even if coverage tests fail
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -147,7 +175,7 @@ jobs:
       - name: Combine coverage reports
         shell: bash
         run: |
-          reportgenerator -reports:"./artifacts/*/coverage.xml" -targetdir:"./coverage" -reporttypes:Cobertura
+          reportgenerator -reports:"./artifacts/**/coverage.xml" -targetdir:"./coverage" -reporttypes:Cobertura
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
