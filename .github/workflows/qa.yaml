@@ -169,6 +169,7 @@ jobs:
       - name: Install dependencies
         run: |
           dotnet tool install -g dotnet-reportgenerator-globaltool
+          go install honnef.co/go/tools/cmd/staticcheck@latest
       - name: Down coverage artifacts
         uses: actions/download-artifact@v5
         with:
@@ -182,3 +183,12 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage/Cobertura.xml
           disable_search: true
+      - name: TiCS quality gate
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: tiobe/tics-github-action@v3
+        with:
+          mode: client
+          project: ubuntu-insights
+          viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=GoProjects
+          ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
+          installTics: true
