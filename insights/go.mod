@@ -8,7 +8,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.11.1
 	github.com/ubuntu/decorate v0.0.0-20250213124239-8228e241ee19
-	github.com/ubuntu/ubuntu-insights/common v0.6.1
+	github.com/ubuntu/ubuntu-insights/common v0.6.2
 	golang.org/x/text v0.28.0
 	gopkg.in/ini.v1 v1.67.0
 	gopkg.in/yaml.v3 v3.0.1

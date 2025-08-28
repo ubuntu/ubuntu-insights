@@ -54,8 +54,8 @@ github.com/subosito/gotenv v1.6.0 h1:9NlTDc1FTs4qu0DDq7AEtTPNw6SVm7uBMsUCUjABIf8
 github.com/subosito/gotenv v1.6.0/go.mod h1:Dk4QP5c2W3ibzajGcXpNraDfq2IrhjMIvMSWPKKo0FU=
 github.com/ubuntu/decorate v0.0.0-20250213124239-8228e241ee19 h1:IP8p46//e//o0KPZdAzl+WF1DdRKHXfkbB+sQDCAlkw=
 github.com/ubuntu/decorate v0.0.0-20250213124239-8228e241ee19/go.mod h1:PUpwIgUuCQyuCz/gwiq6WYbo7IvtXXd8JqL01ez+jZE=
-github.com/ubuntu/ubuntu-insights/common v0.6.1 h1:fAx8j3H21ofOjyaqz//7hBvpAPpfhWrzTcL4pcYj0Gc=
-github.com/ubuntu/ubuntu-insights/common v0.6.1/go.mod h1:M7p8z4zy0p1NKUBhj7g+2IA1vVXki6tY5z541JOLQJ0=
+github.com/ubuntu/ubuntu-insights/common v0.6.2 h1:gFB82ha3rNKmQzVZ2kjmE1pBVrHYhx6SDq7OD05umRw=
+github.com/ubuntu/ubuntu-insights/common v0.6.2/go.mod h1:fcUz1+IfhnTcuGkh6CPV97QxBDpLrLQPtEZGUW4AmCo=
 go.uber.org/atomic v1.9.0 h1:ECmE8Bn/WFTYwEW/bpKD3M8VtR/zQVbavAoalC1PYyE=
 go.uber.org/atomic v1.9.0/go.mod h1:fEN4uk6kAWBTFdckzkM89CLk9XfWZrxpCo0nPH17wJc=
 go.uber.org/multierr v1.9.0 h1:7fIwc/ZtS0q++VgcfqFDxSBZVv/Xo49/SYnDFupUwlI=
