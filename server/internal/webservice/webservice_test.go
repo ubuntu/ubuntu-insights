@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
-	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
 	"github.com/ubuntu/ubuntu-insights/server/internal/webservice"
 )
 
@@ -51,7 +50,6 @@ func TestNew(t *testing.T) {
 			t.Parallel()
 
 			daemonConfig := webservice.StaticConfig{
-				ConfigPath: webservice.GenerateTestDaemonConfig(t, &config.Conf{}),
 				ReportsDir: t.TempDir(),
 			}
 
@@ -408,12 +406,6 @@ func newForTest(t *testing.T, cm *testConfigManager, daemonConfig *webservice.St
 
 	if daemonConfig.ReportsDir == "" {
 		daemonConfig.ReportsDir = t.TempDir()
-	}
-
-	if daemonConfig.ConfigPath == "" {
-		daemonConfig.ConfigPath = webservice.GenerateTestDaemonConfig(t, &config.Conf{
-			AllowedList: cm.AllowList(),
-		})
 	}
 
 	s, err := webservice.New(t.Context(), cm, *daemonConfig)
