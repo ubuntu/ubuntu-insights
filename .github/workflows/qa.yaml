@@ -6,6 +6,9 @@ on:
     tags:
       - "*"
   pull_request:
+  schedule:
+    # Weekly scan
+    - cron: "15 4 * * 1"
 
 env:
   DEBIAN_FRONTEND: noninteractive
@@ -183,11 +186,20 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage/Cobertura.xml
           disable_search: true
-      - name: TiCS quality gate
+      - name: "TiCS: quality gate"
         if: ${{ github.event_name == 'pull_request' }}
         uses: tiobe/tics-github-action@v3
         with:
           mode: client
+          project: ubuntu-insights
+          viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=GoProjects
+          ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
+          installTics: true
+      - name: "TiCS: QServer"
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'schedule' }} # Only push to main and scheduled
+        uses: tiobe/tics-github-action@v3
+        with:
+          mode: qserver
           project: ubuntu-insights
           viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=GoProjects
           ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
