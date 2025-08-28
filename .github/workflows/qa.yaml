@@ -146,7 +146,8 @@ jobs:
           # Print executed commands to ease debugging
           set -x
 
-          go test -shuffle=on -coverpkg=./... -coverprofile=${cov_dir}/raw/coverage.out -covermode=set ./...
+          go test -json -shuffle=on -coverpkg=./... -coverprofile=${cov_dir}/raw/coverage.out -covermode=set ./... \
+            | gotestfmt --logfile "${TEST_ARTIFACTS_PATH}/gotestfmt.coverage.log"
 
           # Filter out the testutils and testsdetection packages from the coverage report
           grep -hv -e "testutils" -e "testsdetection" ${cov_dir}/raw/coverage.out > ${cov_dir}/codecov/coverage.out.codecov
