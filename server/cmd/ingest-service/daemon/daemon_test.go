@@ -108,7 +108,7 @@ func TestAppCanSigHupAfterExecute(t *testing.T) {
 
 	a, wait := startDaemon(t, nil, nil)
 	a.Quit()
-	wait(false)
+	wait(true)
 
 	orig := os.Stdout
 	os.Stdout = w
