@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -27,6 +28,7 @@ type Config struct {
 
 type dbPool interface {
 	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	Ping(ctx context.Context) error
 	Close()
 }
 
@@ -42,8 +44,9 @@ type options struct {
 // Options represents an optional function to override Manager default values.
 type Options func(*options)
 
-// Connect establishes a connection to the PostgreSQL database using the provided configuration.
-func Connect(ctx context.Context, cfg Config, args ...Options) (*Manager, error) {
+// New creates database manager with a PostgreSQL connection pool using the provided configuration.
+// Note: The connection is validated with a ping, but it is not maintained.
+func New(ctx context.Context, cfg Config, args ...Options) (*Manager, error) {
 	opts := options{
 		newPool: func(ctx context.Context, dsn string) (dbPool, error) {
 			return pgxpool.New(ctx, dsn)
@@ -54,17 +57,20 @@ func Connect(ctx context.Context, cfg Config, args ...Options) (*Manager, error)
 		opt(&opts)
 	}
 
-	dsn := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName, cfg.SSLMode,
-	)
-
-	dbpool, err := opts.newPool(ctx, dsn)
+	dbpool, err := opts.newPool(ctx, cfg.URI("postgres"))
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect to database: %w", err)
+		return nil, fmt.Errorf("unable to create database connection pool: %w", err)
 	}
 
-	slog.Info("Connected to PostgreSQL database", "host", cfg.Host, "port", cfg.Port)
+	slog.Debug("Testing database connection", "host", cfg.Host, "port", cfg.Port)
+	pingCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	if err := dbpool.Ping(pingCtx); err != nil {
+		dbpool.Close()
+		return nil, fmt.Errorf("unable to ping database: %v", err)
+	}
+
+	slog.Info("Successfully pinged PostgreSQL database", "host", cfg.Host, "port", cfg.Port)
 	return &Manager{dbpool: dbpool}, nil
 }
 
@@ -234,4 +240,34 @@ func (db *Manager) Close() error {
 	case <-time.After(10 * time.Second):
 		return fmt.Errorf("timeout while closing database, connection may still be open")
 	}
+}
+
+// URI is a helper method that returns a connection URI for PostgreSQL.
+// It does not check the validity of the configuration values.
+//
+// Security warning: the returned string may include credentials.
+func (c Config) URI(scheme string) string {
+	host := c.Host
+	if c.Port != 0 {
+		host = fmt.Sprintf("%s:%d", c.Host, c.Port)
+	}
+
+	user := url.User(c.User)
+	if c.Password != "" {
+		user = url.UserPassword(c.User, c.Password)
+	}
+
+	u := &url.URL{
+		Scheme: scheme,
+		User:   user,
+		Host:   host,
+		Path:   c.DBName,
+	}
+
+	q := u.Query()
+	if c.SSLMode != "" {
+		q.Set("sslmode", c.SSLMode)
+	}
+	u.RawQuery = q.Encode()
+	return u.String()
 }
