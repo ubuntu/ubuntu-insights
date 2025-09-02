@@ -19,9 +19,11 @@ import (
 
 // App represents the application.
 type App struct {
-	cmd    *cobra.Command
-	viper  *viper.Viper
-	config appConfig
+	cmd   *cobra.Command
+	viper *viper.Viper
+
+	allowlistPath string
+	config        appConfig
 
 	daemon *webservice.Server
 
@@ -41,10 +43,12 @@ func New() (*App, error) {
 	a := App{ready: make(chan struct{})}
 
 	a.cmd = &cobra.Command{
-		Use:           constants.WebServiceCmdName,
-		Short:         "Ubuntu Insights web service",
-		Long:          "Ubuntu Insights web service used for accepting HTTP requests with insights reports from clients.",
+		Use:   fmt.Sprintf("%s <allowlist>", constants.WebServiceCmdName),
+		Short: "Ubuntu Insights web service",
+		Long: `Ubuntu Insights web service used for accepting HTTP requests with insights reports from clients.
+An JSON structured <allowlist> file is required to specify which sources to process. The service will watch this file for changes and reload it automatically.`,
 		SilenceErrors: true,
+		Args:          cobra.ExactArgs(1),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// Command parsing has been successful. Returns to not print usage anymore.
 			a.cmd.SilenceUsage = true
@@ -62,6 +66,7 @@ func New() (*App, error) {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			a.cmd.SilenceUsage = true
+			a.allowlistPath = args[0]
 
 			return a.run()
 		},
@@ -85,7 +90,6 @@ func installRootCmd(app *App) {
 	cmd := app.cmd
 
 	defaultConf := webservice.StaticConfig{
-		ConfigPath: "",
 		ReportsDir: constants.DefaultServiceReportsDir,
 
 		ReadTimeout:    5 * time.Second,
@@ -102,7 +106,6 @@ func installRootCmd(app *App) {
 	cmd.PersistentFlags().BoolVar(&app.config.JSONLogs, "json-logs", false, "enable JSON formatted logs")
 
 	// Daemon flags
-	cmd.Flags().StringVar(&app.config.Daemon.ConfigPath, "daemon-config", defaultConf.ConfigPath, "path to the configuration file")
 	cmd.Flags().StringVar(&app.config.Daemon.ReportsDir, "reports-dir", defaultConf.ReportsDir, "directory to store reports in")
 
 	cmd.Flags().DurationVar(&app.config.Daemon.ReadTimeout, "read-timeout", defaultConf.ReadTimeout, "read timeout for HTTP server")
@@ -117,13 +120,7 @@ func installRootCmd(app *App) {
 	cmd.Flags().StringVar(&app.config.Daemon.MetricsHost, "metrics-host", defaultConf.MetricsHost, "host for the metrics endpoint")
 	cmd.Flags().IntVar(&app.config.Daemon.MetricsPort, "metrics-port", defaultConf.MetricsPort, "port for the metrics endpoint")
 
-	err := cmd.MarkFlagFilename("daemon-config")
-	if err != nil {
-		// This should never happen.
-		panic(fmt.Sprintf("failed to mark daemon-config flag as filename: %v", err))
-	}
-
-	err = cmd.MarkFlagDirname("reports-dir")
+	err := cmd.MarkFlagDirname("reports-dir")
 	if err != nil {
 		// This should never happen.
 		panic(fmt.Sprintf("failed to mark reports-dir flag as required: %v", err))
@@ -167,13 +164,12 @@ func (a App) RootCmd() cobra.Command {
 }
 
 func (a *App) run() (err error) {
-	a.config.Daemon.ConfigPath, err = filepath.Abs(a.config.Daemon.ConfigPath)
+	a.allowlistPath, err = filepath.Abs(a.allowlistPath)
 	if err != nil {
-		return fmt.Errorf("failed to get absolute path for config file: %v", err)
+		return fmt.Errorf("failed to get absolute path for allowlist file: %v", err)
 	}
-	dConf := a.config.Daemon
-	cm := config.New(dConf.ConfigPath)
-	a.daemon, err = webservice.New(context.Background(), cm, dConf)
+	cm := config.New(a.allowlistPath)
+	a.daemon, err = webservice.New(context.Background(), cm, a.config.Daemon)
 	close(a.ready)
 	if err != nil {
 		return fmt.Errorf("failed to create server: %v", err)

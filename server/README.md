@@ -11,7 +11,7 @@ Neither of these services are meant for local use.
 ### Web Service
 
 ```shell
-  ubuntu-insights-web-service [flags]
+  ubuntu-insights-web-service <allowlist> [flags]
   ubuntu-insights-web-service [command]
 ```
 
@@ -24,7 +24,6 @@ Available Commands:
 
 Flags:
       --config string              use a specific configuration file
-      --daemon-config string       path to the configuration file
   -h, --help                       help for ubuntu-insights-web-service
       --json-logs                  enable JSON formatted logs
       --listen-host string         host to listen on
@@ -34,7 +33,7 @@ Flags:
       --metrics-host string        host for the metrics endpoint
       --metrics-port int           port for the metrics endpoint (default 2112)
       --read-timeout duration      read timeout for HTTP server (default 5s)
-      --reports-dir string         directory to store reports in (default "/var/lib/ubuntu-insights-services/reports")
+      --reports-dir string         directory to store reports in (default "~/.cache/ubuntu-insights-services~/reports")
       --request-timeout duration   request timeout for HTTP server (default 3s)
   -v, --verbose count              issue INFO (-v), DEBUG (-vv)
       --write-timeout duration     write timeout for HTTP server (default 10s)
@@ -43,7 +42,7 @@ Flags:
 ### Ingest Service
 
 ```shell
-  ubuntu-insights-ingest-service [flags]
+  ubuntu-insights-ingest-service <allowlist> [flags]
   ubuntu-insights-ingest-service [command]
 ```
 
@@ -57,7 +56,6 @@ Available Commands:
 
 Flags:
       --config string            use a specific configuration file
-  -c, --daemon-config string     path to the configuration file
       --db-host string           database host
   -n, --db-name string           database name
   -P, --db-password string       database password
@@ -69,16 +67,16 @@ Flags:
       --metrics-host string      host for the metrics endpoint
       --metrics-port int         port for the metrics endpoint (default 2113)
       --read-timeout duration    read timeout for the metrics HTTP server (default 5s)
-      --reports-dir string       base directory to read reports from (default "/var/lib/ubuntu-insights-services/reports")
+      --reports-dir string       base directory to read reports from (default "~/.cache/ubuntu-insights-services/reports")
   -v, --verbose count            issue INFO (-v), DEBUG (-vv)
       --write-timeout duration   write timeout for the metrics HTTP server (default 10s)
 ```
 
-### The Daemon Config
+### The Allowlist
 
-The daemon config, which can be passed to either the web service or the ingest service or shared with both, is a required JSON file which consists of an allow list configuration. This file is watched by the service in a manner such that changes to it will be applied without requiring the service to restart.
+The allowlist configuration file, which can be passed to either the web service or the ingest service or shared with both, is a required JSON file which defines an allowlist for the sources being processed. This file is watched by the service in a manner such that changes to it will be applied without requiring the service to restart.
 
-See [this file](./examples/daemon-config.json) for an example of how it should be formatted.
+See [this file](./examples/allowlist.json) for an example of how it should be formatted.
 
 An application must be included in this list for the web service to accept HTTP requests from a given application endpoint, and for the ingest service to process reports for that application.
 
@@ -86,7 +84,7 @@ Applications or items meant to be treated as legacy reports from Ubuntu Report s
 
 #### Reserved Names
 
-The following applications and items are reserved and cannot be used within the allow list
+The following applications and items are reserved and cannot be used within the allowlist
 
 - `ubuntu_report`
 - `schema_migrations`

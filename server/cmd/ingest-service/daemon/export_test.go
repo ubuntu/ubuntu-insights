@@ -21,7 +21,7 @@ func (a *App) Config() AppConfig {
 }
 
 // NewForTests creates a new App instance for testing purposes.
-func NewForTests(t *testing.T, conf *AppConfig, daeConf *config.Conf, args ...string) *App {
+func NewForTests(t *testing.T, conf *AppConfig, allowlistPath string, args ...string) *App {
 	t.Helper()
 
 	if conf == nil {
@@ -32,8 +32,8 @@ func NewForTests(t *testing.T, conf *AppConfig, daeConf *config.Conf, args ...st
 		conf.ReportsDir = filepath.Join(t.TempDir(), "reports")
 	}
 
-	p := GenerateTestConfig(t, conf, daeConf)
-	argsWithConf := []string{"--config", p}
+	p := GenerateTestConfig(t, conf)
+	argsWithConf := []string{allowlistPath, "--config", p}
 	argsWithConf = append(argsWithConf, args...)
 
 	a, err := New()
@@ -42,20 +42,20 @@ func NewForTests(t *testing.T, conf *AppConfig, daeConf *config.Conf, args ...st
 	return a
 }
 
-// GenerateTestDaemonConfig generates a temporary daemon config file for testing.
-func GenerateTestDaemonConfig(t *testing.T, daeConf *config.Conf) string {
+// GenerateTestAllowlist generates a temporary allowlist config file for testing.
+func GenerateTestAllowlist(t *testing.T, allowlist *config.Conf) string {
 	t.Helper()
 
-	d, err := json.Marshal(daeConf)
-	require.NoError(t, err, "Setup: failed to marshal dynamic server config for tests")
-	daeConfPath := filepath.Join(t.TempDir(), "daemon-testconfig.yaml")
-	require.NoError(t, os.WriteFile(daeConfPath, d, 0600), "Setup: failed to write dynamic config for tests")
+	d, err := json.Marshal(allowlist)
+	require.NoError(t, err, "Setup: failed to marshal allowlist config for tests")
+	allowlistPath := filepath.Join(t.TempDir(), "allowlist-test.yaml")
+	require.NoError(t, os.WriteFile(allowlistPath, d, 0600), "Setup: failed to write allowlist config for tests")
 
-	return daeConfPath
+	return allowlistPath
 }
 
 // GenerateTestConfig generates a temporary config file for testing.
-func GenerateTestConfig(t *testing.T, origConf *AppConfig, daeConf *config.Conf) string {
+func GenerateTestConfig(t *testing.T, origConf *AppConfig) string {
 	t.Helper()
 
 	var conf appConfig
@@ -66,10 +66,6 @@ func GenerateTestConfig(t *testing.T, origConf *AppConfig, daeConf *config.Conf)
 
 	if conf.Verbosity == 0 {
 		conf.Verbosity = 2
-	}
-
-	if conf.ConfigPath == "" {
-		conf.ConfigPath = GenerateTestDaemonConfig(t, daeConf)
 	}
 
 	d, err := yaml.Marshal(conf)
