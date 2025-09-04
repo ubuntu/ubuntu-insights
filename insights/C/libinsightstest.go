@@ -111,11 +111,11 @@ func TestCollectImpl(t *testing.T) {
 
 		// error case
 		"error returns error string": {
-			mockErr: errors.New("Error String"),
+			mockErr: errors.New("error string"),
 		},
 		"Report is not returned in error case": {
 			outReport: new(*C.char),
-			mockErr:   errors.New("Error String"),
+			mockErr:   errors.New("error string"),
 			mockOut:   []byte(`{"output": "no report in error"}`),
 		},
 	}
@@ -237,11 +237,11 @@ func TestCompileImpl(t *testing.T) {
 
 		// error case
 		"Error returns error string": {
-			mockErr: errors.New("Error String"),
+			mockErr: errors.New("error string"),
 		},
 		"Report is not returned in error case": {
 			outReport: new(*C.char),
-			mockErr:   errors.New("Error String"),
+			mockErr:   errors.New("error string"),
 			mockOut:   []byte(`{"output": "no report in error"}`),
 		},
 	}
@@ -336,7 +336,7 @@ func TestWriteImpl(t *testing.T) {
 
 		// Error case
 		"Error is returned": {
-			mockErr: errors.New("Error String"),
+			mockErr: errors.New("error string"),
 		},
 	}
 
@@ -436,7 +436,7 @@ func TestUploadImpl(t *testing.T) {
 
 		// error case
 		"error returns error string": {
-			err: errors.New("Error String"),
+			err: errors.New("error string"),
 		},
 	}
 	for name, tc := range tests {
@@ -607,7 +607,7 @@ func TestSetConsentImpl(t *testing.T) {
 
 		// error case
 		"error returns error string": {
-			err: errors.New("Error String"),
+			err: errors.New("error string"),
 		},
 	}
 	for name, tc := range tests {
