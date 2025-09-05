@@ -156,7 +156,7 @@ func TestServeMulti(t *testing.T) {
 				var got map[string]any
 				assert.NoError(t, json.Unmarshal(data, &got))
 				want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-				assert.Equal(t, want, got, "")
+				assert.Equal(t, want, got)
 			}
 		})
 	}

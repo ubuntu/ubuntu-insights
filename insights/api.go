@@ -127,7 +127,7 @@ func (c Config) Collect(source string, flags CollectFlags) ([]byte, error) {
 	}
 
 	if err := col.Write(insights, flags.Period, flags.Force, flags.DryRun); err != nil {
-		if !(flags.DryRun && errors.Is(err, ErrConsentFileNotFound)) {
+		if !flags.DryRun || !errors.Is(err, ErrConsentFileNotFound) {
 			return nil, err
 		}
 	}

@@ -231,7 +231,7 @@ func TestProcessFiles(t *testing.T) {
 			require.NoError(t, err, "Failed to get reference directory contents")
 
 			// Ensure "ingest_processor_process_duration_seconds" is registered
-			assert.NotEqualValues(t, 0, testutil.CollectAndCount(registry, "ingest_processor_process_duration_seconds"),
+			assert.NotEqual(t, 0, testutil.CollectAndCount(registry, "ingest_processor_process_duration_seconds"),
 				"Expected 'ingest_processor_process_duration_seconds' metric to be registered")
 
 			// Don't check "ingest_processor_process_duration_seconds" as it may vary

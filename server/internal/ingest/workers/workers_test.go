@@ -187,7 +187,7 @@ func checkService(t *testing.T, runErr chan error, expectErr bool, duration time
 			return
 		}
 		// Unexpected early close
-		require.Fail(t, "Service closed unexpectedly: %v", err)
+		require.Fail(t, "Service closed unexpectedly", err)
 	case <-time.After(duration):
 		require.False(t, expectErr, "Service did not exit with an error within the expected duration")
 	}
