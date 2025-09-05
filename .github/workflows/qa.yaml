@@ -31,7 +31,9 @@ defaults:
 
 jobs:
   plan:
-    name: Create test plan # Dynamic matrix generation for subsequent jobs
+    # Dynamic matrix generation for subsequent jobs.
+    # The `env` context is not available in `strategy`, but `needs` is: https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability.
+    name: Create test plan
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
