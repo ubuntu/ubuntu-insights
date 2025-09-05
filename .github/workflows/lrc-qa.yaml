@@ -73,17 +73,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: setup-go cache workaround #https://github.com/actions/setup-go/issues/424
-        shell: bash
-        run: echo "TAR_OPTIONS=--skip-old-files" >> $GITHUB_ENV
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.work
-          cache-dependency-path: |
-            insights/go.sum
-            server/go.sum
-            common/go.sum
-            tools/go.sum
+      - name: Prepare environment
+        uses: ./.github/actions/prepare-environment
 
       - name: Vendor Go modules
         working-directory: insights
