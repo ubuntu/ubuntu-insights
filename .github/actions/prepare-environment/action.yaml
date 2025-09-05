@@ -12,10 +12,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: setup-go cache workaround #https://github.com/actions/setup-go/issues/424
-      shell: bash
-      run: echo "TAR_OPTIONS=--skip-old-files" >> $GITHUB_ENV
-
     - name: Set up Go
       uses: actions/setup-go@v6
       with:
