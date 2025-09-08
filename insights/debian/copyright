@@ -177,6 +177,22 @@ Copyright: 2011-2019, Canonical Ltd
  2006-2010, Kirill Simonov
 License: Expat
 
+Files: vendor/go.yaml.in/yaml/v3/*
+Copyright: 2011-2019 Canonical Ltd.
+License: Apache-2.0
+
+Files: vendor/go.yaml.in/yaml/v3/apic.go
+ vendor/go.yaml.in/yaml/v3/emitterc.go
+ vendor/go.yaml.in/yaml/v3/parserc.go
+ vendor/go.yaml.in/yaml/v3/readerc.go
+ vendor/go.yaml.in/yaml/v3/scannerc.go
+ vendor/go.yaml.in/yaml/v3/writerc.go
+ vendor/go.yaml.in/yaml/v3/yamlh.go
+ vendor/go.yaml.in/yaml/v3/yamlprivateh.go
+Copyright: 2011-2019, Canonical Ltd
+ 2006-2010, Kirill Simonov
+License: Expat
+
 License: Apache-2.0
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
