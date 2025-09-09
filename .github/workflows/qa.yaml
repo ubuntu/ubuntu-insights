@@ -171,14 +171,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
+      - name: Determine TiCS run conditions
+        id: tics-condition
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "tics_mode=client" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.event_name }}" == "schedule" ]]; then
+            echo "tics_mode=qserver" >> $GITHUB_OUTPUT
+          fi
+
       - name: Install dependencies
         run: |
+          set -e
           dotnet tool install -g dotnet-reportgenerator-globaltool
           go install honnef.co/go/tools/cmd/staticcheck@latest
+
+      - name: Install dependencies (QServer)
+        if: steps.tics-condition.outputs.tics_mode == 'qserver'
+        run: |
+          set -e
+          sudo apt-get update
+          sudo apt-get install -y ${{ env.INSIGHTS_APT_DEPS }}
+
       - name: Down coverage artifacts
         uses: actions/download-artifact@v5
         with:
           path: ./artifacts/
+
       - name: Combine coverage reports
         shell: bash
         run: |
@@ -188,20 +208,12 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage/Cobertura.xml
           disable_search: true
-      - name: "TiCS: quality gate"
-        if: ${{ github.event_name == 'pull_request' }}
+
+      - name: "TiCS"
+        if: ${{ steps.tics-condition.outputs.tics_mode != '' }}
         uses: tiobe/tics-github-action@v3
         with:
-          mode: client
-          project: ubuntu-insights
-          viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=GoProjects
-          ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
-          installTics: true
-      - name: "TiCS: QServer"
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'schedule' }} # Only push to main and scheduled
-        uses: tiobe/tics-github-action@v3
-        with:
-          mode: qserver
+          mode: ${{ steps.tics-condition.outputs.tics_mode }}
           project: ubuntu-insights
           viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=GoProjects
           ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
