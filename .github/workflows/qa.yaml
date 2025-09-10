@@ -203,6 +203,13 @@ jobs:
         shell: bash
         run: |
           reportgenerator -reports:"./artifacts/**/coverage.xml" -targetdir:"./coverage" -reporttypes:Cobertura
+
+      - name: Upload processed artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: insights-${{ github.job }}-artifacts-${{ github.run_attempt }}
+          path: ./coverage
+
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
