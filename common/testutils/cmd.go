@@ -1,3 +1,5 @@
+// TiCS: disabled
+
 // Package testutils provides helper functions for testing
 package testutils
 
