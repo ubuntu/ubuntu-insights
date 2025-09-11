@@ -208,6 +208,14 @@ jobs:
           set -euo pipefail
           go install honnef.co/go/tools/cmd/staticcheck@latest
 
+          modules=("insights" "common" "server")
+          for module in "${modules[@]}"; do
+            echo "Downloading dependencies for module: $module"
+            pushd "$module" > /dev/null
+            go mod download
+            popd > /dev/null
+          done
+
       - name: Down coverage artifacts
         uses: actions/download-artifact@v5
         with:
