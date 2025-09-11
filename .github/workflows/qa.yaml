@@ -230,6 +230,13 @@ jobs:
           # TiCS may have issues with combined reports
           for artifact in ./artifacts/*; do
             artifact_name=$(basename "$artifact")
+
+            # TiCS can only match one coverage report per file, so only include ubuntu-24.04 reports
+            if [[ "$artifact_name" != *"ubuntu-24.04"* ]]; then
+              echo "Skipping artifact: $artifact_name (not from ubuntu-24.04)"
+              continue
+            fi
+
             coverage_file="$artifact/coverage/coverage.xml"
             
             if [[ -f "$coverage_file" ]]; then
