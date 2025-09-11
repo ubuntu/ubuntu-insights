@@ -203,20 +203,13 @@ jobs:
         uses: ./.github/actions/prepare-environment
         with:
           apt-dependencies: ${{ env.INSIGHTS_APT_DEPS }}
+          download-go-deps: "true"
 
       - name: Install TiCS dependencies
         if: ${{ steps.tics-condition.outputs.tics_mode != '' }}
         run: |
           set -euo pipefail
           go install honnef.co/go/tools/cmd/staticcheck@latest
-
-          modules=("insights" "common" "server")
-          for module in "${modules[@]}"; do
-            echo "Downloading dependencies for module: $module"
-            pushd "$module" > /dev/null
-            go mod download
-            popd > /dev/null
-          done
 
       - name: Process coverage reports
         if: ${{ steps.tics-condition.outputs.tics_mode != '' }}

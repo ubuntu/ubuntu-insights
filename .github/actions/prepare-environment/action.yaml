@@ -8,6 +8,9 @@ inputs:
   apt-dependencies:
     description: A space-separated list of apt dependencies to install (Ignored if not using a Linux runner).
     default: ""
+  download-go-deps:
+    description: Whether to pre-download Go module dependencies for all modules in the repository.
+    default: "false"
 
 runs:
   using: "composite"
@@ -29,3 +32,15 @@ runs:
         set -e
         sudo apt-get update
         sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ${{ inputs.apt-dependencies }}
+
+    - name: Download Go module dependencies
+      if: inputs.download-go-deps == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        cd ${{ inputs.working-directory }}
+        find . -type f -name 'go.mod' -print0 | while IFS= read -r -d '' file; do
+          dir=$(dirname "$file")
+          echo "Downloading Go module dependencies in $dir"
+          (cd "$dir" && go mod download)
+        done
