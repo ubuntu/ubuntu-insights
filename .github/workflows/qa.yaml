@@ -164,32 +164,48 @@ jobs:
           name: insights-${{ github.job }}-${{ matrix.module }}-${{ matrix.os }}-artifacts-${{ github.run_attempt }}
           path: ${{ env.TEST_ARTIFACTS_PATH }}
 
-  process-coverage:
-    name: "Combine and process code coverage"
+  codecov:
+    name: "Upload code coverage to Codecov"
     needs: go-coverage-tests
     if: always() # Run this even if coverage tests fail
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
-      - name: Determine TiCS run conditions
-        id: tics-condition
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "tics_mode=client" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.event_name }}" == "schedule" ]]; then
-            echo "tics_mode=qserver" >> $GITHUB_OUTPUT
-          fi
+      - name: Down coverage artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: ./artifacts/
 
-      - name: Prepare environment for QServer
-        if: steps.tics-condition.outputs.tics_mode == 'qserver'
+      - name: Cleanup artifacts
+        run: |
+          set -euo pipefail
+          # Remove raw and unconverted coverage reports
+          rm -rf ./artifacts/**/coverage/raw
+          rm -rf ./artifacts/**/coverage/codecov
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./artifacts/
+
+  tics:
+    name: "TiCS Analysis"
+    needs: go-coverage-tests
+    if: always() && ((${{ github.event_name }} == "push" && ${{ github.ref }} == "refs/heads/main") || ${{ github.event_name }} == "schedule")
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Prepare environment for TiCS
         uses: ./.github/actions/prepare-environment
         with:
           apt-dependencies: ${{ env.INSIGHTS_APT_DEPS }}
 
-      - name: Install dependencies
+      - name: Install TiCS dependencies
         run: |
-          set -e
+          set -euo pipefail
           go install honnef.co/go/tools/cmd/staticcheck@latest
 
       - name: Down coverage artifacts
@@ -224,16 +240,10 @@ jobs:
           name: insights-${{ github.job }}-artifacts-${{ github.run_attempt }}
           path: ./coverage
 
-      - uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          directory: ./coverage
-
       - name: "TiCS"
-        if: ${{ steps.tics-condition.outputs.tics_mode != '' }}
         uses: tiobe/tics-github-action@v3
         with:
-          mode: ${{ steps.tics-condition.outputs.tics_mode }}
+          mode: qserver
           project: ubuntu-insights
           viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=GoProjects
           ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
