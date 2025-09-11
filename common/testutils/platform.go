@@ -1,3 +1,5 @@
+// TiCS: disabled
+
 package testutils
 
 import (

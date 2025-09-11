@@ -181,33 +181,53 @@ jobs:
             echo "tics_mode=qserver" >> $GITHUB_OUTPUT
           fi
 
+      - name: Prepare environment for QServer
+        if: steps.tics-condition.outputs.tics_mode == 'qserver'
+        uses: ./.github/actions/prepare-environment
+        with:
+          apt-dependencies: ${{ env.INSIGHTS_APT_DEPS }}
+
       - name: Install dependencies
         run: |
           set -e
-          dotnet tool install -g dotnet-reportgenerator-globaltool
           go install honnef.co/go/tools/cmd/staticcheck@latest
-
-      - name: Install dependencies (QServer)
-        if: steps.tics-condition.outputs.tics_mode == 'qserver'
-        run: |
-          set -e
-          sudo apt-get update
-          sudo apt-get install -y ${{ env.INSIGHTS_APT_DEPS }}
 
       - name: Down coverage artifacts
         uses: actions/download-artifact@v5
         with:
           path: ./artifacts/
 
-      - name: Combine coverage reports
-        shell: bash
+      - name: Process coverage reports
         run: |
-          reportgenerator -reports:"./artifacts/**/coverage.xml" -targetdir:"./coverage" -reporttypes:Cobertura
+          set -euo pipefail
+          mkdir -p ./coverage
+
+          # Process each coverage report independently
+          # TiCS may have issues with combined reports
+          for artifact in ./artifacts/*; do
+            artifact_name=$(basename "$artifact")
+            coverage_file="$artifact/coverage/coverage.xml"
+            
+            if [[ -f "$coverage_file" ]]; then
+              mv "$coverage_file" "./coverage/${artifact_name}-coverage.xml"
+            else
+              if [[ "$artifact_name" == *"coverage"* ]]; then
+                # Only warn if the artifact name suggests it should contain coverage
+                echo "::warning::Coverage file not found in artifact: $artifact_name" 
+              fi
+            fi
+          done
+
+      - name: Upload processed artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: insights-${{ github.job }}-artifacts-${{ github.run_attempt }}
+          path: ./coverage
+
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/Cobertura.xml
-          disable_search: true
+          directory: ./coverage
 
       - name: "TiCS"
         if: ${{ steps.tics-condition.outputs.tics_mode != '' }}
