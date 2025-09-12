@@ -14,6 +14,7 @@ env:
   DEBIAN_FRONTEND: noninteractive
   GO_TESTS_TIMEOUT: 30m
   INSIGHTS_APT_DEPS: "libwayland-dev"
+  TICS_COVERAGE_RUNNER: "ubuntu-24.04" # Defines which coverage results we pass to TiCS. TiCS does not allow multiple reports per file
   # RAW_MATRIX defines the OS/module matrix for jobs.
   # The "server" module only supports ubuntu.
   RAW_MATRIX: |
@@ -165,39 +166,53 @@ jobs:
           path: ${{ env.TEST_ARTIFACTS_PATH }}
 
   process-coverage:
-    name: "Combine and process code coverage"
+    name: "Process code coverage"
     needs: go-coverage-tests
     if: always() # Run this even if coverage tests fail
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
-      - name: Determine TiCS run conditions
-        id: tics-condition
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "tics_mode=client" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.event_name }}" == "schedule" ]]; then
-            echo "tics_mode=qserver" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Prepare environment for QServer
-        if: steps.tics-condition.outputs.tics_mode == 'qserver'
-        uses: ./.github/actions/prepare-environment
-        with:
-          apt-dependencies: ${{ env.INSIGHTS_APT_DEPS }}
-
-      - name: Install dependencies
-        run: |
-          set -e
-          go install honnef.co/go/tools/cmd/staticcheck@latest
-
-      - name: Down coverage artifacts
+      - name: Download coverage artifacts
         uses: actions/download-artifact@v5
         with:
           path: ./artifacts/
 
+      - name: Cleanup artifacts
+        run: |
+          # Remove raw and unconverted coverage reports
+          rm -rf ./artifacts/**/coverage/raw
+          rm -rf ./artifacts/**/coverage/codecov
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./artifacts/
+
+      - name: Determine TiCS run conditions
+        id: tics-condition
+        run: |
+          # Client mode is intentionally disabled due to how the results are hidden in the dashboard
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.event_name }}" == "schedule" ]]; then
+            echo "tics_mode=qserver" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Prepare environment for TiCS
+        if: ${{ steps.tics-condition.outputs.tics_mode != '' }}
+        uses: ./.github/actions/prepare-environment
+        with:
+          apt-dependencies: ${{ env.INSIGHTS_APT_DEPS }}
+          download-go-deps: "true"
+
+      - name: Install TiCS dependencies
+        if: ${{ steps.tics-condition.outputs.tics_mode != '' }}
+        run: |
+          set -euo pipefail
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+
       - name: Process coverage reports
+        if: ${{ steps.tics-condition.outputs.tics_mode != '' }}
         run: |
           set -euo pipefail
           mkdir -p ./coverage
@@ -206,6 +221,13 @@ jobs:
           # TiCS may have issues with combined reports
           for artifact in ./artifacts/*; do
             artifact_name=$(basename "$artifact")
+
+            # TiCS can only match one coverage report per file
+            if [[ "$artifact_name" != *"-${{ env.TICS_COVERAGE_RUNNER }}-artifacts-"* ]]; then
+              echo "Skipping artifact: $artifact_name (not from ${{ env.TICS_COVERAGE_RUNNER }})"
+              continue
+            fi
+
             coverage_file="$artifact/coverage/coverage.xml"
             
             if [[ -f "$coverage_file" ]]; then
@@ -217,17 +239,6 @@ jobs:
               fi
             fi
           done
-
-      - name: Upload processed artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: insights-${{ github.job }}-artifacts-${{ github.run_attempt }}
-          path: ./coverage
-
-      - uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          directory: ./coverage
 
       - name: "TiCS"
         if: ${{ steps.tics-condition.outputs.tics_mode != '' }}
