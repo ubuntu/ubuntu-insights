@@ -249,3 +249,4 @@ jobs:
           viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=GoProjects
           ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
           installTics: true
+          postAnnotations: false # Often not useful due to just false positives hitting the GitHub 10 annotations limit
