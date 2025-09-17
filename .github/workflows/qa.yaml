@@ -19,12 +19,19 @@ env:
   # The "server" module only supports ubuntu.
   RAW_MATRIX: |
     {
-      "os": ["ubuntu-24.04", "windows-2022", "macos-13", "macos-14"],
-      "module": ["insights", "common"],
+      "os": ["ubuntu-24.04"],
+      "module": ["insights"],
       "include": [
         {"os": "ubuntu-24.04", "module": "server"}
       ]
     }
+#    {
+#      "os": ["ubuntu-24.04", "windows-2022", "macos-13", "macos-14"],
+#      "module": ["insights", "common"],
+#      "include": [
+#        {"os": "ubuntu-24.04", "module": "server"}
+#      ]
+#    }
 
 defaults:
   run:
