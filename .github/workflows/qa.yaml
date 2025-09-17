@@ -58,7 +58,7 @@ jobs:
           sudo apt install -y ${{ env.INSIGHTS_APT_DEPS }}
       - uses: actions/checkout@v5
       - name: Go code sanity check
-        uses: canonical/desktop-engineering/gh-actions/go/code-sanity@v2
+        uses: canonical/desktop-engineering/gh-actions/go/code-sanity@go-toolchain-fallback
         with:
           working-directory: ${{ matrix.module }}
           tools-directory: ${{ github.workspace }}/tools
