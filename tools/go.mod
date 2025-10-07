@@ -2,7 +2,7 @@ module github.com/ubuntu/ubuntu-insights/tools
 
 go 1.24.0
 
-require github.com/golangci/golangci-lint/v2 v2.5.0
+require github.com/golangci/golangci-lint/v2 v2.5.0 // indirect
 
 require (
 	4d63.com/gocheckcompilerdirectives v1.3.0 // indirect
@@ -205,3 +205,5 @@ require (
 	mvdan.cc/gofumpt v0.9.1 // indirect
 	mvdan.cc/unparam v0.0.0-20250301125049-0df0534333a4 // indirect
 )
+
+tool github.com/golangci/golangci-lint/v2/cmd/golangci-lint
