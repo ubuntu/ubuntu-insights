@@ -192,7 +192,15 @@ jobs:
 
       - name: Determine TiCS run conditions
         id: tics-condition
+        env:
+          TICSAUTHTOKEN: ${{ secrets.TICSAUTHTOKEN }}
         run: |
+          # When triggered by certain actors, such as Dependabot, the TiCS secret is not available.
+          if [[ -z "${TICSAUTHTOKEN}" ]]; then
+            echo "::warning::TiCS token not available"
+            exit 0
+          fi
+
           # Client mode is intentionally disabled due to how the results are hidden in the dashboard
           if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.event_name }}" == "schedule" ]]; then
             echo "tics_mode=qserver" >> $GITHUB_OUTPUT
