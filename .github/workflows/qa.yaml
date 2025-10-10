@@ -170,6 +170,8 @@ jobs:
     needs: go-coverage-tests
     if: always() # Run this even if coverage tests fail
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }} # Prevent overlapping runs that cause failures with QServer/TiCS
     steps:
       - uses: actions/checkout@v5
 
