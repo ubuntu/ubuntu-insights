@@ -104,7 +104,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           run-id: ${{ needs.build-ubuntu-insights.outputs.run-id }}
           merge-multiple: true
@@ -181,7 +181,7 @@ jobs:
           done
 
       - name: Download artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           run-id: ${{ needs.build-ubuntu-insights.outputs.run-id }}
           merge-multiple: true
