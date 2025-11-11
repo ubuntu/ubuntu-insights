@@ -12,6 +12,10 @@ on:
     branches: [main]
     tags: ["*"]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   UBUNTU_VERSIONS: |
     ["devel"]
