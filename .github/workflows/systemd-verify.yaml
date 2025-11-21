@@ -13,6 +13,10 @@ on:
     paths:
       - "./insights/autostart/systemd/*"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify-systemd:
     runs-on: ubuntu-latest

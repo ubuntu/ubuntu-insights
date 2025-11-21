@@ -2,6 +2,10 @@ name: Git Checks
 
 on: [pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   block-fixup:
     runs-on: ubuntu-latest
