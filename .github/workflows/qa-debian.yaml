@@ -159,7 +159,7 @@ jobs:
       contains(needs.check-modified-files.outputs.list, 'insights/debian/') ||
       contains(needs.check-modified-files.outputs.list, '.github/workflows/qa-debian.yaml') ||
       startsWith(github.ref, 'refs/tags/') ||
-      github.event_name == 'release' }}
+      github.event_name == 'release' }} 
 
     steps:
       # Copied from https://github.com/ubuntu/authd/blob/main/.github/workflows/build-deb.yaml
