@@ -75,7 +75,7 @@ jobs:
           key: ${{ runner.os }}-licenserecon-${{ steps.licenserecon-commit.outputs.hash }}
 
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Prepare environment
         uses: ./.github/actions/prepare-environment
