@@ -5,3 +5,5 @@
 - ubuntu_report
 - schema_migrations
 - ubuntu_desktop_provision
+- ubuntu_release_upgrader
+- wsl_setup
