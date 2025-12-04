@@ -2,7 +2,7 @@ name: Check if CLA is signed
 on: [pull_request_target]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -12,5 +12,3 @@ jobs:
     steps:
       - name: Check if CLA signed
         uses: canonical/has-signed-canonical-cla@v2
-        with:
-          accept-existing-contributors: true
