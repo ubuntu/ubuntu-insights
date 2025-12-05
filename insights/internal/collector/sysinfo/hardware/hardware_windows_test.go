@@ -13,7 +13,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/collector/sysinfo/hardware"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/collector/sysinfo/platform"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 func TestMain(m *testing.M) {

@@ -9,9 +9,9 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/ubuntu/decorate v0.0.0-20250213124239-8228e241ee19
 	github.com/ubuntu/ubuntu-insights/common v0.6.2
+	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/text v0.31.0
 	gopkg.in/ini.v1 v1.67.0
-	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -30,6 +30,6 @@ require (
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/sys v0.35.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
