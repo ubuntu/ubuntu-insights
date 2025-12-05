@@ -258,8 +258,8 @@ github.com/tklauser/go-sysconf v0.3.12 h1:0QaGUFOdQaIVdPgfITYzaTegZvdCjmYO52cSFA
 github.com/tklauser/go-sysconf v0.3.12/go.mod h1:Ho14jnntGE1fpdOqQEEaiKRpvIavV0hSfmBq8nJbHYI=
 github.com/tklauser/numcpus v0.6.1 h1:ng9scYS7az0Bk4OZLvrNXNSAO2Pxr1XXRAPyjhIx+Fk=
 github.com/tklauser/numcpus v0.6.1/go.mod h1:1XfjsgE2zo8GVw7POkMbHENHzVg3GzmoZ9fESEdAacY=
-github.com/ubuntu/ubuntu-insights/common v0.6.2 h1:gFB82ha3rNKmQzVZ2kjmE1pBVrHYhx6SDq7OD05umRw=
-github.com/ubuntu/ubuntu-insights/common v0.6.2/go.mod h1:fcUz1+IfhnTcuGkh6CPV97QxBDpLrLQPtEZGUW4AmCo=
+github.com/ubuntu/ubuntu-insights/common v0.8.0 h1:UtglnfDX16dkRr8/otHIrTAMT96gWVHE7EKu5h4AQoI=
+github.com/ubuntu/ubuntu-insights/common v0.8.0/go.mod h1:lklFal0CcuESaTe/2fVPNMzmzEh2gseo8RPzuZ7p1FA=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
 github.com/zenazn/goji v0.9.0/go.mod h1:7S9M489iMyHBNxwZnk9/EHS098H4/F6TATF2mIxtB1Q=
