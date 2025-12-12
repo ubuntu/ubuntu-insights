@@ -21,8 +21,8 @@ func Run(ctx context.Context, cmd string, args ...string) (stdout, stderr *bytes
 	c := exec.CommandContext(ctx, cmd, args...)
 	c.Stdout = stdout
 	c.Stderr = stderr
-	c.Env = append(c.Env, "LANG=C", "LC_ALL=C")
 	c.Env = append(c.Env, os.Environ()...)
+	c.Env = append(c.Env, "LANG=C", "LC_ALL=C", "LANGUAGE=C")
 	err = c.Run()
 
 	return stdout, stderr, err
