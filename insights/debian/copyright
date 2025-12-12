@@ -149,10 +149,6 @@ Files: vendor/github.com/ubuntu/decorate/*
 Copyright: 2022, 2023, Canonical Ltd.
 License: Expat
 
-Files: vendor/go.uber.org/*
-Copyright: 2016-2021, Uber Technologies, Inc.
-License: Expat
-
 Files: vendor/*golang.org/*
 Copyright: 2009-2025, The Go Authors.
 License: BSD-3-clause

@@ -1,3 +1,12 @@
+ubuntu-insights (0.8.0) resolute; urgency=medium
+
+  * New upstream release (LP: #2134760)
+  * Fix collection in certain localization environments
+  * Change section to utils
+  * Go dependency and toolchain updates
+
+ -- Kat Kuo <kat.kuo@canonical.com>  Thu, 11 Dec 2025 10:03:02 -0500
+
 ubuntu-insights (0.6.2) questing; urgency=medium
 
   * Fix broken test files
