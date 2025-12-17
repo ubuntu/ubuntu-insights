@@ -53,6 +53,8 @@ func TestCollect(t *testing.T) {
 			args: []string{"collect", "False", filepath.Join("testdata", "source_metrics", "normal.json")},
 		}, "Collect Bad-File-consent source": {
 			args: []string{"collect", "Bad-File", filepath.Join("testdata", "source_metrics", "normal.json")},
+		}, "Does not error with the quiet flag": {
+			args: []string{"collect", "--dry-run", "--quiet"},
 		},
 
 		"Exit 0 when no consent files": {
@@ -92,6 +94,14 @@ func TestCollect(t *testing.T) {
 			wantUsageErr: true,
 		}, "Collect nArgs 3": {
 			args:         []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "extra-arg"},
+			wantErr:      true,
+			wantUsageErr: true,
+		}, "Errors when verbose and quiet are used together": {
+			args:         []string{"collect", "--verbose", "--quiet"},
+			wantErr:      true,
+			wantUsageErr: true,
+		}, "Errors propagate with the quiet flag": {
+			args:         []string{"collect", "source", "--quiet"},
 			wantErr:      true,
 			wantUsageErr: true,
 		},

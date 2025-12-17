@@ -52,11 +52,14 @@ func TestConsent(t *testing.T) {
 		"Set existing and new source": {args: []string{"consent", "True", "Unknown", "-s=true"}},
 		"Set existing and bad source": {args: []string{"consent", "True", "Bad-File", "False", "-s=true"}},
 
-		"Set shorthand True": {args: []string{"consent", "-s=true"}},
+		"Set shorthand True":                 {args: []string{"consent", "-s=true"}},
+		"Does not error with the quiet flag": {args: []string{"consent", "--state=false", "--quiet"}},
 
 		// Usage Errors
-		"Usage errors when passing bad flag":           {args: []string{"consent", "-unknown"}, wantUsageErr: true, wantErr: true},
-		"Usage errors when unparsable state is passed": {args: []string{"consent", "-s=bad"}, wantUsageErr: true, wantErr: true},
+		"Usage errors when passing bad flag":                    {args: []string{"consent", "-unknown"}, wantUsageErr: true, wantErr: true},
+		"Usage errors when unparsable state is passed":          {args: []string{"consent", "-s=bad"}, wantUsageErr: true, wantErr: true},
+		"Usage errors when verbose and quiet are used together": {args: []string{"consent", "--verbose", "--quiet"}, wantErr: true, wantUsageErr: true},
+		"Usage errors propagate with the quiet flag":            {args: []string{"consent", "-s=bad", "--quiet"}, wantErr: true, wantUsageErr: true},
 	}
 
 	for name, tc := range tests {
