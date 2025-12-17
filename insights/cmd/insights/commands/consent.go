@@ -94,7 +94,9 @@ func (a App) consentRun() error {
 			continue
 		}
 
-		fmt.Printf("%s: %t\n", source, state)
+		if !a.config.Quiet {
+			fmt.Printf("%s: %t\n", source, state)
+		}
 	}
 
 	if len(failedSources) > 0 {

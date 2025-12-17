@@ -86,6 +86,11 @@ func TestUpload(t *testing.T) {
 			useReportsFixture: true,
 			wantErr:           true,
 		},
+		"Usage errors when verbose and quiet are used together": {
+			args:         []string{"upload", "--verbose", "--quiet"},
+			wantErr:      true,
+			wantUsageErr: true,
+		},
 	}
 
 	for name, tc := range tests {

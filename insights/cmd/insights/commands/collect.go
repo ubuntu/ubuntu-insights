@@ -90,11 +90,13 @@ func (a App) collectRun() (err error) {
 		return err
 	}
 
-	ib, err := json.MarshalIndent(insights, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal insights report for console printing: %v", err)
+	if !a.config.Quiet {
+		ib, err := json.MarshalIndent(insights, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal insights report for console printing: %v", err)
+		}
+		fmt.Println(string(ib))
 	}
-	fmt.Println(string(ib))
 
 	err = c.Write(insights, a.config.Collect.Period, a.config.Collect.Force, a.config.Collect.DryRun)
 	if errors.Is(err, consent.ErrConsentFileNotFound) {
