@@ -27,7 +27,7 @@ SystemCallFilter=@system-service
 KeyringMode=private
 ProcSubset=pid
 ProtectProc=invisible
-RestrictAddressFamilies=none
+RestrictAddressFamilies=AF_INET AF_INET6
 
 [Install]
 Also=ubuntu-insights-upload.timer
