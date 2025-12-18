@@ -40,7 +40,7 @@ jobs:
           fi
 
       - name: Cache licenserecon build - restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         id: cache-licenserecon-restore
         if: steps.licenserecon-commit.outputs.cache-enabled == 'true'
         with:
@@ -68,7 +68,7 @@ jobs:
           sudo dpkg -i licenserecon_*.deb || sudo apt-get install -f -y
 
       - name: Cache licenserecon build - save # Save licenserecon to cache even if `lrc` fails down the road.
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         if: steps.licenserecon-commit.outputs.cache-enabled == 'true' && steps.cache-licenserecon-restore.outputs.cache-hit != 'true' && steps.build-licenserecon.outcome == 'success'
         with:
           path: licenserecon_*.deb
