@@ -110,7 +110,7 @@ jobs:
 
       - name: Upload test artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: insights-${{ github.job }}-${{ matrix.module }}-${{ matrix.os }}-artifacts-${{ github.run_attempt }}
           path: ${{ env.TEST_ARTIFACTS_PATH }}
@@ -164,7 +164,7 @@ jobs:
           gocov convert ${cov_dir}/codecov/coverage.out.codecov | gocov-xml > ${cov_dir}/coverage.xml
 
       - name: Upload test artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: insights-${{ github.job }}-${{ matrix.module }}-${{ matrix.os }}-artifacts-${{ github.run_attempt }}
           path: ${{ env.TEST_ARTIFACTS_PATH }}
@@ -178,7 +178,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Download coverage artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           path: ./artifacts/
 
