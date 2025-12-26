@@ -42,6 +42,10 @@ func TestSetVerbosity(t *testing.T) {
 			name:    "debug",
 			pattern: []int{2},
 		},
+		{
+			name:    "quiet",
+			pattern: []int{-1},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -50,6 +54,12 @@ func TestSetVerbosity(t *testing.T) {
 
 			for _, p := range tc.pattern {
 				cli.SetVerbosity(p)
+
+				if p < 0 {
+					assert.True(t, slog.Default().Enabled(context.Background(), slog.LevelError))
+					assert.False(t, slog.Default().Enabled(context.Background(), slog.LevelError-1))
+					continue
+				}
 
 				switch p {
 				case 0:
@@ -92,6 +102,11 @@ func TestSetSlog(t *testing.T) {
 			name:    "debug json",
 			level:   2,
 			jsonLog: true,
+		},
+		{
+			name:    "quiet",
+			level:   -1,
+			jsonLog: false,
 		},
 	}
 

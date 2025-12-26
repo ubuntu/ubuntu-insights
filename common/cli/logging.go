@@ -8,6 +8,7 @@ import (
 )
 
 // SetVerbosity sets the logging level for the default logger based on the verbose flag count.
+// If level is negative, it infers quiet operation and sets the logger to errors only.
 //
 // This function has the same behaviors as slog.SetLogLoggerLevel.
 func SetVerbosity(level int) {
@@ -26,6 +27,10 @@ func SetSlog(level int, jsonLogs bool) {
 }
 
 func getLevel(level int) slog.Level {
+	if level < 0 {
+		return slog.LevelError
+	}
+
 	switch level {
 	case 0:
 		return constants.DefaultLogLevel
