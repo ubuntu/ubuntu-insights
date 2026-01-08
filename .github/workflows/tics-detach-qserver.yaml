@@ -1,0 +1,30 @@
+name: Force Detach TiCS QServer
+on:
+  workflow_dispatch:
+
+jobs:
+  detach-tics-qserver:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      # The GitHub TiCS action removes the maintenance scripts on install if in client or diagnostic mode, leaving just QServer mode which takes too long and would fail anyway.
+      # The script is typically installed and available in the self-hosted TiCS runner images, but we can't use that here.
+      # https://github.com/tiobe/tics-github-action/blob/fcd98d227776108045dbe10ceadef8fc4a166124/src/configuration/tics.ts#L162
+      - name: Install TiCS Wrapper
+        env:
+          TICSAUTHTOKEN: ${{ secrets.TICSAUTHTOKEN }}
+        run: |
+          curl -o ~/install_tics.sh -L "https://canonical.tiobe.com/tiobeweb/TICS/api/public/v1/fapi/installtics/Script?cfg=GoProjects&platform=linux&url=https://canonical.tiobe.com/tiobeweb/TICS/"
+          chmod +x ~/install_tics.sh
+          ~/install_tics.sh
+
+      # Based on https://github.com/canonical/mir/pull/4472/files
+      - name: Detach TiCS QServer from project
+        env:
+          TICSAUTHTOKEN: ${{ secrets.TICSAUTHTOKEN }}
+        run: |
+          source ~/.profile
+          TICSMaintenance -project ubuntu-insights -detach
