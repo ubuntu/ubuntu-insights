@@ -22,6 +22,7 @@ type App struct {
 	viper *viper.Viper
 
 	config struct {
+		Quiet       bool
 		Verbose     int
 		consentDir  string
 		insightsDir string
@@ -76,9 +77,20 @@ The information collected can't be used to identify a single machine. All report
 		SilenceErrors: true,
 		Version:       constants.Version,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if a.config.Quiet && a.config.Verbose > 0 {
+				return fmt.Errorf("the --quiet and --verbose flags cannot be used together")
+			}
+
 			// Command parsing has been successful. Returns to not print usage anymore.
 			a.cmd.SilenceUsage = true
-			cli.SetVerbosity(a.config.Verbose) // Set verbosity before loading config
+			getLogLevel := func() int {
+				if a.config.Quiet {
+					return -1
+				}
+				return a.config.Verbose
+			}
+
+			cli.SetVerbosity(getLogLevel()) // Set verbosity before loading config
 			if err := cli.InitViperConfig(constants.CmdName, a.cmd, a.viper); err != nil {
 				return err
 			}
@@ -86,7 +98,7 @@ The information collected can't be used to identify a single machine. All report
 				return fmt.Errorf("unable to decode configuration into struct: %w", err)
 			}
 
-			cli.SetVerbosity(a.config.Verbose)
+			cli.SetVerbosity(getLogLevel())
 			return nil
 		},
 	}
@@ -111,9 +123,12 @@ The information collected can't be used to identify a single machine. All report
 func installRootCmd(app *App) error {
 	cmd := app.cmd
 
+	cmd.PersistentFlags().BoolVar(&app.config.Quiet, "quiet", false, "suppress all output except errors")
 	cmd.PersistentFlags().CountVarP(&app.config.Verbose, "verbose", "v", "issue INFO (-v), DEBUG (-vv)")
 	cmd.PersistentFlags().StringVar(&app.config.consentDir, "consent-dir", constants.DefaultConfigPath, "the base directory of the consent state files")
 	cmd.PersistentFlags().StringVar(&app.config.insightsDir, "insights-dir", constants.DefaultCachePath, "the base directory of the insights report cache")
+
+	cmd.MarkFlagsMutuallyExclusive("quiet", "verbose")
 
 	if err := cmd.MarkPersistentFlagDirname("consent-dir"); err != nil {
 		slog.Error("An error occurred while initializing Ubuntu Insights", "error", err.Error())
