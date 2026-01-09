@@ -29,6 +29,7 @@ env:
         {"os": "ubuntu-24.04", "module": "server"}
       ]
     }
+  PROJECT: ubuntu-insights # TiCS project name
 
 defaults:
   run:
@@ -257,8 +258,17 @@ jobs:
         uses: tiobe/tics-github-action@v3
         with:
           mode: ${{ steps.tics-condition.outputs.tics_mode }}
-          project: ubuntu-insights
+          project: ${{ env.PROJECT }}
           viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=GoProjects
           ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
           installTics: true
           postAnnotations: false # Often not useful due to just false positives hitting the GitHub 10 annotations limit
+
+      # Copied from https://github.com/canonical/mir/pull/4472/files
+      - if: ${{ steps.tics-condition.outputs.tics_mode == 'qserver' && cancelled() }}
+        name: Detach TiCS QServer to prevent "project already connected" issue
+        env:
+          TICSAUTHTOKEN: ${{ secrets.TICSAUTHTOKEN }}
+        run: |
+          source ~/.profile
+          TICSMaintenance -project ${PROJECT} -detach
