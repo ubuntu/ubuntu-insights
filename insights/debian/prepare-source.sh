@@ -14,4 +14,10 @@ if [ -n "${is_source_build}" ]; then
     go mod vendor
 fi
 
+# Check that the vendor directory exists and is not empty to confirm vendoring succeeded.
+if [ ! -d "vendor" ] || [ -z "$(ls -A vendor)" ]; then
+		echo "Vendor directory not found or empty!"
+		exit 1
+fi
+
 echo "Source Prepared"
