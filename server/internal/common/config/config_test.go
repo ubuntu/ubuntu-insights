@@ -296,22 +296,18 @@ func TestConfigManagerReadWhileWrite(t *testing.T) {
 	readCount := 100
 
 	// Writer goroutine
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for i := range writeCount {
 			_ = os.WriteFile(tmpFile, fmt.Appendf(nil, `{"allowList":["foo", "foo%d"]}`, i), 0600)
 			_ = cm.Load()
 		}
-	}()
+	})
 
 	// Reader goroutines
 	for range readCount {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_ = cm.AllowList()
-		}()
+		})
 	}
 
 	wg.Wait()
