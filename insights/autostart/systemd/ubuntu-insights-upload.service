@@ -8,24 +8,16 @@ Restart=no
 SuccessExitStatus=1
 
 # Containment
-ProtectSystem=strict
-ProtectHome=tmpfs
-BindPaths=%h/.config %h/.cache
 LockPersonality=yes
 MemoryDenyWriteExecute=yes
 NoNewPrivileges=true
 PrivateMounts=yes
-PrivateTmp=yes
-PrivateUsers=yes
-ProtectControlGroups=yes
-ProtectKernelTunables=yes
 RestrictNamespaces=yes
 RestrictRealtime=yes
 RestrictSUIDSGID=yes
 SystemCallArchitectures=native
 SystemCallFilter=@system-service
 KeyringMode=private
-ProcSubset=pid
 ProtectProc=invisible
 RestrictAddressFamilies=AF_INET AF_INET6
 

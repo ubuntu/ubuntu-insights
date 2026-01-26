@@ -9,24 +9,15 @@ Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/
 SuccessExitStatus=1
 
 # Containment
-ProtectSystem=strict
-ProtectHome=tmpfs
-BindPaths=%h/.config %h/.cache
-BindReadOnlyPaths=/run/user/%U
 LockPersonality=yes
 MemoryDenyWriteExecute=yes
 NoNewPrivileges=true
-PrivateTmp=yes
-PrivateUsers=yes
-ProtectControlGroups=yes
-ProtectKernelTunables=yes
 RestrictNamespaces=yes
 RestrictRealtime=yes
 RestrictSUIDSGID=yes
 SystemCallArchitectures=native
 SystemCallFilter=@system-service
 KeyringMode=private
-ProcSubset=pid
 IPAddressDeny=any
 ProtectProc=invisible
 RestrictAddressFamilies=AF_UNIX
