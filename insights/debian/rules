@@ -7,6 +7,9 @@ export INSIGHTS_GO_PACKAGE := $(shell grep-dctrl -s XS-Go-Import-Path -n - ./deb
 export GOFLAGS := -ldflags=-X=$(INSIGHTS_GO_PACKAGE)/internal/constants.Version=$(DEB_VERSION_UPSTREAM) --mod=vendor -buildmode=pie
 export DH_GOLANG_GO_GENERATE := 1
 
+# Strict symbols checking
+export DPKG_GENSYMBOLS_CHECK_LEVEL := 4
+
 BUILDDIR := _build
 DESTDIR := $(CURDIR)/debian/tmp
 DEB_VERSION_MAJOR := $(shell echo $(DEB_VERSION_UPSTREAM) | cut -d. -f1)
