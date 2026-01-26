@@ -11,7 +11,13 @@ if [ -n "${is_source_build}" ]; then
     rm -r generated &> /dev/null || true
     # Handle vendoring
     rm -r vendor &> /dev/null || true
-    go mod vendor
+    GOTOOLCHAIN=auto go mod vendor
+fi
+
+# Check that the vendor directory exists and is not empty to confirm vendoring succeeded.
+if [ ! -d "vendor" ] || [ -z "$(ls -A vendor)" ]; then
+		echo "Vendor directory not found or empty!"
+		exit 1
 fi
 
 echo "Source Prepared"
