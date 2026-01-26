@@ -132,8 +132,7 @@ jobs:
 
       - name: Install coverage test dependencies
         run: |
-          go install github.com/AlekSi/gocov-xml@latest
-          go install github.com/axw/gocov/gocov@latest
+          go install github.com/boumenot/gocover-cobertura@latest
 
       - name: Install gotestfmt and our wrapper script
         uses: canonical/desktop-engineering/gh-actions/go/gotestfmt@main
@@ -162,7 +161,7 @@ jobs:
 
           # Filter out the testutils and testsdetection packages from the coverage report
           grep -hv -e "testutils" -e "testsdetection" ${cov_dir}/raw/coverage.out > ${cov_dir}/codecov/coverage.out.codecov
-          gocov convert ${cov_dir}/codecov/coverage.out.codecov | gocov-xml > ${cov_dir}/coverage.xml
+          gocover-cobertura < ${cov_dir}/codecov/coverage.out.codecov > ${cov_dir}/coverage.xml
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v6

@@ -47,9 +47,7 @@ func installSignalHandler(a app) func() {
 	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for {
 			switch v, ok := <-c; v {
 			case syscall.SIGINT, syscall.SIGTERM:
@@ -68,7 +66,7 @@ func installSignalHandler(a app) func() {
 				}
 			}
 		}
-	}()
+	})
 
 	return func() {
 		signal.Stop(c)
