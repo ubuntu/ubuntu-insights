@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -123,7 +122,7 @@ func TestCollect(t *testing.T) {
 			sGot, err := json.MarshalIndent(got, "", "  ")
 			require.NoError(t, err, "Collect should marshal sys information")
 			want := testutils.LoadWithUpdateFromGolden(t, string(sGot))
-			assert.Equal(t, strings.ReplaceAll(want, "\r\n", "\n"), string(sGot), "Collect should return expected sys information")
+			assert.Equal(t, want, string(sGot), "Collect should return expected sys information")
 
 			if !l.AssertLevels(t, tc.logs) {
 				l.OutputLogs(t)

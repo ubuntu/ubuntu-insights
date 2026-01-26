@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -755,7 +754,7 @@ func TestCollectWindows(t *testing.T) {
 			sGot, err := yaml.Marshal(got)
 			require.NoError(t, err, "Failed to marshal sysinfo to yaml")
 			want := testutils.LoadWithUpdateFromGolden(t, string(sGot))
-			assert.Equal(t, strings.ReplaceAll(want, "\r\n", "\n"), string(sGot), "Collect should return expected sys information")
+			assert.Equal(t, want, string(sGot), "Collect should return expected sys information")
 
 			if !l.AssertLevels(t, tc.logs) {
 				l.OutputLogs(t)

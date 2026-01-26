@@ -44,6 +44,7 @@ func WithGoldenPath(path string) GoldenOption {
 
 // LoadWithUpdateFromGolden loads the element from a plaintext golden file.
 // It will update the file if the update flag is used prior to loading it.
+// Return carriages are normalized to LF.
 func LoadWithUpdateFromGolden(t *testing.T, data string, opts ...GoldenOption) string {
 	t.Helper()
 
@@ -66,7 +67,7 @@ func LoadWithUpdateFromGolden(t *testing.T, data string, opts ...GoldenOption) s
 	want, err := os.ReadFile(o.goldenPath)
 	require.NoError(t, err, "Cannot load golden file")
 
-	return string(want)
+	return strings.ReplaceAll(string(want), "\r\n", "\n")
 }
 
 // LoadWithUpdateFromGoldenYAML load the generic element from a YAML serialized golden file.

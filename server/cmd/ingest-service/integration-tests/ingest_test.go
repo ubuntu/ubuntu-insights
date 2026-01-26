@@ -283,7 +283,7 @@ func TestIngestService(t *testing.T) {
 			got, err := json.MarshalIndent(results, "", "  ")
 			require.NoError(t, err)
 			want := testutils.LoadWithUpdateFromGolden(t, string(got))
-			assert.Equal(t, strings.ReplaceAll(want, "\r\n", "\n"), string(got), "Unexpected results after processing files")
+			assert.Equal(t, want, string(got), "Unexpected results after processing files")
 		})
 	}
 }

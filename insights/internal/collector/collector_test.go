@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -297,7 +296,7 @@ func TestCompile(t *testing.T) {
 			got, err := json.MarshalIndent(results, "", "  ")
 			require.NoError(t, err)
 			want := testutils.LoadWithUpdateFromGolden(t, string(got))
-			assert.Equal(t, strings.ReplaceAll(want, "\r\n", "\n"), string(got), "Collect should return expected sys information")
+			assert.Equal(t, want, string(got), "Collect should return expected sys information")
 		})
 	}
 }
