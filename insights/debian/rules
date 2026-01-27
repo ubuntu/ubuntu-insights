@@ -15,6 +15,7 @@ export DPKG_GENSYMBOLS_CHECK_LEVEL := 4
 # always matches with the latest available go version in the archive.
 export PATH := $(shell printenv PATH):$(shell ./debian/get-depends-go-bin-path.sh)
 
+# Local variables to avoid repetition
 BUILDDIR := _build
 DESTDIR := $(CURDIR)/debian/tmp
 DEB_VERSION_MAJOR := $(shell echo $(DEB_VERSION_UPSTREAM) | cut -d. -f1)
