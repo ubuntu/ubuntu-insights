@@ -1,10 +1,12 @@
+//go:build cgo
+
 // main_test is the package for testing the C API.
 package main_test
 
 import (
 	"testing"
 
-	"github.com/ubuntu/ubuntu-insights/insights/C"
+	main "github.com/ubuntu/ubuntu-insights/insights/C"
 )
 
 // TestCollect tests C.CollectInsights.
