@@ -1,6 +1,8 @@
-ubuntu-insights (0.9.0ubuntu~dev2) resolute; urgency=medium
+ubuntu-insights (0.9.0ubuntu~dev3) resolute; urgency=medium
 
+  * libinsights: Add callback handler for logging
   * libinsights0-dbgsym: Add missing symbol for insights_compile
+  * Bump Go dependency to 1.25
 
  -- Kat Kuo <kat.kuo@canonical.com>  Mon, 26 Jan 2026 10:58:29 -0500
 
