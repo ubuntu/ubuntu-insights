@@ -4,7 +4,7 @@ package main_test
 import (
 	"testing"
 
-	"github.com/ubuntu/ubuntu-insights/insights/C"
+	main "github.com/ubuntu/ubuntu-insights/insights/C"
 )
 
 // TestCollect tests C.CollectInsights.
@@ -40,4 +40,9 @@ func TestSetConsent(t *testing.T) {
 // TestFakeMain "tests" main. This is just for coverage since main does nothing.
 func TestFakeMain(t *testing.T) {
 	main.TestMainImpl(t)
+}
+
+// TestLogCallback tests the C logging callback integration.
+func TestLogCallback(t *testing.T) {
+	main.TestLogCallbackImpl(t)
 }

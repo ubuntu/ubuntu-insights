@@ -3,6 +3,7 @@ package main
 
 /*
 #include "types.h"
+#include <stdlib.h>
 */
 import "C"
 
@@ -125,6 +126,9 @@ func compileCustomInsights(config *C.insights_const_config, flags *C.insights_co
 
 	report, err := customCompiler(conf, f)
 	if err != nil {
+		if outReport != nil {
+			*outReport = nil
+		}
 		return errToCString(err)
 	}
 
@@ -292,6 +296,20 @@ func insights_set_consent_state(config *C.insights_const_config, source *C.insig
 	})
 }
 
+/**
+ * insights_set_log_callback sets the callback function for logging.
+ * The callback receives the log level and the null terminated message.
+ * Setting the callback overrides the default logging behavior.
+ * Pass NULL to reset to default behavior.
+ *
+ * The callback may be called concurrently from multiple threads.
+ * The implementation must be thread-safe.
+ */
+//export insights_set_log_callback
+func insights_set_log_callback(callback C.insights_logger_callback) {
+	setLogCallbackImpl(callback)
+}
+
 // consentSetter is a function that sets the consent state using the given parameters.
 type consentSetter = func(conf insights.Config, source string, newState bool) error
 
@@ -311,16 +329,39 @@ func setCustomConsentState(config *C.insights_const_config, source *C.insights_c
 // toGoInsightsConfig converts a C Insights Config into the equivalent Go structure.
 func toGoInsightsConfig(config *C.insights_const_config) insights.Config {
 	iConf := insights.Config{Logger: slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))}
+	if hasLogCallback() {
+		// If a callback is registered, use it with Debug level (capture all)
+		loggerOut := func(l slog.Level, msg string) {
+			level := C.INSIGHTS_LOG_ERROR
+			switch l {
+			case slog.LevelDebug:
+				level = C.INSIGHTS_LOG_DEBUG
+			case slog.LevelInfo:
+				level = C.INSIGHTS_LOG_INFO
+			case slog.LevelWarn:
+				level = C.INSIGHTS_LOG_WARN
+			case slog.LevelError:
+				level = C.INSIGHTS_LOG_ERROR
+			}
+
+			cMsg := C.CString(msg)
+			defer C.free(unsafe.Pointer(cMsg))
+			callLogCallback((C.insights_log_level)(level), cMsg)
+		}
+		handler := NewCLogHandler(slog.HandlerOptions{Level: slog.LevelDebug}, loggerOut)
+		iConf.Logger = slog.New(handler)
+	} else if config != nil {
+		if config.verbose {
+			iConf.Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+		}
+	}
+
 	if config != nil {
 		if config.consent_dir != nil {
 			iConf.ConsentDir = C.GoString(config.consent_dir)
 		}
 		if config.insights_dir != nil {
 			iConf.InsightsDir = C.GoString(config.insights_dir)
-		}
-
-		if config.verbose {
-			iConf.Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 		}
 	}
 	return iConf

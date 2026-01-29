@@ -14,6 +14,8 @@ import (
 
 const libname = "libinsights.so.0"
 
+var buildTargets = []string{"libinsights.go", "log_handler.go", "internal.go"}
+
 func main() {
 	if err := buildSharedLibs(); err != nil {
 		slog.Error("Failed to build shared libraries", "error", err)
@@ -32,13 +34,15 @@ func buildSharedLibs() error {
 	}
 	ldflags := fmt.Sprintf("-X=github.com/ubuntu/ubuntu-insights/insights/internal/constants.Version=%s -extldflags -Wl,-soname,%s", constants.Version, libname)
 
-	if output, err := exec.Command("go", "build", //nolint:gosec // This is controlled by the build process and also filtered here
+	args := []string{"build", //nolint:gosec // This is controlled by the build process and also filtered here
 		"-buildmode=c-shared",
 		"-trimpath",
 		"-ldflags", ldflags,
 		"-o", fmt.Sprintf("../generated/%s", libname),
-		"./libinsights.go",
-	).CombinedOutput(); err != nil {
+	}
+	args = append(args, buildTargets...)
+
+	if output, err := exec.Command("go", args...).CombinedOutput(); err != nil {
 		return fmt.Errorf("build command failed with output: %q and error: %v", output, err)
 	}
 

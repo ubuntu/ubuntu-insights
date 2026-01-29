@@ -1,23 +1,15 @@
 // main is the package for the C API.
 package main
 
-// most of this is copied from libinsights.go, keep them up to date.
-
 /*
-#include <stdlib.h>
-#include "types.h"
-
-extern char* insights_collect(const insights_config*, const char*, const insights_collect_flags*, char**);
-extern char* insights_compile(const insights_config*, const insights_compile_flags*, char**);
-extern char* insights_write(const insights_config*, const char*, const char*, const insights_write_flags*);
-extern char* insights_upload(const insights_config*, const char**, size_t, const insights_upload_flags*);
-extern insights_consent_state insights_get_consent_state(const insights_config*, const char*);
-extern char* insights_set_consent_state(const insights_config*, const char*, bool);
+#include "libinsightstest.h"
 */
 import "C"
 
 import (
 	"errors"
+	"log/slog"
+	"runtime"
 	"testing"
 	"unsafe"
 
@@ -689,4 +681,59 @@ func makeConfig(conf *insightsConfig) (cnf *C.insights_config, clean func()) {
 func TestMainImpl(t *testing.T) {
 	t.Parallel()
 	main()
+}
+
+// TestLogCallbackImpl tests that the log callback is correctly invoked.
+func TestLogCallbackImpl(t *testing.T) {
+	t.Parallel()
+
+	C.insights_set_log_callback(C.get_test_callback())
+
+	tests := map[string]struct {
+		logFunc func(l *slog.Logger)
+	}{
+		"Single call": {
+			logFunc: func(l *slog.Logger) {
+				l.Info("info message", "key", "val")
+			},
+		},
+		"Multiple calls mixed levels": {
+			logFunc: func(l *slog.Logger) {
+				l.Error("first error")
+				l.Info("then info")
+				l.Warn("finally warn", "code", 123)
+			},
+		},
+		"Debug logs are captured": {
+			logFunc: func(l *slog.Logger) {
+				l.Debug("debug details", "id", 123)
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			// Lock this parallel test to an OS thread so that C._Thread_local storage is consistent
+			runtime.LockOSThread()
+			defer runtime.UnlockOSThread()
+
+			C.reset_test_callback()
+			defer C.reset_test_callback() // Ensure memory is freed when test finishes
+
+			// Mock collector that just logs
+			mockCollector := func(conf insights.Config, source string, flags insights.CollectFlags) ([]byte, error) {
+				tc.logFunc(conf.Logger)
+				return []byte("report"), nil
+			}
+
+			var outReport *C.char
+			collectCustomInsights(nil, nil, nil, &outReport, mockCollector)
+
+			logs := C.GoString(C.get_test_cb_buffer())
+			assert.False(t, bool(C.get_test_cb_buf_exceeded()), "Log buffer should not have exceeded max size")
+			want := testutils.LoadWithUpdateFromGolden(t, logs)
+			assert.Equal(t, want, logs)
+		})
+	}
 }
