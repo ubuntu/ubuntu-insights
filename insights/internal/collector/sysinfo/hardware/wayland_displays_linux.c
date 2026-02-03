@@ -1,36 +1,38 @@
 #include "wayland_displays_linux.h"
-#include "wayland_displays_linux_test.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wayland-client.h>
 
+#include "wayland_displays_linux_test.h"
+
 static bool memory_error = false;
 
-static struct wayland_display **displays = NULL;
-static struct wl_output **outputs = NULL;
+static struct wayland_display** displays = NULL;
+static struct wl_output** outputs = NULL;
 
 static size_t count = 0;
 static size_t capacity = 4;
 
-static struct wl_display *display;
-static struct wl_registry *registry;
+static struct wl_display* display;
+static struct wl_registry* registry;
 
 // Function to handle geometry events from the Wayland output
-void handle_geometry(void *data, struct wl_output *output, int32_t x, int32_t y,
+void handle_geometry(void* data, struct wl_output* output, int32_t x, int32_t y,
                      int32_t physical_width, int32_t physical_height,
-                     int32_t subpixel, const char *make, const char *model,
+                     int32_t subpixel, const char* make, const char* model,
                      int32_t transform) {
-  struct wayland_display *info = (struct wayland_display *)data;
+  struct wayland_display* info = (struct wayland_display*)data;
   info->phys_width = physical_width;
   info->phys_height = physical_height;
 }
 
 // Function to handle mode events from the Wayland output
-void handle_mode(void *data, struct wl_output *output, uint32_t flags,
+void handle_mode(void* data, struct wl_output* output, uint32_t flags,
                  int32_t width, int32_t height, int32_t refresh) {
   if (flags & WL_OUTPUT_MODE_CURRENT) {
-    struct wayland_display *info = (struct wayland_display *)data;
+    struct wayland_display* info = (struct wayland_display*)data;
     info->width = width;
     info->height = height;
     info->refresh = refresh;
@@ -45,19 +47,19 @@ static const struct wl_output_listener output_listener = {
 };
 
 // Function to handle global events from the Wayland registry
-void global_handler(void *data, struct wl_registry *registry, uint32_t name,
-                    const char *interface, uint32_t version) {
+void global_handler(void* data, struct wl_registry* registry, uint32_t name,
+                    const char* interface, uint32_t version) {
   if (strcmp(interface, "wl_output") != 0) {
     return;
   }
   // Check if we need to increase the capacity of the arrays
   if (count >= capacity) {
     capacity *= 2;
-    struct wl_output **new_outputs =
-        realloc(outputs, capacity * sizeof(struct wl_output *));
+    struct wl_output** new_outputs =
+        realloc(outputs, capacity * sizeof(struct wl_output*));
 
-    struct wayland_display **new_displays =
-        realloc(displays, capacity * sizeof(struct wayland_display *));
+    struct wayland_display** new_displays =
+        realloc(displays, capacity * sizeof(struct wayland_display*));
     if (!new_outputs || !new_displays) {
       free(new_outputs);
       free(new_displays);
@@ -70,14 +72,14 @@ void global_handler(void *data, struct wl_registry *registry, uint32_t name,
     displays = new_displays;
   }
 
-  struct wayland_display *display = malloc(sizeof(struct wayland_display));
+  struct wayland_display* display = malloc(sizeof(struct wayland_display));
   if (!display) {
     memory_error = true;
     return;
   }
   memset(display, 0, sizeof(struct wayland_display));
 
-  struct wl_output *output =
+  struct wl_output* output =
       wl_registry_bind(registry, name, &wl_output_interface, 1);
 
   displays[count] = display;
@@ -87,7 +89,7 @@ void global_handler(void *data, struct wl_registry *registry, uint32_t name,
   wl_output_add_listener(output, &output_listener, display);
 }
 
-void global_remove(void *data, struct wl_registry *registry, uint32_t name) {}
+void global_remove(void* data, struct wl_registry* registry, uint32_t name) {}
 
 static const struct wl_registry_listener registry_listener = {
     .global = global_handler,
@@ -95,8 +97,8 @@ static const struct wl_registry_listener registry_listener = {
 };
 
 int init_wayland() {
-  outputs = malloc(capacity * sizeof(struct wl_output *));
-  displays = malloc(capacity * sizeof(struct wayland_display *));
+  outputs = malloc(capacity * sizeof(struct wl_output*));
+  displays = malloc(capacity * sizeof(struct wayland_display*));
 
   if (!outputs || !displays) {
     free(outputs);
@@ -157,12 +159,12 @@ void cleanup() {
   memory_error = false;
 }
 
-struct wayland_display **get_displays() { return displays; }
+struct wayland_display** get_displays() { return displays; }
 
 int get_output_count() { return count; }
 bool had_memory_error() { return memory_error; }
 
-void set_displays(struct wayland_display **new_displays, int c) {
+void set_displays(struct wayland_display** new_displays, int c) {
   cleanup();
   displays = new_displays;
   count = capacity = c;
