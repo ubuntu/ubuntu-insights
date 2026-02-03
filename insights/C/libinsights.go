@@ -2,8 +2,9 @@
 package main
 
 /*
-#include "types.h"
 #include <stdlib.h>
+
+#include "types.h"
 */
 import "C"
 
