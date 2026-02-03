@@ -1,0 +1,43 @@
+name: C sanity
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  clang-format:
+    name: clang-format check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Install clang-format
+        run: sudo apt-get install --no-install-recommends -y clang-format
+
+      - name: Run clang-format
+        run: |
+          # Ensure that the .clang-format configuration is valid
+          clang-format --dump-config > /dev/null
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # On pull requests, HEAD^1 will always be the merge base, so consider that diff for formatting.
+            git diff -U0 --no-color HEAD^1 \
+              | clang-format-diff -p1 \
+              | tee ${HOME}/clang-diff
+          else
+            find . -type f -regex '.*\.\(c\|h\|C\|H\)' -print0 \
+              | xargs -0 -r clang-format -i
+            
+            # Capture any changes as the diff
+            git diff > ${HOME}/clang-diff
+          fi
+
+          if [ "$( stat --printf='%s' ${HOME}/clang-diff )" -ne 0 ]; then
+            echo "::error::Please apply the above diff to correct formatting"
+            exit 1
+          fi
