@@ -3,17 +3,18 @@ package main
 /* This file acts as a wrapper around internal C helpers in order to get around restrictions in CGo for files using //export. */
 
 /*
-#include "types.h"
 #include <stdlib.h>
+
+#include "types.h"
 
 static insights_logger_callback global_log_callback = NULL;
 
-__attribute__((visibility("hidden"))) void
-set_log_callback_impl(insights_logger_callback callback) {
+__attribute__((visibility("hidden"))) void set_log_callback_impl(
+    insights_logger_callback callback) {
   global_log_callback = callback;
 }
 
-void call_log_callback(insights_log_level level, char *msg) {
+void call_log_callback(insights_log_level level, char* msg) {
   if (global_log_callback) {
     global_log_callback(level, msg);
   }

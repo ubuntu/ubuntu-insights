@@ -1,26 +1,27 @@
 #include "libinsightstest.h"
-#include "types.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "types.h"
+
 // Test helpers
 // Requires C11 or later for _Thread_local
 
-#define TEST_CB_MAX_SIZE 4096 // 4KB
+#define TEST_CB_MAX_SIZE 4096  // 4KB
 
 typedef struct {
   int count;
   char buf[TEST_CB_MAX_SIZE];
-  size_t size;       // Current string length
-  bool buf_exceeded; // Flag to indicate buffer overflow
+  size_t size;        // Current string length
+  bool buf_exceeded;  // Flag to indicate buffer overflow
 } test_cb_state_t;
 
 static _Thread_local test_cb_state_t test_cb_state = {0, {0}, 0, false};
 
-static void append_log(const char *str, size_t len) {
-  if (str == NULL)
-    return;
+static void append_log(const char* str, size_t len) {
+  if (str == NULL) return;
 
   if ((test_cb_state.size + len + 1 > TEST_CB_MAX_SIZE) ||
       test_cb_state.buf_exceeded) {
@@ -33,23 +34,23 @@ static void append_log(const char *str, size_t len) {
   test_cb_state.buf[test_cb_state.size] = '\0';
 }
 
-void test_log_callback_fn(insights_log_level level, const char *msg) {
+void test_log_callback_fn(insights_log_level level, const char* msg) {
   test_cb_state.count++;
 
-  const char *lvlStr = "UNKNOWN";
+  const char* lvlStr = "UNKNOWN";
   switch (level) {
-  case INSIGHTS_LOG_ERROR:
-    lvlStr = "ERROR";
-    break;
-  case INSIGHTS_LOG_WARN:
-    lvlStr = "WARN";
-    break;
-  case INSIGHTS_LOG_INFO:
-    lvlStr = "INFO";
-    break;
-  case INSIGHTS_LOG_DEBUG:
-    lvlStr = "DEBUG";
-    break;
+    case INSIGHTS_LOG_ERROR:
+      lvlStr = "ERROR";
+      break;
+    case INSIGHTS_LOG_WARN:
+      lvlStr = "WARN";
+      break;
+    case INSIGHTS_LOG_INFO:
+      lvlStr = "INFO";
+      break;
+    case INSIGHTS_LOG_DEBUG:
+      lvlStr = "DEBUG";
+      break;
   }
 
   if (msg != NULL) {
@@ -74,6 +75,6 @@ void reset_test_callback() {
 
 int get_test_cb_count() { return test_cb_state.count; }
 
-char *get_test_cb_buffer() { return test_cb_state.buf; }
+char* get_test_cb_buffer() { return test_cb_state.buf; }
 
 bool get_test_cb_buf_exceeded() { return test_cb_state.buf_exceeded; }
