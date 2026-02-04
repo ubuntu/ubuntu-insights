@@ -155,10 +155,10 @@ These special test dependencies are not included in the project dependencies and
 
 ### Code style
 
-This project follow the Go code-style. The client C bindings roughly follow the GNU code-style. For more informative information about the code style in use, please check:
+This project follow the Go code-style. C code present in `insights/` should follow the style defined by `insights/.clang-format`. For more informative information about the code style in use, please check:
 
 - For Go: <https://google.github.io/styleguide/go/>
-- For C: <https://www.gnu.org/prep/standards/html_node/Writing-C.html>
+- For C: <https://google.github.io/styleguide/cppguide>
 
 ## Contributor License Agreement
 
