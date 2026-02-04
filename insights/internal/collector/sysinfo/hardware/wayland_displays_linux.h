@@ -28,4 +28,4 @@ int get_output_count();
 // Checks if there was a memory error.
 bool had_memory_error();
 
-#endif // WAYLAND_DISPLAYS_H
+#endif  // WAYLAND_DISPLAYS_H

@@ -1,6 +1,4 @@
 BasedOnStyle: Google
----
-Language: C
 AllowShortFunctionsOnASingleLine: All
 DerivePointerAlignment: false
 InsertNewlineAtEOF: true
