@@ -20,7 +20,7 @@ int init_wayland();
 void cleanup();
 
 // Get the Wayland display information.
-struct wayland_display **get_displays();
+struct wayland_display** get_displays();
 
 // Get the number of Wayland displays.
 int get_output_count();

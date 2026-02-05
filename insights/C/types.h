@@ -19,11 +19,11 @@ typedef enum {
 } insights_log_level;
 
 typedef void (*insights_logger_callback)(insights_log_level level,
-                                         const char *msg);
+                                         const char* msg);
 
 typedef struct {
-  const char *consent_dir;   // default: "${os.UserConfigDir}/ubuntu-insights"
-  const char *insights_dir;  // default: "${os.UserCacheDir}/ubuntu-insights"
+  const char* consent_dir;   // default: "${os.UserConfigDir}/ubuntu-insights"
+  const char* insights_dir;  // default: "${os.UserCacheDir}/ubuntu-insights"
   bool verbose;              // Debug if true, info otherwise (default: false)
 } insights_config;
 
@@ -33,8 +33,8 @@ typedef struct {
  * @note source_metrics_path and source_metrics_json are mutually exclusive.
  */
 typedef struct {
-  const char *source_metrics_path;  // Path to JSON file (default: empty)
-  const void *source_metrics_json;  // Raw JSON data as bytes (default: NULL)
+  const char* source_metrics_path;  // Path to JSON file (default: empty)
+  const void* source_metrics_json;  // Raw JSON data as bytes (default: NULL)
   size_t source_metrics_json_len;   // Length of source_metrics_json in bytes
   uint32_t period;                  // Collection period in seconds (default: 0)
   bool force;    // Force collection, ignoring duplicates (default: false)
@@ -42,8 +42,8 @@ typedef struct {
 } insights_collect_flags;
 
 typedef struct {
-  const char *source_metrics_path;  // Path to JSON file (default: empty)
-  const void *source_metrics_json;  // Raw JSON data as bytes (default: NULL)
+  const char* source_metrics_path;  // Path to JSON file (default: empty)
+  const void* source_metrics_json;  // Raw JSON data as bytes (default: NULL)
   size_t source_metrics_json_len;   // Length of source_metrics_json in bytes
 } insights_compile_flags;
 
