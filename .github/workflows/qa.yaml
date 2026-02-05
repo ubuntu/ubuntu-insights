@@ -51,22 +51,55 @@ jobs:
   c-sanity:
     uses: ./.github/workflows/c-sanity.yaml
 
+  pre-go-sanity:
+    # These need to be generated in a separate job to avoid conflicting with go-sanity
+    name: "Go: Prepare code sanity artifacts"
+    needs: plan
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ${{ fromJson(needs.plan.outputs.matrix).os }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Prepare environment
+        uses: ./.github/actions/prepare-environment
+        with:
+          apt-dependencies: ${{ env.INSIGHTS_APT_DEPS }}
+
+      - name: Upload integration test shared libraries artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          path: |
+            ${{ github.workspace }}/insights/C/integration-tests/generated
+          name: ${{ github.job }}-${{ matrix.os }}-artifacts-${{ github.run_attempt }}
+          retention-days: 1
+
   go-sanity:
     name: "Go: Code sanity"
-    needs: plan
+    needs:
+      - plan
+      - pre-go-sanity
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
     steps:
+      - uses: actions/checkout@v6
+
       - name: Install dependencies on Linux
         if: runner.os == 'Linux' && matrix.module == 'insights'
         run: |
           sudo apt update
           sudo apt install -y ${{ env.INSIGHTS_APT_DEPS }}
-      - uses: actions/checkout@v6
+
+      - name: Download integration test shared libraries artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: pre-go-sanity-${{ matrix.os }}-artifacts-${{ github.run_attempt }}
+          path: ${{ github.workspace }}/insights/C/integration-tests/generated
+
       - name: Go code sanity check
-        uses: canonical/desktop-engineering/gh-actions/go/code-sanity@v2
+        uses: canonical/desktop-engineering/gh-actions/go/code-sanity@main
         with:
           working-directory: ${{ matrix.module }}
           tools-directory: ${{ github.workspace }}/tools
