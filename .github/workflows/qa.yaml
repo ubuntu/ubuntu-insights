@@ -59,12 +59,14 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
     steps:
+      - uses: actions/checkout@v6
+
       - name: Install dependencies on Linux
         if: runner.os == 'Linux' && matrix.module == 'insights'
         run: |
           sudo apt update
           sudo apt install -y ${{ env.INSIGHTS_APT_DEPS }}
-      - uses: actions/checkout@v6
+
       - name: Go code sanity check
         uses: canonical/desktop-engineering/gh-actions/go/code-sanity@v2
         with:
