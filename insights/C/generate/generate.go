@@ -80,8 +80,12 @@ func buildSharedLibs() error {
 }
 
 func copyTypesHeader() error {
-	if output, err := exec.Command("cp", "./types.h", filepath.Join(outputDir, "types.h")).CombinedOutput(); err != nil {
-		return fmt.Errorf("copy command failed with output: %s and error: %v", output, err)
+	data, err := os.ReadFile("./types.h")
+	if err != nil {
+		return fmt.Errorf("read types.h failed: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(outputDir, "types.h"), data, 0644); err != nil {
+		return fmt.Errorf("write types.h failed: %v", err)
 	}
 	return nil
 }
