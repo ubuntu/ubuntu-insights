@@ -61,7 +61,9 @@ func buildSharedLibs() error {
 	// Apply pedantic flags to CGO_CFLAGS when not doing production build.
 	cgoCFlags := os.Getenv("CGO_CFLAGS")
 	if cgoCFlags == "" {
-		cmd.Env = append(os.Environ(), "CGO_CFLAGS=-Wextra -Werror")
+		// -Wunused-parameter causes false positives in CGO code
+		flags := "-Wextra -Werror -Wno-unused-parameter"
+		cmd.Env = append(os.Environ(), "CGO_CFLAGS="+flags)
 	}
 
 	if output, err := cmd.CombinedOutput(); err != nil {
