@@ -130,6 +130,11 @@ jobs:
           mkdir -p "${artifacts_dir}"
           echo TEST_ARTIFACTS_PATH="${artifacts_dir}" >> $GITHUB_ENV
 
+      - &add-dll-path
+        name: Add generated DLLs to PATH (Windows)
+        if: runner.os == 'Windows' && matrix.module == 'insights'
+        run: echo "${{ github.workspace }}/insights/C/integration-tests/generated" >> $GITHUB_PATH
+
       - name: Run tests (with race detector)
         working-directory: ${{ matrix.module }}
         run: |
@@ -180,6 +185,8 @@ jobs:
           artifacts_dir=${RUNNER_TEMP}/test-artifacts
           mkdir -p "${artifacts_dir}"
           echo TEST_ARTIFACTS_PATH="${artifacts_dir}" >> $GITHUB_ENV
+
+      - *add-dll-path
 
       - name: Run tests (with coverage collection)
         working-directory: ${{ matrix.module }}
