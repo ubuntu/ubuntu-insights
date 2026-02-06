@@ -66,8 +66,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-  build-ubuntu-insights:
-    name: Build ubuntu-insights debian package
+  build-source-packages:
+    name: Build source packages
     needs: plan
     strategy:
       fail-fast: false
@@ -81,12 +81,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
-      - name: Build debian package
+      - name: Build source package
         uses: canonical/desktop-engineering/gh-actions/common/build-debian@main
         with:
           source-dir: insights
           token: ${{ secrets.GITHUB_TOKEN }}
           docker-image: ubuntu:${{ matrix.ubuntu-version }}
+          sources-only: true
 
       - name: Generate outputs
         id: outputs
@@ -95,50 +96,6 @@ jobs:
             echo "pkg-dsc-${{ matrix.ubuntu-version }}=${{ env.PKG_DSC }}"
             echo "pkg-src-changes-${{ matrix.ubuntu-version }}=${{ env.PKG_SOURCE_CHANGES }}"
           ) >> "${GITHUB_OUTPUT}"
-
-  qa:
-    name: Run trivial debian package tests
-    needs:
-      - plan
-      - build-ubuntu-insights
-    strategy:
-      fail-fast: false
-      matrix:
-        ubuntu-version: ${{ fromJSON(needs.plan.outputs.ubuntu-versions) }}
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v7
-        with:
-          run-id: ${{ needs.build-ubuntu-insights.outputs.run-id }}
-          merge-multiple: true
-
-      - name: Install ubuntu-insights debian package
-        run: |
-          sudo apt install -y ./ubuntu-insights_*.deb
-
-      - name: Ensure man page is installed
-        run: |
-          MANPAGER=cat man ubuntu-insights
-
-      - name: Ensure systemd units are installed
-        run: |
-          # Verify systemd can find the units (will succeed even if inactive)
-          systemctl --user --no-pager list-unit-files ubuntu-insights-collect.service
-          systemctl --user --no-pager list-unit-files ubuntu-insights-collect.timer
-          systemctl --user --no-pager list-unit-files ubuntu-insights-upload.service
-          systemctl --user --no-pager list-unit-files ubuntu-insights-upload.timer
-
-      - name: Run trivial tests
-        run:
-          | # Go through a typical workflow, ensuring that no errors are encountered. This should eventually be replaced with true end-to-end tests.
-          ubuntu-insights --version
-          ubuntu-insights --help
-          ubuntu-insights collect -df
-          ubuntu-insights collect
-          ubuntu-insights consent -s=true
-          ubuntu-insights collect
-          ubuntu-insights upload -df
 
   autopkgtest:
     name: Run autopkgtest
@@ -150,7 +107,7 @@ jobs:
     runs-on: ${{ matrix.autopkgtest-host }}
     needs:
       - plan
-      - build-ubuntu-insights
+      - build-source-packages
       - check-modified-files
 
     # Run autopkgtest only on:
@@ -172,7 +129,7 @@ jobs:
         run: |
           set -exuo pipefail
 
-          json_output='${{ toJSON(needs.build-ubuntu-insights.outputs) }}'
+          json_output='${{ toJSON(needs.build-source-packages.outputs) }}'
           for var in $(echo "${json_output}" | jq -r 'keys | .[]'); do
             if [[ "${var}" != *"-${{ matrix.ubuntu-version }}" ]]; then
               continue;
@@ -187,14 +144,8 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v7
         with:
-          run-id: ${{ needs.build-ubuntu-insights.outputs.run-id }}
+          run-id: ${{ needs.build-source-packages.outputs.run-id }}
           merge-multiple: true
-      
-      # When not on ubuntu-24.04, make autopkgtest build the packages from source since we only have built packages for ubuntu-24.04
-      - name: Force build
-        if: ${{ matrix.autopkgtest-host != 'ubuntu-24.04' }}
-        run: |
-          rm -vf *.deb
 
       - name: Run autopkgtest
         uses: canonical/desktop-engineering/gh-actions/common/run-autopkgtest@main
