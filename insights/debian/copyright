@@ -41,10 +41,6 @@ Files: vendor/github.com/inconshreveable/mousetrap/*
 Copyright: 2022, Alan Shreve (@inconshreveable)
 License: Apache-2.0
 
-Files: vendor/github.com/pelletier/go-toml/v2/*
-Copyright: 2021-2023, Thomas Pelletier
-License: Expat
-
 Files: vendor/github.com/pmezard/go-difflib/*
 Copyright: 2013, Patrick Mezard
 License: BSD-3-clause
