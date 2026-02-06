@@ -73,7 +73,7 @@ jobs:
       fail-fast: false
       matrix:
         ubuntu-version: ${{ fromJSON(needs.plan.outputs.ubuntu-versions) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       run-id: ${{ github.run_id }}
       pkg-dsc-devel: ${{ steps.outputs.outputs.pkg-dsc-devel }}
@@ -105,7 +105,7 @@ jobs:
       fail-fast: false
       matrix:
         ubuntu-version: ${{ fromJSON(needs.plan.outputs.ubuntu-versions) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v7
@@ -189,6 +189,12 @@ jobs:
         with:
           run-id: ${{ needs.build-ubuntu-insights.outputs.run-id }}
           merge-multiple: true
+      
+      # When not on ubuntu-24.04, make autopkgtest build the packages from source since we only have built packages for ubuntu-24.04
+      - name: Force build
+        if: ${{ matrix.autopkgtest-host != 'ubuntu-24.04' }}
+        run: |
+          rm -vf *.deb
 
       - name: Run autopkgtest
         uses: canonical/desktop-engineering/gh-actions/common/run-autopkgtest@main
