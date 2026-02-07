@@ -1,5 +1,6 @@
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdnoreturn.h>
@@ -218,6 +219,9 @@ int cmd_upload(int argc, char** argv, int idx, insights_config* cfg) {
       long val = strtol(argv[idx], &endptr, 10);
       if (*endptr != '\0' || endptr == argv[idx])
         fail("Invalid integer for --min-age: %s", argv[idx]);
+      if (val > INT32_MAX)
+        fail("Invalid integer for --min-age: %s (greater than INT32_MAX)",
+             argv[idx]);
       flags.min_age = (int)val;
     }
     idx++;
