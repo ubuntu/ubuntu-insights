@@ -9,6 +9,7 @@ is_source_build=$(git status > /dev/null 2>&1 && echo "1" || true)
 if [ -n "${is_source_build}" ]; then
     # Ensure sources are clean
     rm -r generated &> /dev/null || true
+		rm -r C/integration-tests/generated &> /dev/null || true
     # Handle vendoring
     rm -r vendor &> /dev/null || true
     GOTOOLCHAIN=auto go mod vendor
