@@ -7,9 +7,15 @@ package main
 
 #include "types.h"
 
+#ifdef _WIN32
+#define INSIGHTS_HIDDEN
+#else
+#define INSIGHTS_HIDDEN __attribute__((visibility("hidden")))
+#endif
+
 static insights_logger_callback global_log_callback = NULL;
 
-__attribute__((visibility("hidden"))) void set_log_callback_impl(
+INSIGHTS_HIDDEN void set_log_callback_impl(
     insights_logger_callback callback) {
   global_log_callback = callback;
 }
