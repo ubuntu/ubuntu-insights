@@ -14,5 +14,5 @@ func init() {
 // Normalize normalizes programmatic constants to ensure they have static values for testing.
 func Normalize() {
 	constants.PlatformSource = "PLATFORM-SOURCE"
-	constants.PlatformConsentFile = constants.PlatformSource + constants.ConsentSourceBaseSeparator + constants.DefaultConsentFilenameBase
+	constants.PlatformConsentFile = constants.PlatformSource + constants.ConsentFilenameSuffix
 }

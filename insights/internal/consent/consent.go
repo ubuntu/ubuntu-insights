@@ -59,7 +59,7 @@ func (cm Manager) GetState(source string) (state bool, err error) {
 	return sourceConsent.ConsentState, nil
 }
 
-var consentSourceFilePattern = `%s` + constants.ConsentSourceBaseSeparator + constants.DefaultConsentFilenameBase
+var consentSourceFilePattern = `%s` + constants.ConsentFilenameSuffix
 
 // SetState updates the consent state for the given source.
 // If the source is an empty string, then the platform source consent state will be set.
@@ -96,10 +96,10 @@ func (cm Manager) getFiles() (map[string]string, error) {
 		}
 
 		// Source file
-		if !strings.HasSuffix(entry.Name(), constants.ConsentSourceBaseSeparator+constants.DefaultConsentFilenameBase) {
+		if !strings.HasSuffix(entry.Name(), constants.ConsentFilenameSuffix) {
 			continue
 		}
-		source := strings.TrimSuffix(entry.Name(), constants.ConsentSourceBaseSeparator+constants.DefaultConsentFilenameBase)
+		source := strings.TrimSuffix(entry.Name(), constants.ConsentFilenameSuffix)
 		sourceFiles[source] = filepath.Join(cm.path, entry.Name())
 		cm.log.Debug("Found source consent file", "file", sourceFiles[source])
 	}

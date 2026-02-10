@@ -31,11 +31,11 @@ const (
 	// UploadedFolder is the default name of the uploaded reports folder.
 	UploadedFolder = "uploaded"
 
-	// DefaultConsentFilenameBase is the default base name of the consent state files.
-	DefaultConsentFilenameBase = "consent.toml"
+	// ConsentFilenameBase is the default base name of the consent state files.
+	ConsentFilenameBase = "consent.toml"
 
-	// ConsentSourceBaseSeparator is the default separator between the source and the base name of the consent state files.
-	ConsentSourceBaseSeparator = "-"
+	// ConsentFilenameSuffix is the suffix used to identify consent files (separator + base).
+	ConsentFilenameSuffix = "-" + ConsentFilenameBase
 
 	// ReportExt is the default extension for the report files.
 	ReportExt = ".json"
@@ -72,7 +72,7 @@ var (
 )
 
 func init() {
-	PlatformConsentFile = PlatformSource + ConsentSourceBaseSeparator + DefaultConsentFilenameBase
+	PlatformConsentFile = PlatformSource + ConsentFilenameSuffix
 	initializePaths()
 	initializeOptOutPayload()
 }

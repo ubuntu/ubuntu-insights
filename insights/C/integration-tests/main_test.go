@@ -254,7 +254,7 @@ func validateConsent(t *testing.T, consentDir string) map[string]bool {
 	for _, entry := range cEntries {
 		require.False(t, entry.IsDir(), "Consent entry %s is a directory, expected file", entry.Name())
 		name := entry.Name()
-		source, found := strings.CutSuffix(name, constants.ConsentSourceBaseSeparator+constants.DefaultConsentFilenameBase)
+		source, found := strings.CutSuffix(name, constants.ConsentFilenameSuffix)
 		require.True(t, found, "Consent file name %s does not match expected pattern", name)
 		require.NotEmpty(t, source, "Failed to infer source from consent file name %s", name)
 
