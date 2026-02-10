@@ -1,6 +1,4 @@
 BasedOnStyle: Google
----
-Language: Cpp
 AllowShortFunctionsOnASingleLine: All
 DerivePointerAlignment: false
 InsertNewlineAtEOF: true
