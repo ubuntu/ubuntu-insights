@@ -1,7 +1,7 @@
 Test-Command: debian/tests/run-tests.sh
 Features: test-name=go_tests
 Restrictions: allow-stderr
-Depends: @builddeps@
+Depends: @builddeps@, @
 
 Test-Command: debian/tests/run-smoke-tests.sh
 Features: test-name=smoke_tests
