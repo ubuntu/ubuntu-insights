@@ -20,8 +20,6 @@ import (
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
 )
 
-const defaultConsentFixture = "true"
-
 func TestUpload(t *testing.T) {
 	t.Parallel()
 
@@ -35,7 +33,7 @@ func TestUpload(t *testing.T) {
 	tests := map[string]struct {
 		sources        []string
 		config         string
-		consentFixture string
+		consentFixture consentFixture
 		readOnlyFile   []string
 		maxReports     uint
 		time           int
@@ -46,8 +44,7 @@ func TestUpload(t *testing.T) {
 		responseCode        int
 		noServer            bool
 
-		removeReports        []string
-		removeDefaultConsent bool
+		removeReports []string
 
 		wantExitCode int
 	}{
@@ -103,14 +100,6 @@ func TestUpload(t *testing.T) {
 			sources: []string{"True"},
 			config:  "minAge.yaml",
 			time:    2501,
-			removeReports: []string{
-				"True/local/2000.json",
-				"True/uploaded/1000.json",
-			},
-		},
-		"True-Prioritizes local consent over Default False": {
-			sources:        []string{"True"},
-			consentFixture: "false",
 			removeReports: []string{
 				"True/local/2000.json",
 				"True/uploaded/1000.json",
@@ -237,65 +226,13 @@ func TestUpload(t *testing.T) {
 			wantExitCode: 1,
 		},
 
-		// Unknown
-		"Unknown-Consent falls back to default when not set": {
+		// Unknown consent
+		"Unknown-Consent does nothing": {
 			sources: []string{"Unknown-A"},
 			removeReports: []string{
 				"Unknown-A/local/2000.json",
 				"Unknown-A/uploaded/1000.json",
 			},
-		},
-		"Unknown-DryRun causes nothing to happen": {
-			sources: []string{"Unknown-A"},
-			config:  "dry.yaml",
-			removeReports: []string{
-				"Unknown-A/local/2000.json",
-				"Unknown-A/uploaded/1000.json",
-			},
-		},
-		"Unknown-Force uploads duplicate files": {
-			sources: []string{"Unknown-A"},
-			config:  "force.yaml",
-			removeReports: []string{
-				"Unknown-A/local/2000.json",
-			},
-		},
-
-		// Unknown Default False
-		"Unknown-Consent falls back to default when not set and respects no consent": {
-			sources:        []string{"Unknown-A"},
-			consentFixture: "false",
-			removeReports: []string{
-				"Unknown-A/local/2000.json",
-				"Unknown-A/uploaded/1000.json",
-			},
-		},
-		"Unknown-DryRun causes nothing to happen with false consent": {
-			sources:        []string{"Unknown-A"},
-			config:         "dry.yaml",
-			consentFixture: "false",
-			removeReports: []string{
-				"Unknown-A/local/2000.json",
-				"Unknown-A/uploaded/1000.json",
-			},
-		},
-		"Unknown-Force respects consent and uploads duplicate files": {
-			sources:        []string{"Unknown-A"},
-			config:         "force.yaml",
-			consentFixture: "false",
-			removeReports: []string{
-				"Unknown-A/local/2000.json",
-			},
-		},
-
-		// Unknown Default Not Set
-		"Unknown-Exits 0 when no consent set and does nothing": {
-			sources: []string{"Unknown-A"},
-			removeReports: []string{
-				"Unknown-A/local/2000.json",
-				"Unknown-A/uploaded/1000.json",
-			},
-			removeDefaultConsent: true,
 		},
 
 		// Multi Sources
@@ -307,6 +244,7 @@ func TestUpload(t *testing.T) {
 				"False/local/2000.json",
 				"False/uploaded/1000.json",
 			},
+			consentFixture: fixtureTrue,
 		},
 		"Multi-DryRun causes nothing to happen": {
 			sources: []string{"True", "False"},
@@ -317,6 +255,7 @@ func TestUpload(t *testing.T) {
 				"False/local/2000.json",
 				"False/uploaded/1000.json",
 			},
+			consentFixture: fixtureTrue,
 		},
 		"Multi-Force uploads duplicate files": {
 			sources: []string{"True", "False"},
@@ -325,10 +264,11 @@ func TestUpload(t *testing.T) {
 				"True/local/2000.json",
 				"False/local/2000.json",
 			},
+			consentFixture: fixtureTrue,
 		},
 
 		// All
-		"All-Uploads all reports for all sources detected": {
+		"All-Uploads all reports for all sources detected with consent": {
 			removeReports: []string{
 				"True/local/2000.json",
 				"True/uploaded/1000.json",
@@ -337,6 +277,7 @@ func TestUpload(t *testing.T) {
 				"Unknown-A/local/2000.json",
 				"Unknown-A/uploaded/1000.json",
 			},
+			consentFixture: fixtureTrue,
 		},
 		"All-DryRun causes nothing to happen": {
 			config: "dry.yaml",
@@ -348,6 +289,7 @@ func TestUpload(t *testing.T) {
 				"Unknown-A/local/2000.json",
 				"Unknown-A/uploaded/1000.json",
 			},
+			consentFixture: fixtureTrue,
 		},
 		"All-Force uploads duplicate files": {
 			config: "force.yaml",
@@ -427,8 +369,6 @@ func TestUpload(t *testing.T) {
 				"False/local/2000.json",
 				"False/uploaded/1000.json",
 			},
-			removeDefaultConsent: true,
-
 			initialResponseCode: http.StatusInternalServerError,
 			badCount:            2,
 			wantExitCode:        0,
@@ -536,18 +476,11 @@ func TestUpload(t *testing.T) {
 			}
 			server := s.URL
 
-			if tc.consentFixture == "" {
-				tc.consentFixture = defaultConsentFixture
-			}
-
-			paths := copyFixtures(t, tc.consentFixture)
+			paths := setupFixtures(t, tc.consentFixture)
 
 			// Remove files
 			for _, f := range tc.removeReports {
 				require.NoError(t, os.Remove(filepath.Join(paths.reports, f)), "Setup: failed to remove file")
-			}
-			if tc.removeDefaultConsent {
-				require.NoError(t, os.Remove(filepath.Join(paths.consent, "consent.toml")), "Setup: failed to remove default consent file")
 			}
 
 			for _, f := range tc.readOnlyFile {

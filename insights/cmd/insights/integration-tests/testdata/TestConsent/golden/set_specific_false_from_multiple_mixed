@@ -1,0 +1,24 @@
+Bad-Ext-consent.toml: |
+    consent_state = false
+Bad-Ext-consent.txt: consent_state=true
+Bad-File-consent.toml: |
+    consent_state = false
+Bad-Key-consent.toml: |
+    consent_state = false
+Bad-Value-consent.toml: |
+    consent_state = false
+Empty-consent.toml: |
+    consent_state = false
+Extra-Entries-consent.toml: |
+    consent_state = false
+False-consent.toml: |
+    consent_state = false
+Improper-Name-consent.toml: |
+    consent_state = false
+Improper-name.toml: consent_state=true
+Long-Source-True-consent.toml: |
+    consent_state = false
+Missing-consent.toml: |
+    consent_state = false
+True-consent.toml: |
+    consent_state = false

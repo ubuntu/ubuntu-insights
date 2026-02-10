@@ -1,5 +1,5 @@
 // Package consent is the implementation of the consent manager component.
-// The consent manager is responsible for managing consent files, which are used to store the consent state for a source or the default consent state.
+// The consent manager is responsible for managing consent files, which are used to store the consent state for a source.
 package consent
 
 import (
@@ -40,7 +40,7 @@ func New(l *slog.Logger, path string) *Manager {
 
 // GetState gets the consent state for the given source.
 // If the source do not have a consent file, it will be considered as a false state.
-// If the source is an empty string, then the default consent state will be returned.
+// If the source is an empty string, then the platform source consent state will be returned.
 // If the target consent file does not exist, it will not be created.
 // If the target consent file does not exist, then ErrConsentFileNotFound will be returned.
 func (cm Manager) GetState(source string) (state bool, err error) {
@@ -59,10 +59,10 @@ func (cm Manager) GetState(source string) (state bool, err error) {
 	return sourceConsent.ConsentState, nil
 }
 
-var consentSourceFilePattern = `%s` + constants.ConsentSourceBaseSeparator + constants.DefaultConsentFileName
+var consentSourceFilePattern = `%s` + constants.ConsentSourceBaseSeparator + constants.DefaultConsentFilenameBase
 
 // SetState updates the consent state for the given source.
-// If the source is an empty string, then the default consent state will be set.
+// If the source is an empty string, then the platform source consent state will be set.
 // If the target consent file does not exist, it will be created.
 func (cm Manager) SetState(source string, state bool) (err error) {
 	defer decorate.OnError(&err, "could not set consent state")
@@ -71,34 +71,17 @@ func (cm Manager) SetState(source string, state bool) (err error) {
 	return consent.write(cm.log, cm.getFile(source))
 }
 
-// HasConsent returns true if there is consent for the given source, based on the hierarchy rules.
-// If the source has a consent file, its value is returned.
-// Otherwise, the default consent state is returned.
-//
-// If the source state can't be gotten, and the default consent file does not exist, then ErrConsentFileNotFound will be returned.
-func (cm Manager) HasConsent(source string) (bool, error) {
-	consent, err := cm.GetState(source)
-	if err != nil {
-		cm.log.Warn("Could not get source specific consent state, falling back to default consent state", "source", source, "error", err)
-		return cm.GetState("")
-	}
-
-	return consent, nil
-}
-
 // getFile returns the expected path to the consent file for the given source.
-// If source is blank, it returns the path to the default consent file.
+// If source is blank, it returns the path to the platform source consent file.
 // It does not check if the file exists, or if it is valid.
 func (cm Manager) getFile(source string) string {
-	p := filepath.Join(cm.path, constants.DefaultConsentFileName)
-	if source != "" {
-		p = filepath.Join(cm.path, fmt.Sprintf(consentSourceFilePattern, source))
+	if source == "" {
+		source = constants.PlatformSource
 	}
-
-	return p
+	return filepath.Join(cm.path, fmt.Sprintf(consentSourceFilePattern, source))
 }
 
-// getSourceConsentFiles returns a map of all paths to validly named consent files in the folder, other than the default consent file.
+// getSourceConsentFiles returns a map of all paths to validly named consent files in the folder.
 func (cm Manager) getFiles() (map[string]string, error) {
 	sourceFiles := make(map[string]string)
 
@@ -113,10 +96,10 @@ func (cm Manager) getFiles() (map[string]string, error) {
 		}
 
 		// Source file
-		if !strings.HasSuffix(entry.Name(), constants.ConsentSourceBaseSeparator+constants.DefaultConsentFileName) {
+		if !strings.HasSuffix(entry.Name(), constants.ConsentSourceBaseSeparator+constants.DefaultConsentFilenameBase) {
 			continue
 		}
-		source := strings.TrimSuffix(entry.Name(), constants.ConsentSourceBaseSeparator+constants.DefaultConsentFileName)
+		source := strings.TrimSuffix(entry.Name(), constants.ConsentSourceBaseSeparator+constants.DefaultConsentFilenameBase)
 		sourceFiles[source] = filepath.Join(cm.path, entry.Name())
 		cm.log.Debug("Found source consent file", "file", sourceFiles[source])
 	}

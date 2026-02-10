@@ -31,8 +31,8 @@ const (
 	// UploadedFolder is the default name of the uploaded reports folder.
 	UploadedFolder = "uploaded"
 
-	// DefaultConsentFileName is the default base name of the consent state files.
-	DefaultConsentFileName = "consent.toml"
+	// DefaultConsentFilenameBase is the default base name of the consent state files.
+	DefaultConsentFilenameBase = "consent.toml"
 
 	// ConsentSourceBaseSeparator is the default separator between the source and the base name of the consent state files.
 	ConsentSourceBaseSeparator = "-"
@@ -42,9 +42,6 @@ const (
 
 	// MaxReports is the maximum number of report files that can exist in a folder.
 	MaxReports = 150
-
-	// DefaultCollectSource is the default source when none are provided.
-	DefaultCollectSource = runtime.GOOS
 
 	// DefaultPeriod is the default value for the collector's period.
 	DefaultPeriod = 0
@@ -68,9 +65,14 @@ var (
 	OptOutJSON = struct{ OptOut bool }{true}
 	// OptOutPayload is the marshalled version of OptOutJSON.
 	OptOutPayload []byte
+	// PlatformSource is the source used when a source is not specified.
+	PlatformSource = runtime.GOOS
+	// PlatformConsentFile is the default consent file name, used when a source is not specified.
+	PlatformConsentFile = ""
 )
 
 func init() {
+	PlatformConsentFile = PlatformSource + ConsentSourceBaseSeparator + DefaultConsentFilenameBase
 	initializePaths()
 	initializeOptOutPayload()
 }

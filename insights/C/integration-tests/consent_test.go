@@ -13,12 +13,12 @@ import (
 func TestSetConsent(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
-		state           bool
-		useSystemSource bool
+		state             bool
+		usePlatformSource bool
 	}{
 		"Set opt-in":        {state: true},
 		"Set opt-out":       {state: false},
-		"Set system opt-in": {state: true, useSystemSource: true},
+		"Set system opt-in": {state: true, usePlatformSource: true},
 	}
 
 	for name, tc := range tests {
@@ -27,8 +27,8 @@ func TestSetConsent(t *testing.T) {
 			fixture := setupTestFixture(t)
 
 			targetSource := fixture.source
-			if tc.useSystemSource {
-				targetSource = constants.DefaultCollectSource
+			if tc.usePlatformSource {
+				targetSource = ""
 			}
 
 			_, err := runDriver(t, fixture, "set-consent", "static-test-source", "false")
@@ -40,8 +40,8 @@ func TestSetConsent(t *testing.T) {
 			states := validateConsent(t, fixture.consentDir)
 
 			checkSource := targetSource
-			if tc.useSystemSource {
-				checkSource = "SYSTEM"
+			if tc.usePlatformSource {
+				checkSource = constants.PlatformSource
 			}
 
 			assert.Equal(t, tc.state, states[checkSource], "Consent state mismatch for %s", checkSource)
@@ -53,15 +53,15 @@ func TestSetConsent(t *testing.T) {
 func TestGetConsent(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
-		isNotSet        bool
-		initialState    bool
-		expectState     string
-		useSystemSource bool
+		isNotSet          bool
+		initialState      bool
+		expectState       string
+		usePlatformSource bool
 	}{
 		"Reads opt-in state":               {initialState: true, expectState: "1"},
 		"Reads opt-out state":              {initialState: false, expectState: "0"},
 		"Handles unset state":              {isNotSet: true, expectState: "-1"},
-		"Reads system source opt-in state": {initialState: true, expectState: "1", useSystemSource: true},
+		"Reads system source opt-in state": {initialState: true, expectState: "1", usePlatformSource: true},
 	}
 
 	for name, tc := range tests {
@@ -70,8 +70,8 @@ func TestGetConsent(t *testing.T) {
 			fixture := setupTestFixture(t)
 
 			targetSource := fixture.source
-			if tc.useSystemSource {
-				targetSource = constants.DefaultCollectSource
+			if tc.usePlatformSource {
+				targetSource = ""
 			}
 
 			if !tc.isNotSet {

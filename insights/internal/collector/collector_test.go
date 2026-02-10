@@ -28,7 +28,7 @@ type testConsentChecker struct {
 	err     error
 }
 
-func (m testConsentChecker) HasConsent(source string) (bool, error) {
+func (m testConsentChecker) GetState(source string) (bool, error) {
 	return m.consent, m.err
 }
 

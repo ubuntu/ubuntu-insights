@@ -5,6 +5,7 @@ package main
 import (
 	"os"
 
+	constantstestutils "github.com/ubuntu/ubuntu-insights/insights/internal/constants/testutils"
 	uploadertestutils "github.com/ubuntu/ubuntu-insights/insights/internal/uploader/testutils"
 )
 
@@ -16,4 +17,6 @@ func init() {
 	if os.Getenv("INSIGHTS_TEST_MAKE_PANIC") == "true" {
 		panic("Intentional panic triggered by INSIGHTS_TEST_MAKE_PANIC environment variable")
 	}
+
+	constantstestutils.Normalize()
 }

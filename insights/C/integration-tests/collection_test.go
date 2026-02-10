@@ -10,14 +10,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
-	"github.com/ubuntu/ubuntu-insights/insights/internal/constants"
 )
 
 func TestCollect(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
 		consentState      *bool // nil = unknown/default
-		useSystemSource   bool
+		usePlatformSource bool
 		extraArgs         []string
 		sourceMetrics     map[string]any
 		sourceMetricsRaw  string
@@ -35,8 +34,8 @@ func TestCollect(t *testing.T) {
 			consentState: boolPtr(false),
 		},
 		"System Collect with Consent": {
-			consentState:    boolPtr(true),
-			useSystemSource: true,
+			consentState:      boolPtr(true),
+			usePlatformSource: true,
 		},
 		"Source Metrics Valid JSON": {
 			consentState: boolPtr(true),
@@ -63,8 +62,8 @@ func TestCollect(t *testing.T) {
 			fixture.printReport = true
 
 			targetSource := fixture.source
-			if tc.useSystemSource {
-				targetSource = constants.DefaultCollectSource
+			if tc.usePlatformSource {
+				targetSource = ""
 			}
 
 			if tc.consentState != nil {

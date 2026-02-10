@@ -37,7 +37,7 @@ type Insights struct {
 
 // Consent is an interface for getting the consent state for a given source.
 type Consent interface {
-	HasConsent(source string) (bool, error)
+	GetState(source string) (bool, error)
 }
 
 // SysInfo is an interface for collecting system information.
@@ -110,7 +110,7 @@ type Config struct {
 func (c *Config) Sanitize(l *slog.Logger) error {
 	// Handle default source and source metrics.
 	if c.Source == "" { // Default source to platform
-		c.Source = constants.DefaultCollectSource
+		c.Source = constants.PlatformSource
 		l.Info("No source provided, defaulting to platform", "source", c.Source)
 	}
 
@@ -203,7 +203,7 @@ func (c collector) Write(insights Insights, period uint32, force, dryRun bool) (
 		return fmt.Errorf("failed to marshal insights: %v", err)
 	}
 
-	consent, err := c.consent.HasConsent(c.source)
+	consent, err := c.consent.GetState(c.source)
 	if err != nil {
 		return fmt.Errorf("failed to get consent state: %w", err)
 	}

@@ -1,14 +1,75 @@
-Bad-Ext-consent.txt: consent_state=true
-Bad-File-consent.toml: asdflkasdlkf;
-Bad-Key-consent.toml: consent_value="string value"
-Bad-Value-consent.toml: consent_state="string"
-Empty-consent.toml: ""
-Extra-Entries-consent.toml: |-
-    consent_state=true
-    extra_state=true
-False-consent.toml: |
-    consent_state = true
-Improper-name.toml: consent_state=true
-Long-Source-True-consent.toml: consent_state=true
-True-consent.toml: consent_state=true
-consent.toml: consent_state=true
+False/local/1.json: |-
+    {
+        "test": "1"
+    }
+False/local/500.json: |-
+    {
+        "test": "500"
+    }
+False/local/1000.json: |-
+    {
+        "duplicate": true
+    }
+False/local/2000.json: ""
+False/local/invalid.json: |-
+    {
+        "test": "500"
+    }
+False/uploaded/1000.json: |-
+    {
+        "duplicate": true
+    }
+False/uploaded/1500.json: |-
+    {
+        "only in uploaded": true
+    }
+True/local/1.json: |-
+    {
+        "test": "1"
+    }
+True/local/500.json: |-
+    {
+        "test": "500"
+    }
+True/local/1000.json: |-
+    {
+        "duplicate": true
+    }
+True/local/2000.json: ""
+True/local/invalid.json: |-
+    {
+        "test": "500"
+    }
+True/uploaded/1000.json: |-
+    {
+        "duplicate": true
+    }
+True/uploaded/1500.json: |-
+    {
+        "only in uploaded": true
+    }
+Unknown-A/local/1.json: |-
+    {
+        "test": "1"
+    }
+Unknown-A/local/500.json: |-
+    {
+        "test": "500"
+    }
+Unknown-A/local/1000.json: |-
+    {
+        "duplicate": true
+    }
+Unknown-A/local/2000.json: ""
+Unknown-A/local/invalid.json: |-
+    {
+        "test": "500"
+    }
+Unknown-A/uploaded/1000.json: |-
+    {
+        "duplicate": true
+    }
+Unknown-A/uploaded/1500.json: |-
+    {
+        "only in uploaded": true
+    }

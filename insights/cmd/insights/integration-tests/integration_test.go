@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/constants"
+	constantstestutils "github.com/ubuntu/ubuntu-insights/insights/internal/constants/testutils"
 )
 
 var cliPath string
@@ -24,6 +25,8 @@ type fixturePaths struct {
 }
 
 func TestMain(m *testing.M) {
+	constantstestutils.Normalize()
+
 	execPath, cleanup, err := buildCLI("-tags=integrationtests")
 	if err != nil {
 		log.Printf("Setup: failed to build CLI: %v", err)
@@ -82,8 +85,24 @@ func buildCLI(extraArgs ...string) (execPath string, cleanup func(), err error) 
 	return execPath, cleanup, err
 }
 
-// copyFixtures copies the fixture files to the temporary directory.
-func copyFixtures(t *testing.T, consentFixture string) fixturePaths {
+type consentFixture string
+
+const (
+	fixtureNone           consentFixture = ""
+	fixtureBadExt         consentFixture = "Bad-Ext-consent.txt"
+	fixtureBadFile        consentFixture = "Bad-File-consent.toml"
+	fixtureBadKey         consentFixture = "Bad-Key-consent.toml"
+	fixtureBadValue       consentFixture = "Bad-Value-consent.toml"
+	fixtureEmpty          consentFixture = "Empty-consent.toml"
+	fixtureExtraEntries   consentFixture = "Extra-Entries-consent.toml"
+	fixtureFalse          consentFixture = "False-consent.toml"
+	fixtureImproperName   consentFixture = "Improper-name.toml"
+	fixtureLongSourceTrue consentFixture = "Long-Source-True-consent.toml"
+	fixtureTrue           consentFixture = "True-consent.toml"
+)
+
+// setupFixtures copies the fixture files to the temporary directory and sets up the platform consent file to match the requested fixture. It returns the paths to the copied fixtures.
+func setupFixtures(t *testing.T, initialPlatformConsent consentFixture) fixturePaths {
 	t.Helper()
 	baseFixturesPath := filepath.Join("testdata", "fixtures")
 
@@ -95,9 +114,16 @@ func copyFixtures(t *testing.T, consentFixture string) fixturePaths {
 		base:          dir,
 	}
 
-	require.NoError(t, testutils.CopyDir(t, filepath.Join(baseFixturesPath, "consents", consentFixture), paths.consent), "Setup: failed to copy consents fixture")
+	require.NoError(t, testutils.CopyDir(t, filepath.Join(baseFixturesPath, "consents"), paths.consent), "Setup: failed to copy consents fixture")
 	require.NoError(t, testutils.CopyDir(t, filepath.Join(baseFixturesPath, "reports"), paths.reports), "Setup: failed to copy reports fixture")
 	require.NoError(t, testutils.CopyDir(t, filepath.Join(baseFixturesPath, "source-metrics"), paths.sourceMetrics), "Setup: failed to copy source-metrics fixture")
+
+	if initialPlatformConsent != "" {
+		file := constants.PlatformConsentFile[:len(constants.PlatformConsentFile)-len(filepath.Ext(constants.PlatformConsentFile))]
+		file += filepath.Ext(string(initialPlatformConsent))
+		err := testutils.CopyFile(t, filepath.Join(paths.consent, string(initialPlatformConsent)), filepath.Join(paths.consent, file))
+		require.NoError(t, err, "Setup: failed to setup platform consent file")
+	}
 
 	return paths
 }

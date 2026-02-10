@@ -1,0 +1,13 @@
+Bad-Ext-consent.txt: consent_state=true
+Bad-File-consent.toml: asdflkasdlkf;
+Bad-Key-consent.toml: consent_value="string value"
+Bad-Value-consent.toml: consent_state="string"
+Empty-consent.toml: ""
+Extra-Entries-consent.toml: |-
+    consent_state=true
+    extra_state=true
+False-consent.toml: consent_state=false
+Improper-name.toml: consent_state=true
+Long-Source-True-consent.toml: consent_state=true
+True-consent.toml: |
+    consent_state = true

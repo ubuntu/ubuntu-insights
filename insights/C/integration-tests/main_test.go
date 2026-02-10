@@ -22,13 +22,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/consent"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/constants"
+	constantstestutils "github.com/ubuntu/ubuntu-insights/insights/internal/constants/testutils"
 )
 
 const (
 	reportStartMarker = "REPORT_START"
 	reportEndMarker   = "REPORT_END"
-	systemSource      = "SYSTEM"
-	defaultSource     = "DEFAULT"
 )
 
 var (
@@ -37,6 +36,8 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	constantstestutils.Normalize()
+
 	// Get directories
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -253,15 +254,8 @@ func validateConsent(t *testing.T, consentDir string) map[string]bool {
 	for _, entry := range cEntries {
 		require.False(t, entry.IsDir(), "Consent entry %s is a directory, expected file", entry.Name())
 		name := entry.Name()
-		var source string
-		if name == "consent.toml" {
-			source = defaultSource
-		} else if before, ok := strings.CutSuffix(name, constants.ConsentSourceBaseSeparator+constants.DefaultConsentFileName); ok {
-			source = before
-			if before == constants.DefaultCollectSource {
-				source = systemSource
-			}
-		}
+		source, found := strings.CutSuffix(name, constants.ConsentSourceBaseSeparator+constants.DefaultConsentFilenameBase)
+		require.True(t, found, "Consent file name %s does not match expected pattern", name)
 		require.NotEmpty(t, source, "Failed to infer source from consent file name %s", name)
 
 		var c consent.CFile
@@ -292,10 +286,6 @@ func validateReports(t *testing.T, insightsDir string) map[string]ReportCounts {
 		parts := strings.Split(rel, string(os.PathSeparator))
 		require.Len(t, parts, 3, "Unexpected report path structure: %s", rel)
 		source := parts[0]
-
-		if source == constants.DefaultCollectSource {
-			source = systemSource
-		}
 
 		content, err := os.ReadFile(path)
 		require.NoError(t, err)

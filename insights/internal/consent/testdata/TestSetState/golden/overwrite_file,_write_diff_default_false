@@ -1,6 +1,0 @@
-states:
-    empty: false
-    extra_key: false
-    valid_false: false
-    valid_true: true
-filecount: 9

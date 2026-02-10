@@ -105,7 +105,7 @@ type Options func(*options)
 
 // Consent is an interface for getting the consent state for a given source.
 type Consent interface {
-	HasConsent(source string) (bool, error)
+	GetState(source string) (bool, error)
 }
 
 // New returns a new UploaderManager.

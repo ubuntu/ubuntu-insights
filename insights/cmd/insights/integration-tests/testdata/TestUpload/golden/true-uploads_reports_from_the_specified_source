@@ -45,6 +45,14 @@ reportscontents:
             "id": "1500 False uploaded",
             "only in uploaded": true
         }
+    PLATFORM-SOURCE/local/1.json: |
+        {
+            "id": "1 SYSTEM-SOURCE local"
+        }
+    PLATFORM-SOURCE/uploaded/1000.json: |
+        {
+            "id": "1000 SYSTEM-SOURCE uploaded"
+        }
     True/local/invalid.json: "{   \n    \"id\": \"invalid True local\"\n}"
     True/uploaded/1.json: |-
         {

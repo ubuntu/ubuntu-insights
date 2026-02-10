@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"math"
 	"math/big"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -26,82 +25,80 @@ func TestCollect(t *testing.T) {
 	tests := map[string]struct {
 		args []string
 
-		consentDir       string
-		noDefaultConsent bool
+		platformConsent consentFixture
 
 		wantErr      bool
 		wantUsageErr bool
 	}{
+		// Platform source basic cases
 		"Collect Basic": {
-			args: []string{"collect"},
-		},
-		"Collect source normal": {
-			args: []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json")},
-		}, "Collect source normal, period": {
-			args: []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "--period=10"},
-		}, "Collect source normal, dry-run": {
-			args: []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "--dry-run"},
-		}, "Collect source normal, period, dry-run": {
-			args: []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "--period=10", "--dry-run"},
-		}, "Collect source normal, period, dry-run, force": {
-			args: []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "--period=10", "--dry-run", "--force"},
+			args: []string{"collect"}, platformConsent: fixtureTrue,
 		}, "Collect dry run, verbose 1": {
 			args: []string{"collect", "--dry-run", "-v"},
 		}, "Collect dry run, verbose 2": {
 			args: []string{"collect", "--dry-run", "-vv"},
-		}, "Collect False-consent source": {
-			args: []string{"collect", "False", filepath.Join("testdata", "source_metrics", "normal.json")},
-		}, "Collect Bad-File-consent source": {
-			args: []string{"collect", "Bad-File", filepath.Join("testdata", "source_metrics", "normal.json")},
-		}, "Does not error with the quiet flag": {
-			args: []string{"collect", "--dry-run", "--quiet"},
 		},
 
-		"Exit 0 when no consent files": {
-			args:             []string{"collect", "Unknown", filepath.Join("testdata", "source_metrics", "normal.json")},
-			noDefaultConsent: true,
+		// Specific source basic cases
+		"Collect source normal": {
+			args: []string{"collect", "source", getSourceMetricsPath("normal.json")},
+		}, "Collect source normal, period": {
+			args: []string{"collect", "source", getSourceMetricsPath("normal.json"), "--period=10"},
+		}, "Collect source normal, dry-run": {
+			args: []string{"collect", "source", getSourceMetricsPath("normal.json"), "--dry-run"},
+		}, "Collect source normal, period, dry-run": {
+			args: []string{"collect", "source", getSourceMetricsPath("normal.json"), "--period=10", "--dry-run"},
+		}, "Collect source normal, period, dry-run, force": {
+			args: []string{"collect", "source", getSourceMetricsPath("normal.json"), "--period=10", "--dry-run", "--force"},
 		},
 
-		// Error cases
-		"Collect Source no Metrics": {
+		// Argument usage errors
+		"Errors when specifying a source and the source metrics file is not provided": {
 			args:         []string{"collect", "source"},
 			wantErr:      true,
 			wantUsageErr: true,
-		},
-		"Collect source dir": {
-			args:         []string{"collect", "source", filepath.Join("testdata", "source_metrics")},
-			wantErr:      true,
-			wantUsageErr: true,
-		}, "Collect source invalid path": {
+		}, "Errors when the source metrics path does not exist": {
 			args:         []string{"collect", "source", "invalid-path"},
 			wantErr:      true,
 			wantUsageErr: true,
-		}, "Collect bad flag": {
-			args:         []string{"collect", "--bad-flag"},
+		}, "Errors when the source metrics path is a directory": {
+			args:         []string{"collect", "source", getSourceMetricsPath("")},
 			wantErr:      true,
 			wantUsageErr: true,
-		}, "Collect period not int": {
-			args:         []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "--period=not-int"},
+		}, "Errors when extra arguments are provided": {
+			args:         []string{"collect", "source", getSourceMetricsPath("normal.json"), "extra-arg"},
 			wantErr:      true,
 			wantUsageErr: true,
-		}, "Collect period negative": {
-			args:         []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "--period=-1"},
+		},
+		"Errors when passing source metrics to platform source": {
+			args:         []string{"collect", getSourceMetricsPath("normal.json")},
 			wantErr:      true,
 			wantUsageErr: true,
-		}, "Collect period overflow": {
-			args:         []string{"collect", fmt.Sprintf("--period=%s", overflowInt.String())},
-			wantErr:      true,
-			wantUsageErr: true,
-		}, "Collect nArgs 3": {
-			args:         []string{"collect", "source", filepath.Join("testdata", "source_metrics", "normal.json"), "extra-arg"},
-			wantErr:      true,
-			wantUsageErr: true,
-		}, "Errors when verbose and quiet are used together": {
+		},
+
+		// Flag usage errors
+		"Errors when verbose and quiet are used together": {
 			args:         []string{"collect", "--verbose", "--quiet"},
 			wantErr:      true,
 			wantUsageErr: true,
 		}, "Errors propagate with the quiet flag": {
 			args:         []string{"collect", "source", "--quiet"},
+			wantErr:      true,
+			wantUsageErr: true,
+		}, "Errors when an unknown flag is provided": {
+			args:         []string{"collect", "--bad-flag"},
+			wantErr:      true,
+			wantUsageErr: true,
+		}, "Errors when the period value is not an integer": {
+			args:         []string{"collect", "source", getSourceMetricsPath("normal.json"), "--period=not-int"},
+			wantErr:      true,
+			wantUsageErr: true,
+		}, "Errors when the period value is negative": {
+			args:         []string{"collect", "source", getSourceMetricsPath("normal.json"), "--period=-1"},
+			wantErr:      true,
+			wantUsageErr: true,
+		}, "Errors when the period value overflows": {
+			args:         []string{"collect", fmt.Sprintf("--period=%s", overflowInt.String())},
 			wantErr:      true,
 			wantUsageErr: true,
 		},
@@ -111,10 +108,6 @@ func TestCollect(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.consentDir == "" {
-				tc.consentDir = "true"
-			}
-
 			var gotConfig collector.Config
 			mc := &mockCollector{}
 			newCollector := func(l *slog.Logger, cm collector.Consent, c collector.Config, args ...collector.Options) (collector.Collector, error) {
@@ -123,10 +116,7 @@ func TestCollect(t *testing.T) {
 				return mc, nil
 			}
 
-			a, consentPath, cachePath := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewCollector(newCollector))
-			if tc.noDefaultConsent {
-				require.NoError(t, os.Remove(filepath.Join(consentPath, "consent.toml")), "Setup: could not remove default consent file")
-			}
+			a, cachePath := newAppForTests(t, tc.args, tc.platformConsent, commands.WithNewCollector(newCollector))
 
 			err := a.Run()
 			if tc.wantErr {
@@ -168,7 +158,7 @@ func TestCollectCollectorErrors(t *testing.T) {
 		wantErr bool
 	}{
 		"No Errors": {},
-		"Consent file not error does not return error": {
+		"Consent file not found error does not return error": {
 			writeErr: consent.ErrConsentFileNotFound,
 		},
 
@@ -194,7 +184,7 @@ func TestCollectCollectorErrors(t *testing.T) {
 				return mc, nil
 			}
 
-			a, _, _ := commands.NewAppForTests(t, []string{"collect"}, "true", commands.WithNewCollector(newCollector))
+			a, _ := newAppForTests(t, []string{"collect"}, fixtureTrue, commands.WithNewCollector(newCollector))
 			err := a.Run()
 
 			assert.False(t, a.UsageError(), "Expected no usage error")
@@ -239,7 +229,7 @@ func TestNewError(t *testing.T) {
 				return mc, mc.compileErr
 			}
 
-			a, _, _ := commands.NewAppForTests(t, []string{"collect"}, "true", commands.WithNewCollector(newCollector))
+			a, _ := newAppForTests(t, []string{"collect"}, fixtureTrue, commands.WithNewCollector(newCollector))
 			err := a.Run()
 
 			assert.Equal(t, tc.wantUsageErr, a.UsageError(), "Unexpected usage error state")
@@ -250,6 +240,10 @@ func TestNewError(t *testing.T) {
 			require.NoError(t, err, "Unexpected error running collect command")
 		})
 	}
+}
+
+func getSourceMetricsPath(name string) string {
+	return filepath.Join("testdata", "source_metrics", name)
 }
 
 type mockCollector struct {
