@@ -26,7 +26,8 @@ jobs:
 
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             # On pull requests, HEAD^1 will always be the merge base, so consider that diff for formatting.
-            git diff -U0 --no-color HEAD^1 \
+            git diff -U0 --no-color HEAD^1 -- \
+              '*.c' '*.h' '*.C' '*.H' \
               | clang-format-diff -p1 \
               | tee ${HOME}/clang-diff
           else
