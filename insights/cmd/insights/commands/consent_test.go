@@ -8,7 +8,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
 )
 
-func TestConsent(t *testing.T) {
+func TestGetConsent(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
 		args []string
@@ -38,6 +38,50 @@ func TestConsent(t *testing.T) {
 
 		"Get errors when source missing": {args: []string{"consent", "unknown"}, wantErr: true},
 
+		// Usage Errors
+		"Usage errors when passing bad flag":                    {args: []string{"consent", "-unknown"}, wantUsageErr: true, wantErr: true},
+		"Usage errors when verbose and quiet are used together": {args: []string{"consent", "--verbose", "--quiet"}, wantErr: true, wantUsageErr: true},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			app, configDir := newAppForTests(t, tc.args, tc.platformConsent)
+			preRunDirContents, err := testutils.GetDirContents(t, configDir, 2)
+			require.NoError(t, err, "Setup: failed to read consent config dir")
+
+			err = app.Run()
+			if tc.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			if tc.wantUsageErr {
+				assert.True(t, app.UsageError())
+			} else {
+				assert.False(t, app.UsageError())
+			}
+
+			postRunDirContents, err := testutils.GetDirContents(t, configDir, 2)
+			require.NoError(t, err)
+
+			require.Equal(t, preRunDirContents, postRunDirContents, "Unexpected consent files state")
+		},
+		)
+	}
+}
+
+func TestSetConsent(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		args []string
+
+		platformConsent consentFixture
+
+		wantUsageErr bool
+	}{
 		// Set
 		"Set platform to new value":   {args: []string{"consent", "--state=false"}, platformConsent: fixtureTrue},
 		"Set platform to same value":  {args: []string{"consent", "--state=true"}, platformConsent: fixtureTrue},
@@ -52,10 +96,8 @@ func TestConsent(t *testing.T) {
 		"Does not error with the quiet flag": {args: []string{"consent", "--state=false", "--quiet"}},
 
 		// Usage Errors
-		"Usage errors when passing bad flag":                    {args: []string{"consent", "-unknown"}, wantUsageErr: true, wantErr: true},
-		"Usage errors when unparsable state is passed":          {args: []string{"consent", "-s=bad"}, wantUsageErr: true, wantErr: true},
-		"Usage errors when verbose and quiet are used together": {args: []string{"consent", "--verbose", "--quiet"}, wantErr: true, wantUsageErr: true},
-		"Usage errors propagate with the quiet flag":            {args: []string{"consent", "-s=bad", "--quiet"}, wantErr: true, wantUsageErr: true},
+		"Usage errors when unparsable state is passed": {args: []string{"consent", "-s=bad"}, wantUsageErr: true},
+		"Usage errors propagate with the quiet flag":   {args: []string{"consent", "-s=bad", "--quiet"}, wantUsageErr: true},
 	}
 
 	for name, tc := range tests {
@@ -65,15 +107,11 @@ func TestConsent(t *testing.T) {
 			app, configDir := newAppForTests(t, tc.args, tc.platformConsent)
 
 			err := app.Run()
-			if tc.wantErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
-
 			if tc.wantUsageErr {
+				require.Error(t, err)
 				assert.True(t, app.UsageError())
 			} else {
+				require.NoError(t, err)
 				assert.False(t, app.UsageError())
 			}
 
