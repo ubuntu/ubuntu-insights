@@ -49,6 +49,7 @@ jobs:
           echo "matrix=$(echo "${RAW_MATRIX}" | jq -c .)"  >> $GITHUB_OUTPUT
 
   c-sanity:
+    name: "C: Code sanity"
     uses: ./.github/workflows/c-sanity.yaml
 
   go-sanity:
