@@ -22,29 +22,20 @@ func TestCollect(t *testing.T) {
 		source         string
 		sourceMetrics  string
 		config         string
-		consentFixture string
+		consentFixture consentFixture
 		readOnlyFile   []string
 		maxReports     uint
 		time           int
 		sysinfoErr     bool
 		platformOnly   string
 
-		useSysinfo           bool
-		removeDefaultConsent bool
+		useSysinfo bool
 
 		skipReportCheck bool
 		wantExitCode    int
 	}{
-		// Platform
-		"Platform Linux": {
-			platformOnly: "linux",
-		},
-		"Platform Windows": {
-			platformOnly: "windows",
-		},
-		"Platform Darwin": {
-			platformOnly: "darwin",
-		},
+		// Platform source
+		"Uses platform source when no specific source is passed": {consentFixture: fixtureTrue},
 
 		// True Consent
 		"True Normal": {
@@ -68,12 +59,12 @@ func TestCollect(t *testing.T) {
 		"True Normal Default False": {
 			source:         "True",
 			sourceMetrics:  "normal.json",
-			consentFixture: "false",
+			consentFixture: fixtureFalse,
 		},
 		"True Normal Default Bad-file": {
 			source:         "True",
 			sourceMetrics:  "normal.json",
-			consentFixture: "bad-file",
+			consentFixture: fixtureBadFile,
 		},
 		"True Normal Force": {
 			source:        "True",
@@ -143,31 +134,9 @@ func TestCollect(t *testing.T) {
 		},
 
 		// Unknown Consent
-		"Unknown-A Normal": {
+		"Exit 0 no metrics if unable to read source consent": {
 			source:        "Unknown-A",
 			sourceMetrics: "normal.json",
-		},
-		"Unknown-A Invalid": {
-			source:        "Unknown-A",
-			sourceMetrics: "invalid.json",
-			wantExitCode:  1,
-		},
-		"Unknown-A Normal Default False": {
-			source:         "Unknown-A",
-			sourceMetrics:  "normal.json",
-			consentFixture: "false",
-		},
-		"Unknown-A Invalid Default False": {
-			source:         "Unknown-A",
-			sourceMetrics:  "invalid.json",
-			consentFixture: "false",
-			wantExitCode:   1,
-		},
-		"Unknown-A Normal Default Bad-file": {
-			source:         "Unknown-A",
-			sourceMetrics:  "normal.json",
-			consentFixture: "bad-file",
-			wantExitCode:   1,
 		},
 
 		// SysInfo Tests
@@ -192,11 +161,10 @@ func TestCollect(t *testing.T) {
 			useSysinfo:    true,
 		},
 
-		"Exit 0 no metrics if unable to read source consent and no default consent file": {
-			source:               "Unknown-B",
-			sourceMetrics:        "normal.json",
-			useSysinfo:           true,
-			removeDefaultConsent: true,
+		"Exit 0 no metrics if unable to read source consent with sysinfo": {
+			source:        "Unknown-A",
+			sourceMetrics: "normal.json",
+			useSysinfo:    true,
 		},
 	}
 
@@ -212,14 +180,8 @@ func TestCollect(t *testing.T) {
 				tc.time = defaultTime
 			}
 
-			if tc.consentFixture == "" {
-				tc.consentFixture = defaultConsentFixture
-			}
-			paths := copyFixtures(t, tc.consentFixture)
+			paths := setupFixtures(t, tc.consentFixture)
 
-			if tc.removeDefaultConsent {
-				require.NoError(t, os.Remove(filepath.Join(paths.consent, "consent.toml")))
-			}
 			for _, f := range tc.readOnlyFile {
 				testutils.MakeReadOnly(t, filepath.Join(paths.consent, f))
 			}

@@ -1,7 +1,6 @@
 package consent
 
 // GetAllSourceConsentStates gets the consent states for all sources.
-// It does not get the default consent state.
 // If continueOnErr is true, it will continue to the next source if an error occurs.
 func (cm Manager) GetAllSourceConsentStates(continueOnErr bool) (map[string]bool, error) {
 	p, err := cm.getFiles()

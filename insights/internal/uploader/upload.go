@@ -83,7 +83,7 @@ func (um Uploader) Upload(source string, force bool) error {
 		return err
 	}
 
-	consent, err := um.consent.HasConsent(source)
+	consent, err := um.consent.GetState(source)
 	if err != nil {
 		return fmt.Errorf("upload failed to get consent state: %w", err)
 	}

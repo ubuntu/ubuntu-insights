@@ -5,23 +5,11 @@ payloads:
       }
     - |-
       {
-          "id": "1 Unknown-A local"
-      }
-    - |-
-      {
           "id": "2501 True local"
       }
     - |-
       {
-          "id": "2501 Unknown-A local"
-      }
-    - |-
-      {
           "id": "500 True local"
-      }
-    - |-
-      {
-          "id": "500 Unknown-A local"
       }
     - '{"OptOut":true}'
     - '{"OptOut":true}'
@@ -54,6 +42,14 @@ reportscontents:
         {
             "id": "1500 False uploaded",
             "only in uploaded": true
+        }
+    PLATFORM-SOURCE/local/1.json: |
+        {
+            "id": "1 SYSTEM-SOURCE local"
+        }
+    PLATFORM-SOURCE/uploaded/1000.json: |
+        {
+            "id": "1000 SYSTEM-SOURCE uploaded"
         }
     True/local/1.json: |-
         {

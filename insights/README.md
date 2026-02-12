@@ -73,18 +73,18 @@ Global Flags:
 
 #### Examples
 
-To get the default consent state using the default consent directory:
+To get the platform consent state (linux/windows/darwin depending on your platform) using the default consent directory:
 
 ```console
 foo@bar:~$ ubuntu-insights consent
-Global: false
+linux: false
 ```
 
-To set the consent state for the source `linux`:
+To set the consent state for the source `wsl_setup`:
 
 ```console
-foo@bar:~$ ubuntu-insights consent linux -s true
-linux: true
+foo@bar:~$ ubuntu-insights consent wsl_setup -s true
+wsl_setup: true
 ```
 
 ### ubuntu-insights collect

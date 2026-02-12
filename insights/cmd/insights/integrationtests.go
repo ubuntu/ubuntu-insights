@@ -87,6 +87,7 @@ func init() {
 	}
 
 	constants.Version = "Dev"
+	constants.PlatformSource = "PLATFORM-SOURCE"
 }
 
 type testSysInfo struct {

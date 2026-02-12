@@ -1,4 +1,5 @@
 states:
+    PLATFORM-SOURCE: true
     empty: false
     extra_key: false
     valid_false: true

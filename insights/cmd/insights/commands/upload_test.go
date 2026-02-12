@@ -2,8 +2,6 @@ package commands_test
 
 import (
 	"log/slog"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -17,8 +15,7 @@ func TestUpload(t *testing.T) {
 	tests := map[string]struct {
 		args []string
 
-		consentDir        string
-		noDefaultConsent  bool
+		defaultConsent    consentFixture
 		useReportsFixture bool
 
 		wantErr      bool
@@ -52,12 +49,12 @@ func TestUpload(t *testing.T) {
 			args: []string{"upload", "--retry"},
 		},
 		"Does not error when no consent files": {
-			args:             []string{"upload", "Unknown"},
-			noDefaultConsent: true,
+			args:           []string{"upload", "Unknown"},
+			defaultConsent: fixtureNone,
 		},
 		"Does not error when no consent files and retry": {
-			args:             []string{"upload", "Unknown", "--retry"},
-			noDefaultConsent: true,
+			args:           []string{"upload", "Unknown", "--retry"},
+			defaultConsent: fixtureNone,
 		},
 
 		// Error cases
@@ -97,10 +94,6 @@ func TestUpload(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.consentDir == "" {
-				tc.consentDir = "true"
-			}
-
 			dir := t.TempDir()
 			if tc.useReportsFixture {
 				require.NoError(t, testutils.CopyDir(t, "testdata/reports", dir), "Setup: could not copy reports dir")
@@ -116,11 +109,7 @@ func TestUpload(t *testing.T) {
 
 				return uploader.New(l, cm, dir, minAge, true, args...)
 			}
-			a, cDir, _ := commands.NewAppForTests(t, tc.args, tc.consentDir, commands.WithNewUploader(newUploader))
-
-			if tc.noDefaultConsent {
-				require.NoError(t, os.Remove(filepath.Join(cDir, "consent.toml")), "Setup: could not remove default consent file")
-			}
+			a, _ := newAppForTests(t, tc.args, tc.defaultConsent, commands.WithNewUploader(newUploader))
 
 			err := a.Run()
 			if tc.wantErr {

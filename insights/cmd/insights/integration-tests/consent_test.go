@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
+	"github.com/ubuntu/ubuntu-insights/insights/internal/constants"
 )
 
 func TestConsent(t *testing.T) {
@@ -24,75 +25,75 @@ func TestConsent(t *testing.T) {
 	tests := map[string]struct {
 		state          string
 		config         string
-		consentFixture string
+		consentFixture consentFixture
 		readOnlyFile   []string
 
 		ignoreGolden bool
 		wantExitCode int
 	}{
-		// Get Default
-		"Get Default True":      {config: "default.yaml", consentFixture: "true"},
-		"Get Default False":     {config: "default.yaml", consentFixture: "false"},
-		"Get Default Empty":     {config: "default.yaml", consentFixture: "empty"},
-		"Get Default Bad-Value": {config: "default.yaml", consentFixture: "bad-value", wantExitCode: 1},
-		"Get Default Bad-Key":   {config: "default.yaml", consentFixture: "bad-key"},
-		"Get Default Bad-File":  {config: "default.yaml", consentFixture: "bad-file", wantExitCode: 1},
-		"Get Default Bad-Ext":   {config: "default.yaml", consentFixture: "bad-ext", wantExitCode: 1},
+		// Get platform source
+		"Get platform true state":                  {consentFixture: fixtureTrue},
+		"Get platform false state":                 {consentFixture: fixtureFalse},
+		"Get platform empty state":                 {consentFixture: fixtureEmpty},
+		"Get platform bad value returns error":     {consentFixture: fixtureBadValue, wantExitCode: 1},
+		"Get platform bad key":                     {consentFixture: fixtureBadKey},
+		"Get platform bad file returns error":      {consentFixture: fixtureBadFile, wantExitCode: 1},
+		"Get platform bad extension returns error": {consentFixture: fixtureBadExt, wantExitCode: 1},
 
-		// Get Source
-		"Get Source True":           {config: "true.yaml"},
-		"Get Source Multiple":       {config: "multiple.yaml"},
-		"Get Source Bad-Ext":        {config: "bad-ext.yaml", wantExitCode: 1},
-		"Get Source Bad-File":       {config: "bad-file.yaml", wantExitCode: 1},
-		"Get Source Bad-Key":        {config: "bad-key.yaml"},
-		"Get Source Bad-Value":      {config: "bad-value.yaml", wantExitCode: 1},
-		"Get Source Empty":          {config: "empty.yaml", wantExitCode: 1},
-		"Get Source Missing":        {config: "missing.yaml", wantExitCode: 1},
-		"Get Source Multiple Err":   {config: "multiple-err.yaml", wantExitCode: 1},
-		"Get Source Multiple Mixed": {config: "multiple-mixed.yaml", wantExitCode: 1},
+		// Get specific source
+		"Get specific true state":                    {config: "true.yaml"},
+		"Get specific multiple states":               {config: "multiple.yaml"},
+		"Get specific bad extension returns error":   {config: "bad-ext.yaml", wantExitCode: 1},
+		"Get specific bad file returns error":        {config: "bad-file.yaml", wantExitCode: 1},
+		"Get specific bad key":                       {config: "bad-key.yaml"},
+		"Get specific bad value returns error":       {config: "bad-value.yaml", wantExitCode: 1},
+		"Get specific empty file returns error":      {config: "empty.yaml", wantExitCode: 1},
+		"Get specific missing file returns error":    {config: "missing.yaml", wantExitCode: 1},
+		"Get specific multiple errors returns error": {config: "multiple-err.yaml", wantExitCode: 1},
+		"Get specific multiple mixed returns error":  {config: "multiple-mixed.yaml", wantExitCode: 1},
 
-		// Set Default
-		"Set Default True T":      {state: "true", config: "default.yaml", consentFixture: "true"},
-		"Set Default False T":     {state: "true", config: "default.yaml", consentFixture: "false"},
-		"Set Default Empty T":     {state: "true", config: "default.yaml", consentFixture: "empty"},
-		"Set Default Bad-Value T": {state: "true", config: "default.yaml", consentFixture: "bad-value"},
-		"Set Default Bad-Key T":   {state: "true", config: "default.yaml", consentFixture: "bad-key"},
-		"Set Default Bad-File T":  {state: "true", config: "default.yaml", consentFixture: "bad-file"},
-		"Set Default Bad-Ext T":   {state: "true", config: "default.yaml", consentFixture: "bad-ext"},
+		// Set platform source
+		"Set platform true from true state":    {state: "true", consentFixture: fixtureTrue},
+		"Set platform true from false state":   {state: "true", consentFixture: fixtureFalse},
+		"Set platform true from empty state":   {state: "true", consentFixture: fixtureEmpty},
+		"Set platform true from bad value":     {state: "true", consentFixture: fixtureBadValue},
+		"Set platform true from bad key":       {state: "true", consentFixture: fixtureBadKey},
+		"Set platform true from bad file":      {state: "true", consentFixture: fixtureBadFile},
+		"Set platform true from bad extension": {state: "true", consentFixture: fixtureBadExt},
 
-		"Set Default True F":      {state: "false", config: "default.yaml", consentFixture: "true"},
-		"Set Default False F":     {state: "false", config: "default.yaml", consentFixture: "false"},
-		"Set Default Empty F":     {state: "false", config: "default.yaml", consentFixture: "empty"},
-		"Set Default Bad-Value F": {state: "false", config: "default.yaml", consentFixture: "bad-value"},
-		"Set Default Bad-Key F":   {state: "false", config: "default.yaml", consentFixture: "bad-key"},
-		"Set Default Bad-File F":  {state: "false", config: "default.yaml", consentFixture: "bad-file"},
-		"Set Default Bad-Ext F":   {state: "false", config: "default.yaml", consentFixture: "bad-ext"},
+		"Set platform false from true state":    {state: "false", consentFixture: fixtureTrue},
+		"Set platform false from false state":   {state: "false", consentFixture: fixtureFalse},
+		"Set platform false from empty state":   {state: "false", consentFixture: fixtureEmpty},
+		"Set platform false from bad value":     {state: "false", consentFixture: fixtureBadValue},
+		"Set platform false from bad key":       {state: "false", consentFixture: fixtureBadKey},
+		"Set platform false from bad file":      {state: "false", consentFixture: fixtureBadFile},
+		"Set platform false from bad extension": {state: "false", consentFixture: fixtureBadExt},
 
-		"Set Default True Invalid":  {state: "invalid", config: "default.yaml", consentFixture: "true", wantExitCode: 2},
-		"Set Default False Invalid": {state: "invalid", config: "default.yaml", consentFixture: "false", wantExitCode: 2},
-		"Set Default Empty Invalid": {state: "invalid", config: "default.yaml", consentFixture: "empty", wantExitCode: 2},
+		"Set platform invalid from true state returns usage error":  {state: "invalid", consentFixture: fixtureTrue, wantExitCode: 2},
+		"Set platform invalid from false state returns usage error": {state: "invalid", consentFixture: fixtureFalse, wantExitCode: 2},
+		"Set platform invalid from empty state returns usage error": {state: "invalid", consentFixture: fixtureEmpty, wantExitCode: 2},
 
-		// Set Source
-		"Set Source True T":           {state: "true", config: "true.yaml"},
-		"Set Source False T":          {state: "true", config: "false.yaml"},
-		"Set Source Multiple Mixed T": {state: "true", config: "multiple-mixed.yaml"},
-		"Set Source Missing T":        {state: "true", config: "missing.yaml"},
+		// Set specific source
+		"Set specific true from true state":     {state: "true", config: "true.yaml"},
+		"Set specific true from false state":    {state: "true", config: "false.yaml"},
+		"Set specific true from multiple mixed": {state: "true", config: "multiple-mixed.yaml"},
+		"Set specific true from missing file":   {state: "true", config: "missing.yaml"},
 
-		"Set Source True F":           {state: "false", config: "true.yaml"},
-		"Set Source False F":          {state: "false", config: "false.yaml"},
-		"Set Source Multiple Mixed F": {state: "false", config: "multiple-mixed.yaml"},
+		"Set specific false from true state":     {state: "false", config: "true.yaml"},
+		"Set specific false from false state":    {state: "false", config: "false.yaml"},
+		"Set specific false from multiple mixed": {state: "false", config: "multiple-mixed.yaml"},
 
-		"Set Source True Invalid":           {state: "invalid", config: "true.yaml", wantExitCode: 2},
-		"Set Source False Invalid":          {state: "invalid", config: "false.yaml", wantExitCode: 2},
-		"Set Source Multiple Mixed Invalid": {state: "invalid", config: "multiple-mixed.yaml", wantExitCode: 2},
+		"Set specific invalid from true state returns usage error":     {state: "invalid", config: "true.yaml", wantExitCode: 2},
+		"Set specific invalid from false state returns usage error":    {state: "invalid", config: "false.yaml", wantExitCode: 2},
+		"Set specific invalid from multiple mixed returns usage error": {state: "invalid", config: "multiple-mixed.yaml", wantExitCode: 2},
 
 		// Set Read Only
-		"Set Default Read Only": {
-			state: "false", config: "default.yaml", consentFixture: "true", readOnlyFile: []string{"consent.toml"},
+		"Set platform against read only file returns error": {
+			state: "false", consentFixture: fixtureTrue, readOnlyFile: []string{constants.PlatformConsentFile},
 			ignoreGolden: runtime.GOOS != "windows",
 			wantExitCode: readOnlyErrorCode()},
-		"Set Source Read Only": {
-			state: "false", config: "true.yaml", readOnlyFile: []string{"True-consent.toml"},
+		"Set specific against read only file returns error": {
+			state: "false", config: "true.yaml", consentFixture: fixtureTrue, readOnlyFile: []string{"True-consent.toml"},
 			ignoreGolden: runtime.GOOS != "windows",
 			wantExitCode: readOnlyErrorCode()},
 	}
@@ -101,11 +102,12 @@ func TestConsent(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.consentFixture == "" {
-				tc.consentFixture = defaultConsentFixture
+			if tc.config == "" {
+				tc.config = "default.yaml"
 			}
+
 			tc.config = filepath.Join("testdata", "configs", "consent", tc.config)
-			paths := copyFixtures(t, tc.consentFixture)
+			paths := setupFixtures(t, tc.consentFixture)
 
 			for _, f := range tc.readOnlyFile {
 				testutils.MakeReadOnly(t, filepath.Join(paths.consent, f))

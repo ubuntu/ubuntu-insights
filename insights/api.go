@@ -145,7 +145,7 @@ func (c Config) Compile(flags CompileFlags) ([]byte, error) {
 	r := c.Resolve()
 
 	cConf := collector.Config{
-		Source:            constants.DefaultCollectSource, // TODO: remove following Not actually used, this is to prevent misleading logs.
+		Source:            constants.PlatformSource, // TODO: remove following Not actually used, this is to prevent misleading logs.
 		CachePath:         r.InsightsDir,
 		SourceMetricsPath: flags.SourceMetricsPath,
 		SourceMetricsJSON: flags.SourceMetricsJSON,
@@ -221,7 +221,7 @@ func (c Config) Upload(sources []string, flags UploadFlags) error {
 }
 
 // GetConsentState gets the state for the specified source.
-// If source is "", the default consent state is retrieved.
+// If source is "", the platform source consent state is retrieved.
 //
 // This method calls Resolve() on the config before proceeding.
 func (c Config) GetConsentState(source string) (bool, error) {
@@ -237,7 +237,7 @@ func (c Config) GetConsentState(source string) (bool, error) {
 }
 
 // SetConsentState sets the consent state for the specified source.
-// If source is "", the default consent state is affected.
+// If source is "", the platform source consent state is affected.
 //
 // This method calls Resolve() on the config before proceeding.
 func (c Config) SetConsentState(source string, consentState bool) error {

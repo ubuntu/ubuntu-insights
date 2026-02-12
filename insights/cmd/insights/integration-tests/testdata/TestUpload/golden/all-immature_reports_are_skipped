@@ -5,10 +5,6 @@ payloads:
       }
     - |-
       {
-          "id": "1 Unknown-A local"
-      }
-    - |-
-      {
           "id": "1000 True local",
           "duplicate": true
       }
@@ -16,11 +12,6 @@ payloads:
       {
           "id": "500 True local"
       }
-    - |-
-      {
-          "id": "500 Unknown-A local"
-      }
-    - "{   \n    \"id\": \"1000 Unknown-A local\",\n    \"duplicate\": true\n}"
     - '{"OptOut":true}'
     - '{"OptOut":true}'
     - '{"OptOut":true}'
@@ -40,6 +31,14 @@ reportscontents:
         {
             "id": "1500 False uploaded",
             "only in uploaded": true
+        }
+    PLATFORM-SOURCE/local/1.json: |
+        {
+            "id": "1 SYSTEM-SOURCE local"
+        }
+    PLATFORM-SOURCE/uploaded/1000.json: |
+        {
+            "id": "1000 SYSTEM-SOURCE uploaded"
         }
     True/local/2501.json: |-
         {
@@ -64,6 +63,15 @@ reportscontents:
             "id": "1500 True uploaded",
             "only in uploaded": true
         }
+    Unknown-A/local/1.json: |-
+        {
+            "id": "1 Unknown-A local"
+        }
+    Unknown-A/local/500.json: |-
+        {
+            "id": "500 Unknown-A local"
+        }
+    Unknown-A/local/1000.json: "{   \n    \"id\": \"1000 Unknown-A local\",\n    \"duplicate\": true\n}"
     Unknown-A/local/2501.json: |-
         {
             "id": "2501 Unknown-A local"
@@ -73,13 +81,4 @@ reportscontents:
             "id": "invalid Unknown-A local",
             "test": "500"
         }
-    Unknown-A/uploaded/1.json: |-
-        {
-            "id": "1 Unknown-A local"
-        }
-    Unknown-A/uploaded/500.json: |-
-        {
-            "id": "500 Unknown-A local"
-        }
-    Unknown-A/uploaded/1000.json: "{   \n    \"id\": \"1000 Unknown-A local\",\n    \"duplicate\": true\n}"
     Unknown-A/uploaded/1500.json: "{   \n    \"id\": \"1500 Unknown-A uploaded\",\n    \"only in uploaded\": true\n}"

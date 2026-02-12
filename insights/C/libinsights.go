@@ -19,7 +19,7 @@ import (
 /**
  * insights_collect creates a report for the specified source.
  * If config is NULL, defaults are used.
- * source may be NULL or "" to use platform default.
+ * source may be NULL or "" to use the platform source.
  * flags may be NULL.
  * If collection fails, an error string is returned.
  * Otherwise, this returns NULL.
@@ -150,7 +150,7 @@ func compileCustomInsights(config *C.insights_const_config, flags *C.insights_co
 /**
  * insights_write writes the report to disk based on the consent state.
  * If config is NULL, defaults are used.
- * If "source" is NULL or "" the platform default is used.
+ * If "source" is NULL or "" the platform source is used.
  * If "report" is not a valid Insights report, an error string is returned.
  * If "flags" is NULL, defaults are used.
  * If writing fails, an error string is returned.
@@ -249,7 +249,7 @@ func uploadCustomInsights(config *C.insights_const_config, sources **C.insights_
 /**
  * insights_get_consent_state gets the consent state for the specified source.
  * If config is NULL, defaults are used.
- * source may be NULL or "" to retrieve the default consent state.
+ * source may be NULL or "" to retrieve the platform source consent state.
  * If it could not be retrieved, this function returns CONSENT_UNKNOWN.
  * Otherwise, it returns the consent state of the source.
  **/
@@ -285,7 +285,7 @@ func getCustomConsentState(config *C.insights_const_config, source *C.insights_c
 /**
  * insights_set_consent_state sets the state for the specified source to newState.
  * If config is NULL, defaults are used.
- * source may be NULL or "" to affect the default consent state.
+ * source may be NULL or "" to affect the platform source consent state.
  * If the state could not be set, this function returns an error string.
  * Otherwise, it returns NULL
  * The error string must be freed.
