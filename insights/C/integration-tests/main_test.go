@@ -258,6 +258,11 @@ func validateConsent(t *testing.T, consentDir string) map[string]bool {
 		require.True(t, found, "Consent file name %s does not match expected pattern", name)
 		require.NotEmpty(t, source, "Failed to infer source from consent file name %s", name)
 
+		// Normalize for system lib autopkgtest
+		if source == runtime.GOOS {
+			source = constants.PlatformSource
+		}
+
 		var c consent.CFile
 		_, err := toml.DecodeFile(filepath.Join(consentDir, name), &c)
 		if assert.NoError(t, err, "Failed to decode consent file %s", name) {
@@ -286,6 +291,11 @@ func validateReports(t *testing.T, insightsDir string) map[string]ReportCounts {
 		parts := strings.Split(rel, string(os.PathSeparator))
 		require.Len(t, parts, 3, "Unexpected report path structure: %s", rel)
 		source := parts[0]
+
+		// Normalize for system lib autopkgtest
+		if source == runtime.GOOS {
+			source = constants.PlatformSource
+		}
 
 		content, err := os.ReadFile(path)
 		require.NoError(t, err)
@@ -354,6 +364,12 @@ func setupTestServer(t *testing.T) (*httptest.Server, *testServerState) {
 		}
 
 		source := path.Base(r.URL.Path)
+
+		// Normalize for system lib autopkgtest
+		if source == runtime.GOOS {
+			source = constants.PlatformSource
+		}
+
 		counts := state.Received[source]
 		if optOutStruct.OptOut {
 			counts.OptOut++
