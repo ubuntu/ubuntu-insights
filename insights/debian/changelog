@@ -1,5 +1,6 @@
-ubuntu-insights (0.9.2ubuntu~dev2) resolute; urgency=medium
+ubuntu-insights (0.9.2ubuntu) resolute; urgency=medium
 
+  * New release (LP: #2141704)
   * (Breaking) Remove default consent behavior
     - If consent is not set for a target source, we will no longer defer
       to a "default consent", and we will instead immediately consider
@@ -11,6 +12,7 @@ ubuntu-insights (0.9.2ubuntu~dev2) resolute; urgency=medium
   * libinsights: Add callback handler for logging
   * libinsights: Add new integration tests for shared library
   * libinsights0-dbgsym: Add missing symbol for insights_compile
+  * Go dependency updates
   * Bump Go dependency to 1.25
 
  -- Kat Kuo <kat.kuo@canonical.com>  Mon, 26 Jan 2026 10:58:29 -0500
