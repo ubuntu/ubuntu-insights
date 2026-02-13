@@ -1,3 +1,9 @@
+ubuntu-insights (0.9.3ubuntu) resolute; urgency=medium
+
+  * Fix: Fix systemd tests in autopkgtest smoke test suite
+
+ -- Kat Kuo <kat.kuo@canonical.com>  Fri, 13 Feb 2026 18:08:36 -0500
+
 ubuntu-insights (0.9.2ubuntu) resolute; urgency=medium
 
   * New release (LP: #2141704)
