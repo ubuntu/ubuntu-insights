@@ -5,5 +5,10 @@ Depends: @builddeps@, @
 
 Test-Command: debian/tests/run-smoke-tests.sh
 Features: test-name=smoke_tests
-Restrictions: superficial, allow-stderr
-Depends: systemd, man-db, @
+Restrictions: superficial, allow-stderr, isolation-container, needs-sudo
+Depends:
+    systemd,
+    dbus-user-session,
+    default-logind | logind,
+    man-db,
+    @
