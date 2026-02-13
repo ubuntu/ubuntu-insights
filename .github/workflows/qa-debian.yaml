@@ -88,6 +88,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           docker-image: ubuntu:${{ matrix.ubuntu-version }}
           sources-only: true
+          run-lrc: true
 
       - name: Generate outputs
         id: outputs
