@@ -10,8 +10,9 @@ on:
     # Weekly scan
     - cron: "15 4 * * 1"
 
+# We ignore concurrency for main pushes to avoid the finickiness of canceling in-progress runs on main, while still executing quickly.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.run_id }}
   cancel-in-progress: true
 
 env:
@@ -180,6 +181,8 @@ jobs:
     needs: go-coverage-tests
     if: always() # Run this even if coverage tests fail
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-process-coverage-${{ github.ref }}
     steps:
       - uses: actions/checkout@v6
 

@@ -13,8 +13,9 @@ on:
     paths:
       - "./insights/autostart/systemd/*"
 
+# We ignore concurrency for main pushes to avoid the finickiness of canceling in-progress runs on main, while still executing quickly.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.run_id }}
   cancel-in-progress: true
 
 jobs:
