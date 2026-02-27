@@ -15,6 +15,24 @@ type label string
 // LabelPath is the label used for the path in metrics.
 const LabelPath label = "path"
 
+// LabelRejectReason is the label used for the rejection reason in metrics.
+const LabelRejectReason label = "reject_reason"
+
+const (
+	// RejectReasonNone indicates the request was not rejected.
+	RejectReasonNone = "none"
+	// RejectReasonMethodNotAllowed indicates the request used an unsupported method.
+	RejectReasonMethodNotAllowed = "method_not_allowed"
+	// RejectReasonForbidden indicates the request was rejected for authorization reasons.
+	RejectReasonForbidden = "forbidden"
+	// RejectReasonUnreadablePayload indicates the request body could not be read.
+	RejectReasonUnreadablePayload = "unreadable_payload"
+	// RejectReasonInvalidJSON indicates the request body contained invalid JSON.
+	RejectReasonInvalidJSON = "invalid_json"
+	// RejectReasonInternalServerErr indicates the request failed due to an internal server error.
+	RejectReasonInternalServerErr = "internal_server_error"
+)
+
 // EndpointMiddleware is a observer for collecting HTTP request metrics specific to endpoints.
 type EndpointMiddleware struct {
 	buckets  []float64
@@ -33,7 +51,7 @@ func NewEndpointMiddleware(registry prometheus.Registerer) *EndpointMiddleware {
 // Wrap is a middleware function that wraps an HTTP handler to collect metrics from an endpoint.
 func (m *EndpointMiddleware) Wrap(handlerName string, handler http.Handler) http.HandlerFunc {
 	reg := prometheus.WrapRegistererWith(prometheus.Labels{"handler": handlerName}, m.registry)
-	labels := []string{"method", "code", string(LabelPath)}
+	labels := []string{"method", "code", string(LabelPath), string(LabelRejectReason)}
 
 	requestsTotal := promauto.With(reg).NewCounterVec(
 		prometheus.CounterOpts{
@@ -65,10 +83,13 @@ func (m *EndpointMiddleware) Wrap(handlerName string, handler http.Handler) http
 				requestSize,
 				handler,
 				promhttp.WithLabelFromCtx("path", pathLabelFromCtx),
+				promhttp.WithLabelFromCtx("reject_reason", rejectReasonFromCtx),
 			),
 			promhttp.WithLabelFromCtx("path", pathLabelFromCtx),
+			promhttp.WithLabelFromCtx("reject_reason", rejectReasonFromCtx),
 		),
 		promhttp.WithLabelFromCtx("path", pathLabelFromCtx),
+		promhttp.WithLabelFromCtx("reject_reason", rejectReasonFromCtx),
 	)
 
 	return base.ServeHTTP
@@ -81,9 +102,22 @@ func pathLabelFromCtx(ctx context.Context) string {
 	return "unknown"
 }
 
+func rejectReasonFromCtx(ctx context.Context) string {
+	if reason, ok := ctx.Value(LabelRejectReason).(string); ok {
+		return reason
+	}
+	return RejectReasonNone
+}
+
 // ApplyLabels applies the path label to the request context.
 func ApplyLabels(r *http.Request) {
 	ctx := context.WithValue(r.Context(), LabelPath, r.URL.Path)
+	*r = *r.WithContext(ctx)
+}
+
+// ApplyRejectReason applies the rejection reason label to the request context.
+func ApplyRejectReason(r *http.Request, reason string) {
+	ctx := context.WithValue(r.Context(), LabelRejectReason, reason)
 	*r = *r.WithContext(ctx)
 }
 

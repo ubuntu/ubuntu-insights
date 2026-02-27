@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ubuntu/ubuntu-insights/server/internal/common/constants"
+	"github.com/ubuntu/ubuntu-insights/server/internal/webservice/metrics"
 )
 
 // LegacyReport is a handler for old Ubuntu-Report JSON reports.
@@ -35,14 +36,17 @@ func NewLegacyReport(cfg ConfigProvider, reportsDir string, maxUploadSize int64)
 // ServeHTTP handles incoming HTTP requests for JSON report uploads.
 func (h *LegacyReport) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	reqID := uuid.New().String()
+	metrics.ApplyLabels(r)
 	distribution := filepath.Clean(r.PathValue("distribution"))
 	if distribution == "" || distribution == "." || strings.Contains(distribution, "..") {
+		metrics.ApplyRejectReason(r, metrics.RejectReasonForbidden)
 		http.Error(w, "Invalid distribution name in URL", http.StatusForbidden)
 		return
 	}
 
 	version := filepath.Clean(r.PathValue("version"))
 	if version == "" || version == "." || strings.Contains(version, "..") {
+		metrics.ApplyRejectReason(r, metrics.RejectReasonForbidden)
 		http.Error(w, "Invalid version name in URL", http.StatusForbidden)
 		return
 	}

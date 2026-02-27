@@ -13,6 +13,7 @@ func VersionHandler(w http.ResponseWriter, r *http.Request) {
 	metrics.ApplyLabels(r)
 
 	if r.Method != http.MethodGet {
+		metrics.ApplyRejectReason(r, metrics.RejectReasonMethodNotAllowed)
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
