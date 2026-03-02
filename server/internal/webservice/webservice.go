@@ -115,7 +115,28 @@ func setupPrimaryMux(cm dConfigManager, sc StaticConfig, registry *prometheus.Re
 	mux.Handle("POST /{distribution}/desktop/{version}", endpointMW.Wrap("legacy_upload", legacyUploadHandler))
 	mux.Handle("GET /version", endpointMW.Wrap("version", http.HandlerFunc(handlers.VersionHandler)))
 
-	return muxMW.Wrap("primary_mux", mux)
+	return muxMW.Wrap("primary_mux", debugUnknownEndpoint(mux))
+}
+
+// debugUnknownEndpoint is a middleware that debug logs requests that do not match any mux route.
+func debugUnknownEndpoint(mux *http.ServeMux) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, pattern := mux.Handler(r)
+
+		if pattern == "" {
+			slog.Debug("Request hit unknown endpoint",
+				"method", r.Method,
+				"path", r.URL.Path,
+				"query", r.URL.RawQuery,
+				"host", r.Host,
+				"remote_addr", r.RemoteAddr,
+				"user_agent", r.UserAgent(),
+				"content_type", r.Header.Get("Content-Type"),
+			)
+		}
+
+		mux.ServeHTTP(w, r)
+	})
 }
 
 func setupMetricsMux(registry *prometheus.Registry) *http.ServeMux {

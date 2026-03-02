@@ -46,12 +46,49 @@ func TestEndpointMiddlewareWrap(t *testing.T) {
 	tests := map[string]struct {
 		requests    []request
 		applyLabels bool
+		reason      string
+		statusCode  int
 	}{
 		"No Requests": {},
 		"Single GET Request": {
 			requests: []request{
 				{method: http.MethodGet, path: "/test-get", body: nil},
 			},
+		},
+		"Single GET Request Method Not Allowed": {
+			requests: []request{
+				{method: http.MethodGet, path: "/test-get", body: nil},
+			},
+			reason:     metrics.RejectReasonMethodNotAllowed,
+			statusCode: http.StatusMethodNotAllowed,
+		},
+		"Single GET Request Forbidden": {
+			requests: []request{
+				{method: http.MethodGet, path: "/test-get", body: nil},
+			},
+			reason:     metrics.RejectReasonForbidden,
+			statusCode: http.StatusForbidden,
+		},
+		"Single GET Request Internal Server Error": {
+			requests: []request{
+				{method: http.MethodGet, path: "/test-get", body: nil},
+			},
+			reason:     metrics.RejectReasonInternalServerErr,
+			statusCode: http.StatusInternalServerError,
+		},
+		"Single GET Request Invalid JSON": {
+			requests: []request{
+				{method: http.MethodGet, path: "/test-get", body: nil},
+			},
+			reason:     metrics.RejectReasonInvalidJSON,
+			statusCode: http.StatusBadRequest,
+		},
+		"Single GET Request Unreadable Payload": {
+			requests: []request{
+				{method: http.MethodGet, path: "/test-get", body: nil},
+			},
+			reason:     metrics.RejectReasonUnreadablePayload,
+			statusCode: http.StatusBadRequest,
 		},
 		"Single GET Request with Labels": {
 			requests: []request{
@@ -86,11 +123,29 @@ func TestEndpointMiddlewareWrap(t *testing.T) {
 			mw := metrics.NewEndpointMiddleware(reg)
 
 			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if tc.reason != "" {
+					metrics.ApplyRejectReason(r, tc.reason)
+				}
+
+				if tc.statusCode != 0 {
+					w.WriteHeader(tc.statusCode)
+					return
+				}
+
 				w.WriteHeader(http.StatusAccepted)
 			})
 			if tc.applyLabels {
 				handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					metrics.ApplyLabels(r)
+					if tc.reason != "" {
+						metrics.ApplyRejectReason(r, tc.reason)
+					}
+
+					if tc.statusCode != 0 {
+						w.WriteHeader(tc.statusCode)
+						return
+					}
+
 					w.WriteHeader(http.StatusAccepted)
 				})
 			}
@@ -102,7 +157,11 @@ func TestEndpointMiddlewareWrap(t *testing.T) {
 			}
 
 			for _, req := range tc.requests {
-				sendRequest(t, monitored, req.method, req.path, req.body, http.StatusAccepted)
+				expectedCode := http.StatusAccepted
+				if tc.statusCode != 0 {
+					expectedCode = tc.statusCode
+				}
+				sendRequest(t, monitored, req.method, req.path, req.body, expectedCode)
 			}
 
 			var got = map[string]string{}
