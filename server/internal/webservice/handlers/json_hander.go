@@ -70,6 +70,6 @@ func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID st
 		return
 	}
 
-	slog.Info("File successfully uploaded", "req_id", reqID, "app", app, "target", targetPath)
+	slog.Debug("File successfully uploaded", "req_id", reqID, "app", app, "target", targetPath)
 	w.WriteHeader(h.successStatus)
 }
