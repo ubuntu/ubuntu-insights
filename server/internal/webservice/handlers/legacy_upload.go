@@ -52,6 +52,6 @@ func (h *LegacyReport) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	app := constants.LegacyReportTag + "/" + distribution + "/desktop/" + version
-	slog.Info("Request recv'd", "req_id", reqID, "app", app)
+	slog.Debug("Request recv'd", "req_id", reqID, "app", app)
 	h.jsonHandler.serveHTTP(w, r, reqID, app)
 }

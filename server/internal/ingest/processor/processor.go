@@ -254,7 +254,7 @@ func (p *Processor) processFile(
 	}
 
 	p.filesProcessed.WithLabelValues(app, processResult).Inc()
-	slog.Info("Finished processing file", "file", file, "id", reportID, "app", app)
+	slog.Debug("Finished processing file", "file", file, "id", reportID, "app", app)
 
 	return attemptCount, failureCount
 }

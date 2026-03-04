@@ -39,6 +39,6 @@ func (h *Upload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slog.Info("Request recv'd", "req_id", reqID, "app", app)
+	slog.Debug("Request recv'd", "req_id", reqID, "app", app)
 	h.jsonHandler.serveHTTP(w, r, reqID, app)
 }
