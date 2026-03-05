@@ -144,7 +144,7 @@ jobs:
           done
 
       - name: Download artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           run-id: ${{ needs.build-source-packages.outputs.run-id }}
           merge-multiple: true
