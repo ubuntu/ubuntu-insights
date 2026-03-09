@@ -1,1 +1,11 @@
-{}
+dir_contents: {}
+metrics:
+    http_endpoint_request_size_bytes: |
+        # HELP http_endpoint_request_size_bytes Tracks the size of HTTP requests to the endpoint.
+        # TYPE http_endpoint_request_size_bytes summary
+        http_endpoint_request_size_bytes_sum{code="400",handler="upload",method="post",path="/upload/testapp",reject_reason="invalid_json"} 255
+        http_endpoint_request_size_bytes_count{code="400",handler="upload",method="post",path="/upload/testapp",reject_reason="invalid_json"} 1
+    http_endpoint_requests_total: |
+        # HELP http_endpoint_requests_total Tracks the number of HTTP requests to the endpoint.
+        # TYPE http_endpoint_requests_total counter
+        http_endpoint_requests_total{code="400",handler="upload",method="post",path="/upload/testapp",reject_reason="invalid_json"} 1
