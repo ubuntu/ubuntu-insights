@@ -30,7 +30,6 @@ func NewUpload(cfg ConfigProvider, reportsDir string, maxUploadSize int64) *Uplo
 // ServeHTTP handles incoming HTTP requests for JSON report uploads.
 func (h *Upload) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	reqID := uuid.New().String()
-	metrics.ApplyLabels(r)
 	app := filepath.Clean(r.PathValue("app"))
 	if app == "" || app == "." || strings.Contains(app, "..") {
 		metrics.ApplyRejectReason(r, metrics.RejectReasonForbidden)
