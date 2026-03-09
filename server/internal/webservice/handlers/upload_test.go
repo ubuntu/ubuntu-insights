@@ -108,10 +108,11 @@ func TestUpload(t *testing.T) {
 				tc.expectedCode = http.StatusAccepted
 			}
 
-			handler := handlers.NewUpload(mockConfig, t.TempDir(), tc.maxUploadSize)
+			rawHandler := handlers.NewUpload(mockConfig, t.TempDir(), tc.maxUploadSize)
 			tc.request.Method = tc.method
 
-			runUploadTestCase(t, handler, tc.request, tc.expectedCode, handler.ReportsDir())
+			handler, reg := newEndpointMiddlewareWrap("upload", rawHandler)
+			runUploadTestCase(t, handler, tc.request, tc.expectedCode, rawHandler.ReportsDir(), reg)
 		})
 	}
 }

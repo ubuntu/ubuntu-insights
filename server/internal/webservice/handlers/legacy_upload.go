@@ -36,7 +36,6 @@ func NewLegacyReport(cfg ConfigProvider, reportsDir string, maxUploadSize int64)
 // ServeHTTP handles incoming HTTP requests for JSON report uploads.
 func (h *LegacyReport) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	reqID := uuid.New().String()
-	metrics.ApplyLabels(r)
 	distribution := filepath.Clean(r.PathValue("distribution"))
 	if distribution == "" || distribution == "." || strings.Contains(distribution, "..") {
 		metrics.ApplyRejectReason(r, metrics.RejectReasonForbidden)

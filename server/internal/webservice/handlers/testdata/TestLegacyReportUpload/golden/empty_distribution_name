@@ -1,1 +1,11 @@
-{}
+dir_contents: {}
+metrics:
+    http_endpoint_request_size_bytes: |
+        # HELP http_endpoint_request_size_bytes Tracks the size of HTTP requests to the endpoint.
+        # TYPE http_endpoint_request_size_bytes summary
+        http_endpoint_request_size_bytes_sum{code="403",handler="legacy_upload",method="post",path="unknown",reject_reason="forbidden"} 82
+        http_endpoint_request_size_bytes_count{code="403",handler="legacy_upload",method="post",path="unknown",reject_reason="forbidden"} 1
+    http_endpoint_requests_total: |
+        # HELP http_endpoint_requests_total Tracks the number of HTTP requests to the endpoint.
+        # TYPE http_endpoint_requests_total counter
+        http_endpoint_requests_total{code="403",handler="legacy_upload",method="post",path="unknown",reject_reason="forbidden"} 1

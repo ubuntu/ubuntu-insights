@@ -119,10 +119,11 @@ func TestLegacyReportUpload(t *testing.T) {
 				tc.expectedCode = http.StatusOK
 			}
 
-			handler := handlers.NewLegacyReport(mockConfig, t.TempDir(), tc.maxUploadSize)
+			rawHandler := handlers.NewLegacyReport(mockConfig, t.TempDir(), tc.maxUploadSize)
 			tc.request.Method = tc.method
 
-			runUploadTestCase(t, handler, tc.request, tc.expectedCode, handler.ReportsDir())
+			handler, reg := newEndpointMiddlewareWrap("legacy_upload", rawHandler)
+			runUploadTestCase(t, handler, tc.request, tc.expectedCode, rawHandler.ReportsDir(), reg)
 		})
 	}
 }

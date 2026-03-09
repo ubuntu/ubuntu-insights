@@ -8,10 +8,24 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
+	"github.com/ubuntu/ubuntu-insights/server/internal/webservice/metrics"
 )
+
+var deterministicHandlerMetricNames = []string{
+	"http_endpoint_requests_total",
+	"http_endpoint_request_size_bytes",
+}
+
+type uploadTestGolden struct {
+	DirContents map[string][]string `yaml:"dir_contents"`
+	Metrics     map[string]string   `yaml:"metrics,omitempty"`
+}
 
 type mockConfigManager struct {
 	allowedList []string
@@ -40,6 +54,7 @@ func runUploadTestCase(
 	req *http.Request,
 	expectedCode int,
 	reportsDir string,
+	reg *prometheus.Registry,
 ) {
 	t.Helper()
 
@@ -50,14 +65,31 @@ func runUploadTestCase(
 	contents, err := testutils.GetDirContents(t, reportsDir, 3)
 	require.NoError(t, err, "Failed to get directory contents")
 
-	got := make(map[string][]string)
+	got := uploadTestGolden{DirContents: make(map[string][]string)}
 	for _, file := range contents {
 		dir := filepath.Dir(file)
-		got[dir] = append(got[dir], file)
+		got.DirContents[dir] = append(got.DirContents[dir], file)
+	}
+
+	if reg != nil {
+		got.Metrics = make(map[string]string)
+		for _, name := range deterministicHandlerMetricNames {
+			b, err := testutil.CollectAndFormat(reg, expfmt.TypeTextPlain, name)
+			require.NoError(t, err, "Failed to collect metrics for %s", name)
+			got.Metrics[name] = string(b)
+		}
 	}
 
 	want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
-	assert.Equal(t, want, got, "Directory contents do not match golden file")
+	assert.Equal(t, want, got, "Directory contents and metrics do not match golden file")
+}
+
+// newEndpointMiddlewareWrap creates a fresh registry, wraps handler with EndpointMiddleware,
+// and returns both the wrapped handler and the registry for metric assertions.
+func newEndpointMiddlewareWrap(handlerName string, handler http.Handler) (http.Handler, *prometheus.Registry) {
+	reg := prometheus.NewRegistry()
+	mw := metrics.NewEndpointMiddleware(reg)
+	return mw.Wrap(handlerName, handler), reg
 }
 
 func createRequest(t *testing.T, target string, data []byte) *http.Request {

@@ -21,19 +21,19 @@ type jsonHandler struct {
 }
 
 func (h *jsonHandler) serveHTTP(w http.ResponseWriter, r *http.Request, reqID string, app string) {
+	if !h.config.IsAllowed(app) {
+		metrics.ApplyRejectReason(r, metrics.RejectReasonForbidden)
+		http.Error(w, "Invalid application name in URL", http.StatusForbidden)
+		slog.Debug("Request had invalid application name in URL", "req_id", reqID, "app", app)
+		return
+	}
+
 	metrics.ApplyLabels(r)
 
 	if r.Method != http.MethodPost {
 		metrics.ApplyRejectReason(r, metrics.RejectReasonMethodNotAllowed)
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		slog.Debug("Request had invalid method", "req_id", reqID, "method", r.Method)
-		return
-	}
-
-	if !h.config.IsAllowed(app) {
-		metrics.ApplyRejectReason(r, metrics.RejectReasonForbidden)
-		http.Error(w, "Invalid application name in URL", http.StatusForbidden)
-		slog.Debug("Request had invalid application name in URL", "req_id", reqID, "app", app)
 		return
 	}
 
