@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/pgx" // PGX driver for golang-migrate
+	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5" // PGX driver for golang-migrate
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/spf13/cobra"
 )
@@ -53,7 +53,7 @@ If no path is provided, the default path is used.`,
 func (a App) migrateRun() error {
 	m, err := migrate.New(
 		fmt.Sprintf("file://%s", a.config.MigrationsDir),
-		a.config.DBconfig.URI("pgx"),
+		a.config.DBconfig.URI("pgx5"),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create migration instance: %v", err)

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/pgx" // PGX driver for golang-migrate
+	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5" // PGX driver for golang-migrate
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
@@ -125,7 +125,7 @@ func ApplyMigrations(t *testing.T, dsn string, migrationsDir string) {
 	t.Helper()
 	m, err := migrate.New(
 		fmt.Sprintf("file://%s", migrationsDir),
-		fmt.Sprintf("pgx://%s", dsn[11:]), // Convert DSN to PGX-compatible format
+		fmt.Sprintf("pgx5://%s", dsn[11:]), // Convert DSN to PGX-compatible format
 	)
 	require.NoError(t, err, "Setup: failed to create migration instance")
 	if err := m.Up(); err != nil {
