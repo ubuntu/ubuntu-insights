@@ -1,0 +1,3 @@
+{
+    "iam": "invalid \uD800 data with \u0000 null"
+}

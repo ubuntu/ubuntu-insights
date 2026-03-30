@@ -1,0 +1,15 @@
+{
+    "insightsVersion": "0.0.1~ppa5",
+    "collectionTime": 1747752692,
+    "systemInfo": {
+        "hardware": {
+            "product": {
+                "name": "surrogate \uD800 test \u3041"
+            }
+        },
+        "software": {
+            "description": "value with surrogate \uDFFF trailing",
+            "nullByte": "embedded \u0000 null"
+        }
+    }
+}

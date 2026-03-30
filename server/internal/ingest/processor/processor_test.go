@@ -184,6 +184,11 @@ func TestProcessFiles(t *testing.T) {
 
 			wantErr: context.Canceled,
 		},
+
+		"Reports with null escape characters are sanitized": {
+			app:   "NullEscapeCleaning",
+			delay: 5 * time.Second,
+		},
 	}
 
 	for name, tc := range tests {

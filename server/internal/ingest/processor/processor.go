@@ -3,6 +3,7 @@
 package processor
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -359,6 +360,13 @@ func getReportID(file string) string {
 	return reportID
 }
 
+// sanitizeInvalidUnicodeEscapes replaces JSON Unicode escape sequences that PostgreSQL cannot store
+// (the null character U+0000) with the Unicode replacement
+// character escape (\ufffd) to prevent PostgreSQL SQLSTATE 22P05 errors.
+func sanitizeInvalidUnicodeEscapes(data []byte) []byte {
+	return bytes.ReplaceAll(data, []byte(`\u0000`), []byte(`\ufffd`))
+}
+
 // decodeFile reads a JSON file, unmarshals, and decodes it into the specified target model type.
 // It returns the target model or an error if the file is invalid or does not match the expected structure.
 func decodeFile[T models.TargetModels](file string) (*T, error) {
@@ -366,6 +374,8 @@ func decodeFile[T models.TargetModels](file string) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	data = sanitizeInvalidUnicodeEscapes(data)
 
 	var jsonData map[string]any
 	if err = json.Unmarshal(data, &jsonData); err != nil {
@@ -414,6 +424,8 @@ func (p Processor) uploadInvalid(ctx context.Context, file, id, app string) (boo
 	if err != nil {
 		return false, fmt.Errorf("failed to re-read invalid file %q: %v", file, err)
 	}
+
+	data = sanitizeInvalidUnicodeEscapes(data)
 
 	if len(data) == 0 || strings.TrimSpace(string(data)) == "" {
 		slog.Info("Skipping upload of empty invalid file", "file", file)

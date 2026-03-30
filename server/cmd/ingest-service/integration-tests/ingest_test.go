@@ -140,6 +140,13 @@ func TestIngestService(t *testing.T) {
 				{app: "ubuntu-report/distribution/desktop/version", reportType: invalidJSON, count: 1},
 			},
 		},
+		"Reports with null escape characters are sanitized": {
+			validApps: []string{"linux"},
+			preReports: []reports{
+				{app: "linux", reportType: validV1WithNullEscape, count: 2},
+				{app: "linux", reportType: invalidWithNullEscape, count: 1},
+			},
+		},
 	}
 
 	for name, tc := range tests {
@@ -414,6 +421,8 @@ const (
 	invalidV1ExtraFields
 	invalidOptOut
 	ubuntuReport
+	validV1WithNullEscape
+	invalidWithNullEscape
 )
 
 func makeReport(t *testing.T, reportType report, count int, reportDir string, atomicWrite bool) {
@@ -1040,6 +1049,25 @@ this is invalid JSON`
     }
   }
 }`
+	case validV1WithNullEscape:
+		rep = `
+{
+    "insightsVersion": "0.0.1~ppa5",
+    "collectionTime": 1747752692,
+    "systemInfo": {
+        "hardware": {
+            "product": {
+                "name": "surrogate \uD800 test"
+            }
+        },
+        "software": {
+            "description": "value with surrogate \uDFFF trailing",
+            "nullByte": "embedded \u0000 null"
+        }
+    }
+}`
+	case invalidWithNullEscape:
+		rep = `{"iam": "invalid \uD800 data with \u0000 null"}`
 	}
 
 	// Write the report to a file, with uuid name and .json extension
