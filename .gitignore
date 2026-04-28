@@ -35,3 +35,6 @@ ingest-service
 !ingest-service/
 web-service
 !web-service/
+
+# Snap build artifacts
+*.snap

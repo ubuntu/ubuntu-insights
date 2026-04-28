@@ -1,0 +1,85 @@
+name: ubuntu-insights
+version: "1.0.0"
+summary: A transparent tool to collect and share anonymous insights about your system
+description: |
+  A transparent tool to collect and share anonymous insights about your system.
+  .
+  If consent is given, this tool collects non-personally identifying hardware, software, and platform information, and shares it with the Ubuntu Development team.
+  The information collected can't be used to identify a single machine. All reports are cached on the local machine and can be reviewed before and after uploading.
+  More details on https://github.com/ubuntu/ubuntu-insights
+grade: devel
+confinement: strict
+base: core24
+source-code: https://github.com/ubuntu/ubuntu-insights
+license: GPL-3.0
+
+apps:
+  ubuntu-insights:
+    command: bin/ubuntu-insights
+    completer: bash-completion.sh
+    plugs:
+      - hardware-observe
+      - wayland
+      - x11
+      - network # Needed for uploading
+      # - ubuntu-pro-control # Doesn't work atm, needs we need to use the dbus interface directly.
+      - dot-config-ubuntu-insights # Default config location
+      - dot-cache-ubuntu-insights # Default cache location
+      - block-devices # Required to see encrypted partitions. `dm-crypt` also works.
+      - read-all-home # Allow attachment of source-metrics from home
+
+parts:
+  cli:
+    source: .
+    plugin: nil
+    build-snaps:
+      - go/1.25/stable
+    build-packages:
+      - libwayland-dev
+    build-environment:
+      - GOTOOLCHAIN: local
+    override-build: |
+      go build \
+        -ldflags=-X=github.com/ubuntu/ubuntu-insights/insights/internal/constants.Version=snap-${CRAFT_PROJECT_VERSION} \
+        -o ${SNAPCRAFT_PART_INSTALL}/bin/ubuntu-insights \
+        ./insights/cmd/insights
+
+      go generate ./insights/cmd/insights/main.go
+
+      chmod a+r insights/generated/usr/share/bash-completion/completions/ubuntu-insights 
+      cp insights/generated/usr/share/bash-completion/completions/ubuntu-insights ${SNAPCRAFT_PART_INSTALL}/bash-completion.sh
+    stage-packages:
+      - libwayland-client0
+      - x11-xserver-utils
+    stage:
+      - bin/ubuntu-insights
+      - bash-completion.sh
+      - usr/lib/*/libwayland-client.so.*
+      - usr/lib/*/libXau.so.*
+      - usr/lib/*/libXdmcp.so.*
+      - usr/lib/*/libXext.so.*
+      - usr/lib/*/libXrender.so.*
+      - usr/lib/*/libxcb.so.*
+      - usr/lib/*/libX11.so.*
+      - usr/lib/*/libXrandr.so.*
+      - usr/bin/xrandr
+
+  nano:
+    plugin: nil
+    stage-packages:
+      - nano
+    stage:
+      - usr/bin/nano
+
+plugs:
+  dot-config-ubuntu-insights:
+    interface: personal-files
+    read:
+      - $HOME/.config/ubuntu-insights
+  dot-cache-ubuntu-insights:
+    interface: personal-files
+    write:
+      - $HOME/.cache/ubuntu-insights
+  read-all-home:
+    interface: home
+    read: all
