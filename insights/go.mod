@@ -11,7 +11,7 @@ require (
 	github.com/ubuntu/ubuntu-insights/common v0.9.2
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/text v0.36.0
-	gopkg.in/ini.v1 v1.67.1
+	gopkg.in/ini.v1 v1.67.2
 )
 
 require (
