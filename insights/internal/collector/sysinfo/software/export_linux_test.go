@@ -13,3 +13,10 @@ func WithLang(provider func() (string, bool)) Options {
 		o.platform.langFunc = provider
 	}
 }
+
+// WithSnapEnv overrides the SNAP directory lookup.
+func WithSnapEnv(dir string) Options {
+	return func(o *options) {
+		o.platform.snapEnvFunc = func() string { return dir }
+	}
+}

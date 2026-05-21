@@ -12,31 +12,78 @@ import (
 
 	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/collector/sysinfo/platform"
+	"go.yaml.in/yaml/v3"
 )
 
 type platformOptions struct {
-	root     string
-	langFunc func() (string, bool)
+	root        string
+	langFunc    func() (string, bool)
+	snapEnvFunc func() string
 }
 
-// defaultOptions returns options for when running under a normal environment.
+// defaultPlatformOptions returns options for when running under a normal environment.
 func defaultPlatformOptions() platformOptions {
 	return platformOptions{
 		root: "/",
 		langFunc: func() (string, bool) {
 			return os.LookupEnv("LANG")
 		},
+		snapEnvFunc: func() string {
+			return os.Getenv("SNAP")
+		},
 	}
+}
+
+// isConfinedSnap returns true if running inside a strictly confined or devmode snap.
+// It checks for meta/snap.yaml within the given snap directory and verifies the confinement.
+func isConfinedSnap(snapDir string) bool {
+	if snapDir == "" {
+		return false
+	}
+
+	content, err := os.ReadFile(filepath.Join(snapDir, "meta", "snap.yaml"))
+	if err != nil {
+		return false
+	}
+
+	var meta struct {
+		Confinement string `yaml:"confinement"`
+	}
+	if err := yaml.Unmarshal(content, &meta); err != nil {
+		return false
+	}
+
+	return meta.Confinement == "strict" || meta.Confinement == "devmode"
 }
 
 // osReleaseFields maps os-release keys to the fields we use.
 var osReleaseFields = map[string]string{
-	"ID":         "Distributor ID",
+	"ID":         "Distribution ID",
 	"NAME":       "Name",
 	"VERSION_ID": "Release",
 }
 
+// lsbReleaseFields maps lsb-release keys to our internal fields.
+var lsbReleaseFields = map[string]string{
+	"DISTRIB_ID":      "Distribution ID",
+	"DISTRIB_RELEASE": "Release",
+}
+
 func (s Collector) collectOS() (osInfo, error) {
+	// When running inside a confined snap, /etc/lsb-release contains the
+	// host distro information and doesn't require additional snap interfaces.
+	if isConfinedSnap(s.platform.snapEnvFunc()) {
+		s.log.Debug("Detected confined snap environment, prioritizing lsb-release for OS information")
+		lsbPath := filepath.Join(s.platform.root, "etc/lsb-release")
+		if _, err := os.Stat(lsbPath); err == nil {
+			info, err := s.collectOSFromLSBRelease(lsbPath)
+			if err == nil {
+				return info, nil
+			}
+			s.log.Debug("lsb-release parse failed, falling back to os-release", "error", err)
+		}
+	}
+
 	// Per os-release(5), /etc takes priority over /usr/lib.
 	// Snap hostfs paths take priority over local paths for confined snap compatibility.
 	// Last existing path wins.
@@ -61,15 +108,9 @@ func (s Collector) collectOS() (osInfo, error) {
 	return s.collectOSFromFile(osReleasePath)
 }
 
-// collectOSFromFile reads and parses an os-release file.
-func (s Collector) collectOSFromFile(path string) (osInfo, error) {
-	s.log.Debug("collecting OS information from file", "path", path)
-
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return osInfo{}, fmt.Errorf("failed to read %s: %v", path, err)
-	}
-
+// parseKeyValueFile parses a key=value file (like os-release or lsb-release),
+// mapping keys through fieldMap and returning the resulting data.
+func parseKeyValueFile(content []byte, fieldMap map[string]string) map[string]string {
 	data := map[string]string{}
 	for line := range strings.SplitSeq(string(content), "\n") {
 		line = strings.TrimSpace(line)
@@ -87,16 +128,58 @@ func (s Collector) collectOSFromFile(path string) (osInfo, error) {
 		value = strings.TrimSpace(value)
 		value = strings.Trim(value, "\"'")
 
-		if field, exists := osReleaseFields[key]; exists {
+		if field, exists := fieldMap[key]; exists {
 			data[field] = value
 		}
 	}
+	return data
+}
+
+// collectOSFromLSBRelease reads and parses an lsb-release file.
+func (s Collector) collectOSFromLSBRelease(path string) (osInfo, error) {
+	s.log.Debug("Collecting OS information from lsb-release", "path", path)
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return osInfo{}, fmt.Errorf("failed to read %s: %v", path, err)
+	}
+
+	data := parseKeyValueFile(content, lsbReleaseFields)
 
 	if len(data) == 0 {
 		return osInfo{}, fmt.Errorf("%s contained no usable data", path)
 	}
 
-	if _, ok := data["Distributor ID"]; !ok {
+	if _, ok := data["Distribution ID"]; !ok {
+		s.log.Warn("lsb-release file missing DISTRIB_ID field", "path", path)
+	}
+	if _, ok := data["Release"]; !ok {
+		s.log.Warn("lsb-release file missing DISTRIB_RELEASE field", "path", path)
+	}
+
+	return osInfo{
+		Family:  runtime.GOOS,
+		Distro:  data["Distribution ID"],
+		Version: data["Release"],
+	}, nil
+}
+
+// collectOSFromFile reads and parses an os-release file.
+func (s Collector) collectOSFromFile(path string) (osInfo, error) {
+	s.log.Debug("Collecting OS information from file", "path", path)
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return osInfo{}, fmt.Errorf("failed to read %s: %v", path, err)
+	}
+
+	data := parseKeyValueFile(content, osReleaseFields)
+
+	if len(data) == 0 {
+		return osInfo{}, fmt.Errorf("%s contained no usable data", path)
+	}
+
+	if _, ok := data["Distribution ID"]; !ok {
 		s.log.Warn("os-release file missing ID field", "path", path)
 	}
 	if _, ok := data["Release"]; !ok {
@@ -105,7 +188,7 @@ func (s Collector) collectOSFromFile(path string) (osInfo, error) {
 
 	// Match lsb_release behavior: capitalize first letter of ID, then
 	// prefer NAME if it differs from ID only in capitalization.
-	distro := data["Distributor ID"]
+	distro := data["Distribution ID"]
 	if distro != "" {
 		r, size := utf8.DecodeRuneInString(distro)
 		distro = string(unicode.ToUpper(r)) + distro[size:]

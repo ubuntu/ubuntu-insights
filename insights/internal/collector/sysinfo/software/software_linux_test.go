@@ -26,6 +26,9 @@ func TestCollectLinux(t *testing.T) {
 		language        string
 		missingLanguage bool
 
+		// setSnapEnv controls whether $SNAP is set. When true, it points to filepath.Join(root, "snap").
+		setSnapEnv bool
+
 		logs map[slog.Level]uint
 	}{
 		"Regular software information": {
@@ -56,6 +59,68 @@ func TestCollectLinux(t *testing.T) {
 			fixtures: []string{"os/regular", "os/snap", "bios/regular"},
 			timezone: "EST",
 			language: "en_US",
+		},
+
+		"Snap lsb-release preferred when strictly confined": {
+			fixtures:   []string{"os/regular", "bios/regular", "snap/strict"},
+			timezone:   "EST",
+			language:   "en_US",
+			setSnapEnv: true,
+		},
+
+		"Snap lsb-release preferred when devmode": {
+			fixtures:   []string{"os/regular", "bios/regular", "snap/devmode"},
+			timezone:   "EST",
+			language:   "en_US",
+			setSnapEnv: true,
+		},
+
+		"Snap lsb-release not used when classic": {
+			fixtures:   []string{"os/regular", "bios/regular", "snap/classic"},
+			timezone:   "EST",
+			language:   "en_US",
+			setSnapEnv: true,
+		},
+
+		"Snap lsb-release not used when not in snap": {
+			fixtures: []string{"os/regular", "bios/regular"},
+			timezone: "EST",
+			language: "en_US",
+		},
+
+		"Snap lsb-release not used when confinement field missing": {
+			fixtures:   []string{"os/regular", "bios/regular", "snap/no_confinement"},
+			timezone:   "EST",
+			language:   "en_US",
+			setSnapEnv: true,
+		},
+
+		"Snap lsb-release not used when confinement empty": {
+			fixtures:   []string{"os/regular", "bios/regular", "snap/empty_confinement"},
+			timezone:   "EST",
+			language:   "en_US",
+			setSnapEnv: true,
+		},
+
+		"Snap lsb-release not used when snap.yaml is garbage": {
+			fixtures:   []string{"os/regular", "bios/regular", "snap/garbage"},
+			timezone:   "EST",
+			language:   "en_US",
+			setSnapEnv: true,
+		},
+
+		"Snap lsb-release not used when SNAP points to empty dir": {
+			fixtures:   []string{"os/regular", "bios/regular"},
+			timezone:   "EST",
+			language:   "en_US",
+			setSnapEnv: true,
+		},
+
+		"Snap lsb-release falls back to os-release on failure": {
+			fixtures:   []string{"os/garbage_lsb_release", "bios/regular", "snap/strict"},
+			timezone:   "EST",
+			language:   "en_US",
+			setSnapEnv: true,
 		},
 
 		"No os-release file found": {
@@ -195,10 +260,16 @@ func TestCollectLinux(t *testing.T) {
 				require.NoError(t, err, "setup: failed to remove file %s: ", f)
 			}
 
+			var snapDir string
+			if tc.setSnapEnv {
+				snapDir = filepath.Join(root, "snap")
+			}
+
 			options := []software.Options{
 				software.WithRoot(root),
 				software.WithTimezone(func() string { return tc.timezone }),
 				software.WithLang(func() (string, bool) { return tc.language, !tc.missingLanguage }),
+				software.WithSnapEnv(snapDir),
 			}
 
 			l := testutils.NewMockHandler(slog.LevelDebug)
