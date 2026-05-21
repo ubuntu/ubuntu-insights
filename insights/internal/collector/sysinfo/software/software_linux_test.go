@@ -1,7 +1,6 @@
 package software_test
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -18,40 +17,59 @@ func TestCollectLinux(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		root         string
+		fixtures     []string
 		missingFiles []string
 		pInfo        platform.Info
 
-		osInfo   string
 		timezone string
 
 		language        string
 		missingLanguage bool
 
-		logs    map[slog.Level]uint
-		wantErr bool
+		logs map[slog.Level]uint
 	}{
 		"Regular software information": {
-			root:     "regular",
-			osInfo:   "regular",
+			fixtures: []string{"os/regular", "bios/regular"},
 			timezone: "EST",
 			language: "en_US",
 		},
 
-		"Missing OS information": {
-			root:     "regular",
-			osInfo:   "",
-			timezone: "CEN",
-			language: "fr_FR",
+		"Vendor os-release used as fallback": {
+			fixtures: []string{"os/vendor_only", "bios/partial"},
+			timezone: "EST",
+			language: "en_US",
+		},
+
+		"Snap hostfs os-release": {
+			fixtures: []string{"os/snap", "bios/partial"},
+			timezone: "EST",
+			language: "en_US",
+		},
+
+		"Snap hostfs vendor only": {
+			fixtures: []string{"os/snap_vendor_only", "bios/partial"},
+			timezone: "EST",
+			language: "en_US",
+		},
+
+		"Snap hostfs takes priority over local": {
+			fixtures: []string{"os/regular", "os/snap", "bios/regular"},
+			timezone: "EST",
+			language: "en_US",
+		},
+
+		"No os-release file found": {
+			fixtures: []string{"bios/regular"},
+			timezone: "EST",
+			language: "en_US",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
 			},
 		},
 
-		"Missing distributor OS information": {
-			root:     "regular",
-			osInfo:   "no distributor",
+		"Missing ID in os-release": {
+			fixtures: []string{"os/no_distrib_id", "bios/partial"},
 			timezone: "EST",
 			language: "fr_FR",
 
@@ -60,9 +78,8 @@ func TestCollectLinux(t *testing.T) {
 			},
 		},
 
-		"Missing release OS information": {
-			root:     "regular",
-			osInfo:   "no release",
+		"Missing VERSION_ID in os-release": {
+			fixtures: []string{"os/no_distrib_release", "bios/partial"},
 			timezone: "EST",
 			language: "fr_FR",
 
@@ -71,9 +88,8 @@ func TestCollectLinux(t *testing.T) {
 			},
 		},
 
-		"Error OS information": {
-			root:     "regular",
-			osInfo:   "error",
+		"Garbage os-release file": {
+			fixtures: []string{"os/garbage", "bios/regular"},
 			timezone: "PST",
 			language: "en_ZA",
 
@@ -82,20 +98,36 @@ func TestCollectLinux(t *testing.T) {
 			},
 		},
 
-		"Garbage OS information": {
-			root:     "regular",
-			osInfo:   "garbage",
-			timezone: "EDT",
-			language: "en-CA",
+		"NAME present but no ID": {
+			fixtures: []string{"os/name_no_id", "bios/regular"},
+			timezone: "EST",
+			language: "en_US",
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
 			},
 		},
 
+		"NAME differs from ID only by capitalization": {
+			fixtures: []string{"os/name_capitalized", "bios/regular"},
+			timezone: "EST",
+			language: "en_US",
+		},
+
+		"NAME completely different from ID": {
+			fixtures: []string{"os/name_different", "bios/regular"},
+			timezone: "EST",
+			language: "en_US",
+		},
+
+		"Single quoted os-release values": {
+			fixtures: []string{"os/single_quotes", "bios/regular"},
+			timezone: "EST",
+			language: "en_US",
+		},
+
 		"Missing language information": {
-			root:            "regular",
-			osInfo:          "regular",
+			fixtures:        []string{"os/regular", "bios/regular"},
 			timezone:        "EST",
 			missingLanguage: true,
 
@@ -105,8 +137,7 @@ func TestCollectLinux(t *testing.T) {
 		},
 
 		"Partial BIOS information": {
-			root:     "regular",
-			osInfo:   "regular",
+			fixtures: []string{"os/regular", "bios/regular"},
 			timezone: "EST",
 			language: "en_US",
 
@@ -120,8 +151,7 @@ func TestCollectLinux(t *testing.T) {
 		},
 
 		"Missing BIOS information": {
-			root:     "empty",
-			osInfo:   "regular",
+			fixtures: []string{"os/regular"},
 			timezone: "JST",
 			language: "ja",
 
@@ -131,8 +161,7 @@ func TestCollectLinux(t *testing.T) {
 		},
 
 		"Garbage BIOS information": {
-			root:     "garbage",
-			osInfo:   "regular",
+			fixtures: []string{"os/regular", "bios/garbage"},
 			timezone: "EDT",
 			language: "en-CA",
 
@@ -140,13 +169,13 @@ func TestCollectLinux(t *testing.T) {
 				slog.LevelWarn: 2,
 			},
 		},
+
 		"WSL": {
-			root: "empty",
+			fixtures: []string{"os/regular"},
 			pInfo: platform.Info{
 				WSL: platform.WSL{
 					SubsystemVersion: 2},
 			},
-			osInfo:   "regular",
 			timezone: "JST",
 			language: "ja",
 		},
@@ -155,11 +184,12 @@ func TestCollectLinux(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tmp := t.TempDir()
-			err := testutils.CopyDir(t, "testdata/linuxfs", tmp)
-			require.NoError(t, err, "setup: failed to copy test data directory: ")
+			root := t.TempDir()
+			for _, fixture := range tc.fixtures {
+				err := testutils.CopyDir(t, filepath.Join("testdata/linuxfs", fixture), root)
+				require.NoError(t, err, "setup: failed to copy fixture %s", fixture)
+			}
 
-			root := filepath.Join(tmp, tc.root)
 			for _, f := range tc.missingFiles {
 				err := os.Remove(filepath.Join(root, f))
 				require.NoError(t, err, "setup: failed to remove file %s: ", f)
@@ -171,10 +201,6 @@ func TestCollectLinux(t *testing.T) {
 				software.WithLang(func() (string, bool) { return tc.language, !tc.missingLanguage }),
 			}
 
-			if tc.osInfo != "-" {
-				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeOSInfo", tc.osInfo)
-				options = append(options, software.WithOSInfo(cmdArgs))
-			}
 			l := testutils.NewMockHandler(slog.LevelDebug)
 			s := software.New(slog.New(&l), options...)
 
@@ -184,50 +210,10 @@ func TestCollectLinux(t *testing.T) {
 				l.OutputLogs(t)
 			}
 
-			if tc.wantErr {
-				require.Error(t, err, "Collect should return an error and didn't")
-				return
-			}
 			require.NoError(t, err, "Collect should not return an error")
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			assert.Equal(t, want, got, "Collect should return expected software information")
 		})
-	}
-}
-
-func TestFakeOSInfo(_ *testing.T) {
-	args, err := testutils.GetFakeCmdArgs()
-	if err != nil {
-		return
-	}
-	defer os.Exit(0)
-
-	switch args[0] {
-	case "error":
-		fmt.Fprint(os.Stderr, "Error requested in fake lsb_release")
-		os.Exit(1)
-	case "regular":
-		fmt.Println(`No LSB modules are available.
-Distributor ID:	Ubuntu
-Description:	Ubuntu 24.04.1 LTS
-Release:	24.04
-Codename:	noble`)
-	case "no distributor":
-		fmt.Println(`
-Release:	24.04`)
-	case "no release":
-		fmt.Println(`
-Distributor ID:	Ubuntu`)
-	case "garbage":
-		fmt.Println(`
-ID:	664z708,as
-sdlfk oabgr3w90
-bam398b-9a:c;;;
-zbnznr89;'`)
-	case "":
-		fallthrough
-	case "missing":
-		os.Exit(0)
 	}
 }

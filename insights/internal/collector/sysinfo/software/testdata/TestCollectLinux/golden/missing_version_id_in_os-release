@@ -1,0 +1,10 @@
+os:
+    family: linux
+    distro: No-distrib-release
+    version: ""
+    edition: ""
+timezone: EST
+lang: fr_FR
+bios:
+    vendor: Partial BIOS Vendor
+    version: "0.5"

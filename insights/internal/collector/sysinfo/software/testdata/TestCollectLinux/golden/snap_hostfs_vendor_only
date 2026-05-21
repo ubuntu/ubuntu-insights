@@ -1,0 +1,10 @@
+os:
+    family: linux
+    distro: Snap-vendor-lib
+    version: "6.0"
+    edition: ""
+timezone: EST
+lang: en_US
+bios:
+    vendor: Partial BIOS Vendor
+    version: "0.5"

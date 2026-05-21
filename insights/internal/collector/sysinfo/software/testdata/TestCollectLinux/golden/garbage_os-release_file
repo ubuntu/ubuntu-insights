@@ -1,10 +1,10 @@
 os:
     family: linux
-    distro: Regular-etc
-    version: "1.0"
+    distro: ""
+    version: ""
     edition: ""
-timezone: EST
-lang: ""
+timezone: PST
+lang: en_ZA
 bios:
     vendor: Regular BIOS Vendor
     version: "1.0"
