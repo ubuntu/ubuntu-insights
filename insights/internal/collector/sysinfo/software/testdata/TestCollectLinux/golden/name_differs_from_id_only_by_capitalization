@@ -1,0 +1,10 @@
+os:
+    family: linux
+    distro: Name-Capitalized
+    version: "1.0"
+    edition: ""
+timezone: EST
+lang: en_US
+bios:
+    vendor: Regular BIOS Vendor
+    version: "1.0"

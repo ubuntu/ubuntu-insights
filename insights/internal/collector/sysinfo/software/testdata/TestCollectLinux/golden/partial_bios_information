@@ -1,10 +1,10 @@
 os:
     family: linux
-    distro: Ubuntu
-    version: "24.04"
+    distro: Regular-etc
+    version: "1.0"
     edition: ""
 timezone: EST
 lang: en_US
 bios:
     vendor: ""
-    version: F.03
+    version: "1.0"

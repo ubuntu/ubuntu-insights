@@ -1,0 +1,10 @@
+os:
+    family: linux
+    distro: ""
+    version: ""
+    edition: ""
+timezone: PST
+lang: en_ZA
+bios:
+    vendor: Regular BIOS Vendor
+    version: "1.0"

@@ -1,7 +1,7 @@
 os:
     family: linux
-    distro: Ubuntu
-    version: "24.04"
+    distro: Regular-etc
+    version: "1.0"
     edition: ""
 timezone: JST
 lang: ja

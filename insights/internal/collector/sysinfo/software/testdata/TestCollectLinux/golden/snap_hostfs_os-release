@@ -1,0 +1,10 @@
+os:
+    family: linux
+    distro: Snap-etc
+    version: "4.0"
+    edition: ""
+timezone: EST
+lang: en_US
+bios:
+    vendor: Partial BIOS Vendor
+    version: "0.5"

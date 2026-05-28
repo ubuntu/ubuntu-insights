@@ -1,0 +1,10 @@
+os:
+    family: linux
+    distro: Regular-lsb
+    version: 1.0.1
+    edition: ""
+timezone: EST
+lang: en_US
+bios:
+    vendor: Regular BIOS Vendor
+    version: "1.0"

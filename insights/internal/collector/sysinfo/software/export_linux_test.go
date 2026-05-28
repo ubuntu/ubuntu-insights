@@ -7,16 +7,16 @@ func WithRoot(root string) Options {
 	}
 }
 
-// WithOsInfo overrides default os info.
-func WithOSInfo(cmd []string) Options {
-	return func(o *options) {
-		o.platform.osCmd = cmd
-	}
-}
-
 // WithLang overrides default language provider.
 func WithLang(provider func() (string, bool)) Options {
 	return func(o *options) {
 		o.platform.langFunc = provider
+	}
+}
+
+// WithSnapEnv overrides the SNAP directory lookup.
+func WithSnapEnv(dir string) Options {
+	return func(o *options) {
+		o.platform.snapEnvFunc = func() string { return dir }
 	}
 }

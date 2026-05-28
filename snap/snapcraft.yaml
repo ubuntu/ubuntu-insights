@@ -19,6 +19,7 @@ apps:
     completer: bash-completion.sh
     plugs:
       - hardware-observe
+      # - system-observe # Optional: used for fallback to hostfs paths when /etc/lsb-release can't be read.
       - wayland
       - x11
       - network # Needed for uploading
