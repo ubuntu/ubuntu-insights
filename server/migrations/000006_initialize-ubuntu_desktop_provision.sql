@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE ubuntu_desktop_provision (
     report_id UUID NOT NULL,
     entry_time TIMESTAMP NOT NULL,
@@ -17,3 +18,14 @@ CREATE INDEX idx_ubuntu_desktop_provision_hardware ON ubuntu_desktop_provision U
 CREATE INDEX idx_ubuntu_desktop_provision_software ON ubuntu_desktop_provision USING gin (software);
 CREATE INDEX idx_ubuntu_desktop_provision_platform ON ubuntu_desktop_provision USING gin (platform);
 CREATE INDEX idx_ubuntu_desktop_provision_source_metrics ON ubuntu_desktop_provision USING gin (source_metrics);
+
+-- +goose Down
+DROP INDEX IF EXISTS idx_ubuntu_desktop_provision_entry_time_optout;
+DROP INDEX IF EXISTS idx_ubuntu_desktop_provision_source_metrics;
+DROP INDEX IF EXISTS idx_ubuntu_desktop_provision_platform;
+DROP INDEX IF EXISTS idx_ubuntu_desktop_provision_software;
+DROP INDEX IF EXISTS idx_ubuntu_desktop_provision_hardware;
+DROP INDEX IF EXISTS idx_ubuntu_desktop_provision_collection_time;
+DROP INDEX IF EXISTS idx_ubuntu_desktop_provision_report_id;
+
+DROP TABLE IF EXISTS ubuntu_desktop_provision;
