@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
-	serverTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/common/testutils"
+	serverTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/ingest/testutils"
 )
 
 func TestMigrate(t *testing.T) {
@@ -22,9 +23,11 @@ func TestMigrate(t *testing.T) {
 	require.NoError(t, os.WriteFile(fakeMigration, []byte(""), 0600), "Setup: couldn't write fake migration file")
 
 	tests := map[string]struct {
-		args                 []string
-		noDatabase           bool
-		preAppliedMigrations bool
+		args                  []string
+		noDatabase            bool
+		preAppliedMigrations  bool
+		preGolangMigrateState bool
+		preGolangMigrateDirty bool
 
 		wantExitCode int
 	}{
@@ -36,6 +39,16 @@ func TestMigrate(t *testing.T) {
 			args:                 []string{"migrate", trueMigrationsDir},
 			preAppliedMigrations: true,
 			wantExitCode:         0,
+		},
+		"Bootstrap from golang-migrate": {
+			args:                  []string{"migrate", trueMigrationsDir},
+			preGolangMigrateState: true,
+			wantExitCode:          0,
+		},
+		"Bootstrap from golang-migrate dirty state": {
+			args:                  []string{"migrate", trueMigrationsDir},
+			preGolangMigrateDirty: true,
+			wantExitCode:          1,
 		},
 
 		// Usage Error Cases
@@ -88,6 +101,12 @@ func TestMigrate(t *testing.T) {
 				if tc.preAppliedMigrations {
 					serverTestUtils.ApplyMigrations(t, db.DSN, trueMigrationsDir)
 				}
+				if tc.preGolangMigrateState {
+					seedGolangMigrateState(t, db.DSN, trueMigrationsDir, false)
+				}
+				if tc.preGolangMigrateDirty {
+					seedGolangMigrateState(t, db.DSN, trueMigrationsDir, true)
+				}
 
 				args = append(args,
 					"--db-host", db.Host,
@@ -114,5 +133,33 @@ func TestMigrate(t *testing.T) {
 			}
 			assert.Equal(t, tc.wantExitCode, cmd.ProcessState.ExitCode(), "unexpected exit code: %v\n%s", err, out)
 		})
+	}
+}
+
+// seedGolangMigrateState loads an exact pg_dump of a database previously managed
+// by golang-migrate into the test database. The dump was captured from a real
+// Postgres instance after golang-migrate v4.19.1 applied all 8 migrations.
+//
+// If dirty is true, the schema_migrations row is updated to simulate a failed
+// migration that left the database in a dirty state.
+func seedGolangMigrateState(t *testing.T, dsn string, _ string, dirty bool) {
+	t.Helper()
+
+	dumpPath := filepath.Join(serverTestUtils.ModuleRoot(), "internal", "ingest", "migration", "testdata", "golang_migrate_dump.sql")
+	dumpSQL, err := os.ReadFile(dumpPath)
+	require.NoError(t, err, "Setup: failed to read golang_migrate_dump.sql")
+
+	conn, err := pgx.Connect(t.Context(), dsn)
+	require.NoError(t, err, "Setup: failed to connect to database")
+	defer func() {
+		require.NoError(t, conn.Close(t.Context()))
+	}()
+
+	_, err = conn.Exec(t.Context(), string(dumpSQL))
+	require.NoError(t, err, "Setup: failed to apply golang_migrate_dump.sql")
+
+	if dirty {
+		_, err = conn.Exec(t.Context(), `UPDATE schema_migrations SET dirty = true`)
+		require.NoError(t, err, "Setup: failed to set dirty state")
 	}
 }

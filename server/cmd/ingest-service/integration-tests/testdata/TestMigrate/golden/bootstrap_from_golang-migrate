@@ -1,0 +1,9 @@
+- invalid_reports
+- linux
+- windows
+- darwin
+- ubuntu_report
+- goose_db_version
+- ubuntu_desktop_provision
+- ubuntu_release_upgrader
+- wsl_setup
