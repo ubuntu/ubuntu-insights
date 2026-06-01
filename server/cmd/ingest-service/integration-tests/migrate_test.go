@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"testing"
 	"time"
 
@@ -100,6 +101,7 @@ func TestMigrate(t *testing.T) {
 
 				if tc.preAppliedMigrations {
 					serverTestUtils.ApplyMigrations(t, db.DSN, trueMigrationsDir)
+					seedSampleData(t, db.DSN)
 				}
 				if tc.preGolangMigrateState {
 					seedGolangMigrateState(t, db.DSN, trueMigrationsDir, false)
@@ -117,6 +119,13 @@ func TestMigrate(t *testing.T) {
 					"-vv")
 			}
 
+			// Snapshot data before migration to verify preservation.
+			var before map[string][]string
+			if tc.preAppliedMigrations || tc.preGolangMigrateState {
+				before = snapshotAllTables(t, db.DSN)
+				require.NotEmpty(t, before, "Setup: snapshot should contain seeded data")
+			}
+
 			// #nosec:G204 - we control the command arguments in tests
 			cmd := exec.CommandContext(t.Context(),
 				cliPath,
@@ -130,6 +139,16 @@ func TestMigrate(t *testing.T) {
 				got := serverTestUtils.DBListTables(t, db.DSN)
 				want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 				require.ElementsMatch(t, want, got, "Run should create the expected tables in the database")
+
+				// Verify no data was lost during migration.
+				if before != nil {
+					after := snapshotAllTables(t, db.DSN)
+					for table, beforeRows := range before {
+						afterRows, ok := after[table]
+						require.True(t, ok, "table %q existed before migration but not after", table)
+						assert.Equal(t, beforeRows, afterRows, "data in table %q changed during migration", table)
+					}
+				}
 			}
 			assert.Equal(t, tc.wantExitCode, cmd.ProcessState.ExitCode(), "unexpected exit code: %v\n%s", err, out)
 		})
@@ -139,6 +158,7 @@ func TestMigrate(t *testing.T) {
 // seedGolangMigrateState loads an exact pg_dump of a database previously managed
 // by golang-migrate into the test database. The dump was captured from a real
 // Postgres instance after golang-migrate v4.19.1 applied all 8 migrations.
+// It also seeds sample application data to verify data preservation.
 //
 // If dirty is true, the schema_migrations row is updated to simulate a failed
 // migration that left the database in a dirty state.
@@ -162,4 +182,80 @@ func seedGolangMigrateState(t *testing.T, dsn string, _ string, dirty bool) {
 		_, err = conn.Exec(t.Context(), `UPDATE schema_migrations SET dirty = true`)
 		require.NoError(t, err, "Setup: failed to set dirty state")
 	}
+
+	seedSampleData(t, dsn)
+}
+
+// seedSampleData loads sample application data from a fixture file into the
+// database. This is used to verify that migrations preserve existing data.
+func seedSampleData(t *testing.T, dsn string) {
+	t.Helper()
+
+	samplePath := filepath.Join(serverTestUtils.ModuleRoot(), "internal", "ingest", "migration", "testdata", "sample_data.sql")
+	sampleSQL, err := os.ReadFile(samplePath)
+	require.NoError(t, err, "Setup: failed to read sample_data.sql")
+
+	conn, err := pgx.Connect(t.Context(), dsn)
+	require.NoError(t, err, "Setup: failed to connect for seeding data")
+	defer func() {
+		require.NoError(t, conn.Close(t.Context()))
+	}()
+
+	_, err = conn.Exec(t.Context(), string(sampleSQL))
+	require.NoError(t, err, "Setup: failed to apply sample_data.sql")
+}
+
+// snapshotAllTables returns a map of table name -> sorted row data (as strings)
+// for all application tables in the public schema.
+func snapshotAllTables(t *testing.T, dsn string) map[string][]string {
+	t.Helper()
+
+	conn, err := pgx.Connect(t.Context(), dsn)
+	require.NoError(t, err, "failed to connect for snapshot")
+	defer func() {
+		require.NoError(t, conn.Close(t.Context()))
+	}()
+
+	// Get all application tables (exclude migration tracking tables).
+	rows, err := conn.Query(t.Context(), `
+		SELECT table_name FROM information_schema.tables
+		WHERE table_schema = 'public'
+		  AND table_type = 'BASE TABLE'
+		  AND table_name NOT IN ('schema_migrations', 'goose_db_version')
+		ORDER BY table_name
+	`)
+	require.NoError(t, err)
+
+	var tables []string
+	for rows.Next() {
+		var name string
+		require.NoError(t, rows.Scan(&name))
+		tables = append(tables, name)
+	}
+	require.NoError(t, rows.Err())
+	rows.Close()
+
+	snapshot := make(map[string][]string)
+	for _, table := range tables {
+		// Query all rows as text representation for easy comparison.
+		// Using ctid ordering ensures consistent row order.
+		dataRows, err := conn.Query(t.Context(), "SELECT ROW_TO_JSON(t.*)::text FROM "+table+" t ORDER BY ctid") //nolint:gosec // table name comes from information_schema, not user input
+		require.NoError(t, err, "failed to query table %s", table)
+
+		var rowData []string
+		for dataRows.Next() {
+			var row string
+			require.NoError(t, dataRows.Scan(&row))
+			rowData = append(rowData, row)
+		}
+		require.NoError(t, dataRows.Err())
+		dataRows.Close()
+
+		if len(rowData) > 0 {
+			sort.Strings(rowData)
+			snapshot[table] = rowData
+		}
+	}
+
+	return snapshot
 }
