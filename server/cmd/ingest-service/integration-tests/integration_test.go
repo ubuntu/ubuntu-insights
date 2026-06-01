@@ -11,7 +11,7 @@ import (
 
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/server/internal/common/constants"
-	serverTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/common/testutils"
+	serverTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/ingest/testutils"
 )
 
 var cliPath string

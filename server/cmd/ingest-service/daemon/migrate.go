@@ -1,15 +1,17 @@
 package daemon
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5" // PGX driver for golang-migrate
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/jackc/pgx/v5/stdlib" // PGX driver for database/sql
+	"github.com/pressly/goose/v3"
 	"github.com/spf13/cobra"
+	"github.com/ubuntu/ubuntu-insights/server/internal/ingest/migration"
 )
 
 func installMigrateCmd(app *App) {
@@ -51,32 +53,31 @@ If no path is provided, the default path is used.`,
 }
 
 func (a App) migrateRun() error {
-	m, err := migrate.New(
-		fmt.Sprintf("file://%s", a.config.MigrationsDir),
-		a.config.DBconfig.URI("pgx5"),
-	)
+	db, err := sql.Open("pgx", a.config.DBconfig.URI("postgres"))
 	if err != nil {
-		return fmt.Errorf("failed to create migration instance: %v", err)
+		return fmt.Errorf("failed to open database connection: %v", err)
 	}
 	defer func() {
-		if sErr, dbErr := m.Close(); sErr != nil || dbErr != nil {
-			if sErr != nil {
-				slog.Error("failed to close migration instance", "error", sErr)
-			}
-			if dbErr != nil {
-				slog.Error("failed to close database connection", "error", dbErr)
-			}
+		if err := db.Close(); err != nil {
+			slog.Error("failed to close database connection", "error", err)
 		}
 	}()
 
-	if err := m.Up(); err != nil {
-		if errors.Is(err, migrate.ErrNoChange) {
-			slog.Info("No new migrations to apply")
-			return nil
-		}
+	ctx := context.Background()
 
+	// Bootstrap from golang-migrate if needed (idempotent)
+	if err := migration.BootstrapFromGolangMigrate(ctx, db); err != nil {
+		return fmt.Errorf("failed to bootstrap from golang-migrate: %v", err)
+	}
+
+	if err := goose.SetDialect("postgres"); err != nil {
+		return fmt.Errorf("failed to set goose dialect: %v", err)
+	}
+
+	if err := goose.UpContext(ctx, db, a.config.MigrationsDir); err != nil {
 		return fmt.Errorf("failed to apply migrations: %v", err)
 	}
+
 	slog.Info("Migrations applied successfully")
 	return nil
 }

@@ -3,15 +3,15 @@ package testutils
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"runtime"
 	"testing"
 	"time"
 
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5" // PGX driver for golang-migrate
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5"
+	_ "github.com/jackc/pgx/v5/stdlib" // PGX driver for database/sql
+	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -120,17 +120,19 @@ func (pc PostgresContainer) IsReady(t *testing.T, timeout time.Duration, attempt
 	return fmt.Errorf("database did not become ready after %d attempts: %v", attempts, err)
 }
 
-// ApplyMigrations applies migrations from the specified directory to the database using the PGX driver.
+// ApplyMigrations applies migrations from the specified directory to the database using goose.
 func ApplyMigrations(t *testing.T, dsn string, migrationsDir string) {
 	t.Helper()
-	m, err := migrate.New(
-		fmt.Sprintf("file://%s", migrationsDir),
-		fmt.Sprintf("pgx5://%s", dsn[11:]), // Convert DSN to PGX-compatible format
-	)
-	require.NoError(t, err, "Setup: failed to create migration instance")
-	if err := m.Up(); err != nil {
-		require.ErrorIs(t, err, migrate.ErrNoChange, "Setup: failed to apply migrations")
-	}
+
+	db, err := sql.Open("pgx", dsn)
+	require.NoError(t, err, "Setup: failed to open database connection")
+	defer func() {
+		require.NoError(t, db.Close(), "Setup: failed to close database connection")
+	}()
+
+	require.NoError(t, goose.SetDialect("postgres"), "Setup: failed to set goose dialect")
+	err = goose.Up(db, migrationsDir)
+	require.NoError(t, err, "Setup: failed to apply migrations")
 }
 
 // DBListTables lists all the tables, excluding a blacklist.

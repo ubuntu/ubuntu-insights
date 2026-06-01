@@ -3,7 +3,7 @@
 - windows
 - darwin
 - ubuntu_report
-- schema_migrations
+- goose_db_version
 - ubuntu_desktop_provision
 - ubuntu_release_upgrader
 - wsl_setup

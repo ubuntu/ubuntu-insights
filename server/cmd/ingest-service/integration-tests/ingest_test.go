@@ -23,7 +23,7 @@ import (
 	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/server/internal/common/config"
-	serverTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/common/testutils"
+	serverTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/ingest/testutils"
 )
 
 func TestIngestService(t *testing.T) {
@@ -260,7 +260,7 @@ func TestIngestService(t *testing.T) {
 			}
 
 			reportsCounts := make(map[string]reportCount)
-			for _, app := range serverTestUtils.DBListTables(t, dbContainer.DSN, "schema_migrations", "invalid_reports") {
+			for _, app := range serverTestUtils.DBListTables(t, dbContainer.DSN, "goose_db_version", "invalid_reports") {
 				totalReports, optOutReports, optInReports := checkOptOutCounts(t, dbContainer.DSN, app)
 				reportsCounts[app] = reportCount{
 					TotalReports:  totalReports,

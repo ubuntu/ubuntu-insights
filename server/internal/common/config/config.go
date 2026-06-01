@@ -14,8 +14,8 @@ import (
 )
 
 var reservedNames = map[string]struct{}{
-	"ubuntu_report":     {},
-	"schema_migrations": {},
+	"ubuntu_report":    {},
+	"goose_db_version": {},
 }
 
 // Conf represents the configuration structure.

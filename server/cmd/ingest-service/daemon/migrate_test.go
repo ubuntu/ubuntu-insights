@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/ubuntu-insights/common/testutils"
 	"github.com/ubuntu/ubuntu-insights/server/cmd/ingest-service/daemon"
-	serverTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/common/testutils"
+	serverTestUtils "github.com/ubuntu/ubuntu-insights/server/internal/ingest/testutils"
 )
 
 func TestMigrateRequiresDirArgument(t *testing.T) {
