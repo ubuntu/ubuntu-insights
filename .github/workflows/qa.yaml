@@ -73,6 +73,7 @@ jobs:
         uses: canonical/desktop-engineering/gh-actions/go/code-sanity@v2
         with:
           working-directory: ${{ matrix.module }}
+          go-version-file: ${{ github.workspace }}/go.work
           tools-directory: ${{ github.workspace }}/tools
           golangci-lint-configfile: ${{ github.workspace }}/.golangci.yaml
 
