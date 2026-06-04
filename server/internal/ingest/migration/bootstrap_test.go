@@ -251,8 +251,9 @@ func TestBootstrapPreservesData(t *testing.T) {
 
 	// Run goose migrations to confirm goose considers DB up-to-date.
 	migrationsDir := filepath.Join(testutils.ModuleRoot(), "migrations")
-	require.NoError(t, goose.SetDialect("postgres"))
-	err = goose.Up(db, migrationsDir)
+	provider, err := goose.NewProvider(goose.DialectPostgres, db, os.DirFS(migrationsDir))
+	require.NoError(t, err, "Setup: failed to create a new Goose provider")
+	_, err = provider.Up(ctx)
 	require.NoError(t, err, "Goose Up should succeed (no new migrations)")
 
 	// Verify data is intact.

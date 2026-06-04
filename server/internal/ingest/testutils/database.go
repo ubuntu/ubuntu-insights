@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"runtime"
 	"testing"
 	"time"
@@ -130,8 +131,9 @@ func ApplyMigrations(t *testing.T, dsn string, migrationsDir string) {
 		require.NoError(t, db.Close(), "Setup: failed to close database connection")
 	}()
 
-	require.NoError(t, goose.SetDialect("postgres"), "Setup: failed to set goose dialect")
-	err = goose.Up(db, migrationsDir)
+	provider, err := goose.NewProvider(goose.DialectPostgres, db, os.DirFS(migrationsDir))
+	require.NoError(t, err, "Setup: failed to create goose provider")
+	_, err = provider.Up(t.Context())
 	require.NoError(t, err, "Setup: failed to apply migrations")
 }
 

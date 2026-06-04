@@ -70,11 +70,12 @@ func (a App) migrateRun() error {
 		return fmt.Errorf("failed to bootstrap from golang-migrate: %v", err)
 	}
 
-	if err := goose.SetDialect("postgres"); err != nil {
-		return fmt.Errorf("failed to set goose dialect: %v", err)
+	provider, err := goose.NewProvider(goose.DialectPostgres, db, os.DirFS(a.config.MigrationsDir))
+	if err != nil {
+		return fmt.Errorf("failed to create goose provider: %v", err)
 	}
 
-	if err := goose.UpContext(ctx, db, a.config.MigrationsDir); err != nil {
+	if _, err := provider.Up(ctx); err != nil {
 		return fmt.Errorf("failed to apply migrations: %v", err)
 	}
 
