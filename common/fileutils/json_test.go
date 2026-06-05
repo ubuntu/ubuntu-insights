@@ -24,7 +24,7 @@ func TestUnmarshalJSON(t *testing.T) {
 		var b []byte
 		var err error
 		if len(input) == 1 {
-			b, err = json.Marshal(input[0])
+			b, err = json.Marshal(input[0]) //nolint:gosec // G602: false positive, index is guarded by the length check above
 		} else if input == nil {
 			b = []byte("")
 		} else {

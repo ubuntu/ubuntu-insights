@@ -615,7 +615,7 @@ Windows version: 10.0.26100.3194`
 	// Convert the UTF-16 encoded data to bytes
 	var utf16Bytes []byte
 	for _, r := range encoded {
-		utf16Bytes = append(utf16Bytes, byte(r), byte(r>>8))
+		utf16Bytes = append(utf16Bytes, byte(r), byte(r>>8)) //nolint:gosec // G115: intentional conversion for UTF-16 LE encoding, high bits are discarded by design
 	}
 
 	if _, err = file.Write(utf16Bytes); err != nil {

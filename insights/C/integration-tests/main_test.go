@@ -3,6 +3,7 @@ package libinsights_test
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -114,8 +115,7 @@ func TestMain(m *testing.M) {
 	args := append(cflags, "-o", testDriverPath, "main.c")
 	args = append(args, ldflags...)
 
-	// #nosec:G204 - we control the command arguments in tests
-	buildCmd := exec.Command(cc, args...)
+	buildCmd := exec.Command(cc, args...) //nolint:gosec // G702: command arguments are fully controlled by the test infrastructure, not user input
 	buildCmd.Dir = driverDir
 	buildCmd.Env = os.Environ()
 
@@ -131,7 +131,7 @@ func TestMain(m *testing.M) {
 		dllDst := filepath.Join(buildDir, "libinsights.dll")
 		input, err := os.ReadFile(dllSrc)
 		if err == nil {
-			if err := os.WriteFile(dllDst, input, 0600); err != nil {
+			if err := os.WriteFile(dllDst, input, 0600); err != nil { //nolint:gosec // G703: path is constructed from controlled test environment variables, not user input
 				log.Printf("Warning: failed to write dll to %s: %v", dllDst, err)
 			}
 		} else {
@@ -247,7 +247,7 @@ func validateConsent(t *testing.T, consentDir string) map[string]bool {
 	consentStates := make(map[string]bool)
 
 	cEntries, err := os.ReadDir(consentDir)
-	if os.IsNotExist(err) {
+	if errors.Is(err, os.ErrNotExist) {
 		return consentStates
 	}
 	require.NoError(t, err, "Failed to read consent directory")
@@ -277,7 +277,14 @@ func validateReports(t *testing.T, insightsDir string) map[string]ReportCounts {
 	t.Helper()
 	reports := make(map[string]ReportCounts)
 
-	err := filepath.WalkDir(insightsDir, func(path string, d os.DirEntry, err error) error {
+	root, err := os.OpenRoot(insightsDir)
+	if errors.Is(err, os.ErrNotExist) {
+		return reports
+	}
+	require.NoError(t, err, "Failed to open insights dir")
+	defer root.Close()
+
+	err = filepath.WalkDir(insightsDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -297,7 +304,7 @@ func validateReports(t *testing.T, insightsDir string) map[string]ReportCounts {
 			source = constants.PlatformSource
 		}
 
-		content, err := os.ReadFile(path)
+		content, err := root.ReadFile(filepath.ToSlash(rel))
 		require.NoError(t, err)
 
 		var payload struct {
@@ -315,9 +322,6 @@ func validateReports(t *testing.T, insightsDir string) map[string]ReportCounts {
 		reports[source] = c
 		return nil
 	})
-	if os.IsNotExist(err) {
-		return reports
-	}
 	require.NoError(t, err, "Failed to walk insights dir")
 
 	return reports
@@ -387,7 +391,7 @@ func setupTestServer(t *testing.T) (*httptest.Server, *testServerState) {
 func countLogLevels(t *testing.T, logPath string) map[int]int {
 	t.Helper()
 	f, err := os.Open(logPath)
-	if os.IsNotExist(err) {
+	if errors.Is(err, os.ErrNotExist) {
 		return map[int]int{}
 	}
 	require.NoError(t, err)

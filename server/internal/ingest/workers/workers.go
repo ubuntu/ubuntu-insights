@@ -146,7 +146,7 @@ func (m *Pool) syncWorkers(ctx context.Context) {
 			return // normal shutdown
 		default:
 		}
-		appCtx, cancel := context.WithCancel(ctx)
+		appCtx, cancel := context.WithCancel(ctx) //nolint:gosec // G118: cancel is stored in m.workers map and called by syncWorkers when the app is removed
 		m.workers[app] = cancel
 		slog.Info("Starting app worker", "app", app)
 		m.workerWG.Add(1)

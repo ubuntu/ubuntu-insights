@@ -67,6 +67,10 @@ linters:
       # G601: Implicit memory aliasing in for loop.
       - path: (.+)\.go$
         text: G601
+      # CGo injects _cgo_cmalloc with a naked return; we cannot modify generated CGo helpers.
+      - linters:
+          - nakedret
+        text: naked return in func `_cgo_cmalloc`
     paths:
       - third_party$
       - builtin$

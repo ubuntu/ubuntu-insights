@@ -18,7 +18,7 @@ func Run(ctx context.Context, cmd string, args ...string) (stdout, stderr *bytes
 	stdout = &bytes.Buffer{}
 	stderr = &bytes.Buffer{}
 
-	c := exec.CommandContext(ctx, cmd, args...)
+	c := exec.CommandContext(ctx, cmd, args...) //nolint:gosec // G204: this utility function is intentionally designed to run arbitrary commands
 	c.Stdout = stdout
 	c.Stderr = stderr
 	c.Env = append(c.Env, os.Environ()...)
