@@ -87,4 +87,4 @@ Applications or items meant to be treated as legacy reports from Ubuntu Report s
 The following applications and items are reserved and cannot be used within the allowlist
 
 - `ubuntu_report`
-- `schema_migrations`
+- `goose_db_version`
