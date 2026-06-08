@@ -239,7 +239,7 @@ func snapshotAllTables(t *testing.T, dsn string) map[string][]string {
 	for _, table := range tables {
 		// Query all rows as text representation for easy comparison.
 		// Using ctid ordering ensures consistent row order.
-		dataRows, err := conn.Query(t.Context(), "SELECT ROW_TO_JSON(t.*)::text FROM "+table+" t ORDER BY ctid") //nolint:gosec // table name comes from information_schema, not user input
+		dataRows, err := conn.Query(t.Context(), "SELECT ROW_TO_JSON(t.*)::text FROM "+table+" t ORDER BY ctid")
 		require.NoError(t, err, "failed to query table %s", table)
 
 		var rowData []string

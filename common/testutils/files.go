@@ -93,7 +93,7 @@ func GetDirContents(t *testing.T, dir string, maxDepth uint) (map[string]string,
 		}
 
 		if !d.IsDir() {
-			content, err := os.ReadFile(path)
+			content, err := os.ReadFile(path) //nolint:gosec // G122: test utility code, symlink TOCTOU is not a concern here
 			if err != nil {
 				return err
 			}
