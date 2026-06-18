@@ -23,7 +23,7 @@ apps:
       - wayland
       - x11
       - network # Needed for uploading
-      # - ubuntu-pro-control # Doesn't work atm, needs we need to use the dbus interface directly.
+      - ubuntu-pro-control # Used to read the Ubuntu Pro attach state over D-Bus.
       - dot-config-ubuntu-insights # Default config location
       - dot-cache-ubuntu-insights # Default cache location
       - block-devices # Required to see encrypted partitions. `dm-crypt` also works.
