@@ -26,9 +26,10 @@ func TestResolve(t *testing.T) {
 		},
 		"Custom config": {
 			config: insights.Config{
-				ConsentDir:  "custom_consent_dir",
-				InsightsDir: "custom_insights_dir",
-				Logger:      slog.Default(),
+				ConsentDir:      "custom_consent_dir",
+				InsightsDir:     "custom_insights_dir",
+				SystemConfigDir: "custom_system_config_dir",
+				Logger:          slog.Default(),
 			},
 		},
 	}
@@ -43,6 +44,7 @@ func TestResolve(t *testing.T) {
 			// Assert the resolved config
 			assert.NotEmpty(t, resolved.ConsentDir)
 			assert.NotEmpty(t, resolved.InsightsDir)
+			assert.NotEmpty(t, resolved.SystemConfigDir)
 			assert.NotNil(t, resolved.Logger)
 		})
 	}
@@ -444,6 +446,137 @@ func TestSetConsentState(t *testing.T) {
 			state, err := conf.GetConsentState(tc.source)
 			require.NoError(t, err, "Failed to get consent state after setting it")
 			assert.Equal(t, tc.state, state)
+		})
+	}
+}
+
+// TestIsSystemOptOut tests the IsSystemOptOut API method.
+func TestIsSystemOptOut(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		// When systemOptOutFile is set, the file is copied into the temp dir as system-config.toml.
+		// When empty, the directory exists but contains no config file.
+		systemOptOutFile string
+
+		want    bool
+		wantErr bool
+	}{
+		"No config file returns false": {},
+		"Opted-out config returns true": {
+			systemOptOutFile: "opted_out-system-config.toml",
+			want:             true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+
+			if tc.systemOptOutFile != "" {
+				src := filepath.Join("testdata", "system_config", tc.systemOptOutFile)
+				dst := filepath.Join(dir, "system-config.toml")
+				data, err := os.ReadFile(src)
+				require.NoError(t, err, "Setup: failed to read system config fixture")
+				require.NoError(t, os.WriteFile(dst, data, 0600), "Setup: failed to write system config file") //nolint:gosec // test fixture, path is t.TempDir()
+			}
+
+			conf := insights.Config{SystemConfigDir: dir}
+			got, err := conf.IsSystemOptOut()
+			if tc.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+// TestSetSystemOptOut tests the SetSystemOptOut API method.
+func TestSetSystemOptOut(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		setState bool
+	}{
+		"Set opt-out true":  {setState: true},
+		"Set opt-out false": {setState: false},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			conf := insights.Config{SystemConfigDir: dir}
+
+			err := conf.SetSystemOptOut(tc.setState)
+			require.NoError(t, err)
+
+			got, err := conf.IsSystemOptOut()
+			require.NoError(t, err, "Failed to read system opt-out after setting it")
+			assert.Equal(t, tc.setState, got)
+		})
+	}
+}
+
+// TestCollectSystemOptOut verifies that when the system opt-out is active,
+// Collect writes an opt-out report regardless of per-source consent.
+func TestCollectSystemOptOut(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		source       string
+		systemOptOut bool
+	}{
+		"System opted-out, user consent true writes opt-out report": {
+			source:       "valid_true",
+			systemOptOut: true,
+		},
+		"System not opted-out, user consent true writes full report": {
+			source:       "valid_true",
+			systemOptOut: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			insightsDir := t.TempDir()
+			systemConfigDir := t.TempDir()
+
+			if tc.systemOptOut {
+				err := insights.Config{SystemConfigDir: systemConfigDir}.SetSystemOptOut(true)
+				require.NoError(t, err, "Setup: failed to set system opt-out")
+			}
+
+			conf := insights.Config{
+				ConsentDir:      filepath.Join("testdata", "consent_files"),
+				InsightsDir:     insightsDir,
+				SystemConfigDir: systemConfigDir,
+			}
+
+			_, err := conf.Collect(tc.source, insights.CollectFlags{})
+			require.NoError(t, err)
+
+			// Verify a report was written to the local folder.
+			localDir := filepath.Join(insightsDir, tc.source, "local")
+			entries, err := os.ReadDir(localDir)
+			require.NoError(t, err, "local reports directory should exist")
+			require.Len(t, entries, 1, "exactly one report should be written")
+
+			data, err := os.ReadFile(filepath.Join(localDir, entries[0].Name()))
+			require.NoError(t, err)
+
+			if tc.systemOptOut {
+				assert.Contains(t, string(data), `"OptOut":true`, "system opted-out report should contain opt-out payload")
+			} else {
+				assert.NotContains(t, string(data), `"OptOut":true`, "non-opted-out report should not contain opt-out payload")
+			}
 		})
 	}
 }
