@@ -14,6 +14,25 @@ import (
 // If the file already exists, then it will be overwritten.
 // Not atomic on Windows.
 func AtomicWrite(path string, data []byte) (err error) {
+	return atomicWrite(path, data, 0)
+}
+
+// AtomicWriteWithPerm writes data to a file atomically, creating any missing parent
+// directories with dirPerm and setting the resulting file's mode to filePerm.
+// If the file already exists, then it will be overwritten.
+// Not atomic on Windows.
+func AtomicWriteWithPerm(path string, data []byte, dirPerm, filePerm os.FileMode) (err error) {
+	if err := os.MkdirAll(filepath.Dir(path), dirPerm); err != nil {
+		return fmt.Errorf("could not create directory: %v", err)
+	}
+	return atomicWrite(path, data, filePerm)
+}
+
+// atomicWrite writes data to a file atomically via a temporary file and rename.
+// If filePerm is non-zero, the resulting file's mode is set to filePerm; otherwise
+// the temporary file's default mode is kept.
+// Not atomic on Windows.
+func atomicWrite(path string, data []byte, filePerm os.FileMode) (err error) {
 	tmp, err := os.CreateTemp(filepath.Dir(path), "tmp-*.tmp")
 	if err != nil {
 		return fmt.Errorf("could not create temporary file: %v", err)
@@ -24,6 +43,12 @@ func AtomicWrite(path string, data []byte) (err error) {
 			err = fmt.Errorf("failed to remove temporary file %s: %v", tmp.Name(), e)
 		}
 	}()
+
+	if filePerm != 0 {
+		if err := tmp.Chmod(filePerm); err != nil {
+			return fmt.Errorf("could not set permissions on temporary file: %v", err)
+		}
+	}
 
 	if _, err := tmp.Write(data); err != nil {
 		return fmt.Errorf("could not write to temporary file: %v", err)
