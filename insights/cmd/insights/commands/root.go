@@ -22,10 +22,11 @@ type App struct {
 	viper *viper.Viper
 
 	config struct {
-		Quiet       bool
-		Verbose     int
-		consentDir  string
-		insightsDir string
+		Quiet           bool
+		Verbose         int
+		consentDir      string
+		insightsDir     string
+		systemConfigDir string
 
 		Upload  uploader.Config
 		Collect struct {
@@ -39,6 +40,10 @@ type App struct {
 		Consent struct {
 			Sources []string
 			State   string
+		}
+
+		SystemOptOut struct {
+			State string
 		}
 	}
 
@@ -112,6 +117,7 @@ The information collected can't be used to identify a single machine. All report
 	installCollectCmd(&a)
 	installUploadCmd(&a)
 	installConsentCmd(&a)
+	installSystemOptOutCmd(&a)
 
 	if err := a.viper.BindPFlags(a.cmd.PersistentFlags()); err != nil {
 		return nil, err
@@ -127,6 +133,7 @@ func installRootCmd(app *App) error {
 	cmd.PersistentFlags().CountVarP(&app.config.Verbose, "verbose", "v", "issue INFO (-v), DEBUG (-vv)")
 	cmd.PersistentFlags().StringVar(&app.config.consentDir, "consent-dir", constants.DefaultConfigPath, "the base directory of the consent state files")
 	cmd.PersistentFlags().StringVar(&app.config.insightsDir, "insights-dir", constants.DefaultCachePath, "the base directory of the insights report cache")
+	cmd.PersistentFlags().StringVar(&app.config.systemConfigDir, "system-config-dir", constants.DefaultSystemConfigPath, "the directory of the system-wide configuration file")
 
 	cmd.MarkFlagsMutuallyExclusive("quiet", "verbose")
 
@@ -136,6 +143,11 @@ func installRootCmd(app *App) error {
 	}
 
 	if err := cmd.MarkPersistentFlagDirname("insights-dir"); err != nil {
+		slog.Error("An error occurred while initializing Ubuntu Insights", "error", err.Error())
+		return err
+	}
+
+	if err := cmd.MarkPersistentFlagDirname("system-config-dir"); err != nil {
 		slog.Error("An error occurred while initializing Ubuntu Insights", "error", err.Error())
 		return err
 	}

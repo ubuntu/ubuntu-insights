@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/consent"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/constants"
+	"github.com/ubuntu/ubuntu-insights/insights/internal/systemconfig"
 )
 
 func installConsentCmd(app *App) {
@@ -60,6 +61,14 @@ If no sources are provided, the platform source consent state is managed.`,
 
 func (a App) consentRun() error {
 	cm := consent.New(slog.Default(), a.config.consentDir)
+
+	// The consent command always reports the real per-user consent state, but warn when the
+	// system opt-out is active since it overrides that state during collection and upload.
+	if optedOut, err := systemconfig.New(slog.Default(), a.config.systemConfigDir).IsOptedOut(); err != nil {
+		slog.Warn("Failed to check system opt-out state", "error", err)
+	} else if optedOut {
+		slog.Warn("System opt-out is active; per-user consent state is overridden during collection and upload")
+	}
 
 	if len(a.config.Consent.Sources) == 0 {
 		// Change platform consent state

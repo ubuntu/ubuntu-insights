@@ -75,7 +75,7 @@ func (a App) collectRun() (err error) {
 		SourceMetricsPath: a.config.Collect.SourceMetricsPath,
 	}
 
-	cm := consent.New(l, a.config.consentDir)
+	cm := consent.NewWithSystemConfig(l, a.config.consentDir, a.config.systemConfigDir)
 	c, err := a.newCollector(l, cm, cConfig)
 	if err != nil {
 		if errors.Is(err, collector.ErrSanitizeError) {
