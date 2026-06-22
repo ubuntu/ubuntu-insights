@@ -3,6 +3,7 @@
 package consent
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/ubuntu/decorate"
+	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/constants"
 )
 
@@ -119,30 +121,13 @@ func readFile(l *slog.Logger, path string) (CFile, error) {
 // Not atomic on Windows.
 // Makes dir if it does not exist.
 func (cf CFile) write(l *slog.Logger, path string) (err error) {
-	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
-		return fmt.Errorf("could not create directory: %v", err)
-	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), "consent-*.tmp")
-	if err != nil {
-		return fmt.Errorf("could not create temporary file: %v", err)
-	}
-	defer func() {
-		_ = tmp.Close()
-		if err := os.Remove(tmp.Name()); err != nil && !os.IsNotExist(err) {
-			l.Warn("Failed to remove temporary file when writing consent file", "file", tmp.Name(), "error", err)
-		}
-	}()
-
-	if err := toml.NewEncoder(tmp).Encode(cf); err != nil {
+	var buf bytes.Buffer
+	if err := toml.NewEncoder(&buf).Encode(cf); err != nil {
 		return fmt.Errorf("could not encode consent file: %v", err)
 	}
 
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("could not close temporary file: %v", err)
-	}
-
-	if err := os.Rename(tmp.Name(), path); err != nil {
-		return fmt.Errorf("could not rename temporary file: %v", err)
+	if err := fileutils.AtomicWriteWithPerm(path, buf.Bytes(), 0750, 0600); err != nil {
+		return err
 	}
 	l.Debug("Wrote consent file", "file", path, "consent", cf.ConsentState)
 
