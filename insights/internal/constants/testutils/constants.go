@@ -15,4 +15,5 @@ func init() {
 func Normalize() {
 	constants.PlatformSource = "PLATFORM-SOURCE"
 	constants.PlatformConsentFile = constants.PlatformSource + constants.ConsentFilenameSuffix
+	constants.DefaultSystemConfigPath = "SYSTEM-CONFIG-PATH"
 }
