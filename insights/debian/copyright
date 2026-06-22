@@ -29,6 +29,10 @@ Copyright: fsnotify Authors.
  2012, The Go Authors.
 License: BSD-3-clause
 
+Files: vendor/github.com/godbus/dbus/v5/*
+Copyright: 2013, Georg Reinke <guelfey@gmail.com>, Google
+License: BSD-2-clause
+
 Files: vendor/github.com/go-viper/mapstructure/v2/*
 Copyright: 2013, Mitchell Hashimoto
 License: Expat

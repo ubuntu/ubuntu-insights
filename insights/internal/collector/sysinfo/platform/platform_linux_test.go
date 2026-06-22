@@ -29,6 +29,7 @@ func TestCollectLinux(t *testing.T) {
 		systemdAnalyzeCmd string
 		wslVersionCmd     string
 		proStatusCmd      string
+		proDBus           platform.ProDBusSpec
 		env               map[string]string
 
 		missingFiles []string
@@ -129,6 +130,47 @@ func TestCollectLinux(t *testing.T) {
 				"XDG_CURRENT_DESKTOP": "❤️",
 				"XDG_SESSION_DESKTOP": "(●'◡'●)",
 				"XDG_SESSION_TYPE":    "(╯°□°）╯︵ ┻━┻"},
+		},
+
+		// Pro D-Bus path (preferred over CLI).
+		"Pro attached over D-Bus does not use CLI": {
+			detectVirtCmd:     "none",
+			systemdAnalyzeCmd: "regular",
+			wslVersionCmd:     "error",
+			proStatusCmd:      "-", // CLI must not be needed.
+			proDBus:           platform.ProDBusAttached,
+		},
+		"Pro detached over D-Bus does not use CLI": {
+			detectVirtCmd:     "none",
+			systemdAnalyzeCmd: "regular",
+			wslVersionCmd:     "error",
+			proStatusCmd:      "-", // CLI must not be needed.
+			proDBus:           platform.ProDBusDetached,
+		},
+		"Pro D-Bus property error falls back to CLI attached": {
+			detectVirtCmd:     "none",
+			systemdAnalyzeCmd: "regular",
+			wslVersionCmd:     "error",
+			proStatusCmd:      "attached",
+			proDBus:           platform.ProDBusPropertyError,
+		},
+		"Pro D-Bus garbage type falls back to CLI detached": {
+			detectVirtCmd:     "none",
+			systemdAnalyzeCmd: "regular",
+			wslVersionCmd:     "error",
+			proStatusCmd:      "detached",
+			proDBus:           platform.ProDBusGarbage,
+		},
+		"Pro D-Bus and CLI both fail warns": {
+			detectVirtCmd:     "none",
+			systemdAnalyzeCmd: "regular",
+			wslVersionCmd:     "error",
+			proStatusCmd:      "error",
+			proDBus:           platform.ProDBusConnectError,
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
 		},
 
 		// Other virt types
@@ -427,6 +469,10 @@ func TestCollectLinux(t *testing.T) {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeProStatus", tc.proStatusCmd)
 				options = append(options, platform.WithProStatusCmd(cmdArgs))
 			}
+
+			// Default (zero value) is ProDBusConnectError, so tests that do not set
+			// proDBus fall back to the `pro` CLI path being exercised above.
+			options = append(options, platform.WithProDBusConnector(tc.proDBus))
 
 			p := platform.New(slog.New(&l), options...)
 

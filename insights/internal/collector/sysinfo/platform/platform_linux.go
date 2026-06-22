@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/godbus/dbus/v5"
 	"github.com/ubuntu/decorate"
 	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/cmdutils"
@@ -18,6 +19,50 @@ import (
 	"golang.org/x/text/transform"
 	"gopkg.in/ini.v1"
 )
+
+// Ubuntu Pro D-Bus interface details, as exposed by ubuntu-advantage-desktop-daemon
+// on the system bus. This is used in preference to the `pro` CLI for improved
+// compatibility with confined snaps (via the ubuntu-pro-control interface).
+const (
+	proDBusDest  = "com.canonical.UbuntuAdvantage"
+	proDBusPath  = "/com/canonical/UbuntuAdvantage/Manager"
+	proDBusIface = "com.canonical.UbuntuAdvantage.Manager"
+	proDBusProp  = proDBusIface + ".Attached"
+)
+
+// proDBusObject is the subset of dbus.BusObject used to read the attach state.
+type proDBusObject interface {
+	GetProperty(p string) (dbus.Variant, error)
+}
+
+// proDBusConn is the subset of *dbus.Conn used to read the attach state.
+// It is an interface to allow injecting a fake connection in tests.
+type proDBusConn interface {
+	Object(dest string, path dbus.ObjectPath) proDBusObject
+	Close() error
+}
+
+// systemBusConn wraps a *dbus.Conn to satisfy proDBusConn.
+type systemBusConn struct {
+	conn *dbus.Conn
+}
+
+func (c systemBusConn) Object(dest string, path dbus.ObjectPath) proDBusObject {
+	return c.conn.Object(dest, path)
+}
+
+func (c systemBusConn) Close() error {
+	return c.conn.Close()
+}
+
+// connectSystemBus connects to the system bus and returns a proDBusConn.
+func connectSystemBus() (proDBusConn, error) {
+	conn, err := dbus.ConnectSystemBus()
+	if err != nil {
+		return nil, err
+	}
+	return systemBusConn{conn: conn}, nil
+}
 
 // Info contains platform information for Linux.
 type Info struct {
@@ -49,6 +94,8 @@ type platformOptions struct {
 	wslVersionCmd     []string
 	proStatusCmd      []string
 
+	proDBusConnector func() (proDBusConn, error)
+
 	getenv func(key string) string
 }
 
@@ -60,6 +107,8 @@ func defaultPlatformOptions() platformOptions {
 		systemdAnalyzeCmd: []string{"systemd-analyze", "time", "--system"},
 		wslVersionCmd:     []string{"wsl.exe", "-v"},
 		proStatusCmd:      []string{"pro", "api", "u.pro.status.is_attached.v1"},
+
+		proDBusConnector: connectSystemBus,
 
 		getenv: os.Getenv,
 	}
@@ -273,11 +322,52 @@ func (p Collector) getDesktop() Desktop {
 }
 
 // isProAttached returns the attach state of Ubuntu Pro.
+//
+// It first attempts to query the state over D-Bus, which works inside confined
+// snaps via the ubuntu-pro-control interface. If that fails (for example, the
+// daemon is not installed or the system bus is unavailable), it falls back to
+// the `pro` CLI.
 func (p Collector) isProAttached() bool {
-	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, p.platform.proStatusCmd[0], p.platform.proStatusCmd[1:]...)
+	attached, err := p.isProAttachedDBus()
+	if err == nil {
+		return attached
+	}
+	p.log.Debug("failed to get pro status over D-Bus, falling back to CLI", "error", err)
+
+	attached, err = p.isProAttachedCLI()
 	if err != nil {
 		p.log.Warn("failed to get pro status", "error", err)
 		return false
+	}
+	return attached
+}
+
+// isProAttachedDBus returns the attach state of Ubuntu Pro by reading the
+// Attached property from the ubuntu-advantage-desktop-daemon over the system bus.
+func (p Collector) isProAttachedDBus() (bool, error) {
+	conn, err := p.platform.proDBusConnector()
+	if err != nil {
+		return false, fmt.Errorf("failed to connect to system bus: %v", err)
+	}
+	defer conn.Close()
+
+	v, err := conn.Object(proDBusDest, proDBusPath).GetProperty(proDBusProp)
+	if err != nil {
+		return false, fmt.Errorf("failed to get %q property: %v", proDBusProp, err)
+	}
+
+	attached, ok := v.Value().(bool)
+	if !ok {
+		return false, fmt.Errorf("unexpected type %T for %q property", v.Value(), proDBusProp)
+	}
+	return attached, nil
+}
+
+// isProAttachedCLI returns the attach state of Ubuntu Pro using the `pro` CLI.
+func (p Collector) isProAttachedCLI() (bool, error) {
+	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, p.platform.proStatusCmd[0], p.platform.proStatusCmd[1:]...)
+	if err != nil {
+		return false, fmt.Errorf("failed to run pro api: %v", err)
 	}
 	if stderr.Len() > 0 {
 		p.log.Info("pro api output to stderr", "stderr", stderr)
@@ -291,10 +381,8 @@ func (p Collector) isProAttached() bool {
 			}
 		}
 	}
-	err = json.Unmarshal(stdout.Bytes(), &proStatus)
-	if err != nil {
-		p.log.Warn("failed to parse pro api return", "error", err)
-		return false
+	if err := json.Unmarshal(stdout.Bytes(), &proStatus); err != nil {
+		return false, fmt.Errorf("failed to parse pro api return: %v", err)
 	}
-	return proStatus.Data.Attributes.IsAttached
+	return proStatus.Data.Attributes.IsAttached, nil
 }

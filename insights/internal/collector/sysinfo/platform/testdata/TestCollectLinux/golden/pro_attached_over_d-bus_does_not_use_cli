@@ -1,0 +1,11 @@
+wsl:
+    subsystemversion: 0
+    systemd: ""
+    interop: ""
+    version: ""
+    kernelversion: ""
+desktop:
+    desktopenvironment: ""
+    sessionname: ""
+    sessiontype: ""
+proattached: true
