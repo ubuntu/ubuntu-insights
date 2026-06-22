@@ -15,6 +15,7 @@ import (
 	"github.com/ubuntu/decorate"
 	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/constants"
+	"github.com/ubuntu/ubuntu-insights/insights/internal/systemconfig"
 )
 
 var (
@@ -25,6 +26,10 @@ var (
 // Manager is a struct that manages consent files.
 type Manager struct {
 	path string
+
+	// optOut, when set, makes GetState honor the system-wide opt-out state.
+	// When nil, only the per-source consent files are consulted.
+	optOut *systemconfig.Manager
 
 	log *slog.Logger
 }
@@ -40,6 +45,20 @@ func New(l *slog.Logger, path string) *Manager {
 	return &Manager{log: l, path: path}
 }
 
+// NewWithSystemConfig returns a new Manager that also honors the system-wide opt-out state.
+// consentDir is the folder the per-source consent files are stored into, and systemConfigDir
+// is the directory containing the system-wide configuration file.
+//
+// When the system opt-out is active, GetState reports false for every source regardless of the
+// per-source consent files. SetState is unaffected.
+func NewWithSystemConfig(l *slog.Logger, consentDir, systemConfigDir string) *Manager {
+	return &Manager{
+		log:    l,
+		path:   consentDir,
+		optOut: systemconfig.New(l, systemConfigDir),
+	}
+}
+
 // GetState gets the consent state for the given source.
 // If the source do not have a consent file, it will be considered as a false state.
 // If the source is an empty string, then the platform source consent state will be returned.
@@ -53,6 +72,18 @@ func (cm Manager) GetState(source string) (state bool, err error) {
 			err = errors.Join(ErrConsentFileNotFound, err)
 		}
 	}()
+
+	if cm.optOut != nil {
+		optedOut, optErr := cm.optOut.IsOptedOut()
+		if optErr != nil {
+			return false, fmt.Errorf("failed to check system opt-out: %v", optErr)
+		}
+		if optedOut {
+			cm.log.Info("System opt-out is active, treating consent as false", "source", source)
+			return false, nil
+		}
+	}
+
 	sourceConsent, err := readFile(cm.log, cm.getFile(source))
 	if err != nil {
 		return false, err

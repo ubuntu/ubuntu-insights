@@ -120,7 +120,7 @@ func (c Config) Collect(source string, flags CollectFlags) ([]byte, error) {
 		SourceMetricsJSON: flags.SourceMetricsJSON,
 	}
 
-	cm := newEffectiveConsent(r.Logger, r.ConsentDir, r.SystemConfigDir)
+	cm := consent.NewWithSystemConfig(r.Logger, r.ConsentDir, r.SystemConfigDir)
 	col, err := collector.New(r.Logger, cm, cConf)
 	if err != nil {
 		return nil, err
@@ -179,7 +179,7 @@ func (c Config) Compile(flags CompileFlags) ([]byte, error) {
 func (c Config) Write(source string, report []byte, flags WriteFlags) error {
 	r := c.Resolve()
 
-	cm := newEffectiveConsent(r.Logger, r.ConsentDir, r.SystemConfigDir)
+	cm := consent.NewWithSystemConfig(r.Logger, r.ConsentDir, r.SystemConfigDir)
 	col, err := collector.New(r.Logger, cm, collector.Config{
 		Source:    source,
 		CachePath: r.InsightsDir,
@@ -217,7 +217,7 @@ func (c Config) Upload(sources []string, flags UploadFlags) error {
 		return err
 	}
 
-	cm := newEffectiveConsent(r.Logger, r.ConsentDir, r.SystemConfigDir)
+	cm := consent.NewWithSystemConfig(r.Logger, r.ConsentDir, r.SystemConfigDir)
 	uploader, err := uploader.New(r.Logger, cm, r.InsightsDir, uConf.MinAge, uConf.DryRun)
 	if err != nil {
 		return fmt.Errorf("failed to create uploader: %v", err)
@@ -294,36 +294,4 @@ func (c Config) warnIfSystemOptedOut() {
 	if optedOut {
 		c.Logger.Warn("System opt-out is active; per-user consent state is overridden")
 	}
-}
-
-// effectiveConsent is a collector.Consent / uploader.Consent implementation that
-// returns false whenever the system opt-out is active, delegating to the per-user
-// consent manager otherwise.
-type effectiveConsent struct {
-	consent *consent.Manager
-	optOut  *systemconfig.Manager
-	log     *slog.Logger
-}
-
-// newEffectiveConsent creates an effectiveConsent that combines system opt-out with per-user consent.
-func newEffectiveConsent(l *slog.Logger, consentDir, systemConfigDir string) *effectiveConsent {
-	return &effectiveConsent{
-		consent: consent.New(l, consentDir),
-		optOut:  systemconfig.New(l, systemConfigDir),
-		log:     l,
-	}
-}
-
-// GetState returns false when the system opt-out is active, otherwise returns the per-user consent state.
-func (ec *effectiveConsent) GetState(source string) (bool, error) {
-	optedOut, err := ec.optOut.IsOptedOut()
-	if err != nil {
-		return false, fmt.Errorf("failed to check system opt-out: %v", err)
-	}
-	if optedOut {
-		ec.log.Info("System opt-out is active, treating consent as false", "source", source)
-		return false, nil
-	}
-
-	return ec.consent.GetState(source)
 }
