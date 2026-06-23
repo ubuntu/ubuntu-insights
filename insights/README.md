@@ -13,6 +13,8 @@ Ubuntu Insights caches all collected data locally, and will only attempt to uplo
 
 By default, Ubuntu Insights will only collect once per collection period.
 
+A system-wide opt-out can be configured by administrators to override all per-user and per-source consent settings. When active, all collection and upload operations behave as if consent is denied.
+
 To execute the interactive command-line interface manually, use `ubuntu-insights`.
 
 ### Example Insights Reports
@@ -27,6 +29,8 @@ Consent Files: `~/.config/ubuntu-insights`
 
 Reports Cache: `~/.cache/ubuntu-insights`
 
+System Configuration: `/etc/ubuntu-insights`
+
 ## Command-Line Interface Usage
 
 ### ubuntu-insights
@@ -35,21 +39,24 @@ Reports Cache: `~/.cache/ubuntu-insights`
 
 #### Options
 
-```
+```none
 Available Commands:
-  collect     Collect system information
-  completion  Generate the autocompletion script for the specified shell
-  consent     Manage or get user consent state
-  help        Help about any command
-  upload      Upload metrics to the Ubuntu Insights server
+  collect         Collect system information
+  completion      Generate the autocompletion script for the specified shell
+  consent         Manage or get user consent state
+  help            Help about any command
+  system-opt-out  Manage or get the system-wide opt-out state
+  upload          Upload metrics to the Ubuntu Insights server
 
 Flags:
-      --config string         use a specific configuration file
-      --consent-dir string    the base directory of the consent state files
-  -h, --help                  help for ubuntu-insights
-      --insights-dir string   the base directory of the insights report cache
-  -v, --verbose count         issue INFO (-v), DEBUG (-vv)
-      --version               version for ubuntu-insights
+      --config string              use a specific configuration file
+      --consent-dir string         the base directory of the consent state files
+  -h, --help                       help for ubuntu-insights
+      --insights-dir string        the base directory of the insights report cache
+  -q, --quiet                      suppress all output except errors
+      --system-config-dir string   the directory of the system-wide configuration file
+  -v, --verbose count              issue INFO (-v), DEBUG (-vv)
+      --version                    version for ubuntu-insights
 ```
 
 ### ubuntu-insights consent
@@ -60,7 +67,7 @@ Manage or get user consent state for data collection and upload
 
 #### Options
 
-```
+```none
 Flags:
   -h, --help           help for consent
   -s, --state string   the consent state to set (true or false)
@@ -87,6 +94,53 @@ foo@bar:~$ ubuntu-insights consent wsl_setup -s true
 wsl_setup: true
 ```
 
+### ubuntu-insights system-opt-out
+
+Manage or get the system-wide opt-out state for data collection and upload.
+
+When the system opt-out is active, all collection and upload operations behave as if consent is denied, regardless of per-user or per-source consent settings.
+
+Setting the system opt-out state typically requires administrative privileges to write to the system configuration directory.
+
+`ubuntu-insights system-opt-out [flags]`
+
+#### Options
+
+```none
+Flags:
+  -h, --help           help for system-opt-out
+  -s, --state string   the system opt-out state to set (true or false)
+
+Global Flags:
+      --config string              use a specific configuration file
+      --system-config-dir string   the directory of the system-wide configuration file
+  -q, --quiet                      suppress all output except errors
+  -v, --verbose count              issue INFO (-v), DEBUG (-vv)
+```
+
+#### Examples
+
+To get the current system-wide opt-out state:
+
+```console
+foo@bar:~$ ubuntu-insights system-opt-out
+false
+```
+
+To enable the system-wide opt-out (may require administrative privileges):
+
+```console
+foo@bar:~$ sudo ubuntu-insights system-opt-out -s true
+true
+```
+
+To disable the system-wide opt-out:
+
+```console
+foo@bar:~$ sudo ubuntu-insights system-opt-out -s false
+false
+```
+
 ### ubuntu-insights collect
 
 Collect system information and metrics and store it locally.
@@ -98,7 +152,7 @@ If source is provided, then the source-metrics-path should be provided as well.
 
 #### Options
 
-```
+```none
 Flags:
   -d, --dry-run       perform a dry-run where a report is collected, but not written to disk
   -f, --force         force a collection, override the report if there are any conflicts (consent is still respected)
@@ -123,7 +177,7 @@ If consent is not given for a source, an opt-out notification will be sent regar
 
 #### Options
 
-```
+```none
 Flags:
   -d, --dry-run        go through the motions of doing an upload, but do not communicate with the server, send the payload, or modify local files
   -f, --force          force an upload, ignoring min age and clashes between the collected file and a file in the uploaded folder, replacing the clashing uploaded report if it exists (doesn't ignore consent)
@@ -146,4 +200,4 @@ These commands are hidden from help, and should primarily be used by the system 
 
 Generate the autocompletion script for ubuntu-insights for the specified shell.
 
-`  ubuntu-insights completion [shell]`
+`ubuntu-insights completion [shell]`
