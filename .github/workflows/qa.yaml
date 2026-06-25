@@ -61,7 +61,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install dependencies on Linux
         if: runner.os == 'Linux' && matrix.module == 'insights'
@@ -85,7 +85,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Prepare environment
         uses: ./.github/actions/prepare-environment
         with:
@@ -132,7 +132,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Prepare environment
         uses: ./.github/actions/prepare-environment
         with:
@@ -185,7 +185,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-process-coverage-${{ github.ref }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Download coverage artifacts
         uses: actions/download-artifact@v8
