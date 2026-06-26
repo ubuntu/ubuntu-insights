@@ -3,5 +3,4 @@ conf:
     insightsdir: ""
     systemconfigdir: ""
     logger: null
-source: ""
-state: false
+state: true

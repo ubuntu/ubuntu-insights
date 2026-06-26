@@ -298,6 +298,35 @@ func insights_set_consent_state(config *C.insights_const_config, source *C.insig
 }
 
 /**
+ * insights_get_system_opt_out gets the system-wide opt-out state.
+ * If config is NULL, defaults are used.
+ * If the state could not be retrieved, this function returns false.
+ **/
+//export insights_get_system_opt_out
+func insights_get_system_opt_out(config *C.insights_const_config) C.bool {
+	conf := toGoInsightsConfig(config)
+
+	optedOut, err := conf.IsSystemOptOut()
+	if err != nil {
+		return C.bool(false)
+	}
+	return C.bool(optedOut)
+}
+
+/**
+ * insights_set_system_opt_out_state sets the system-wide opt-out state.
+ * If config is NULL, defaults are used.
+ * If the state could not be set, this function returns an error string.
+ * Otherwise, it returns NULL.
+ * The error string must be freed.
+ **/
+//export insights_set_system_opt_out_state
+func insights_set_system_opt_out_state(config *C.insights_const_config, state C.bool) *C.char {
+	conf := toGoInsightsConfig(config)
+	return errToCString(conf.SetSystemOptOut((bool)(state)))
+}
+
+/**
  * insights_set_log_callback sets the callback function for logging.
  * The callback receives the log level and the null terminated message.
  * Setting the callback overrides the default logging behavior.
@@ -325,6 +354,24 @@ func setCustomConsentState(config *C.insights_const_config, source *C.insights_c
 
 	err := setter(conf, sourceStr, (bool)(newState))
 	return errToCString(err)
+}
+
+// systemOptOutGetter is a function that gets the system opt-out state using the given parameters.
+type systemOptOutGetter = func(conf insights.Config) C.bool
+
+// getCustomSystemOptOut handles C to Go translation and calls the custom getter.
+func getCustomSystemOptOut(config *C.insights_const_config, getter systemOptOutGetter) C.bool {
+	conf := toGoInsightsConfig(config)
+	return getter(conf)
+}
+
+// systemOptOutSetter is a function that sets the system opt-out state using the given parameters.
+type systemOptOutSetter = func(conf insights.Config, state bool) error
+
+// setCustomSystemOptOutState handles C to Go translation and calls the custom setter.
+func setCustomSystemOptOutState(config *C.insights_const_config, state C.bool, setter systemOptOutSetter) *C.char {
+	conf := toGoInsightsConfig(config)
+	return errToCString(setter(conf, (bool)(state)))
 }
 
 // toGoInsightsConfig converts a C Insights Config into the equivalent Go structure.
@@ -363,6 +410,9 @@ func toGoInsightsConfig(config *C.insights_const_config) insights.Config {
 		}
 		if config.insights_dir != nil {
 			iConf.InsightsDir = C.GoString(config.insights_dir)
+		}
+		if config.system_config_dir != nil {
+			iConf.SystemConfigDir = C.GoString(config.system_config_dir)
 		}
 	}
 	return iConf
