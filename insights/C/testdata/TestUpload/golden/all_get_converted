@@ -1,6 +1,7 @@
 conf:
     consentdir: home/etc/wsl/dir
     insightsdir: insights/wsl/dir
+    systemconfigdir: ""
     logger: null
 sources:
     - wsl

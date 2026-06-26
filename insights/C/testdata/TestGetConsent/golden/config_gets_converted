@@ -1,5 +1,6 @@
 conf:
     consentdir: home/etc/dir
     insightsdir: insights/dir
+    systemconfigdir: ""
     logger: null
 source: platform
