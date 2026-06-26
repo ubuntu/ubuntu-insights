@@ -23,6 +23,7 @@ func TestCollect(t *testing.T) {
 		sourceMetrics  string
 		config         string
 		consentFixture consentFixture
+		systemConfig   string
 		readOnlyFile   []string
 		maxReports     uint
 		time           int
@@ -41,6 +42,11 @@ func TestCollect(t *testing.T) {
 		"True Normal": {
 			source:        "True",
 			sourceMetrics: "normal.json",
+		},
+		"True Normal with system opt-out writes opt-out": {
+			source:        "True",
+			sourceMetrics: "normal.json",
+			systemConfig:  "system_opt_out = true\n",
 		},
 		"True Bad-Ext": {
 			source:        "True",
@@ -181,6 +187,7 @@ func TestCollect(t *testing.T) {
 			}
 
 			paths := setupFixtures(t, tc.consentFixture)
+			setupSystemConfig(t, paths.systemConfig, tc.systemConfig)
 
 			for _, f := range tc.readOnlyFile {
 				testutils.MakeReadOnly(t, filepath.Join(paths.consent, f))
@@ -190,6 +197,8 @@ func TestCollect(t *testing.T) {
 			require.NoError(t, err)
 
 			smContents, err := testutils.GetDirContents(t, paths.sourceMetrics, 3)
+			require.NoError(t, err)
+			systemConfigContents, err := testutils.GetDirContents(t, paths.systemConfig, 3)
 			require.NoError(t, err)
 
 			if tc.sourceMetrics != "" {
@@ -208,6 +217,7 @@ func TestCollect(t *testing.T) {
 			cmd.Args = append(cmd.Args, "-vv")
 			cmd.Args = append(cmd.Args, "--consent-dir", paths.consent)
 			cmd.Args = append(cmd.Args, "--insights-dir", paths.reports)
+			cmd.Args = append(cmd.Args, "--system-config-dir", paths.systemConfig)
 			cmd.Env = append(cmd.Env, os.Environ()...)
 			if tc.maxReports != 0 {
 				cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_MAX_REPORTS="+fmt.Sprint(tc.maxReports))
@@ -238,6 +248,10 @@ func TestCollect(t *testing.T) {
 			gotContents, err = testutils.GetDirContents(t, paths.sourceMetrics, 3)
 			require.NoError(t, err, "failed to get source metrics directory contents")
 			assert.Equal(t, smContents, gotContents)
+
+			gotContents, err = testutils.GetDirContents(t, paths.systemConfig, 3)
+			require.NoError(t, err, "failed to get system config directory contents")
+			assert.Equal(t, systemConfigContents, gotContents)
 
 			if tc.skipReportCheck {
 				return

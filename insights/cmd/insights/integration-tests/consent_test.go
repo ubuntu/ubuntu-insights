@@ -26,10 +26,12 @@ func TestConsent(t *testing.T) {
 		state          string
 		config         string
 		consentFixture consentFixture
+		systemConfig   string
 		readOnlyFile   []string
 
-		ignoreGolden bool
-		wantExitCode int
+		wantOutputContains []string
+		ignoreGolden       bool
+		wantExitCode       int
 	}{
 		// Get platform source
 		"Get platform true state":                  {consentFixture: fixtureTrue},
@@ -51,6 +53,14 @@ func TestConsent(t *testing.T) {
 		"Get specific missing file returns error":    {config: "missing.yaml", wantExitCode: 1},
 		"Get specific multiple errors returns error": {config: "multiple-err.yaml", wantExitCode: 1},
 		"Get specific multiple mixed returns error":  {config: "multiple-mixed.yaml", wantExitCode: 1},
+		"Get specific true state when system opt-out active": {
+			config:       "true.yaml",
+			systemConfig: "system_opt_out = true\n",
+			wantOutputContains: []string{
+				"True: true",
+				"System opt-out is active; per-user consent state is overridden during collection and upload",
+			},
+		},
 
 		// Set platform source
 		"Set platform true from true state":    {state: "true", consentFixture: fixtureTrue},
@@ -108,6 +118,7 @@ func TestConsent(t *testing.T) {
 
 			tc.config = filepath.Join("testdata", "configs", "consent", tc.config)
 			paths := setupFixtures(t, tc.consentFixture)
+			setupSystemConfig(t, paths.systemConfig, tc.systemConfig)
 
 			for _, f := range tc.readOnlyFile {
 				testutils.MakeReadOnly(t, filepath.Join(paths.consent, f))
@@ -117,10 +128,13 @@ func TestConsent(t *testing.T) {
 			require.NoError(t, err, "Setup: failed to get directory contents")
 			smContents, err := testutils.GetDirContents(t, paths.sourceMetrics, 3)
 			require.NoError(t, err, "Setup: failed to get directory contents")
+			systemConfigContents, err := testutils.GetDirContents(t, paths.systemConfig, 3)
+			require.NoError(t, err, "Setup: failed to get directory contents")
 
 			// #nosec:G204 - we control the command arguments in tests
 			cmd := exec.Command(cliPath, "consent", "--config", tc.config, "-vv")
 			cmd.Args = append(cmd.Args, "--consent-dir", paths.consent)
+			cmd.Args = append(cmd.Args, "--system-config-dir", paths.systemConfig)
 			if tc.state != "" {
 				cmd.Args = append(cmd.Args, "-s", tc.state)
 			}
@@ -129,6 +143,9 @@ func TestConsent(t *testing.T) {
 				require.NoError(t, err, "unexpected CLI error: %v\n%s", err, out)
 			}
 			assert.Equal(t, tc.wantExitCode, cmd.ProcessState.ExitCode(), "unexpected exit code: %v\n%s", err, out)
+			for _, want := range tc.wantOutputContains {
+				assert.Contains(t, string(out), want)
+			}
 
 			// Check that the reports and source-metrics directories were not modified
 			got, err := testutils.GetDirContents(t, paths.reports, 3)
@@ -138,6 +155,10 @@ func TestConsent(t *testing.T) {
 			got, err = testutils.GetDirContents(t, paths.sourceMetrics, 3)
 			require.NoError(t, err, "failed to get directory contents")
 			assert.Equal(t, smContents, got)
+
+			got, err = testutils.GetDirContents(t, paths.systemConfig, 3)
+			require.NoError(t, err, "failed to get directory contents")
+			assert.Equal(t, systemConfigContents, got)
 
 			got, err = testutils.GetDirContents(t, paths.consent, 3)
 			require.NoError(t, err, "failed to get directory contents")

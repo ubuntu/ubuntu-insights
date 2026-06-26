@@ -34,6 +34,7 @@ func TestUpload(t *testing.T) {
 		sources        []string
 		config         string
 		consentFixture consentFixture
+		systemConfig   string
 		readOnlyFile   []string
 		maxReports     uint
 		time           int
@@ -51,6 +52,14 @@ func TestUpload(t *testing.T) {
 		// True
 		"True-Uploads reports from the specified source": {
 			sources: []string{"True"},
+			removeReports: []string{
+				"True/local/2000.json",
+				"True/uploaded/1000.json",
+			},
+		},
+		"True-System opt-out sends opt-out payload": {
+			sources:      []string{"True"},
+			systemConfig: "system_opt_out = true\n",
 			removeReports: []string{
 				"True/local/2000.json",
 				"True/uploaded/1000.json",
@@ -477,6 +486,7 @@ func TestUpload(t *testing.T) {
 			server := s.URL
 
 			paths := setupFixtures(t, tc.consentFixture)
+			setupSystemConfig(t, paths.systemConfig, tc.systemConfig)
 
 			// Remove files
 			for _, f := range tc.removeReports {
@@ -492,6 +502,8 @@ func TestUpload(t *testing.T) {
 
 			smContents, err := testutils.GetDirContents(t, paths.sourceMetrics, 3)
 			require.NoError(t, err, "Setup: failed to get source metrics directory contents")
+			systemConfigContents, err := testutils.GetDirContents(t, paths.systemConfig, 3)
+			require.NoError(t, err, "Setup: failed to get system config directory contents")
 
 			// #nosec:G204 - we control the command arguments in tests
 			cmd := exec.Command(cliPath, "upload")
@@ -503,6 +515,7 @@ func TestUpload(t *testing.T) {
 			cmd.Args = append(cmd.Args, "-vv")
 			cmd.Args = append(cmd.Args, "--consent-dir", paths.consent)
 			cmd.Args = append(cmd.Args, "--insights-dir", paths.reports)
+			cmd.Args = append(cmd.Args, "--system-config-dir", paths.systemConfig)
 			cmd.Env = append(cmd.Env, os.Environ()...)
 			cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_SERVER_URL="+server)
 			cmd.Env = append(cmd.Env, "UBUNTU_INSIGHTS_INTEGRATIONTESTS_BASE_RETRY_PERIOD="+baseRetryPeriod.String())
@@ -530,6 +543,10 @@ func TestUpload(t *testing.T) {
 			gotContents, err = testutils.GetDirContents(t, paths.sourceMetrics, 3)
 			require.NoError(t, err, "failed to get source metrics directory contents")
 			assert.Equal(t, smContents, gotContents)
+
+			gotContents, err = testutils.GetDirContents(t, paths.systemConfig, 3)
+			require.NoError(t, err, "failed to get system config directory contents")
+			assert.Equal(t, systemConfigContents, gotContents)
 
 			type results struct {
 				Payloads        []string
