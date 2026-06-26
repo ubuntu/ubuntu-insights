@@ -785,15 +785,6 @@ func TestGetSystemOptOutImpl(t *testing.T) {
 			inConfig, cleanup := makeConfig(tc.config)
 			defer cleanup()
 
-			// Override toGoInsightsConfig to use a mock config that returns our mock values.
-			conf := toGoInsightsConfig(inConfig)
-			conf = insights.Config{
-				ConsentDir:      conf.ConsentDir,
-				InsightsDir:     conf.InsightsDir,
-				SystemConfigDir: conf.SystemConfigDir,
-				Logger:          conf.Logger,
-			}
-
 			var got struct {
 				Conf insights.Config
 			}
