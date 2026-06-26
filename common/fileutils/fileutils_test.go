@@ -124,6 +124,25 @@ func TestAtomicWriteWithPerm(t *testing.T) {
 	}
 }
 
+func TestAtomicWriteWithPermSetsPermissionsAfterRename(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "file")
+	t.Cleanup(func() { _ = os.Chmod(path, 0600) })
+
+	err := fileutils.AtomicWriteWithPerm(path, []byte("data"), 0755, 0400)
+	require.NoError(t, err, "AtomicWriteWithPerm should not apply restrictive permissions before renaming")
+
+	if runtime.GOOS == "windows" {
+		return
+	}
+
+	info, err := os.Stat(path)
+	require.NoError(t, err, "Stat should not return an error")
+	require.Equal(t, os.FileMode(0400), info.Mode().Perm(), "file should have the requested permissions")
+}
+
 func TestReadFileLogError(t *testing.T) {
 	t.Parallel()
 

@@ -44,12 +44,6 @@ func atomicWrite(path string, data []byte, filePerm os.FileMode) (err error) {
 		}
 	}()
 
-	if filePerm != 0 {
-		if err := tmp.Chmod(filePerm); err != nil {
-			return fmt.Errorf("could not set permissions on temporary file: %v", err)
-		}
-	}
-
 	if _, err := tmp.Write(data); err != nil {
 		return fmt.Errorf("could not write to temporary file: %v", err)
 	}
@@ -60,6 +54,12 @@ func atomicWrite(path string, data []byte, filePerm os.FileMode) (err error) {
 
 	if err := os.Rename(tmp.Name(), path); err != nil {
 		return fmt.Errorf("could not rename temporary file: %v", err)
+	}
+
+	if filePerm != 0 {
+		if err := os.Chmod(path, filePerm); err != nil {
+			return fmt.Errorf("could not set permissions on file: %v", err)
+		}
 	}
 	return nil
 }
