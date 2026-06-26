@@ -304,13 +304,13 @@ func insights_set_consent_state(config *C.insights_const_config, source *C.insig
  **/
 //export insights_get_system_opt_out
 func insights_get_system_opt_out(config *C.insights_const_config) C.bool {
-	conf := toGoInsightsConfig(config)
-
-	optedOut, err := conf.IsSystemOptOut()
-	if err != nil {
-		return C.bool(false)
-	}
-	return C.bool(optedOut)
+	return getCustomSystemOptOut(config, func(conf insights.Config) C.bool {
+		optedOut, err := conf.IsSystemOptOut()
+		if err != nil {
+			return C.bool(false)
+		}
+		return C.bool(optedOut)
+	})
 }
 
 /**
@@ -322,8 +322,9 @@ func insights_get_system_opt_out(config *C.insights_const_config) C.bool {
  **/
 //export insights_set_system_opt_out_state
 func insights_set_system_opt_out_state(config *C.insights_const_config, state C.bool) *C.char {
-	conf := toGoInsightsConfig(config)
-	return errToCString(conf.SetSystemOptOut((bool)(state)))
+	return setCustomSystemOptOutState(config, state, func(conf insights.Config, state bool) error {
+		return conf.SetSystemOptOut(state)
+	})
 }
 
 /**
