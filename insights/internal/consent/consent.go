@@ -3,6 +3,7 @@
 package consent
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -12,7 +13,9 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/ubuntu/decorate"
+	"github.com/ubuntu/ubuntu-insights/common/fileutils"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/constants"
+	"github.com/ubuntu/ubuntu-insights/insights/internal/systemconfig"
 )
 
 var (
@@ -23,6 +26,10 @@ var (
 // Manager is a struct that manages consent files.
 type Manager struct {
 	path string
+
+	// optOut, when set, makes GetState honor the system-wide opt-out state.
+	// When nil, only the per-source consent files are consulted.
+	optOut *systemconfig.Manager
 
 	log *slog.Logger
 }
@@ -38,6 +45,20 @@ func New(l *slog.Logger, path string) *Manager {
 	return &Manager{log: l, path: path}
 }
 
+// NewWithSystemConfig returns a new Manager that also honors the system-wide opt-out state.
+// consentDir is the folder the per-source consent files are stored into, and systemConfigDir
+// is the directory containing the system-wide configuration file.
+//
+// When the system opt-out is active, GetState reports false for every source regardless of the
+// per-source consent files. SetState is unaffected.
+func NewWithSystemConfig(l *slog.Logger, consentDir, systemConfigDir string) *Manager {
+	return &Manager{
+		log:    l,
+		path:   consentDir,
+		optOut: systemconfig.New(l, systemConfigDir),
+	}
+}
+
 // GetState gets the consent state for the given source.
 // If the source do not have a consent file, it will be considered as a false state.
 // If the source is an empty string, then the platform source consent state will be returned.
@@ -51,6 +72,18 @@ func (cm Manager) GetState(source string) (state bool, err error) {
 			err = errors.Join(ErrConsentFileNotFound, err)
 		}
 	}()
+
+	if cm.optOut != nil {
+		optedOut, optErr := cm.optOut.IsOptedOut()
+		if optErr != nil {
+			return false, fmt.Errorf("failed to check system opt-out: %v", optErr)
+		}
+		if optedOut {
+			cm.log.Warn("System opt-out is active, treating consent as false", "source", source)
+			return false, nil
+		}
+	}
+
 	sourceConsent, err := readFile(cm.log, cm.getFile(source))
 	if err != nil {
 		return false, err
@@ -119,30 +152,13 @@ func readFile(l *slog.Logger, path string) (CFile, error) {
 // Not atomic on Windows.
 // Makes dir if it does not exist.
 func (cf CFile) write(l *slog.Logger, path string) (err error) {
-	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
-		return fmt.Errorf("could not create directory: %v", err)
-	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), "consent-*.tmp")
-	if err != nil {
-		return fmt.Errorf("could not create temporary file: %v", err)
-	}
-	defer func() {
-		_ = tmp.Close()
-		if err := os.Remove(tmp.Name()); err != nil && !os.IsNotExist(err) {
-			l.Warn("Failed to remove temporary file when writing consent file", "file", tmp.Name(), "error", err)
-		}
-	}()
-
-	if err := toml.NewEncoder(tmp).Encode(cf); err != nil {
+	var buf bytes.Buffer
+	if err := toml.NewEncoder(&buf).Encode(cf); err != nil {
 		return fmt.Errorf("could not encode consent file: %v", err)
 	}
 
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("could not close temporary file: %v", err)
-	}
-
-	if err := os.Rename(tmp.Name(), path); err != nil {
-		return fmt.Errorf("could not rename temporary file: %v", err)
+	if err := fileutils.AtomicWriteWithPerm(path, buf.Bytes(), 0750, 0600); err != nil {
+		return err
 	}
 	l.Debug("Wrote consent file", "file", path, "consent", cf.ConsentState)
 

@@ -83,6 +83,66 @@ func TestAtomicWrite(t *testing.T) {
 	}
 }
 
+func TestAtomicWriteWithPerm(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		data     []byte
+		nestDirs bool // write into a not-yet-existing nested directory
+		dirPerm  os.FileMode
+		filePerm os.FileMode
+	}{
+		"World-readable file in existing dir": {data: []byte("data"), dirPerm: 0755, filePerm: 0644},
+		"Private file in existing dir":        {data: []byte("data"), dirPerm: 0750, filePerm: 0600},
+		"Creates missing parent directories":  {data: []byte("data"), nestDirs: true, dirPerm: 0755, filePerm: 0644},
+		"Empty file":                          {data: []byte{}, dirPerm: 0755, filePerm: 0644},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			if tc.nestDirs {
+				dir = filepath.Join(dir, "new", "nested")
+			}
+			path := filepath.Join(dir, "file")
+
+			err := fileutils.AtomicWriteWithPerm(path, tc.data, tc.dirPerm, tc.filePerm)
+			require.NoError(t, err, "AtomicWriteWithPerm should not return an error")
+
+			data, err := os.ReadFile(path)
+			require.NoError(t, err, "ReadFile should not return an error")
+			require.Equal(t, tc.data, data, "AtomicWriteWithPerm should write the data to the file")
+
+			if runtime.GOOS != "windows" {
+				info, err := os.Stat(path)
+				require.NoError(t, err, "Stat should not return an error")
+				require.Equal(t, tc.filePerm, info.Mode().Perm(), "file should have the requested permissions")
+			}
+		})
+	}
+}
+
+func TestAtomicWriteWithPermSetsPermissionsAfterRename(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "file")
+	t.Cleanup(func() { _ = os.Chmod(path, 0600) })
+
+	err := fileutils.AtomicWriteWithPerm(path, []byte("data"), 0755, 0400)
+	require.NoError(t, err, "AtomicWriteWithPerm should not apply restrictive permissions before renaming")
+
+	if runtime.GOOS == "windows" {
+		return
+	}
+
+	info, err := os.Stat(path)
+	require.NoError(t, err, "Stat should not return an error")
+	require.Equal(t, os.FileMode(0400), info.Mode().Perm(), "file should have the requested permissions")
+}
+
 func TestReadFileLogError(t *testing.T) {
 	t.Parallel()
 

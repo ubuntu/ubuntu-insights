@@ -65,6 +65,55 @@ func TestGetState(t *testing.T) {
 	}
 }
 
+func TestGetStateWithSystemConfig(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		source                     string
+		initialPlatformConsentFile string
+		systemConfigContent        string // when writeSystemConfig is true, the content of the system config file.
+		writeSystemConfig          bool
+
+		want    bool
+		wantErr bool
+	}{
+		"Opt-out true overrides true consent":              {initialPlatformConsentFile: "valid_true-consent.toml", writeSystemConfig: true, systemConfigContent: "system_opt_out = true\n", want: false},
+		"Opt-out false respects true consent":              {initialPlatformConsentFile: "valid_true-consent.toml", writeSystemConfig: true, systemConfigContent: "system_opt_out = false\n", want: true},
+		"Opt-out false respects false consent":             {initialPlatformConsentFile: "valid_false-consent.toml", writeSystemConfig: true, systemConfigContent: "system_opt_out = false\n", want: false},
+		"No system config file respects consent":           {initialPlatformConsentFile: "valid_true-consent.toml", want: true},
+		"Opt-out true short-circuits missing consent file": {writeSystemConfig: true, systemConfigContent: "system_opt_out = true\n", want: false},
+
+		// Errors
+		"No opt-out and missing consent file errors": {writeSystemConfig: true, systemConfigContent: "system_opt_out = false\n", wantErr: true},
+		"Malformed system config errors":             {initialPlatformConsentFile: "valid_true-consent.toml", writeSystemConfig: true, systemConfigContent: "system_opt_out = not_a_bool\n", wantErr: true},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			dir, err := setupTmpConsentFiles(t, tc.initialPlatformConsentFile)
+			require.NoError(t, err, "Setup: failed to setup temporary consent files")
+
+			if tc.writeSystemConfig {
+				require.NoError(t, os.WriteFile(
+					filepath.Join(dir, constants.SystemConfigFileName),
+					[]byte(tc.systemConfigContent), 0600),
+					"Setup: failed to write system config file")
+			}
+
+			cm := consent.NewWithSystemConfig(slog.Default(), dir, dir)
+
+			got, err := cm.GetState(tc.source)
+			if tc.wantErr {
+				require.Error(t, err, "expected an error but got none")
+				return
+			}
+			require.NoError(t, err, "got an unexpected error")
+			require.Equal(t, tc.want, got, "GetState should honor the system opt-out state")
+		})
+	}
+}
+
 func TestSetState(t *testing.T) {
 	t.Parallel()
 

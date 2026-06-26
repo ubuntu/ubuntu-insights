@@ -37,6 +37,9 @@ const (
 	// ConsentFilenameSuffix is the suffix used to identify consent files (separator + base).
 	ConsentFilenameSuffix = "-" + ConsentFilenameBase
 
+	// SystemConfigFileName is the file name of the system-wide configuration file.
+	SystemConfigFileName = "system-config.toml"
+
 	// ReportExt is the default extension for the report files.
 	ReportExt = ".json"
 
@@ -61,6 +64,8 @@ var (
 	DefaultConfigPath = DefaultAppFolder
 	// DefaultCachePath is the default app user cache path. It's overridden when imported.
 	DefaultCachePath = DefaultAppFolder
+	// DefaultSystemConfigPath is the default path to the system-wide configuration directory. It's overridden when imported.
+	DefaultSystemConfigPath = DefaultAppFolder
 	// OptOutJSON is the data sent in case of Opt-Out choice.
 	OptOutJSON = struct{ OptOut bool }{true}
 	// OptOutPayload is the marshalled version of OptOutJSON.
@@ -84,6 +89,7 @@ func initializePaths() {
 	if manGeneration == "true" {
 		DefaultConfigPath = ""
 		DefaultCachePath = ""
+		DefaultSystemConfigPath = ""
 		return
 	}
 
@@ -98,6 +104,7 @@ func initializePaths() {
 
 	DefaultConfigPath = filepath.Join(userConfigDir, DefaultConfigPath)
 	DefaultCachePath = filepath.Join(userCacheDir, DefaultCachePath)
+	DefaultSystemConfigPath = systemConfigDir()
 }
 
 // initializeOptOutPayload initializes the OptOutPayload variable with the marshalled OptOutJSON.

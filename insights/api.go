@@ -11,13 +11,15 @@ import (
 	"github.com/ubuntu/ubuntu-insights/insights/internal/collector"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/consent"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/constants"
+	"github.com/ubuntu/ubuntu-insights/insights/internal/systemconfig"
 	"github.com/ubuntu/ubuntu-insights/insights/internal/uploader"
 )
 
 // Config represents optional parameters shared by all calls.
 type Config struct {
-	ConsentDir  string
-	InsightsDir string
+	ConsentDir      string
+	InsightsDir     string
+	SystemConfigDir string // Directory containing the system-wide configuration file.
 
 	Logger *slog.Logger // Optional logger, if not set, a new one will be created.
 }
@@ -85,6 +87,9 @@ func (c Config) Resolve() Config {
 	if c.InsightsDir == "" {
 		c.InsightsDir = constants.DefaultCachePath
 	}
+	if c.SystemConfigDir == "" {
+		c.SystemConfigDir = constants.DefaultSystemConfigPath
+	}
 
 	if c.Logger == nil {
 		c.Logger = slog.Default()
@@ -115,7 +120,7 @@ func (c Config) Collect(source string, flags CollectFlags) ([]byte, error) {
 		SourceMetricsJSON: flags.SourceMetricsJSON,
 	}
 
-	cm := consent.New(r.Logger, r.ConsentDir)
+	cm := consent.NewWithSystemConfig(r.Logger, r.ConsentDir, r.SystemConfigDir)
 	col, err := collector.New(r.Logger, cm, cConf)
 	if err != nil {
 		return nil, err
@@ -152,6 +157,7 @@ func (c Config) Compile(flags CompileFlags) ([]byte, error) {
 	}
 
 	// TODO: remove consent manager dependency from Compile
+	// Note: Compile does not check consent, so we use the plain consent manager here.
 	cm := consent.New(r.Logger, r.ConsentDir)
 	col, err := collector.New(r.Logger, cm, cConf)
 	if err != nil {
@@ -173,7 +179,7 @@ func (c Config) Compile(flags CompileFlags) ([]byte, error) {
 func (c Config) Write(source string, report []byte, flags WriteFlags) error {
 	r := c.Resolve()
 
-	cm := consent.New(r.Logger, r.ConsentDir)
+	cm := consent.NewWithSystemConfig(r.Logger, r.ConsentDir, r.SystemConfigDir)
 	col, err := collector.New(r.Logger, cm, collector.Config{
 		Source:    source,
 		CachePath: r.InsightsDir,
@@ -211,7 +217,7 @@ func (c Config) Upload(sources []string, flags UploadFlags) error {
 		return err
 	}
 
-	cm := consent.New(r.Logger, r.ConsentDir)
+	cm := consent.NewWithSystemConfig(r.Logger, r.ConsentDir, r.SystemConfigDir)
 	uploader, err := uploader.New(r.Logger, cm, r.InsightsDir, uConf.MinAge, uConf.DryRun)
 	if err != nil {
 		return fmt.Errorf("failed to create uploader: %v", err)
@@ -223,9 +229,14 @@ func (c Config) Upload(sources []string, flags UploadFlags) error {
 // GetConsentState gets the state for the specified source.
 // If source is "", the platform source consent state is retrieved.
 //
+// The returned value reflects only the per-user, per-source consent and is not affected by the system opt-out state.
+// A warning is logged if the system opt-out is currently active.
+//
 // This method calls Resolve() on the config before proceeding.
 func (c Config) GetConsentState(source string) (bool, error) {
 	r := c.Resolve()
+
+	r.warnIfSystemOptedOut()
 
 	cm := consent.New(r.Logger, r.ConsentDir)
 	s, err := cm.GetState(source)
@@ -239,10 +250,48 @@ func (c Config) GetConsentState(source string) (bool, error) {
 // SetConsentState sets the consent state for the specified source.
 // If source is "", the platform source consent state is affected.
 //
+// The system opt-out state is not affected by this call.
+// A warning is logged if the system opt-out is currently active.
+//
 // This method calls Resolve() on the config before proceeding.
 func (c Config) SetConsentState(source string, consentState bool) error {
 	r := c.Resolve()
 
+	r.warnIfSystemOptedOut()
+
 	cm := consent.New(r.Logger, r.ConsentDir)
 	return cm.SetState(source, consentState)
+}
+
+// IsSystemOptOut reports whether the system-wide opt-out is currently active.
+//
+// This method calls Resolve() on the config before proceeding.
+func (c Config) IsSystemOptOut() (bool, error) {
+	r := c.Resolve()
+
+	return systemconfig.New(r.Logger, r.SystemConfigDir).IsOptedOut()
+}
+
+// SetSystemOptOut sets the system-wide opt-out state.
+//
+// This method calls Resolve() on the config before proceeding.
+func (c Config) SetSystemOptOut(state bool) error {
+	r := c.Resolve()
+
+	return systemconfig.New(r.Logger, r.SystemConfigDir).SetOptOut(state)
+}
+
+// warnIfSystemOptedOut logs a warning when the system opt-out is active.
+// It is used by GetConsentState and SetConsentState so callers are aware the
+// per-user consent state is overridden at the system level.
+func (c Config) warnIfSystemOptedOut() {
+	om := systemconfig.New(c.Logger, c.SystemConfigDir)
+	optedOut, err := om.IsOptedOut()
+	if err != nil {
+		c.Logger.Warn("Failed to check system opt-out state", "error", err)
+		return
+	}
+	if optedOut {
+		c.Logger.Warn("System opt-out is active; per-user consent state is overridden")
+	}
 }
