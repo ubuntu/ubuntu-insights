@@ -3,5 +3,5 @@
 package main
 
 func init() {
-	libname = "libinsights.0.dylib"
+	libname = "libinsights.1.dylib"
 }

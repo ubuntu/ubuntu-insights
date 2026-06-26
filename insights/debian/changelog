@@ -1,3 +1,21 @@
+ubuntu-insights (1.0.0ubuntu) resolute; urgency=medium
+
+  * Add system-wide opt-out support:
+    - New `system-opt-out` CLI subcommand to query and set the system-wide
+      opt-out state.
+    - Wire system opt-out into the Go API and consent manager; when active it
+      overrides per-user consent during collection and upload.
+    - Add C bindings: insights_get_system_opt_out and
+      insights_set_system_opt_out_state.
+  * Collect the Ubuntu Pro attach state by querying it over D-Bus, with a
+    command-line fallback.
+  * Collect Linux OS information from `os-release`, with special handling for
+    collection inside confined snaps.
+  * (Breaking) Bump SONAME to libinsights.so.1 (libinsights0 -> libinsights1)
+    - Reorganize the public C structs.
+
+ -- Kat Kuo <kat.kuo@canonical.com>  Fri, 26 Jun 2026 16:38:44 -0400
+
 ubuntu-insights (0.9.3ubuntu) resolute; urgency=medium
 
   * Fix: Fix systemd tests in autopkgtest smoke test suite
