@@ -21,6 +21,7 @@ type fixturePaths struct {
 	consent       string
 	reports       string
 	sourceMetrics string
+	systemConfig  string
 	base          string
 }
 
@@ -111,6 +112,7 @@ func setupFixtures(t *testing.T, initialPlatformConsent consentFixture) fixtureP
 		consent:       filepath.Join(dir, "consents"),
 		reports:       filepath.Join(dir, "reports"),
 		sourceMetrics: filepath.Join(dir, "source-metrics"),
+		systemConfig:  filepath.Join(dir, "system-config"),
 		base:          dir,
 	}
 

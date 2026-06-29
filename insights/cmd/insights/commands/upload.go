@@ -48,7 +48,7 @@ func (a App) uploadRun() error {
 		return err
 	}
 
-	cm := consent.New(l, a.config.consentDir)
+	cm := consent.NewWithSystemConfig(l, a.config.consentDir, a.config.systemConfigDir)
 	u, err := a.newUploader(l, cm, a.config.insightsDir, uConfig.MinAge, uConfig.DryRun)
 	if err != nil {
 		return fmt.Errorf("failed to create uploader: %v", err)
