@@ -96,9 +96,9 @@ func TestMain(m *testing.M) {
 		var libName string
 		switch runtime.GOOS {
 		case "linux":
-			libName = "libinsights.so.0"
+			libName = "libinsights.so.1"
 		case "darwin":
-			libName = "libinsights.0.dylib"
+			libName = "libinsights.1.dylib"
 		case "windows":
 			libName = "libinsights.dll"
 		default:

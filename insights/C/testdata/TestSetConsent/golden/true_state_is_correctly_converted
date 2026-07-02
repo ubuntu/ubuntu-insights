@@ -1,6 +1,7 @@
 conf:
     consentdir: ""
     insightsdir: ""
+    systemconfigdir: ""
     logger: null
 source: ""
 state: true

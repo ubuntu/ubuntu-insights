@@ -648,8 +648,8 @@ func strPtr(in string) *string {
 
 // insightsConfig lets us setup a C.insights_config easier.
 type insightsConfig struct {
-	consent, cache *string // Removed src since source is now passed as parameter
-	verbose        bool
+	consent, cache, systemConfigDir *string
+	verbose                         bool
 }
 
 // makeConfig is a helper to create a C insights_config.
@@ -659,6 +659,7 @@ func makeConfig(conf *insightsConfig) (cnf *C.insights_config, clean func()) {
 			if cnf != nil {
 				C.free(unsafe.Pointer(cnf.consent_dir))
 				C.free(unsafe.Pointer(cnf.insights_dir))
+				C.free(unsafe.Pointer(cnf.system_config_dir))
 			}
 		}
 	}()
@@ -670,6 +671,9 @@ func makeConfig(conf *insightsConfig) (cnf *C.insights_config, clean func()) {
 		}
 		if conf.cache != nil {
 			cnf.insights_dir = C.CString(*conf.cache)
+		}
+		if conf.systemConfigDir != nil {
+			cnf.system_config_dir = C.CString(*conf.systemConfigDir)
 		}
 		cnf.verbose = C.bool(conf.verbose)
 	}
@@ -734,6 +738,134 @@ func TestLogCallbackImpl(t *testing.T) {
 			assert.False(t, bool(C.get_test_cb_buf_exceeded()), "Log buffer should not have exceeded max size")
 			want := testutils.LoadWithUpdateFromGolden(t, logs)
 			assert.Equal(t, want, logs)
+		})
+	}
+}
+
+// TestGetSystemOptOutImpl tests the insights_get_system_opt_out C binding.
+func TestGetSystemOptOutImpl(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		config *insightsConfig
+
+		mockState bool
+		mockErr   error
+		want      bool
+	}{
+		"Null config uses defaults": {},
+
+		"Config gets converted": {
+			config: &insightsConfig{
+				systemConfigDir: strPtr("/etc/system/config"),
+				verbose:         true,
+			},
+		},
+
+		"true state is correctly converted": {
+			mockState: true,
+			want:      true,
+		},
+
+		"false state is correctly converted": {
+			mockState: false,
+			want:      false,
+		},
+
+		"error returns false": {
+			mockErr: errors.New("error string"),
+			want:    false,
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			inConfig, cleanup := makeConfig(tc.config)
+			defer cleanup()
+
+			var got struct {
+				Conf insights.Config
+			}
+
+			ret := getCustomSystemOptOut(inConfig, func(conf insights.Config) C.bool {
+				got.Conf = conf
+				if tc.mockErr != nil {
+					return C.bool(false)
+				}
+				return C.bool(tc.mockState)
+			})
+
+			assert.Equal(t, C.bool(tc.want), ret, "Did not get expected system opt-out state")
+
+			assert.NotNil(t, got.Conf.Logger, "Logger should not be nil in the callback")
+			got.Conf.Logger = nil
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			assert.Equal(t, want, got, "C structures should be correctly translated to Go")
+		})
+	}
+}
+
+// TestSetSystemOptOutImpl tests the insights_set_system_opt_out_state C binding.
+func TestSetSystemOptOutImpl(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		config *insightsConfig
+		state  C.bool
+
+		mockErr error
+	}{
+		"Null config uses defaults": {},
+
+		"Config gets converted": {
+			config: &insightsConfig{
+				systemConfigDir: strPtr("/etc/system/config"),
+				verbose:         true,
+			},
+		},
+
+		"false state is correctly converted": {
+			state: C.bool(false),
+		},
+
+		"true state is correctly converted": {
+			state: C.bool(true),
+		},
+
+		"error returns error string": {
+			mockErr: errors.New("error string"),
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			inConfig, cleanup := makeConfig(tc.config)
+			defer cleanup()
+
+			var got struct {
+				Conf  insights.Config
+				State bool
+			}
+
+			ret := setCustomSystemOptOutState(inConfig, tc.state, func(conf insights.Config, state bool) error {
+				got.Conf = conf
+				got.State = state
+				return tc.mockErr
+			})
+			defer C.free(unsafe.Pointer(ret))
+
+			if tc.mockErr == nil {
+				assert.Nil(t, ret)
+			} else {
+				assert.Equal(t, C.GoString(ret), tc.mockErr.Error())
+			}
+
+			assert.NotNil(t, got.Conf.Logger, "Logger should not be nil in the callback")
+			got.Conf.Logger = nil
+			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
+			assert.Equal(t, want, got, "C structures should be correctly translated to Go")
 		})
 	}
 }
