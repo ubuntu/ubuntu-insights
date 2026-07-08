@@ -19,12 +19,7 @@ gpus:
       device: 0xdevice1
       vendor: "0x10de"
       driver: nvidia
-accelerators:
-    - name: Intel NPU
-      device: "0x643e"
-      vendor: "0x8086"
-      driver: intel_vpu
-      kind: "0x120000"
+accelerators: []
 mem:
     total: 31941
 blks:
@@ -59,7 +54,11 @@ blks:
               type: part
               children: []
 screens:
-    - physicalresolution: 1x1
-      size: 1mm x 1mm
-      resolution: ""
-      refreshrate: "10.00"
+    - physicalresolution: ""
+      size: 598mm x 336mm
+      resolution: 1920x1080
+      refreshrate: "60.00"
+    - physicalresolution: ""
+      size: 344mm x 193mm
+      resolution: 1920x1080
+      refreshrate: "60.03"

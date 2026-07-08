@@ -19,6 +19,7 @@ gpus:
       device: ""
       vendor: ""
       driver: .
+accelerators: []
 mem:
     total: 0
 blks: []

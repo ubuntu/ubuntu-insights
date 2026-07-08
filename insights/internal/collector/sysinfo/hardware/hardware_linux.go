@@ -8,6 +8,7 @@ import "C"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -242,6 +243,83 @@ func (h Collector) collectGPU(card string) (info gpu, err error) {
 	driverLink, err := os.Readlink(filepath.Join(devDir, "driver"))
 	if err != nil {
 		h.log.Warn("failed to get GPU driver", "GPU", card, "error", err)
+		return info, nil
+	}
+	info.Driver = filepath.Base(driverLink)
+
+	return info, nil
+}
+
+// accelSymlinkRegex matches the name of an acceleration device folder.
+var accelSymlinkRegex = regexp.MustCompile(`^accel[0-9]+$`)
+
+// collectAccelerators uses sysfs to collect information about compute acceleration devices.
+func (h Collector) collectAccelerators(_ platform.Info) ([]accelerator, error) {
+	// Using ReadDir instead of WalkDir since we don't want recursive directories.
+	ds, err := os.ReadDir(filepath.Join(h.platform.root, "sys/class/accel"))
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			h.log.Debug("no acceleration device directory found in sysfs, skipping")
+			return []accelerator{}, nil
+		}
+		return []accelerator{}, fmt.Errorf("failed to read acceleration device directory in sysfs: %v", err)
+	}
+
+	accelerators := []accelerator{}
+	for _, d := range ds {
+		n := d.Name()
+		if !accelSymlinkRegex.MatchString(n) {
+			continue
+		}
+
+		a, err := h.collectAccelerator(n)
+		if err != nil {
+			h.log.Warn("failed to get acceleration device info", "device", n, "error", err)
+			continue
+		}
+		accelerators = append(accelerators, a)
+	}
+
+	return accelerators, nil
+}
+
+// collectAccelerator handles gathering information for a single acceleration device.
+func (h Collector) collectAccelerator(accelName string) (info accelerator, err error) {
+	accelDir, err := filepath.EvalSymlinks(filepath.Join(h.platform.root, "sys/class/accel", accelName))
+	if err != nil {
+		return info, fmt.Errorf("failed to follow %s symlink: %v", accelName, err)
+	}
+
+	devDir, err := filepath.EvalSymlinks(filepath.Join(accelDir, "device"))
+	if err != nil {
+		return info, fmt.Errorf("failed to follow %s device symlink: %v", accelName, err)
+	}
+
+	info.Vendor = fileutils.ReadFileLogError(filepath.Join(devDir, "vendor"), h.log)
+	info.Name = fileutils.ReadFileLog(filepath.Join(devDir, "label"), h.log, slog.LevelInfo) // label is not always present
+	info.Device = fileutils.ReadFileLogError(filepath.Join(devDir, "device"), h.log)
+	info.Kind = fileutils.ReadFileLog(filepath.Join(devDir, "class"), h.log, slog.LevelInfo) // class is not always present
+
+	if strings.ContainsRune(info.Vendor, '\n') {
+		h.log.Warn("acceleration device vendor contains invalid value", "device", accelName)
+		info.Vendor = ""
+	}
+	if strings.ContainsRune(info.Name, '\n') {
+		h.log.Warn("acceleration device name contains invalid value", "device", accelName)
+		info.Name = ""
+	}
+	if strings.ContainsRune(info.Device, '\n') {
+		h.log.Warn("acceleration device ID contains invalid value", "device", accelName)
+		info.Device = ""
+	}
+	if strings.ContainsRune(info.Kind, '\n') {
+		h.log.Warn("acceleration device class contains invalid value", "device", accelName)
+		info.Kind = ""
+	}
+
+	driverLink, err := os.Readlink(filepath.Join(devDir, "driver"))
+	if err != nil {
+		h.log.Warn("failed to get acceleration device driver", "device", accelName, "error", err)
 		return info, nil
 	}
 	info.Driver = filepath.Base(driverLink)
