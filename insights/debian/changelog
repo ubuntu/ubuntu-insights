@@ -1,4 +1,4 @@
-ubuntu-insights (1.0.0ubuntu) resolute; urgency=medium
+ubuntu-insights (1.0.0ubuntu) UNRELEASED; urgency=medium
 
   * Add system-wide opt-out support:
     - New `system-opt-out` CLI subcommand to query and set the system-wide
@@ -13,8 +13,10 @@ ubuntu-insights (1.0.0ubuntu) resolute; urgency=medium
     collection inside confined snaps.
   * (Breaking) Bump SONAME to libinsights.so.1 (libinsights0 -> libinsights1)
     - Reorganize the public C structs.
+  * Go dependency updates
+  * Bump Go dependency to 1.26
 
- -- Kat Kuo <kat.kuo@canonical.com>  Fri, 26 Jun 2026 16:38:44 -0400
+ -- Kat Kuo <kat.kuo@canonical.com>  Wed, 08 Jul 2026 18:22:55 -0400
 
 ubuntu-insights (0.9.3ubuntu) resolute; urgency=medium
 
