@@ -169,6 +169,13 @@ func (s Collector) collectMemory() (memory, error) {
 	}, nil
 }
 
+// collectAccelerators returns an empty slice on macOS. Discrete compute accelerators
+// (including Apple Neural Engine) are not exposed through any public API on this platform.
+func (s Collector) collectAccelerators(_ platform.Info) ([]accelerator, error) {
+	s.log.Debug("acceleration device collection is not supported on macOS")
+	return []accelerator{}, nil
+}
+
 func (s Collector) collectDisks() (out []disk, err error) {
 	defer func() {
 		if err != nil && len(out) == 0 {
