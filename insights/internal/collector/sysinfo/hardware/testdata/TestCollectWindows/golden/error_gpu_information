@@ -11,6 +11,7 @@ cpu:
     cores: 8
     threads: 2
 gpus: []
+accelerators: []
 mem:
     total: 65237
 blks:

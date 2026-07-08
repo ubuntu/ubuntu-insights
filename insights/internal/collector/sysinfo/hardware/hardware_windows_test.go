@@ -33,6 +33,7 @@ func TestCollectWindows(t *testing.T) {
 		productInfo       string
 		cpuInfo           string
 		gpuInfo           string
+		accelInfo         string
 		memoryInfo        string
 		diskInfo          string
 		partitionInfo     string
@@ -47,6 +48,7 @@ func TestCollectWindows(t *testing.T) {
 			productInfo:   "regular",
 			cpuInfo:       "regular",
 			gpuInfo:       "regular",
+			accelInfo:     "regular",
 			memoryInfo:    "regular",
 			diskInfo:      "regular",
 			partitionInfo: "regular",
@@ -200,6 +202,42 @@ func TestCollectWindows(t *testing.T) {
 
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 1,
+				slog.LevelInfo: 3,
+			},
+		},
+
+		"Regular acceleration device information": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			accelInfo:     "regular",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
+			partitionInfo: "regular",
+
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelInfo: 3,
+			},
+		},
+
+		"Missing acceleration device information": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			accelInfo:     "missing",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
+			partitionInfo: "regular",
+
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
+
+			logs: map[slog.Level]uint{
 				slog.LevelInfo: 3,
 			},
 		},
@@ -711,6 +749,11 @@ func TestCollectWindows(t *testing.T) {
 				options = append(options, hardware.WithGPUInfo(cmdArgs))
 			}
 
+			if tc.accelInfo != "-" {
+				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeAccelInfo", tc.accelInfo)
+				options = append(options, hardware.WithAccelInfo(cmdArgs))
+			}
+
 			if tc.memoryInfo != "-" {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestFakeMemoryInfo", tc.memoryInfo)
 				options = append(options, hardware.WithMemoryInfo(cmdArgs))
@@ -1076,6 +1119,31 @@ VideoMemoryType              : 2
 VideoMode                    :
 VideoModeDescription         : 1920 x 1080 x 4294967296 colors
 VideoProcessor               : Intel(R) UHD Graphics Family`)
+	case "":
+		fallthrough
+	case "missing":
+		os.Exit(0)
+	}
+}
+
+func TestFakeAccelInfo(_ *testing.T) {
+	args, err := testutils.GetFakeCmdArgs()
+	if err != nil {
+		return
+	}
+	defer os.Exit(0)
+
+	switch args[0] {
+	case "error":
+		fmt.Fprint(os.Stderr, "Error requested in fake accel info")
+		os.Exit(1)
+	case "regular":
+		fmt.Println(`
+
+HardwareID              : {PCI\VEN_8086&DEV_7D1D&SUBSYS_00000000&REV_00, PCI\VEN_8086&DEV_7D1D, PCI\VEN_8086&CC_120000}
+Manufacturer            : Intel Corporation
+Name                    : Intel(R) AI Boost
+PNPClass                : ComputeAccelerator`)
 	case "":
 		fallthrough
 	case "missing":
