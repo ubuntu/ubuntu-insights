@@ -62,6 +62,14 @@ Ubuntu Insights is divided into two components:
           "driver": "gpu"
         }
       ],
+      "accelerators": [
+        {
+          "device": "0x17f0",
+          "vendor": "0x1022",
+          "driver": "amdxdna",
+          "kind": "0x120000"
+        }
+      ],
       "memory": {
         "size": 23247
       },
