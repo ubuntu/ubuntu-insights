@@ -21,10 +21,15 @@ typedef enum {
 typedef void (*insights_logger_callback)(insights_log_level level,
                                          const char* msg);
 
+/**
+ * @brief Configuration shared by all insights operations.
+ */
 typedef struct {
   const char* consent_dir;   // default: "${os.UserConfigDir}/ubuntu-insights"
   const char* insights_dir;  // default: "${os.UserCacheDir}/ubuntu-insights"
-  bool verbose;              // Debug if true, info otherwise (default: false)
+  const char* system_config_dir;  // Directory for system-wide config (default:
+                                  // platform-specific)
+  bool verbose;  // Debug if true, info otherwise (default: false)
 } insights_config;
 
 /**

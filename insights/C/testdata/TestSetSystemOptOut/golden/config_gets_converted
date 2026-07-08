@@ -1,7 +1,6 @@
 conf:
     consentdir: ""
     insightsdir: ""
-    systemconfigdir: ""
+    systemconfigdir: /etc/system/config
     logger: null
-source: ""
 state: false

@@ -48,3 +48,13 @@ func TestFakeMain(t *testing.T) {
 func TestLogCallback(t *testing.T) {
 	main.TestLogCallbackImpl(t)
 }
+
+// TestGetSystemOptOut tests the C insights_get_system_opt_out_state binding.
+func TestGetSystemOptOut(t *testing.T) {
+	main.TestGetSystemOptOutImpl(t)
+}
+
+// TestSetSystemOptOut tests the C insights_set_system_opt_out_state binding.
+func TestSetSystemOptOut(t *testing.T) {
+	main.TestSetSystemOptOutImpl(t)
+}
