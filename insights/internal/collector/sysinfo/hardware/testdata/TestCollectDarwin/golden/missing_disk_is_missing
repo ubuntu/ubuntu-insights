@@ -17,6 +17,7 @@ gpus:
     - name: Intel UHD Graphics 2
       vendor: Intel
       driver: "0xf000"
+accelerators: []
 mem:
     total: 16384
 blks: []

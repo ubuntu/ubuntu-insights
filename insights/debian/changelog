@@ -1,5 +1,6 @@
 ubuntu-insights (1.0.0ubuntu) UNRELEASED; urgency=medium
 
+  * Accelerator device collection
   * Add system-wide opt-out support:
     - New `system-opt-out` CLI subcommand to query and set the system-wide
       opt-out state.

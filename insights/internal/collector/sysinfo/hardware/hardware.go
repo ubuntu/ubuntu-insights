@@ -10,12 +10,13 @@ import (
 
 // Info aggregates hardware info.
 type Info struct {
-	Product product  `json:"product,omitzero"`
-	CPU     cpu      `json:"cpu,omitzero"`
-	GPUs    []gpu    `json:"gpus,omitempty"`
-	Mem     memory   `json:"memory,omitzero"`
-	Blks    []disk   `json:"disks,omitempty"`
-	Screens []screen `json:"screens,omitempty"`
+	Product      product       `json:"product,omitzero"`
+	CPU          cpu           `json:"cpu,omitzero"`
+	GPUs         []gpu         `json:"gpus,omitempty"`
+	Accelerators []accelerator `json:"accelerators,omitempty"`
+	Mem          memory        `json:"memory,omitzero"`
+	Blks         []disk        `json:"disks,omitempty"`
+	Screens      []screen      `json:"screens,omitempty"`
 }
 
 // product contains information for a system's product.
@@ -42,6 +43,15 @@ type gpu struct {
 	Device string `json:"device,omitempty"`
 	Vendor string `json:"vendor"`
 	Driver string `json:"driver"`
+}
+
+// accelerator contains information for a compute acceleration device (e.g. NPU, VPU, FPGA).
+type accelerator struct {
+	Name   string `json:"name,omitempty"`
+	Device string `json:"device,omitempty"`
+	Vendor string `json:"vendor,omitempty"`
+	Driver string `json:"driver,omitempty"`
+	Kind   string `json:"kind,omitempty"`
 }
 
 // memory contains information for the system's memory.
@@ -124,6 +134,12 @@ func (h Collector) Collect(pi platform.Info) (info Info, err error) {
 	if err != nil {
 		h.log.Warn("failed to collect GPU info", "error", err)
 		info.GPUs = []gpu{}
+	}
+
+	info.Accelerators, err = h.collectAccelerators(pi)
+	if err != nil {
+		h.log.Warn("failed to collect acceleration device info", "error", err)
+		info.Accelerators = []accelerator{}
 	}
 
 	info.Mem, err = h.collectMemory()

@@ -21,6 +21,13 @@ func WithGPUInfo(cmd []string) Options {
 	}
 }
 
+// WithAccelInfo overrides default acceleration device info.
+func WithAccelInfo(cmd []string) Options {
+	return func(o *options) {
+		o.platform.accelCmd = cmd
+	}
+}
+
 // WithMemoryInfo overrides default memory info.
 func WithMemoryInfo(cmd []string) Options {
 	return func(o *options) {

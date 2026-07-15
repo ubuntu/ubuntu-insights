@@ -62,6 +62,7 @@ func TestCollectLinux(t *testing.T) {
 		blkInfo      string
 		screenInfo   string
 		missingFiles []string
+		writeFiles   map[string]string
 		pinfo        platform.Info
 		wayland      waylandType
 
@@ -170,6 +171,65 @@ func TestCollectLinux(t *testing.T) {
 				"sys/class/drm/c0/d0/driver",
 				"sys/class/drm/c0/d0/label",
 				"sys/class/drm/c0/d0/vendor",
+			},
+
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 2,
+				slog.LevelInfo: 1,
+			},
+		},
+
+		"Missing accelerators": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "regular",
+			missingFiles: []string{
+				"sys/class/accel/accel0",
+			},
+		},
+
+		"Accelerator information with invalid values warns": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "regular",
+			writeFiles: map[string]string{
+				"sys/class/accel/a0/da0/vendor": "0x8086\nEvil line",
+				"sys/class/accel/a0/da0/label":  "Intel NPU\nEvil line",
+				"sys/class/accel/a0/da0/device": "0x643e\nEvil line",
+				"sys/class/accel/a0/da0/class":  "0x120000\nEvil line",
+			},
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 4,
+			},
+		},
+
+		"Error collecting accelerator information warns": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "regular",
+			missingFiles: []string{
+				"sys/class/accel",
+			},
+			writeFiles: map[string]string{
+				"sys/class/accel": "i am a file not a directory",
+			},
+			logs: map[slog.Level]uint{
+				slog.LevelWarn: 1,
+			},
+		},
+
+		"Missing accelerator information": {
+			root:       "regular",
+			cpuInfo:    "regular",
+			blkInfo:    "regular",
+			screenInfo: "regular",
+			missingFiles: []string{
+				"sys/class/accel/a0/da0/driver",
+				"sys/class/accel/a0/da0/label",
+				"sys/class/accel/a0/da0/vendor",
 			},
 
 			logs: map[slog.Level]uint{
@@ -444,6 +504,13 @@ func TestCollectLinux(t *testing.T) {
 				// allow removal of non-empty directories
 				err := os.RemoveAll(filepath.Join(root, f))
 				require.NoError(t, err, "setup: failed to remove file %s: ", f)
+			}
+			for relPath, content := range tc.writeFiles {
+				fullPath := filepath.Join(root, relPath)
+				err := os.MkdirAll(filepath.Dir(fullPath), 0750)
+				require.NoError(t, err, "setup: failed to create parent dir for %s: ", relPath)
+				err = os.WriteFile(fullPath, []byte(content), 0600)
+				require.NoError(t, err, "setup: failed to write file %s: ", relPath)
 			}
 
 			options := []hardware.Options{

@@ -11,6 +11,7 @@ cpu:
     cores: 0
     threads: 0
 gpus: []
+accelerators: []
 mem:
     total: 0
 blks: []

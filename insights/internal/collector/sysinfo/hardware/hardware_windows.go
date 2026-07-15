@@ -20,6 +20,7 @@ type platformOptions struct {
 	productCmd []string
 	cpuCmd     []string
 	gpuCmd     []string
+	accelCmd   []string
 	memoryCmd  []string
 
 	diskCmd      []string
@@ -36,6 +37,7 @@ func defaultPlatformOptions() platformOptions {
 		productCmd: []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_ComputerSystem", "|", "Format-List", "-Property", "*"},
 		cpuCmd:     []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_Processor", "|", "Format-List", "-Property", "*"},
 		gpuCmd:     []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_VideoController", "|", "Format-List", "-Property", "*"},
+		accelCmd:   []string{"powershell.exe", "-Command", "Get-CimInstance", "Win32_PnPEntity", "|", "Where-Object", "{ $_.PNPClass -in 'ComputeAccelerator', 'NeuralProcessor' }", "|", "Select-Object", "Name, Manufacturer, PNPClass, HardwareID", "|", "Format-List"},
 		memoryCmd:  []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_ComputerSystem", "|", "Format-List", "-Property", "TotalPhysicalMemory"},
 
 		diskCmd:      []string{"powershell.exe", "-Command", "Get-WmiObject", "Win32_DiskDrive", "|", "Select-Object", "Model, MediaType, Index, Size, Partitions", "|", "ConvertTo-Json", "-Depth", "3"},
@@ -149,6 +151,35 @@ func (s Collector) collectGPUs(_ platform.Info) (info []gpu, err error) {
 	}
 
 	return info, nil
+}
+
+// collectAccelerators uses Win32_PnPEntity to collect information about compute acceleration devices.
+// Acceleration devices are optional; if the query returns no results or fails, an empty slice is returned.
+func (s Collector) collectAccelerators(_ platform.Info) ([]accelerator, error) {
+	var usedAccelFields = map[string]struct{}{
+		"Name":         {},
+		"Manufacturer": {},
+		"PNPClass":     {},
+		"HardwareID":   {},
+	}
+
+	accelData, err := cmdutils.RunListFmt(s.platform.accelCmd, usedAccelFields, s.log)
+	if err != nil {
+		// Acceleration devices are optional; log at debug level and return empty.
+		s.log.Debug("no acceleration devices collected", "error", err)
+		return []accelerator{}, nil
+	}
+
+	result := make([]accelerator, 0, len(accelData))
+	for _, a := range accelData {
+		result = append(result, accelerator{
+			Name:   a["Name"],
+			Vendor: a["Manufacturer"],
+			Device: a["HardwareID"],
+			Kind:   a["PNPClass"],
+		})
+	}
+	return result, nil
 }
 
 // collectMemory uses Win32_ComputerSystem to collect information about RAM.

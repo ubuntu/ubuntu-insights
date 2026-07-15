@@ -19,6 +19,7 @@ gpus:
       device: ""
       vendor: Intel Corporation
       driver: igdumdim0.dll
+accelerators: []
 mem:
     total: 65237
 blks: []
