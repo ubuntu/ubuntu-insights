@@ -37,7 +37,7 @@ func defaultPlatformOptions() platformOptions {
 		productCmd: []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_ComputerSystem", "|", "Format-List", "-Property", "*"},
 		cpuCmd:     []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_Processor", "|", "Format-List", "-Property", "*"},
 		gpuCmd:     []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_VideoController", "|", "Format-List", "-Property", "*"},
-		accelCmd:   []string{"powershell.exe", "-Command", "Get-CimInstance", "Win32_PnPEntity", "|", "Where-Object", "{ $_.PNPClass -eq 'ComputeAccelerator' }", "|", "Select-Object", "Name, Manufacturer, PNPClass, HardwareID", "|", "Format-List"},
+		accelCmd:   []string{"powershell.exe", "-Command", "Get-CimInstance", "Win32_PnPEntity", "|", "Where-Object", "{ $_.PNPClass -in 'ComputeAccelerator', 'NeuralProcessor' }", "|", "Select-Object", "Name, Manufacturer, PNPClass, HardwareID", "|", "Format-List"},
 		memoryCmd:  []string{"powershell.exe", "-Command", "Get-CIMInstance", "Win32_ComputerSystem", "|", "Format-List", "-Property", "TotalPhysicalMemory"},
 
 		diskCmd:      []string{"powershell.exe", "-Command", "Get-WmiObject", "Win32_DiskDrive", "|", "Select-Object", "Model, MediaType, Index, Size, Partitions", "|", "ConvertTo-Json", "-Depth", "3"},

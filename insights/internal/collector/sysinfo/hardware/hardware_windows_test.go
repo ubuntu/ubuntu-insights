@@ -224,6 +224,24 @@ func TestCollectWindows(t *testing.T) {
 			},
 		},
 
+		"Multiple acceleration devices information": {
+			productInfo:   "regular",
+			cpuInfo:       "regular",
+			gpuInfo:       "regular",
+			accelInfo:     "multiple",
+			memoryInfo:    "regular",
+			diskInfo:      "regular",
+			partitionInfo: "regular",
+
+			screenResInfo:     "regular",
+			screenPhysResInfo: "regular",
+			screenSizeInfo:    "regular",
+
+			logs: map[slog.Level]uint{
+				slog.LevelInfo: 3,
+			},
+		},
+
 		"Missing acceleration device information": {
 			productInfo:   "regular",
 			cpuInfo:       "regular",
@@ -1144,6 +1162,18 @@ HardwareID              : {PCI\VEN_8086&DEV_7D1D&SUBSYS_00000000&REV_00, PCI\VEN
 Manufacturer            : Intel Corporation
 Name                    : Intel(R) AI Boost
 PNPClass                : ComputeAccelerator`)
+	case "multiple":
+		fmt.Println(`
+
+HardwareID              : {PCI\VEN_8086&DEV_7D1D&SUBSYS_00000000&REV_00, PCI\VEN_8086&DEV_7D1D, PCI\VEN_8086&CC_120000}
+Manufacturer            : Intel Corporation
+Name                    : Intel(R) AI Boost
+PNPClass                : ComputeAccelerator
+
+HardwareID              : {ACPI\QCOM0C89, *QCOM0C89}
+Manufacturer            : Qualcomm Technologies, Inc.
+Name                    : Qualcomm(R) Hexagon(TM) NPU
+PNPClass                : NeuralProcessor`)
 	case "":
 		fallthrough
 	case "missing":
