@@ -298,7 +298,7 @@ func (h Collector) collectAccelerator(accelName string) (info accelerator, err e
 	info.Vendor = fileutils.ReadFileLogError(filepath.Join(devDir, "vendor"), h.log)
 	info.Name = fileutils.ReadFileLog(filepath.Join(devDir, "label"), h.log, slog.LevelInfo) // label is not always present
 	info.Device = fileutils.ReadFileLogError(filepath.Join(devDir, "device"), h.log)
-	info.Kind = fileutils.ReadFileLog(filepath.Join(devDir, "class"), h.log, slog.LevelInfo) // class is not always present
+	info.Type = fileutils.ReadFileLog(filepath.Join(devDir, "class"), h.log, slog.LevelInfo) // class is not always present
 
 	if strings.ContainsRune(info.Vendor, '\n') {
 		h.log.Warn("acceleration device vendor contains invalid value", "device", accelName)
@@ -312,9 +312,9 @@ func (h Collector) collectAccelerator(accelName string) (info accelerator, err e
 		h.log.Warn("acceleration device ID contains invalid value", "device", accelName)
 		info.Device = ""
 	}
-	if strings.ContainsRune(info.Kind, '\n') {
+	if strings.ContainsRune(info.Type, '\n') {
 		h.log.Warn("acceleration device class contains invalid value", "device", accelName)
-		info.Kind = ""
+		info.Type = ""
 	}
 
 	driverLink, err := os.Readlink(filepath.Join(devDir, "driver"))

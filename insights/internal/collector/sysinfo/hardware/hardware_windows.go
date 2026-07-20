@@ -176,7 +176,7 @@ func (s Collector) collectAccelerators(_ platform.Info) ([]accelerator, error) {
 			Name:   a["Name"],
 			Vendor: a["Manufacturer"],
 			Device: a["HardwareID"],
-			Kind:   a["PNPClass"],
+			Type:   a["PNPClass"],
 		})
 	}
 	return result, nil

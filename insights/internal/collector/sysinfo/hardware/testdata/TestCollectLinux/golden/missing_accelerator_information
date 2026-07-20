@@ -24,7 +24,7 @@ accelerators:
       device: "0x643e"
       vendor: ""
       driver: ""
-      kind: "0x120000"
+      type: "0x120000"
 mem:
     total: 31941
 blks:

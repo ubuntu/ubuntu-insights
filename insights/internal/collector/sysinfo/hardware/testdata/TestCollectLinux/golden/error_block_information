@@ -24,7 +24,7 @@ accelerators:
       device: "0x643e"
       vendor: "0x8086"
       driver: intel_vpu
-      kind: "0x120000"
+      type: "0x120000"
 mem:
     total: 31941
 blks: []
