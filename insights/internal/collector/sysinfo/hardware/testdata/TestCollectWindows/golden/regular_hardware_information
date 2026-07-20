@@ -24,7 +24,7 @@ accelerators:
       device: '{PCI\VEN_8086&DEV_7D1D&SUBSYS_00000000&REV_00, PCI\VEN_8086&DEV_7D1D, PCI\VEN_8086&CC_120000}'
       vendor: Intel Corporation
       driver: ""
-      kind: ComputeAccelerator
+      type: ComputeAccelerator
 mem:
     total: 65237
 blks:

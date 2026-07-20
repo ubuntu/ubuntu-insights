@@ -51,7 +51,7 @@ type accelerator struct {
 	Device string `json:"device,omitempty"`
 	Vendor string `json:"vendor,omitempty"`
 	Driver string `json:"driver,omitempty"`
-	Kind   string `json:"kind,omitempty"`
+	Type   string `json:"type,omitempty"`
 }
 
 // memory contains information for the system's memory.
