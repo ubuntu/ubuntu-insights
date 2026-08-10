@@ -1,4 +1,4 @@
-ubuntu-insights (1.0.0ubuntu) UNRELEASED; urgency=medium
+ubuntu-insights (1.0.0ubuntu) stonking; urgency=medium
 
   * Accelerator device collection
   * Add system-wide opt-out support:
@@ -17,7 +17,7 @@ ubuntu-insights (1.0.0ubuntu) UNRELEASED; urgency=medium
   * Go dependency updates
   * Bump Go dependency to 1.26
 
- -- Kat Kuo <kat.kuo@canonical.com>  Wed, 08 Jul 2026 18:22:55 -0400
+ -- Kat Kuo <kat.kuo@canonical.com>  Wed, 15 Jul 2026 19:38:00 -0400
 
 ubuntu-insights (0.9.3ubuntu) resolute; urgency=medium
 
