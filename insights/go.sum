@@ -62,8 +62,9 @@ github.com/ubuntu/decorate v0.0.0-20250213124239-8228e241ee19 h1:IP8p46//e//o0KP
 github.com/ubuntu/decorate v0.0.0-20250213124239-8228e241ee19/go.mod h1:PUpwIgUuCQyuCz/gwiq6WYbo7IvtXXd8JqL01ez+jZE=
 github.com/ubuntu/ubuntu-insights/common v1.0.0 h1:IhBo0KKwL79bIyegJ9uFS/n2IgI7gnFSIMCJM46M/x8=
 github.com/ubuntu/ubuntu-insights/common v1.0.0/go.mod h1:VXa1WKCRg9aOdwQMIgwZLNL4CpflYH11+dGPNv1ws8I=
-go.yaml.in/yaml/v3 v3.0.4 h1:tfq32ie2Jv2UxXFdLJdh3jXuOzWiL1fo0bu/FbuKpbc=
 go.yaml.in/yaml/v3 v3.0.4/go.mod h1:DhzuOOF2ATzADvBadXxruRBLzYTpT36CKvDb3+aBEFg=
+go.yaml.in/yaml/v3 v3.0.5 h1:N6y/pJk8buWs9NY5ERU2HSMfm+IuD/OtfdAnq6kESPw=
+go.yaml.in/yaml/v3 v3.0.5/go.mod h1:HVTZu1O7/Vkt2N+BFy8Zza+lnLsABggaTM2ZpNIGuKg=
 golang.org/x/sys v0.45.0 h1:dO4czNzziLiiXplLQgBCEpCvXQ3dnkn0SdaZSYdQ+FY=
 golang.org/x/sys v0.45.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
 golang.org/x/text v0.40.0 h1:Ub2Z6/xjgF1WrYQz2nuITOEegKFtiIy+rieRJ5lHZKs=
