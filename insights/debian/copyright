@@ -20,10 +20,6 @@ Files: vendor/github.com/cpuguy83/go-md2man/v2/*
 Copyright: 2014, 2020, Brian Goff
 License: Expat
 
-Files: vendor/github.com/davecgh/go-spew/*
-Copyright: 2012-2016, Dave Collins <dave@davec.name>
-License: ISC
-
 Files: vendor/github.com/fsnotify/fsnotify/*
 Copyright: fsnotify Authors.
  2012, The Go Authors.
@@ -48,10 +44,6 @@ License: Apache-2.0
 Files: vendor/github.com/pelletier/go-toml/v2/*
 Copyright: 2021-2023, Thomas Pelletier
 License: Expat
-
-Files: vendor/github.com/pmezard/go-difflib/*
-Copyright: 2013, Patrick Mezard
-License: BSD-3-clause
 
 Files: vendor/github.com/russross/blackfriday/v2/*
 Copyright: 2011, Russ Ross <russ@russross.com>
@@ -141,6 +133,14 @@ Files: vendor/github.com/stretchr/testify/*
 Copyright: 2012-2020, Mat Ryer, Tyler Bunnell and contributors.
 License: Expat
 
+Files: vendor/github.com/stretchr/testify/internal/difflib/*
+Copyright: 2013, Patrick Mezard
+License: BSD-3-clause
+
+Files: vendor/github.com/stretchr/testify/internal/spew/*
+Copyright: 2012-2016, Dave Collins <dave@davec.name>
+License: ISC
+
 Files: vendor/github.com/subosito/gotenv/*
 Copyright: 2013, Alif Rachmawadi
 License: Expat
@@ -156,22 +156,6 @@ License: BSD-3-clause
 Files: vendor/gopkg.in/ini.v1/*
 Copyright: 2014-2017, 2019, Unknwon
 License: Apache-2.0
-
-Files: vendor/gopkg.in/yaml.v3/*
-Copyright: 2011-2019 Canonical Ltd.
-License: Apache-2.0
-
-Files: vendor/gopkg.in/yaml.v3/apic.go
- vendor/gopkg.in/yaml.v3/emitterc.go
- vendor/gopkg.in/yaml.v3/parserc.go
- vendor/gopkg.in/yaml.v3/readerc.go
- vendor/gopkg.in/yaml.v3/scannerc.go
- vendor/gopkg.in/yaml.v3/writerc.go
- vendor/gopkg.in/yaml.v3/yamlh.go
- vendor/gopkg.in/yaml.v3/yamlprivateh.go
-Copyright: 2011-2019, Canonical Ltd
- 2006-2010, Kirill Simonov
-License: Expat
 
 Files: vendor/go.yaml.in/yaml/v3/*
 Copyright: 2011-2019 Canonical Ltd.
