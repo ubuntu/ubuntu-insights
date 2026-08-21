@@ -5,13 +5,10 @@
 [license-image]: https://img.shields.io/badge/License-GPL3.0-blue.svg
 [codecov-image]: https://codecov.io/gh/ubuntu/ubuntu-insights/branch/main/graph/badge.svg
 [codecov-url]: https://codecov.io/gh/ubuntu/ubuntu-insights
-[goreport-image]: https://goreportcard.com/badge/github.com/ubuntu/ubuntu-insights
-[goreport-url]: https://goreportcard.com/report/github.com/ubuntu/ubuntu-insights
 
 [![Code quality][actions-image]][actions-url]
 [![License][license-image]](LICENSE)
 [![Code coverage][codecov-image]][codecov-url]
-[![Go Report Card][goreport-image]][goreport-url]
 
 This is the code repository for **Ubuntu Insights**, a transparent, user-friendly, open, platform-agnostic, and cross-application solution for reporting hardware information and other collected metrics.
 
