@@ -25,3 +25,4 @@ libinsights.so.1 libinsights1 #MINVER#
  set_memory_error@Base 1.0.0
  (regex|optional).*crosscall.* 1.0.0
  (regex|optional)"_cgo.*" 1.0.0
+ (regex|optional)"threadentry" 1.0.0
