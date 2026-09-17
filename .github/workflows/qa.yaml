@@ -264,7 +264,7 @@ jobs:
 
       - name: "TiCS"
         if: ${{ steps.tics-condition.outputs.tics_mode != '' }}
-        uses: tiobe/tics-github-action@v3
+        uses: tiobe/tics-github-action@v4
         with:
           mode: ${{ steps.tics-condition.outputs.tics_mode }}
           project: ${{ env.PROJECT }}
