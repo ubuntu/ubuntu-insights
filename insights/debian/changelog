@@ -1,6 +1,9 @@
 ubuntu-insights (1.0.1ubuntu) UNRELEASED; urgency=medium
 
   * Fix WSL version collection when triggered by systemd (LP: #2168785)
+    - Add `AF_VSOCK` to `RestrictAddressFamilies` for the collect unit
+    - Collect WSL version using `wslinfo --version`, 
+      with `wsl.exe --version` as a fallback
   * Go dependency updates
 
  -- Kat Kuo <kat.kuo@canonical.com>  Mon, 28 Sep 2026 13:31:08 -0400

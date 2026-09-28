@@ -27,6 +27,13 @@ func WithSystemdAnalyzeCmd(cmd []string) Options {
 	}
 }
 
+// WithWSLInfoCmd sets the wslinfo command for the platform collector.
+func WithWSLInfoCmd(cmd []string) Options {
+	return func(o *options) {
+		o.platform.wslInfoCmd = cmd
+	}
+}
+
 // WithWSLVersionCmd sets the WSL version command for the platform collector.
 func WithWSLVersionCmd(cmd []string) Options {
 	return func(o *options) {
