@@ -91,6 +91,7 @@ type platformOptions struct {
 	root              string
 	detectVirtCmd     []string
 	systemdAnalyzeCmd []string
+	wslInfoCmd        []string
 	wslVersionCmd     []string
 	proStatusCmd      []string
 
@@ -105,6 +106,7 @@ func defaultPlatformOptions() platformOptions {
 		root:              "/",
 		detectVirtCmd:     []string{"systemd-detect-virt"},
 		systemdAnalyzeCmd: []string{"systemd-analyze", "time", "--system"},
+		wslInfoCmd:        []string{"wslinfo"},
 		wslVersionCmd:     []string{"wsl.exe", "-v"},
 		proStatusCmd:      []string{"pro", "api", "u.pro.status.is_attached.v1"},
 
@@ -196,11 +198,32 @@ func (p Collector) collectWSL() WSL {
 		info.Systemd = "used"
 	}
 
-	if !p.interopEnabled() {
+	if p.interopEnabled() {
+		info.Interop = "enabled"
+	} else {
 		info.Interop = "disabled"
+	}
+
+	for _, flag := range []string{"--version", "--wsl-version"} {
+		args := append(append([]string{}, p.platform.wslInfoCmd[1:]...), flag)
+		stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 5*time.Second, p.platform.wslInfoCmd[0], args...)
+		if err != nil {
+			p.log.Debug("failed to run wslinfo", "flag", flag, "error", err)
+			continue
+		}
+		if stderr.Len() > 0 {
+			p.log.Info("wslinfo output to stderr", "stderr", stderr)
+		}
+		version := strings.TrimSpace(stdout.String())
+		if regexp.MustCompile(`^\d+(?:\.\d+)+$`).MatchString(version) {
+			info.Version = version
+			return info
+		}
+		p.log.Debug("invalid wslinfo version", "flag", flag, "output", version)
+	}
+	if info.Interop == "disabled" {
 		return info
 	}
-	info.Interop = "enabled"
 
 	// Run `wsl.exe -v` and parse it
 	stdout, stderr, err := cmdutils.RunWithTimeout(context.Background(), 15*time.Second, p.platform.wslVersionCmd[0], p.platform.wslVersionCmd[1:]...)

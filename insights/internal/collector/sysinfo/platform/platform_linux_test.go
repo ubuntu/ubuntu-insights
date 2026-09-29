@@ -460,6 +460,8 @@ func TestCollectLinux(t *testing.T) {
 				options = append(options, platform.WithSystemdAnalyzeCmd(cmdArgs))
 			}
 
+			options = append(options, platform.WithWSLInfoCmd(testutils.SetupFakeCmdArgs("TestFakeWSLInfo", "error")))
+
 			if tc.wslVersionCmd != "-" {
 				cmdArgs := testutils.SetupFakeCmdArgs("TestWSLVersionInfo", tc.wslVersionCmd)
 				options = append(options, platform.WithWSLVersionCmd(cmdArgs))
@@ -490,6 +492,49 @@ func TestCollectLinux(t *testing.T) {
 
 			want := testutils.LoadWithUpdateFromGoldenYAML(t, got)
 			require.Equal(t, want, got, "Collect should return expected platform information")
+		})
+	}
+}
+
+func TestCollectWSLVersion(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		interop       string
+		wslInfo       string
+		legacyWSLInfo string
+		wslExe        string
+		want          string
+	}{
+		"prefers wslinfo --version":                 {interop: "enabled", wslInfo: "2.4.11.0", legacyWSLInfo: "2.2.3.0", wslExe: "error", want: "2.4.11.0"},
+		"wslinfo works without interop":             {interop: "disabled", wslInfo: "2.4.11.0", legacyWSLInfo: "error", wslExe: "error", want: "2.4.11.0"},
+		"uses legacy flag when version unsupported": {interop: "enabled", wslInfo: "error", legacyWSLInfo: "2.2.3.0", wslExe: "error", want: "2.2.3.0"},
+		"uses legacy flag without interop":          {interop: "disabled", wslInfo: "error", legacyWSLInfo: "2.2.3.0", wslExe: "error", want: "2.2.3.0"},
+		"uses legacy flag when output invalid":      {interop: "enabled", wslInfo: "garbage", legacyWSLInfo: "2.2.3.0", wslExe: "error", want: "2.2.3.0"},
+		"falls back when wslinfo is missing":        {interop: "enabled", wslInfo: "error", legacyWSLInfo: "error", wslExe: "regular-en", want: "2.4.11.0"},
+		"falls back when wslinfo is invalid":        {interop: "enabled", wslInfo: "garbage", legacyWSLInfo: "garbage", wslExe: "regular-en", want: "2.4.11.0"},
+		"falls back when wslinfo output empty":      {interop: "enabled", wslInfo: "empty", legacyWSLInfo: "empty", wslExe: "regular-en", want: "2.4.11.0"},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			root := t.TempDir()
+			require.NoError(t, testutils.CopyDir(t, filepath.Join("testdata/linuxfs", tc.interop), root))
+			require.NoError(t, testutils.CopyDir(t, filepath.Join("testdata/linuxfs", "version-wsl2"), root))
+			logHandler := testutils.NewMockHandler(slog.LevelDebug)
+			collector := platform.New(slog.New(&logHandler),
+				platform.WithRoot(root),
+				platform.WithDetectVirtCmd(testutils.SetupFakeCmdArgs("TestFakeVirtInfo", "wsl")),
+				platform.WithSystemdAnalyzeCmd(testutils.SetupFakeCmdArgs("TestFakeSystemdAnalyze", "regular")),
+				platform.WithWSLInfoCmd(testutils.SetupFakeCmdArgs("TestFakeWSLInfo", tc.wslInfo, tc.legacyWSLInfo)),
+				platform.WithWSLVersionCmd(testutils.SetupFakeCmdArgs("TestWSLVersionInfo", tc.wslExe)),
+				platform.WithProDBusConnector(platform.ProDBusAttached),
+			)
+			got, err := collector.Collect()
+			require.NoError(t, err)
+			require.Equal(t, tc.want, got.WSL.Version)
+			logHandler.AssertLevels(t, nil)
 		})
 	}
 }
@@ -554,6 +599,25 @@ func TestFakeVirtInfo(_ *testing.T) {
 	case "missing":
 		os.Exit(0)
 	}
+}
+
+func TestFakeWSLInfo(_ *testing.T) {
+	args, err := testutils.GetFakeCmdArgs()
+	if err != nil {
+		return
+	}
+	defer os.Exit(0)
+	result := args[0]
+	if len(args) > 2 && args[2] == "--wsl-version" {
+		result = args[1]
+	}
+	if result == "error" {
+		os.Exit(1)
+	}
+	if result == "empty" {
+		return
+	}
+	fmt.Println(result)
 }
 
 func TestWSLVersionInfo(_ *testing.T) {
