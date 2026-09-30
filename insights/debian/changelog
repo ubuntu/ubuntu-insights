@@ -1,4 +1,4 @@
-ubuntu-insights (1.0.1ubuntu) UNRELEASED; urgency=medium
+ubuntu-insights (1.0.1ubuntu) stonking; urgency=medium
 
   * Fix WSL version collection when triggered by systemd (LP: #2168785)
     - Add `AF_VSOCK` to `RestrictAddressFamilies` for the collect unit
