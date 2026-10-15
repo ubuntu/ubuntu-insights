@@ -80,6 +80,22 @@ sudo apt install devscripts
 
 On other operating systems, you will need [Go](https://go.dev/) at a minimum.
 
+### Using Canonical Workshop (optional)
+
+[Canonical Workshop](https://ubuntu.com/workshop) provides an isolated development environment for this repository. It requires Ubuntu or WSL2, LXD 6.8 or later, and Workshop. Install them if needed:
+
+```bash
+sudo snap install --channel=6/stable lxd
+sudo snap install --classic workshop
+```
+
+From the repository root, launch the checked-in profile and open a shell:
+
+```bash
+workshop launch
+workshop shell
+```
+
 ### Building and running the binaries
 
 This repository is set up in a mono-repo structure, and consists of multiple modules and binaries.

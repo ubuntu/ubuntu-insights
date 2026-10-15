@@ -110,7 +110,7 @@ func openTestDB(t *testing.T) *sql.DB {
 
 	container := testutils.StartPostgresContainer(t)
 	t.Cleanup(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		if err := container.Stop(ctx); err != nil {
 			t.Errorf("Teardown: failed to stop container: %v", err)
