@@ -1,3 +1,9 @@
+ubuntu-insights (1.0.2ubuntu) UNRELEASED; urgency=medium
+
+  * Go dependency updates
+
+ -- Kat Kuo <kat.kuo@canonical.com>  Thu, 15 Oct 2026 17:10:02 -0400
+
 ubuntu-insights (1.0.1ubuntu) stonking; urgency=medium
 
   * Fix WSL version collection when triggered by systemd (LP: #2168785)
