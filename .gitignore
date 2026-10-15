@@ -26,6 +26,7 @@ go.work.sum
 
 # Debian package build artifacts
 ubuntu-insights_*
+insights/debian/libinsights*/
 *.*deb
 
 # Go build artifacts
@@ -35,6 +36,9 @@ ingest-service
 !ingest-service/
 web-service
 !web-service/
+
+# Canonical Workshop runtime state
+.workshop.lock
 
 # Snap build artifacts
 *.snap

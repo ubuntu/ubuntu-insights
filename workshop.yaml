@@ -1,0 +1,13 @@
+name: dev
+base: ubuntu@26.04
+sdks:
+  - name: go
+    channel: 1.26/stable
+  - name: project-dev
+  - name: vscode-remote
+actions:
+  test: >-
+    (cd common && go test -count=1 ./...)
+    && (cd insights && go test -count=1 ./...)
+    && (cd server && go test -count=1 ./...)
+  build-deb: cd insights && debuild -b -uc -us

@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+
+apt-get update
+apt-get install \
+  build-essential \
+  debhelper-compat \
+  devscripts \
+  dh-golang \
+  dctrl-tools \
+  fakeroot \
+  golang-1.26-go \
+  libwayland-dev \
+  docker.io
+
+# Docker is needed for server integration tests
+usermod -aG docker workshop
