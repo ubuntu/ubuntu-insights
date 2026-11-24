@@ -19,9 +19,9 @@ jobs:
     name: Run tests in workshop
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
-      - uses: canonical/launch-workshop@v1
+      - uses: canonical/launch-workshop@v1.0.1
         with:
           cache: |
             go:mod-cache
@@ -34,9 +34,9 @@ jobs:
     name: Run build-deb in workshop
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
-      - uses: canonical/launch-workshop@v1
+      - uses: canonical/launch-workshop@v1.0.1
         with:
           cache: |
             go:mod-cache
