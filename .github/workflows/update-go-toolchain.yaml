@@ -22,7 +22,7 @@ jobs:
   update-toolchain:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
       - name: Update Go toolchain
         uses: canonical/desktop-engineering/gh-actions/go/update-toolchain@main

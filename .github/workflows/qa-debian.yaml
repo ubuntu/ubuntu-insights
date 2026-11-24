@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
 
       - id: git-diff
         name: Check modified files
@@ -81,7 +81,7 @@ jobs:
       pkg-src-changes-devel: ${{ steps.outputs.outputs.pkg-src-changes-devel }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
       - name: Build source package
         uses: canonical/desktop-engineering/gh-actions/common/build-debian@main
         with:
@@ -144,7 +144,7 @@ jobs:
           done
 
       - name: Download artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v8.0.2
         with:
           run-id: ${{ needs.build-source-packages.outputs.run-id }}
           merge-multiple: true
