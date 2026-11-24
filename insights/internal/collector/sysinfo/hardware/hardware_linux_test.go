@@ -63,8 +63,11 @@ func TestCollectLinux(t *testing.T) {
 		screenInfo   string
 		missingFiles []string
 		writeFiles   map[string]string
-		pinfo        platform.Info
-		wayland      waylandType
+		// symlinks maps link paths to targets. They are created at test time because broken or
+		// looping symlinks can't be committed: the Actions runner fails to stage this repo as a `$/` action.
+		symlinks map[string]string
+		pinfo    platform.Info
+		wayland  waylandType
 
 		logs    map[slog.Level]uint
 		wantErr bool
@@ -404,6 +407,10 @@ func TestCollectLinux(t *testing.T) {
 			cpuInfo:    "",
 			blkInfo:    "",
 			screenInfo: "",
+			symlinks: map[string]string{
+				"sys/class/drm/c0/d0/driver": ".",
+				"sys/class/drm/c1/d1/driver": ".",
+			},
 			logs: map[slog.Level]uint{
 				slog.LevelWarn: 3,
 			},
@@ -511,6 +518,10 @@ func TestCollectLinux(t *testing.T) {
 				require.NoError(t, err, "setup: failed to create parent dir for %s: ", relPath)
 				err = os.WriteFile(fullPath, []byte(content), 0600)
 				require.NoError(t, err, "setup: failed to write file %s: ", relPath)
+			}
+			for relPath, target := range tc.symlinks {
+				err := os.Symlink(target, filepath.Join(root, relPath))
+				require.NoError(t, err, "setup: failed to create symlink %s: ", relPath)
 			}
 
 			options := []hardware.Options{
