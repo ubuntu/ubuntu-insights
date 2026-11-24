@@ -14,6 +14,7 @@ libinsights.so.1 libinsights1 #MINVER#
  init_wayland@Base 1.0.0
  insights_collect@Base 1.0.0
  insights_compile@Base 1.0.0
+ insights_free_string@Base 1.0.2
  insights_get_consent_state@Base 1.0.0
  insights_get_system_opt_out_state@Base 1.0.0
  insights_set_consent_state@Base 1.0.0

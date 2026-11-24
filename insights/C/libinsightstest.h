@@ -23,6 +23,7 @@ extern char* insights_set_consent_state(const insights_config*, const char*,
 extern bool insights_get_system_opt_out_state(const insights_config*);
 extern char* insights_set_system_opt_out_state(const insights_config*, bool);
 extern void insights_set_log_callback(insights_logger_callback);
+extern void insights_free_string(char*);
 
 // Test helpers
 insights_logger_callback get_test_callback();
