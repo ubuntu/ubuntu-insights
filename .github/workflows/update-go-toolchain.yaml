@@ -1,0 +1,31 @@
+name: Update Go toolchain
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Run in dry-run mode'
+        required: false
+        default: 'true'
+  pull_request: 
+    paths:
+      - .github/workflows/update-go-toolchain.yaml
+
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-toolchain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Update Go toolchain
+        uses: canonical/desktop-engineering/gh-actions/go/update-toolchain@main
+        with:
+          dry-run: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.dry-run == 'true') }}
+
