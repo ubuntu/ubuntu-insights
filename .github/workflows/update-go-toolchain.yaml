@@ -7,8 +7,9 @@ on:
     inputs:
       dry-run:
         description: 'Run in dry-run mode'
+        type: boolean
         required: false
-        default: 'true'
+        default: true
   pull_request: 
     paths:
       - .github/workflows/update-go-toolchain.yaml
@@ -27,5 +28,5 @@ jobs:
       - name: Update Go toolchain
         uses: canonical/desktop-engineering/gh-actions/go/update-toolchain@main
         with:
-          dry-run: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.dry-run == 'true') }}
+          dry-run: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.dry-run) }}
 
