@@ -88,7 +88,7 @@ int cmd_set_consent(int argc, char** argv, int idx, insights_config* cfg) {
   char* err = insights_set_consent_state(cfg, source, state);
   if (err) {
     fprintf(stderr, "Error: %s\n", err);
-    free(err);
+    insights_free_string(err);
     return 1;
   }
   return 0;
@@ -128,13 +128,13 @@ int cmd_collect(int argc, char** argv, int idx, insights_config* cfg) {
   char* err = insights_collect(cfg, source, &flags, &report);
   if (err) {
     fprintf(stderr, "Error: %s\n", err);
-    free(err);
+    insights_free_string(err);
     return 1;
   }
   if (should_print_report) {
     print_report(report);
   }
-  free(report);
+  insights_free_string(report);
   return 0;
 }
 
@@ -156,13 +156,13 @@ int cmd_compile(int argc, char** argv, int idx, insights_config* cfg) {
   char* err = insights_compile(cfg, &flags, &report);
   if (err) {
     fprintf(stderr, "Error: %s\n", err);
-    free(err);
+    insights_free_string(err);
     return 1;
   }
   if (should_print_report) {
     print_report(report);
   }
-  free(report);
+  insights_free_string(report);
   return 0;
 }
 
@@ -187,7 +187,7 @@ int cmd_write(int argc, char** argv, int idx, insights_config* cfg) {
   free(report_content);
   if (err) {
     fprintf(stderr, "Error: %s\n", err);
-    free(err);
+    insights_free_string(err);
     return 1;
   }
   return 0;
@@ -230,7 +230,7 @@ int cmd_upload(int argc, char** argv, int idx, insights_config* cfg) {
   char* err = insights_upload(cfg, sources, sources_len, &flags);
   if (err) {
     fprintf(stderr, "Error: %s\n", err);
-    free(err);
+    insights_free_string(err);
     return 1;
   }
   return 0;

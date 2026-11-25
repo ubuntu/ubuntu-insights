@@ -32,8 +32,8 @@ import (
  * If the consent state is determined to be false, an OptOut report
  * will be written to disk, but the full compiled report will still be returned.
  *
- * The out_report must be freed by the caller.
- * The error string must be freed.
+ * The out_report must be freed by the caller using insights_free_string.
+ * The error string must be freed using insights_free_string.
  **/
 //export insights_collect
 func insights_collect(config *C.insights_const_config, source *C.insights_const_char, flags *C.insights_const_collect_flags, out_report **C.char) *C.char { //nolint:revive // Exported for C
@@ -100,8 +100,8 @@ func collectCustomInsights(config *C.insights_const_config, source *C.insights_c
  * If out_report is not NULL, the pretty printed report is
  * returned via out_report as a null-terminated C string.
  *
- * The out_report must be freed by the caller.
- * The error string must be freed.
+ * The out_report must be freed by the caller using insights_free_string.
+ * The error string must be freed using insights_free_string.
  **/
 //export insights_compile
 func insights_compile(config *C.insights_const_config, flags *C.insights_const_compile_flags, out_report **C.char) *C.char { //nolint:revive // Exported for C
@@ -154,7 +154,7 @@ func compileCustomInsights(config *C.insights_const_config, flags *C.insights_co
  * If "report" is not a valid Insights report, an error string is returned.
  * If "flags" is NULL, defaults are used.
  * If writing fails, an error string is returned.
- * Any error string returned must be freed.
+ * Any error string returned must be freed using insights_free_string.
  **/
 //export insights_write
 func insights_write(config *C.insights_const_config, source *C.insights_const_char, report *C.insights_const_char, flags *C.insights_const_write_flags) *C.char {
@@ -202,7 +202,7 @@ func writeCustomInsights(config *C.insights_const_config, source *C.insights_con
  * flags may be NULL.
  * If uploading fails, an error string is returned.
  * Otherwise, this returns NULL.
- * The error string must be freed.
+ * The error string must be freed using insights_free_string.
  **/
 //export insights_upload
 func insights_upload(config *C.insights_const_config, sources **C.insights_const_char, sources_len C.size_t, flags *C.insights_const_upload_flags) *C.char { //nolint:revive // Exported for C
@@ -288,7 +288,7 @@ func getCustomConsentState(config *C.insights_const_config, source *C.insights_c
  * source may be NULL or "" to affect the platform source consent state.
  * If the state could not be set, this function returns an error string.
  * Otherwise, it returns NULL
- * The error string must be freed.
+ * The error string must be freed using insights_free_string.
  **/
 //export insights_set_consent_state
 func insights_set_consent_state(config *C.insights_const_config, source *C.insights_const_char, new_state C.bool) *C.char { //nolint:revive // Exported for C
@@ -318,7 +318,7 @@ func insights_get_system_opt_out_state(config *C.insights_const_config) C.bool {
  * If config is NULL, defaults are used.
  * If the state could not be set, this function returns an error string.
  * Otherwise, it returns NULL.
- * The error string must be freed.
+ * The error string must be freed using insights_free_string.
  **/
 //export insights_set_system_opt_out_state
 func insights_set_system_opt_out_state(config *C.insights_const_config, state C.bool) *C.char {
@@ -339,6 +339,18 @@ func insights_set_system_opt_out_state(config *C.insights_const_config, state C.
 //export insights_set_log_callback
 func insights_set_log_callback(callback C.insights_logger_callback) {
 	setLogCallbackImpl(callback)
+}
+
+/**
+ * insights_free_string frees a C string returned by the libinsights C API
+ * (such as error strings or compiled reports) using the library's allocator.
+ * This should be used instead of calling free directly, especially when the
+ * caller may use a different C runtime.
+ * Passing a NULL pointer is safe and has no effect.
+ **/
+//export insights_free_string
+func insights_free_string(str *C.char) {
+	C.free(unsafe.Pointer(str))
 }
 
 // consentSetter is a function that sets the consent state using the given parameters.
